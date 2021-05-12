@@ -1,0 +1,745 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Grounded fixpoints and their applications in knowledge representation.
+   </title>
+   <abstract>
+    In various domains of logic, researchers have made use of a similar intuition: that facts (or models) can be derived from the ground up. They typically phrase this intuition by saying, e.g., that the facts should be grounded, or that they should not be unfounded, or that they should be supported by cycle-free arguments, et cetera. In this paper, we formalise this intuition in the context of algebraical fixpoint theory. We define when a lattice element x∈L is grounded for lattice operator O:L→L. On the algebraical level, we investigate the relationship between grounded fixpoints and the various classes of fixpoints of approximation fixpoint theory, including supported, minimal, Kripke–Kleene, stable and well-founded fixpoints. On the logical level, we investigate groundedness in the context of logic programming, autoepistemic logic, default logic and argumentation frameworks. We explain what grounded points and fixpoints mean in these logics and show that this concept indeed formalises intuitions that existed in these fields. We investigate which existing semantics are grounded. We study the novel semantics for these logics that is induced by grounded fixpoints, which has some very appealing properties, not in the least its mathematical simplicity and generality. Our results unveil a remarkable uniformity in intuitions and mathematics in these fields.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Motivated by structural analogies in the semantics of several non-monotonic logics, Denecker, Marek and Truszczyński (from now on abbreviated as DMT) [10] developed an algebraic fixpoint theory that defines different types of fixpoints for a so-called approximating bilattice operator, called supported, Kripke–Kleene, stable and well-founded fixpoints. In the context of logic programming, they found that Fitting's (three- or four-valued) immediate consequence operator is an approximating operator of the two-valued immediate consequence operator and that its four different types of fixpoints correspond exactly to the four major, equally named semantics of logic programs. They also identified approximating operators for default logic (DL) and autoepistemic logic (AEL) and showed that the fixpoint theory induces all main and some new semantics in these fields [11]. Moreover, by showing that Konolige's mapping from DL to AEL [26] preserves the approximating operator, they resolved an old research question regarding the nature of these two logics: AEL and DL were essentially unified in the sense that for each semantics covered by AFT, a DL theory is equivalent with its Konolige mapping in AEL. However, the original DL and AEL semantics occupy different positions in this family and do not correspond. As such AEL and DL under their original semantics, are “just” two different dialects of autoepistemic reasoning [11], [13].
+     </paragraph>
+     <paragraph>
+      The study of these approximating operators called approximation fixpoint theory (AFT) was later used to define semantics of extensions of logic programs, such as logic programs with aggregates [35] and HEX logic programs [2]. Vennekens et al. [42] used AFT in an algebraical modularity study for logic programming, AEL and DL. Recently, Strass [38] showed that many semantics from Dung's argumentation frameworks (AFs) and abstract dialectical frameworks (ADFs) can be obtained by direct applications of AFT. Bi et al. [4] extended AFT with approximators allowing for inconsistencies and used it to integrate description logics with logic programs. Bogaerts et al. [6] defined the causal logic FO(C) as an instantiation of AFT. This suggests that fixpoint theory, in ways that are difficult to explain due to its high level of abstraction, captures certain fundamental intuitions in a range of logics and sorts of human knowledge. It is this observation that provides the basic motivation for the present study.
+     </paragraph>
+     <paragraph>
+      In this paper, we formally use fixpoint theory to investigate an intuition that is found in all aforementioned logic domains. There, researchers have made use of a similar intuition: that facts (or models) can be derived from the ground up. They typically phrase this intuition by saying that, e.g., the facts should be grounded, or that they should not be unfounded, or that they should be supported by cycle-free arguments, or by arguments that contain no vicious circles, et cetera. In several cases, great efforts were done to refine semantics which did allow ungrounded models or facts. For example, it is well-known that the completion semantics of logic programs allows ungrounded models, e.g., for the transitive closure program. The efforts to avoid these led to the development of perfect, stable and well-founded semantics. Also for AEL, it was known that Moore's expansion semantics accepted ungrounded models, e.g., for the theory {a mathematical formula}{KP⇒P} which has the ungrounded model in which P is known but this knowledge is self-supported. Examples like this motivated several attempts to refine Moore's semantics, among others by Halpern and Moses [24] and Konolige [26].
+     </paragraph>
+     <paragraph>
+      We formalise the intuition of groundedness in the context of algebraical fixpoint theory. We call a lattice element {a mathematical formula}x∈Lgrounded for lattice operator {a mathematical formula}O:L→L if for all {a mathematical formula}v∈L such that {a mathematical formula}O(x∧v)≤v, it holds that {a mathematical formula}x≤v. We investigate this notion on the algebraical level in AFT and on the logical level in the context of logic programming, autoepistemic logic, default logic and abstract argumentation frameworks. We explain what grounded points and fixpoints mean in these logics and show that this concept indeed formalises intuitions that existed in these fields. We investigate which existing semantics are grounded, where we call a semantics grounded if all its models are grounded, and investigate a novel semantics for these logics that is based on grounded fixpoints. Our results unveil a remarkable uniformity in intuition and mathematics in these fields and lead to a new candidate semantics with some very appealing properties, not in the least the mathematical simplicity and generality to define it in the context of operator-based logics and logic constructs.
+     </paragraph>
+     <paragraph>
+      We can summarise the main contributions of this paper as follows. We extend AFT with the notion of a grounded fixpoint, a fixpoint closely related to stable and well-founded fixpoints. We show that if the Kripke–Kleene fixpoint is exact, then it is grounded. If the well-founded fixpoint is exact, then it is the unique grounded and the unique stable fixpoint. Otherwise, stable fixpoints are grounded but not necessarily the other way around. A useful feature of grounded fixpoints that distinguishes them from stable and well-founded fixpoints is that they are determined by O and do not require the choice of an approximator. We then apply this theory to different logical research domains. In all domains, we explain the meaning of grounded fixpoints, relate them to attempts to formalise groundedness, study which semantics are grounded and finally, we explore the semantics induced by grounded fixpoints. More specifically, (i) in the context of logic programming, our theory yields an intuitive, purely two-valued, semantics that is easily extensible and that formalises well-known intuitions related to unfounded sets. (ii) We show that two of the main semantics of AFs can be characterised as grounded fixpoints of previously defined operators and discuss grounded fixpoints in the context of ADFs. (iii) Applied to autoepistemic logic and default logic, groundedness turns out to provide an alternative and improved formalisation of intuitions described by Konolige [26].
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Preliminaries
+     </section-title>
+     <section label="2.1">
+      <section-title>
+       Lattices and operators
+      </section-title>
+      <paragraph>
+       A partially ordered set (poset){a mathematical formula}〈L,≤〉 is a set L equipped with a partial order ≤, i.e., a reflexive, antisymmetric, transitive relation. As usual, we write {a mathematical formula}x&lt;y as abbreviation for {a mathematical formula}x≤y∧x≠y. If S is a subset of L, then x is an upper bound, respectively a lower bound of S if for every {a mathematical formula}s∈S, it holds that {a mathematical formula}s≤x respectively {a mathematical formula}x≤s. An element x is a least upper bound, respectively greatest lower bound of S if it is an upper bound that is smaller than every other upper bound, respectively a lower bound that is greater than every other lower bound. If S has a least upper bound, respectively a greatest lower bound, we denote it {a mathematical formula}lub(S), respectively {a mathematical formula}glb(S). As is custom, we sometimes call a greatest lower bound a meet, and a least upper bound a join and use the related notations {a mathematical formula}⋀S=glb(S), {a mathematical formula}x∧y=glb({x,y}), {a mathematical formula}⋁S=lub(S) and {a mathematical formula}x∨y=lub({x,y}). We call {a mathematical formula}〈L,≤〉 a complete lattice if every subset of L has a least upper bound and a greatest lower bound. A complete lattice has both a least element ⊥ and a greatest element ⊤.
+      </paragraph>
+      <paragraph>
+       An operator {a mathematical formula}O:L→L is monotone if {a mathematical formula}x≤y implies that {a mathematical formula}O(x)≤O(y) and anti-monotone if {a mathematical formula}x≤y implies that {a mathematical formula}O(y)≤O(x). An element {a mathematical formula}x∈L is a prefixpoint, a fixpoint, a postfixpoint of O if {a mathematical formula}O(x)≤x, respectively {a mathematical formula}O(x)=x, {a mathematical formula}x≤O(x). Every monotone operator O in a complete lattice has a least fixpoint, denoted {a mathematical formula}lfp(O), which is also O's least prefixpoint and the limit (the least upper bound) of the increasing sequence {a mathematical formula}(xi)i≥0 defined by
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}x0=⊥,
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}xi+1=O(xi), for successor ordinals {a mathematical formula}i+1,
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}xλ=lub({xi|i&lt;λ}), for limit ordinals λ.
+       </list-item>
+      </list>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Logic programming
+      </section-title>
+      <paragraph>
+       In the following sections, we illustrate our abstract results in the context of logic programming. We recall some preliminaries. We restrict ourselves to propositional logic programs, but allow arbitrary propositional formulas in rule bodies. However, our results basically apply to all extensions of logic programming that admit an immediate consequence operator (non-propositional ones, aggregates in the body, etc.).
+      </paragraph>
+      <paragraph>
+       Let Σ be an alphabet, i.e., a collection of symbols which are called atoms. A literal is an atom p or the negation ¬q of an atom q. A logic program {a mathematical formula}P is a set of rules r of the form {a mathematical formula}h←φ, where h is an atom called the head of r, denoted {a mathematical formula}head(r), and φ is a propositional formula called the body of r, denoted {a mathematical formula}body(r). An interpretation I of the alphabet Σ is an element of {a mathematical formula}2Σ, i.e., a subset of Σ. The set of interpretations {a mathematical formula}2Σ forms a lattice equipped with the order ⊆. The truth value (t or f) of a propositional formula φ in a structure I, denoted {a mathematical formula}φI is defined as usual. With a logic program {a mathematical formula}P, we associate an immediate consequence operator [40]{a mathematical formula}TP that maps a structure I to{a mathematical formula}
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      Grounded fixpoints
+     </section-title>
+     <paragraph>
+      Let {a mathematical formula}〈L,≤〉 be a complete lattice and {a mathematical formula}O:L→L a lattice operator, fixed throughout this entire section. We start by giving the most central definition of this text, namely the notion of groundedness.
+     </paragraph>
+     <paragraph label="Definition 3.1">
+      GroundedWe call {a mathematical formula}x∈Lgrounded for O if for each {a mathematical formula}v∈L such that {a mathematical formula}O(x∧v)≤v, it holds that {a mathematical formula}x≤v. We call x a grounded fixpoint of O if it is a fixpoint of O and it is grounded for O.
+     </paragraph>
+     <paragraph>
+      This concept is strongly related to the following.
+     </paragraph>
+     <paragraph label="Definition 3.2">
+      Strictly groundedWe call {a mathematical formula}x∈Lstrictly grounded for O if there is no {a mathematical formula}y∈L such that {a mathematical formula}y&lt;x and {a mathematical formula}(O(y)∧x)≤y.
+     </paragraph>
+     <paragraph>
+      The intuition behind these concepts is very similar and is easy to explain if we assume that the elements of L are sets of “facts” of some kind and the ≤ relation is the subset relation between such sets. In this case, ∧ is the intersection and ∨ the union of sets. Intuitively, a set of facts x is (strictly) grounded if it can be “built from the ground up” by O. Such sets are built in several stages. Facts that are derived in later stages depend on those of earlier stages. This means that x has a stratified internal structure. If we remove multiple strata from x, we cannot expect that applying O will reconstruct all of the removed facts, but we should expect that at least some of the removed facts of x reappear, in particular those in the lowest stratum from where facts were deleted. This idea is formalised in slightly different ways in the two definitions.
+     </paragraph>
+     <paragraph>
+      If L is a powerset lattice, this intuition directly translates to {a mathematical formula}∀u≠∅:u⊆x⇒O(x∖u)∩u≠∅, i.e., whenever a set of elements u is removed from x, at least one of these elements returns. To express it in the context of lattices in general, the statement needs to be reformulated without using set subtraction. There are two ways to do this.
+     </paragraph>
+     <paragraph>
+      In the definition of strictly grounded point, removing strata from x corresponds to taking {a mathematical formula}y&lt;x (y represents {a mathematical formula}x∖u in this case). The condition that some elements of x should come back corresponds to {a mathematical formula}(O(y)∧x)≰y (at least one element of {a mathematical formula}O(y) is in x but not in y; thus, at least one is in u).
+     </paragraph>
+     <paragraph>
+      In the definition of grounded point, a slightly different but equivalent set-theoretic expression is formalised: {a mathematical formula}∀u:u∩x≠∅⇒O(x∖u)∩u≠∅. Removing strata from x corresponds to selecting a {a mathematical formula}v∈L and taking {a mathematical formula}x∧v (v corresponds to the complement of u, hence {a mathematical formula}x∖u to {a mathematical formula}x∧v and the fact that {a mathematical formula}u∩x≠∅ corresponds to {a mathematical formula}x≰v). The condition that {a mathematical formula}O(x∧v) reintroduces an element of u corresponds to {a mathematical formula}O(x∧v)≰v.
+     </paragraph>
+     <paragraph>
+      In what follows, we study some properties of (strictly) grounded (fix)points. We start by showing the tight relationship between the two concepts. In general, every strictly grounded point is grounded but not necessarily the other way around. Unsurprisingly, in the context of powerset lattices — the context in which we explained the intuitions — the two notions coincide.
+     </paragraph>
+     <paragraph label="Proposition 3.3">
+      If x is strictly grounded for O, then x is grounded for O.
+     </paragraph>
+     <paragraph label="Proof">
+      Assume x is strictly grounded and {a mathematical formula}v∈L is such that {a mathematical formula}O(x∧v)≤v. Let y denote {a mathematical formula}x∧v. Then {a mathematical formula}O(y)≤v, and hence {a mathematical formula}(O(y)∧x)≤(x∧v)=y. Since {a mathematical formula}(O(y)∧v)≤y and x is strictly grounded, it cannot be the case that {a mathematical formula}y&lt;x. Since {a mathematical formula}(x∧v)=y≤x, equality holds, i.e. {a mathematical formula}(x∧v)=x and {a mathematical formula}x≤v. This shows that x is indeed grounded.  □
+     </paragraph>
+     <paragraph label="Example 3.4">
+      The converse of Proposition 3.3 does not hold. Consider lattice and operator represented by the following graph, where full edges express the order relation (to be precise, the ≤ relation is the reflexive transitive closure of these edges) and the dotted edges represent the operator:{a mathematical formula} In this case, {a mathematical formula}b1 is grounded but not strictly grounded, as can be seen by taking {a mathematical formula}y=b2.
+     </paragraph>
+     <paragraph label="Proposition 3.5">
+      Let L be a powerset lattice{a mathematical formula}〈2⊤,⊆〉. Then a point{a mathematical formula}x∈Lis grounded if and only if it is strictly grounded.
+     </paragraph>
+     <paragraph label="Proof">
+      We recall that in the context of powerset lattices the greatest lower bound is the intersection and least upper bound is the union.Proposition 3.3 guarantees that we only need to show that all grounded points are strictly grounded. Hence, suppose x is grounded. Assume towards contradiction that x is not strictly grounded, i.e., that for some {a mathematical formula}y⊊x, {a mathematical formula}O(y)∩x⊆y. Take {a mathematical formula}v=y∪(⊤∖x). It holds that {a mathematical formula}v∩x=y. We have that {a mathematical formula}x⊈v. Also, it holds that {a mathematical formula}O(y)⊆v if and only if {a mathematical formula}O(y)∩x⊆y. Since we assumed the latter, it holds that {a mathematical formula}O(v∩x)=O(y)⊆v. Hence, we obtain a contradiction with the groundedness of x, which proves our claim.  □
+     </paragraph>
+     <paragraph label="Proposition 3.6">
+      Let O be a monotone operator. If x is grounded for O then x is a postfixpoint of O that is less than or equal to{a mathematical formula}lfp(O), i.e.,{a mathematical formula}x≤O(x)and{a mathematical formula}x≤lfp(O).
+     </paragraph>
+     <paragraph label="Proof">
+      First, we show that {a mathematical formula}x≤lfp(O). Since O is monotone, we have {a mathematical formula}O(lfp(O)∧x)≤O(lfp(O))=lfp(O). Hence, groundedness of x with {a mathematical formula}v=lfp(O) indeed yields that {a mathematical formula}x≤lfp(O).In order to show that x is a postfixpoint of O, take {a mathematical formula}v=O(x). Again using monotonicity of O, we find {a mathematical formula}O(v∧x)≤O(x)=v. Hence, groundedness yields that {a mathematical formula}x≤v=O(x), and indeed x is a postfixpoint of O.  □
+     </paragraph>
+     <paragraph label="Example 3.7">
+      The converse of Proposition 3.6 does not hold. Consider the following logic program {a mathematical formula}P:{a mathematical formula} Its immediate consequence operator {a mathematical formula}TP is represented by the following graph:{a mathematical formula}{a mathematical formula}TP is a monotone operator with least fixpoint ⊤. Also, {a mathematical formula}{q} is a postfixpoint of {a mathematical formula}TP since {a mathematical formula}TP({q})=⊤≥{q}. However, {a mathematical formula}{q} is not grounded since {a mathematical formula}TP({q}∧{p})=TP(⊥)={p}, while {a mathematical formula}{q}≰{p}.
+     </paragraph>
+     <paragraph label="Proposition 3.8">
+      All grounded fixpoints of O are minimal fixpoints of O.
+     </paragraph>
+     <paragraph label="Proof">
+      Suppose x is grounded and y and x are fixpoints of O with {a mathematical formula}y≤x. In this case, {a mathematical formula}O(x∧y)=O(y)=y≤y. Thus, since x is grounded, we conclude that {a mathematical formula}x≤y, which yields {a mathematical formula}x=y. We find that indeed, all grounded fixpoints are minimal fixpoints.  □
+     </paragraph>
+     <paragraph label="Example 3.9">
+      The converse of Proposition 3.8 does not hold. Consider the logic program {a mathematical formula}P:{a mathematical formula} This logic program has as immediate consequence operator {a mathematical formula}TP:{a mathematical formula} In this case, {a mathematical formula}{p} is a minimal fixpoint of {a mathematical formula}TP, but {a mathematical formula}{p} is not grounded since {a mathematical formula}TP({p}∧{q})=TP(⊥)={q}, while {a mathematical formula}{p}≰{q}.
+     </paragraph>
+     <paragraph label="Proposition 3.10">
+      A monotone operator has exactly one grounded (and strictly grounded) fixpoint, namely its least fixpoint.
+     </paragraph>
+     <paragraph label="Proof">
+      Proposition 3.8 guarantees that grounded fixpoints are minimal, hence a monotone operator O can have at most one grounded fixpoint {a mathematical formula}lfp(O). Now we show that {a mathematical formula}lfp(O) is indeed strictly grounded. Since O is monotone, for every {a mathematical formula}y≤lfp(O), it holds that {a mathematical formula}O(y)≤O(lfp(O))=lfp(O) and hence that {a mathematical formula}O(y)∧lfp(O)=O(y). Now suppose that for some {a mathematical formula}y≤lfp(O), {a mathematical formula}O(y)∧lfp(O)≤y. Then by the previous also {a mathematical formula}O(y)≤y. Thus y is a prefixpoint of O. However, {a mathematical formula}lfp(O) is the least prefixpoint of O, hence {a mathematical formula}lfp(O)≤y, and thus {a mathematical formula}y=lfp(O). We conclude that {a mathematical formula}lfp(O) is indeed strictly grounded. From Proposition 3.3, it then follows that x is grounded as well.  □
+     </paragraph>
+     <paragraph label="Proposition 3.11">
+      Every postfixpoint of an anti-monotone operator is strictly grounded.
+     </paragraph>
+     <paragraph label="Proof">
+      Suppose x is a postfixpoint of an anti-monotone operator O, i.e., {a mathematical formula}x≤O(x) and that {a mathematical formula}y≤x. In that case {a mathematical formula}O(y)≥O(x)≥x. If {a mathematical formula}O(y)∧x≤y, then it follows that {a mathematical formula}x≤y. Thus indeed {a mathematical formula}x=y and x is strictly grounded.  □
+     </paragraph>
+     <paragraph label="Example 3.12">
+      The converse of Proposition 3.11 does not hold. Consider the logic program {a mathematical formula}P:{a mathematical formula} This logic program has as immediate consequence operator {a mathematical formula}TP:{a mathematical formula} The operator {a mathematical formula}TP is anti-monotone, and {a mathematical formula}{p} is strictly grounded for {a mathematical formula}TP. However, {a mathematical formula}{p} is not a postfixpoint of {a mathematical formula}TP.
+     </paragraph>
+    </section>
+    <section label="4">
+     <section-title>
+      Grounded fixpoints and approximation fixpoint theory
+     </section-title>
+     <section label="4.1">
+      <section-title>
+       Preliminaries: AFT
+      </section-title>
+      <paragraph>
+       Given a lattice L, approximation fixpoint theory makes use of the bilattice {a mathematical formula}L2. We define two projection functions for pairs as usual: {a mathematical formula}(x,y)1=x and {a mathematical formula}(x,y)2=y. Pairs {a mathematical formula}(x,y)∈L2 are used to approximate all elements in the interval {a mathematical formula}[x,y]={z|x≤z∧z≤y}. We call {a mathematical formula}(x,y)∈L2consistent if {a mathematical formula}x≤y, that is, if {a mathematical formula}[x,y] is non-empty. We use {a mathematical formula}Lc to denote the set of consistent elements. Elements {a mathematical formula}(x,x)∈Lc are called exact; they constitute the embedding of L in {a mathematical formula}L2. We sometimes abuse notation and use the tuple {a mathematical formula}(x,y) and the interval {a mathematical formula}[x,y] interchangeably. The precision ordering on {a mathematical formula}L2 is defined as {a mathematical formula}(x,y)≤p(u,v) if {a mathematical formula}x≤u and {a mathematical formula}v≤y. In case {a mathematical formula}(u,v) is consistent, this means that {a mathematical formula}(x,y) approximates all elements approximated by {a mathematical formula}(u,v), or in other words that {a mathematical formula}[u,v]⊆[x,y]. If L is a complete lattice, then {a mathematical formula}〈L2,≤p〉 is also a complete lattice.
+      </paragraph>
+      <paragraph>
+       AFT studies fixpoints of lattice operators {a mathematical formula}O:L→L through operators approximating O. An operator {a mathematical formula}A:L2→L2 is an approximator of O if it is {a mathematical formula}≤p-monotone, and has the property that for all x, {a mathematical formula}O(x)∈A(x,x). Approximators are internal in {a mathematical formula}Lc (i.e., map {a mathematical formula}Lc into {a mathematical formula}Lc). As usual, we restrict our attention to symmetric approximators: approximators A such that for all x and y, {a mathematical formula}A(x,y)1=A(y,x)2. DMT [12] showed that the consistent fixpoints of interest (supported, stable, well-founded) are uniquely determined by an approximator's restriction to {a mathematical formula}Lc, hence, sometimes we only define approximators on {a mathematical formula}Lc.
+      </paragraph>
+      <paragraph>
+       AFT studies fixpoints of O using fixpoints of A.
+      </paragraph>
+      <list>
+       <list-item label="•">
+        The A-Kripke–Kleene fixpoint is the {a mathematical formula}≤p-least fixpoint of A and has the property that it approximates all fixpoints of O.
+       </list-item>
+       <list-item label="•">
+        A partial A-stable fixpoint is a pair {a mathematical formula}(x,y) such that {a mathematical formula}x=lfp(A(⋅,y)1) and {a mathematical formula}y=lfp(A(x,⋅)2), where {a mathematical formula}A(⋅,y)1 denotes the operator {a mathematical formula}L→L:x↦A(x,y)1 and analogously for {a mathematical formula}A(x,⋅)2.
+       </list-item>
+       <list-item label="•">
+        The A-well-founded fixpoint is the least precise partial A-stable fixpoint.
+       </list-item>
+       <list-item label="•">
+        An A-stable fixpoint of O is a fixpoint x of O such that {a mathematical formula}(x,x) is a partial A-stable fixpoint. This is equivalent with the condition that {a mathematical formula}x=lfp(A(⋅,x)1).
+       </list-item>
+      </list>
+      <paragraph>
+       The A-Kripke–Kleene fixpoint of O can be constructed by iteratively applying A, starting from {a mathematical formula}(⊥,⊤). For the A-well-founded fixpoint, a similar constructive characterisation has been worked out by Denecker and Vennekens [15]:
+      </paragraph>
+      <paragraph label="Definition 4.1">
+       An A-refinement of {a mathematical formula}(x,y) is a pair {a mathematical formula}(x′,y′)∈L2 satisfying one of the following two conditions:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}(x,y)≤p(x′,y′)≤pA(x,y), or
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}x′=x and {a mathematical formula}A(x,y′)2≤y′≤y.
+       </list-item>
+      </list>
+      <paragraph label="Definition 4.2">
+       A well-founded induction of A is a sequence {a mathematical formula}(xi,yi)i≤β with β an ordinal such that
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}(x0,y0)=(⊥,⊤);
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}(xi+1,yi+1) is an A-refinement of {a mathematical formula}(xi,yi), for all {a mathematical formula}i&lt;β;
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}(xλ,yλ)=lub≤p{(xi,yi)|i&lt;λ} for each limit ordinal {a mathematical formula}λ≤β.
+       </list-item>
+      </list>
+      <paragraph>
+       A well-founded induction is an algebraical generalisation of the well-founded model construction defined by Vam Gelder et al. [41]. The first type of refinements correspond to making a partial structure more precise by applying Fitting's immediate consequence operator; the second type of refinement corresponds to making a structure more precise by eliminating an unfounded set.
+      </paragraph>
+      <paragraph>
+       For a given approximator A, there are many different terminal well-founded inductions of A. Denecker and Vennekens [15] showed that they all have the same limit, which equals the A-well-founded fixpoint of O. Furthermore, if A is symmetric, the A-well-founded fixpoint of O (and in fact, every tuple in a well-founded induction of A) is consistent. Well-founded inductions that only use the first sort of refinement converge to the A-Kripke–Kleene fixpoint.
+      </paragraph>
+      <paragraph>
+       The precision order can be pointwise extended to the family of approximators of O. It then follows that more precise approximators have a more precise well-founded fixpoint and more precise approximators have more stable fixpoints. DMT [12] showed that there exists a most precise approximator, {a mathematical formula}UO, called the ultimate approximator of O. This operator is defined by{a mathematical formula} Here, we used the notation {a mathematical formula}O(X)={O(x)|x∈X} for a set {a mathematical formula}X⊆L. It then follows that for every approximator A, all A-stable fixpoints are {a mathematical formula}UO-stable fixpoints, and the {a mathematical formula}UO-well-founded fixpoint is always more precise than the A-well-founded fixpoint. We refer to {a mathematical formula}UO-stable fixpoints as ultimate stable fixpoints of O and to the {a mathematical formula}UO-well-founded fixpoint as the ultimate well-founded fixpoint of O. Semantics defined using the ultimate approximator have as advantage that they only depend on O since the approximator can be derived from O.
+      </paragraph>
+      <paragraph>
+       Approximation fixpoint theory and logic programming. In the context of logic programming, elements of the bilattice {a mathematical formula}(2Σ)2 are four-valued interpretations, pairs {a mathematical formula}I=(I1,I2) of interpretations. The pair {a mathematical formula}(I1,I2) approximates all interpretations {a mathematical formula}I′ with {a mathematical formula}I1⊆I′⊆I2. We often identify an interpretation I with the four-valued interpretation {a mathematical formula}(I,I). If {a mathematical formula}I=(I1,I2) is a (four-valued) interpretation, and {a mathematical formula}U⊆Σ, we write {a mathematical formula}I[U:f] for the (four-valued) interpretation that equals {a mathematical formula}I on all elements not in U and that interprets all elements in U as f, i.e., the interpretation {a mathematical formula}(I1∖U,I2∖U). We are mostly concerned with consistent (also called partial or three-valued) interpretations: tuples {a mathematical formula}I=(I1,I2) with {a mathematical formula}I1⊆I2. For such an interpretation, the atoms in {a mathematical formula}I1 are true (t) in {a mathematical formula}I, the atoms in {a mathematical formula}I2∖I1 are unknown (u) in {a mathematical formula}I and the other atoms are false (f) in {a mathematical formula}I. If {a mathematical formula}I is a three-valued interpretation, and φ a formula, we write {a mathematical formula}φI for the standard three-valued valuation based on the Kleene truth tables (see Fig. 1). An alternative valuation is the supervaluation; with this valuation, the value of a formula φ is t (respectively f) in partial interpretation {a mathematical formula}I if and only if it is t (respectively f) in all interpretations approximated by {a mathematical formula}I; it is unknown otherwise.
+      </paragraph>
+      <paragraph>
+       We call two formulas 3-equivalent if they have the same truth value in all three-valued interpretations and 2-equivalent if they have the same truth value in all (two-valued) interpretations. Several approximators have been defined for logic programs. The most common is Fitting's immediate consequence operator {a mathematical formula}ΨP[20], a direct generalisation of {a mathematical formula}TP to partial interpretations. DMT [10] showed that the well-founded fixpoint of {a mathematical formula}ΨP is the well-founded model of {a mathematical formula}P as defined by Van Gelder et al. [41] and that {a mathematical formula}ΨP-stable fixpoints are exactly the stable models of {a mathematical formula}P as defined by Gelfond and Lifschitz [21]. In this case, the operator {a mathematical formula}ΨP(⋅,y)1 coincides with the immediate consequence operator of the Gelfond–Lifschitz reduct [21]. The most precise approximator is the ultimate approximator {a mathematical formula}UP.
+      </paragraph>
+      <paragraph>
+       Replacing the body of a rule by a 3-equivalent formula obviously preserves {a mathematical formula}ΨP; replacing the body of a rule by a 2-equivalent formula preserves {a mathematical formula}TP and hence also {a mathematical formula}UP. Thus, transformations that preserve 3-equivalence, preserve standard Kripke–Kleene, stable and well-founded semantics, and transformations preserving 2-equivalence preserve all ultimate semantics (ultimate Kripke–Kleene, ultimate stable, ultimate well-founded). The ease with which this can be proven demonstrates the power of AFT.
+      </paragraph>
+      <paragraph>
+       Preserving 2-equivalence is not enough to preserve standard semantics. For example, consider programs {a mathematical formula}P={p←p∨¬p} and {a mathematical formula}P′={p.}. Even though the body of the rule defining p in {a mathematical formula}P is a tautology, {a mathematical formula}{p} is not a stable model of {a mathematical formula}P while it is a stable model of {a mathematical formula}P′. But ultimate semantics treat these two programs identically. For instance, {a mathematical formula}{p} is the unique ultimate stable model of both programs.
+      </paragraph>
+      <paragraph>
+       While substituting formulas for 2-equivalent formulas in rule bodies preserves the ultimate but not necessarily the standard versions of semantics, a weaker equivalence property can still be guaranteed. It holds that the standard Kripke–Kleene and well-founded models of both programs are compatible with each other: no atom is true in the model of one and false in the model of the other program. This follows from the fact that both the ultimate Kripke–Kleene and the ultimate well-founded model are preserved by these substitutions and that they are consistent and more precise than the standard Kripke–Kleene and well-founded model respectively.
+      </paragraph>
+      <paragraph>
+       The nice property that ultimate semantics only depend on the operator comes at a cost. DMT [12] showed that deciding whether {a mathematical formula}P has an ultimate stable model is {a mathematical formula}Σ2P-complete, while that same task is only NP-complete for classical stable models.
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Grounded fixpoints and approximation fixpoint theory
+      </section-title>
+      <paragraph>
+       In this section, we discuss how groundedness relates to AFT. More concretely, we show that all (ultimate) stable fixpoints are grounded and that all grounded fixpoints are approximated by the (ultimate) well-founded fixpoint.
+      </paragraph>
+      <paragraph label="Proposition 4.3">
+       All ultimate stable fixpoints of O are (strictly) grounded fixpoints.
+      </paragraph>
+      <paragraph label="Proof">
+       Let x be an ultimate stable fixpoint of O. Thus, {a mathematical formula}(x,x) is a fixpoint of the ultimate stable operator, i.e., {a mathematical formula}x=UO(x)1=lfp(⋀O([⋅,x])). Since {a mathematical formula}O(x)=⋀O([x,x]), it follows that x is also a fixpoint of O. Now suppose for some {a mathematical formula}y≤x, {a mathematical formula}O(y)∧x≤y; we show that {a mathematical formula}x=y. We know that{a mathematical formula} Thus, y is a prefixpoint of the monotone operator {a mathematical formula}⋀O([⋅,x]). Since x is the least fixpoint (and also the least prefixpoint) of that same operator, we find that {a mathematical formula}x≤y, and thus {a mathematical formula}x=y, which shows that x is strictly grounded indeed.  □
+      </paragraph>
+      <paragraph label="Example 4.4">
+       The converse of Proposition 4.3 does not always hold. Consider the logic program {a mathematical formula}P:{a mathematical formula} This logic program has as immediate consequence operator {a mathematical formula}TP:{a mathematical formula} ⊤ is grounded for {a mathematical formula}TP, since the only v with {a mathematical formula}TP(⊤∧v)=TP(v)≤v is ⊤ itself. However, since {a mathematical formula}TP([⊥,⊤])=L∖{⊥} and {a mathematical formula}{p}∧{q}=⊥, it follows that {a mathematical formula}⋀(TP[⊥,⊤])=⊥. Thus, {a mathematical formula}lfp(⋀TP([⋅,⊤]))=⊥. Therefore, ⊤ is not an ultimate stable fixpoint of {a mathematical formula}TP.
+      </paragraph>
+      <paragraph>
+       The fact that all A-stable fixpoints are ultimate stable fixpoints yields:
+      </paragraph>
+      <paragraph label="Corollary 4.5">
+       If A is an approximator of O, then all A-stable fixpoints are (strictly) grounded fixpoints of O.
+      </paragraph>
+      <paragraph label="Theorem 4.6">
+       The well-founded fixpoint{a mathematical formula}(u,v)of a symmetric approximator A of O approximates all grounded fixpoints of O.
+      </paragraph>
+      <paragraph label="Proof">
+       Let {a mathematical formula}(ai,bi)i≤β be a well-founded induction of A and let x be a grounded fixpoint of O. We show by induction that for every {a mathematical formula}i≤β, {a mathematical formula}ai≤x≤bi. The result trivially holds for {a mathematical formula}i=0 since {a mathematical formula}(a0,b0)=(⊥,⊤). It is also clear that the property is preserved in limit ordinals. Hence, all we need to show is that the property is preserved by A-refinements. Suppose {a mathematical formula}(a′,b′) is an A-refinement of {a mathematical formula}(a,b) and {a mathematical formula}(a,b) approximates x. We show that also {a mathematical formula}(a′,b′) approximates x, i.e., that {a mathematical formula}a′≤x≤b′. We distinguish two cases.First, assume that {a mathematical formula}(a,b)≤p(a′,b′)≤pA(a,b). Since x is a fixpoint of O and A an approximator of O, we find that {a mathematical formula}x=O(x)∈A(x,x)⊆A(a,b)⊆(a′,b′).Second, assume that {a mathematical formula}a′=a and {a mathematical formula}A(a,b′)2≤b′≤b. Since every tuple in a well-founded induction of a symmetric approximator is consistent, we know that {a mathematical formula}b′≥a. Since also {a mathematical formula}x≥a, we see that {a mathematical formula}a≤x∧b′≤b′. Hence {a mathematical formula}x∧b′∈[a,b′], thus {a mathematical formula}O(x∧b′)∈A(a,b′), and we see that {a mathematical formula}O(x∧b′)≤A(a,b′)2≤b′. Since x is grounded, this implies that {a mathematical formula}x≤b′; we conclude that also in this case {a mathematical formula}x∈[a′,b′].We have thus shown that every step in a well-founded induction of A preserves all grounded fixpoints.  □
+      </paragraph>
+      <paragraph label="Corollary 4.7">
+       If the well-founded fixpoint of a symmetric approximator A of O is exact, then this point is the unique (strictly) grounded fixpoint of O.
+      </paragraph>
+      <paragraph>
+       Since the Kripke–Kleene fixpoint approximates the well-founded fixpoint, we also get the following property.
+      </paragraph>
+      <paragraph label="Corollary 4.8">
+       If the Kripke–Kleene fixpoint of a symmetric approximator A of O is exact, then it is the unique fixpoint of O and it is (strictly) grounded.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Grounded fixpoints of logic programs
+     </section-title>
+     <paragraph>
+      In this section, we discuss grounded fixpoints in the context of logic programming. It follows immediately from the algebraical results (Corollary 4.5 and Theorem 4.6) that stable models are grounded fixpoints of the immediate consequence operator and that all grounded fixpoints are minimal fixpoints approximated by the well-founded model. Furthermore, if the Kripke–Kleene or well-founded model is exact, then it is the unique grounded fixpoint of {a mathematical formula}TP.
+     </paragraph>
+     <paragraph>
+      Grounded fixpoints can be explained in terms of unfounded sets, a notion that was first defined by Van Gelder, Ross and Schlipf [41] in their seminal paper introducing the well-founded semantics. Unfounded sets of three-valued interpretations are a key concept in the construction of the well-founded model. Intuitively, an unfounded set is a set of atoms that might circularly support themselves, but have no support from outside. Stated differently, an unfounded set of a logic program {a mathematical formula}P with respect to a (partial) interpretation {a mathematical formula}I is a set U of atoms such that {a mathematical formula}P does not provide support for any atom in U if the atoms in U are assumed false.
+     </paragraph>
+     <paragraph>
+      Below, we define the concept of unfounded set in the context of two-valued interpretations. For clarity, we refer to our unfounded sets as “2-unfounded sets” and to the original definition by Van Gelder, Ross and Schlipf as “GRS-unfounded sets”.
+     </paragraph>
+     <paragraph label="Definition 5.1">
+      2-Unfounded setLet {a mathematical formula}P be a logic program and {a mathematical formula}I⊆Σ an interpretation.A set {a mathematical formula}U⊆Σ is a 2-unfounded set of I (with respect to {a mathematical formula}P) if for each rule {a mathematical formula}r∈P with {a mathematical formula}head(r)∈U, {a mathematical formula}body(r)I[U:f] is false. A 2-unfounded set U of I is called proper if U is a nonempty subset of I.
+     </paragraph>
+     <paragraph>
+      Thus, U is a 2-unfounded set of I if after revising I by setting atoms of U to false, no atom in U can be derived.
+     </paragraph>
+     <paragraph>
+      All interpretations I admit 2-unfounded sets, in particular the empty set ∅ and every set U consisting of atoms p that are false in I and for which every rule {a mathematical formula}r∈P with {a mathematical formula}head(r)=p has a false body in I. Indeed, for such sets, it holds that {a mathematical formula}I[U:f]=I and no rule derives an element of U. However, not every interpretation I admits a proper 2-unfounded set. If I has a proper 2-unfounded set, then this means that I cannot be built up from the ground.
+     </paragraph>
+     <paragraph>
+      In Section 5.1, we investigate the relationship between this formalisation of unfounded sets and the original one. In particular, we extend the above definition to three-valued interpretations and show that the different notions of unfounded set are equivalent in the context of the well-founded model construction. First, we show how unfounded sets are related to the algebraical notion of groundedness.
+     </paragraph>
+     <paragraph>
+      The definition of 2-unfounded set can be easily rephrased in terms of the operator {a mathematical formula}TP, as shown in the following proposition.
+     </paragraph>
+     <paragraph label="Proposition 5.2">
+      U is a 2-unfounded set of I with respect to{a mathematical formula}Pif and only if{a mathematical formula}TP(I[U:f])∩U=∅.
+     </paragraph>
+     <paragraph label="Proof">
+      Follows immediately from the fact that {a mathematical formula}p∈TP(I[U:f]) if and only if for some rule {a mathematical formula}r∈P with {a mathematical formula}head(r)=p, it holds that {a mathematical formula}body(r)I[U:f]=t.  □
+     </paragraph>
+     <paragraph label="Example 5.3">
+      Let {a mathematical formula}P be the following program:{a mathematical formula} Let I be the interpretation {a mathematical formula}{p,q}. Then {a mathematical formula}U1={p,q} is a 2-unfounded set of I since {a mathematical formula}I[U1:f]={r} and in this structure, the bodies of rules defining p and q are false. Alternatively, we notice that {a mathematical formula}TP(I[U1:f])∩U1=∅∩U1=∅.The set {a mathematical formula}U2={p} is not a 2-unfounded set of I since the rule body for p evaluates to true in {a mathematical formula}I[U2:f].
+     </paragraph>
+     <paragraph>
+      In what follows, we use {a mathematical formula}U¯ for the set complement of U, i.e., {a mathematical formula}U¯=Σ∖U.
+     </paragraph>
+     <paragraph label="Proposition 5.4">
+      Let{a mathematical formula}Pbe a logic program,{a mathematical formula}I∈2Σan interpretation,{a mathematical formula}U⊆Σ. The following statements are equivalent:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       U is a 2-unfounded set of I,
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}TP(I∩U¯)⊆U¯, and
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}TP(I∖U)∩I⊆I∖U.
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      The equivalence of the first two follows immediately from Proposition 5.2 since {a mathematical formula}I[U:f]=I∖U=I∩U¯ and for every set X, {a mathematical formula}X⊆U¯ if and only if {a mathematical formula}X∩U=∅. The equivalence of the second and third follows from the fact that {a mathematical formula}I∖U=I∩U¯ and for all subsets {a mathematical formula}X,Y and Z of Σ it holds that {a mathematical formula}X∩Y⊆Y∖Z if and only if {a mathematical formula}X⊆(Σ∖Z).  □
+     </paragraph>
+     <paragraph>
+      Proposition 5.4 shows that U is a 2-unfounded set if and only if its complement satisfies the condition on v in Definition 3.1 if and only if {a mathematical formula}I∖U satisfies the condition on y in Definition 3.2. This allows us to reformulate the condition that I is grounded as follows.
+     </paragraph>
+     <paragraph label="Proposition 5.5">
+      A structure I is (strictly) grounded for{a mathematical formula}TPif and only if I does not contain atoms that belong to a 2-unfounded set U of I with respect to P.
+     </paragraph>
+     <paragraph label="Proof">
+      First, suppose I is grounded for {a mathematical formula}TP and U is a 2-unfounded set of I. Let {a mathematical formula}V=U¯ denote the set complement of U. Since U is a 2-unfounded set, {a mathematical formula}TP(I∩V)⊆V. Thus, the definition of groundedness yields {a mathematical formula}I⊆V, and hence that {a mathematical formula}U∩I=∅. We conclude that I is indeed disjoint from any 2-unfounded set.The reverse direction is analogous. Suppose every 2-unfounded set is disjoint from I. Let V be such that {a mathematical formula}TP(I∩V)⊆V and let {a mathematical formula}U=V¯ denote the complement of V. Then again {a mathematical formula}I[U:f]=I∩V and the result follows.We already established in Proposition 3.5 that groundedness is equivalent with strict groundedness in this context.  □
+     </paragraph>
+     <paragraph label="Corollary 5.6">
+      A structure I is a grounded fixpoint of{a mathematical formula}TPif and only if it is a fixpoint of{a mathematical formula}TPand it has no proper 2-unfounded sets.
+     </paragraph>
+     <paragraph>
+      We call grounded fixpoints of {a mathematical formula}TPgrounded models of{a mathematical formula}P. Similarly to ultimate semantics, grounded models are insensitive to 2-equivalence-preserving rewritings in the bodies of rules: if {a mathematical formula}P and {a mathematical formula}P′ are such that {a mathematical formula}TP=TP′, then the grounded models of {a mathematical formula}P and {a mathematical formula}P′ coincide. Also similar to ultimate semantics, the above property comes at a cost.
+     </paragraph>
+     <paragraph label="Theorem 5.7">
+      The problem “given a finite propositional logic program{a mathematical formula}P, decide whether{a mathematical formula}Phas a grounded model” is{a mathematical formula}Σ2P-complete.
+     </paragraph>
+     <paragraph>
+      The proof of this theorem is heavily inspired by the proof of a similar property for ultimate stable models (Theorem 6.12) by DMT [12]; we use the same reduction of a {a mathematical formula}Σ2P-hard problem to our problem.
+     </paragraph>
+     <paragraph label="Proof">
+      Given an interpretation I, the task of verifying that I is a grounded model can be done by calculating {a mathematical formula}TP(I[U:f]) for all candidate proper 2-unfounded sets, i.e., non-empty sets U with {a mathematical formula}U⊆I. Hence this task is in co-NP. Thus the task of deciding whether there exists grounded model certainly is in the class {a mathematical formula}Σ2P.We now show {a mathematical formula}Σ2P-hardness of the problem of existence of a grounded model of a program {a mathematical formula}P. Let φ be a propositional formula in DNF over propositional symbols {a mathematical formula}x1,…,xm,y1,…,yn. For an interpretation {a mathematical formula}I⊆{x1,…,xm}, we define {a mathematical formula}φI as the formula obtained from φ by replacing all atoms {a mathematical formula}xi∈I by t and all atoms {a mathematical formula}xi∉I by f. Recall that the problem of deciding whether there exists an interpretation {a mathematical formula}I⊆{x1,…,xm} such that {a mathematical formula}φI is a tautology is {a mathematical formula}Σ2P-hard. We now reduce this problem to our problem. For each {a mathematical formula}xi, we introduce a new variable {a mathematical formula}xi′; we will use {a mathematical formula}xi′ to represent the negation of {a mathematical formula}xi. Let {a mathematical formula}φ′ be the formula obtained from φ by replacing all literals {a mathematical formula}¬xi by {a mathematical formula}xi′. We define a program {a mathematical formula}P(φ) consisting of the following clauses
+      <list>
+       {a mathematical formula}xi←¬xi′ and {a mathematical formula}xi′←¬xi for each {a mathematical formula}i∈{1,…,m},{a mathematical formula}yi←φ′ for each {a mathematical formula}i∈{1,…,n},{a mathematical formula}p←φ′,{a mathematical formula}q←¬p∧¬q.Thus it suffices to show that if
+      </list>
+      <paragraph>
+       {a mathematical formula}I⊆{x1,…,xm}, then {a mathematical formula}M=Iˇ∪{p,y1,…,yn} is a grounded model of {a mathematical formula}P(φ) if and only if {a mathematical formula}φI is a tautology.In order to prove this, we fix I and {a mathematical formula}M=Iˇ∪{p,y1,…,yn}. Now, M is not a grounded model if and only if there exists a non-empty {a mathematical formula}U⊆M such that {a mathematical formula}TP(M∖U)∩U=∅. Since {a mathematical formula}TP is anti-monotone when restricted to the {a mathematical formula}xi and {a mathematical formula}xi′, each such U has the property that {a mathematical formula}xi∉U and {a mathematical formula}xi′∉U. Hence {a mathematical formula}U⊆{p,y1,…,yn}. Hence, such a U has the property that {a mathematical formula}φ′ is false in {a mathematical formula}M∖U. But {a mathematical formula}φ′ is false in {a mathematical formula}M∖U if and only if {a mathematical formula}φI is false in {a mathematical formula}{y1,…,yn}∖U. Thus, we conclude that M is not a grounded model if and only if there exists a truth assignment to {a mathematical formula}J⊆{y1,…,yn} such that {a mathematical formula}φI is false in J. Thus, M is not a grounded model if and only if {a mathematical formula}φI is not a tautology, which is exactly what we needed to show.  □
+      </paragraph>
+     </paragraph>
+     <paragraph>
+      Let us briefly compare grounded model semantics with the two most frequently used semantics of logic programming: well-founded and stable semantics. Firstly, we observe that these three semantics tend to prefer a subclass of the minimal models. We called this criterion groundedness and indeed found that stable semantics and two-valued well-founded semantics have the property that they only accept grounded interpretations.
+     </paragraph>
+     <paragraph>
+      Secondly, since these three semantics are closely related, it is to be expected that they often coincide. We established that for programs with a two-valued Kripke–Kleene model, the Kripke–Kleene semantics coincides with the supported model semantics and with the three semantics mentioned above. Also for programs with a two-valued well-founded model, the three semantics coincide. This sort of programs is common in applications for deductive databases (Datalog and extensions [1]) and for representing inductive definitions [14], [16]. In contrast, well-founded semantics only rarely coincides with stable semantics in the context of answer set programming (ASP). In the context where the well-founded model is three-valued, the question arises when stable and grounded models coincide. We illustrated in Example 4.4 that in this case, stable and grounded model semantics may disagree (since {a mathematical formula}{p,q} is not an ultimate stable model, it certainly is no stable model either). However, we observe that this example is quite extraordinary, and this is the case for all such programs that we found. It leads us to expect that both semantics coincide for large classes of ASP programs. It is therefore an interesting topic for future research to search for characteristics of programs that guarantee that both semantics agree. If such properties can be identified, then within those classes the grounded model semantics gives an equivalent reformulation of the stable semantics. If these classes cover the pragmatically important classes of ASP programs (that is, if the ASP programs written for practical problems fall inside them), then the grounded model semantics is an elegant, intuitive and concise variant of the standard stable semantics, which in practice coincides with it. And if pragmatically important classes of programs are discovered for which both semantics disagree, the question then is if other properties than groundedness can be identified that are possessed by stable but not by grounded models.
+     </paragraph>
+     <paragraph>
+      Grounded model semantics is, to the best of our knowledge, the first purely two-valued and algebraical semantics for logic programs that satisfies the desirable property of groundedness. The well-founded semantics explicitly uses three-valued interpretations in the well-founded model construction. Stable semantics uses three-valued logic implicitly in the sense that, as we showed, the Gelfond–Lifschitz reduct corresponds to an evaluation in a partial interpretation. One of the main advantages of grounded model semantics is that it is so easily definable for language extensions. All it takes is to define the (two-valued) immediate consequence operator. Typically this is quite easy (see the next paragraph). Note that the ultimate versions of the well-founded and stable semantics are purely algebraical as well but they are mathematically more involved since they still refer to three-valued interpretations (replacing Kleene valuation by supervaluation).
+     </paragraph>
+     <paragraph>
+      Grounded fixpoints for logic programs with abstract constraint atoms. The fact that grounded model semantics is two-valued and algebraical makes it not only easier to understand, but also to extend the semantics. To illustrate this, we consider logic programs with abstract constraint atoms as defined by Marek et al. [29]. An abstract constraint is a collection {a mathematical formula}C⊆2Σ. A constraint atom is an expression of the form {a mathematical formula}C(X), where {a mathematical formula}X⊆Σ and C is an abstract constraint. The goal of such an atom is to model constraints on subsets of X. The truth value of {a mathematical formula}C(X) in interpretation I is t if {a mathematical formula}I∩X∈C and f otherwise. Abstract constraints are a generalisation of pseudo-Boolean constraints, cardinality constraints, containment constraints, and much more. A deterministic logic program with abstract constraint atoms [29] is a set of rules of the form{sup:1}{a mathematical formula} where p is an atom and the {a mathematical formula}ai and {a mathematical formula}bi are constraint atoms. Having defined the truth value of a constraint atom {a mathematical formula}C(X) in an interpretation I, an immediate consequence operator can be defined in the standard way:{a mathematical formula} Grounded models of this operator still represent the same intuitions: an interpretation I is grounded if it admits no unfounded sets, or said differently, if it contains no atoms without external support. Thus, I is grounded if it contains no non-empty set U of atoms such that {a mathematical formula}body(r)I[U:f] for each rule r with {a mathematical formula}head(r)∈U.
+     </paragraph>
+     <paragraph label="Example 5.8">
+      Let Σ be the alphabet {a mathematical formula}{a,b,c,d}. For every i, let {a mathematical formula}C≥i be the cardinality constraint {a mathematical formula}{X⊆Σ||X|≥i}. Consider the following logic program {a mathematical formula}P over Σ:{a mathematical formula} Any interpretation in which d holds is not grounded since, taking {a mathematical formula}U={d} yields for every I that {a mathematical formula}C≥4(Σ)I[U:f]=f and thus {a mathematical formula}d∉TP(I[U:f]). It can easily be verified that {a mathematical formula}{a,b,c} is the only grounded model of {a mathematical formula}P.
+     </paragraph>
+     <paragraph>
+      This example illustrates that even for complex, abstract extensions of logic programs, groundedness is an intuitive property. Groundedness easily extends to these rich formalisms: the lattice always is the space of interpretations, the immediate consequence is defined in the standard way and defining grounded models takes only one line given this immediate consequence operator. This is in sharp contrast with more common semantics of logic programming (such as stable and well-founded semantics) which are often hard(er) to extend to richer formalisms, as can be observed by the many different versions of those semantics that exist for logic programs with aggregates [19], [37], [35], [18], [22].
+     </paragraph>
+     <paragraph>
+      Furthermore, groundedness is closely related to one of the most popular semantics for logic programs with aggregates, namely the FLP-stable semantics defined by Faber et al. [18]. Given an interpretation I, Faber, Pfeifer and Leone [18] defined the reduct of {a mathematical formula}P with respect to I as the program {a mathematical formula}PI={r|r∈P∧I⊨body(r)}. I is an FLP-stable model of {a mathematical formula}P if it is a subset-minimal model of {a mathematical formula}TPI. For a large class of programs, this semantics is equivalent with qrounded model semantics, as the following theorem shows.
+     </paragraph>
+     <paragraph label="Theorem 5.9">
+      Let{a mathematical formula}Pbe a logic program with abstract constraint atoms. If for each{a mathematical formula}p∈Σ, there is at most one rule{a mathematical formula}r∈Pwith{a mathematical formula}head(r)=p, then I is an FLP-stable model of{a mathematical formula}Pif and only if I is a grounded model of{a mathematical formula}P.
+     </paragraph>
+     <paragraph label="Proof">
+      In this case, for all I and J, {a mathematical formula}TPI(J)=TP(J)∩TP(I) since {a mathematical formula}PI is obtained from {a mathematical formula}P by removing all rules with body false in I and there is at most one rule defining each atom. If I is a supported model, we find that {a mathematical formula}TPI(J)=TP(J)∩I. It is easy to see that FLP-stable models are supported models, i.e., fixpoints of {a mathematical formula}TP. Assume I is a supported model. In this case I is FLP-stable if and only if there is no {a mathematical formula}J⊊I with {a mathematical formula}TP(J)∩I=TPI(J)⊆J, i.e., if and only if I is strictly grounded. Now, we know from Proposition 3.5 that in the context of logic programming, groundedness and strict groundedness are equivalent, which proves our claim.  □
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Discussion
+      </section-title>
+      <paragraph>
+       Unfounded sets. Unfounded sets were first defined by Van Gelder et al. [41] in their seminal paper introducing the well-founded semantics. Their definition slightly differs from Definition 5.1.
+      </paragraph>
+      <paragraph label="Definition 5.10">
+       GRS-unfounded setLet {a mathematical formula}P be a logic program and {a mathematical formula}I a three-valued interpretation. A set {a mathematical formula}U⊆Σ is a GRS-unfounded set of {a mathematical formula}I (with respect to {a mathematical formula}P) if for each rule r with {a mathematical formula}head(r)∈U, {a mathematical formula}body(r)I=f or {a mathematical formula}body(r)I[U:f]=f.
+      </paragraph>
+      <paragraph>
+       The first difference between 2-unfounded sets and GRS-unfounded sets is that GRS-unfounded sets are defined for three-valued interpretations, while we restricted our attention to (two-valued) interpretations. Our definition easily generalises to three-valued interpretations as well.
+      </paragraph>
+      <paragraph label="Definition 5.11">
+       3-Unfounded setLet {a mathematical formula}P be a logic program and {a mathematical formula}I a three-valued interpretation. A set {a mathematical formula}U⊆Σ is a 3-unfounded set of {a mathematical formula}I (with respect to {a mathematical formula}P) if for each rule r with {a mathematical formula}head(r)∈U, {a mathematical formula}body(r)I[U:f]=f.
+      </paragraph>
+      <paragraph label="Lemma 5.12">
+       Let{a mathematical formula}Pbe a logic program and I an interpretation. A set{a mathematical formula}U⊆Σis a 2-unfounded set of I with respect to{a mathematical formula}Pif and only if it is a 3-unfounded set of I with respect to{a mathematical formula}P.
+      </paragraph>
+      <paragraph label="Proof">
+       Follows immediately from the definitions.  □
+      </paragraph>
+      <paragraph>
+       This definition formalises the same intuitions as Definition 5.1: U is a 3-unfounded set if making all atoms in U false in {a mathematical formula}I results in a state where none of them can be derived. This definition easily translates to algebra as well.
+      </paragraph>
+      <paragraph label="Proposition 5.13">
+       Let{a mathematical formula}Pbe a logic program,{a mathematical formula}ΨPFitting's immediate consequence operator and{a mathematical formula}Ia three-valued interpretation. A set{a mathematical formula}U⊆Σis a 3-unfounded set if and only if{a mathematical formula}ΨP(I[U:f])2∩U=∅.
+      </paragraph>
+      <paragraph label="Proof">
+       Recall that Fitting's operator is defined by{a mathematical formula}{a mathematical formula} The claim now follows immediately from the definition of {a mathematical formula}ΨP(I)2.  □
+      </paragraph>
+      <paragraph>
+       The following proposition relates the two notions of unfounded sets.
+      </paragraph>
+      <paragraph label="Proposition 5.14">
+       Let{a mathematical formula}Pbe a logic program,{a mathematical formula}Ia three-valued interpretation and{a mathematical formula}U⊆Σ. The following properties hold.
+      </paragraph>
+      <list>
+       <list-item label="•">
+        If U is a 3-unfounded set, then U is a GRS-unfounded set.
+       </list-item>
+       <list-item label="•">
+        If{a mathematical formula}I[U:f]is more precise than{a mathematical formula}I, then U is a GRS-unfounded set if and only if U is a 3-unfounded set.
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       The first claim follows directly from the definitions.If {a mathematical formula}I and U are chosen such that {a mathematical formula}I[U:f] is more precise than {a mathematical formula}I, for every formula φ, the condition {a mathematical formula}φI=f or {a mathematical formula}φI[U:f]=f is equivalent with {a mathematical formula}φI[U:f]=f. Thus we conclude that in this case the notions of 3-unfounded set and GRS-unfounded set are indeed equivalent, which proves the second claim.  □
+      </paragraph>
+      <paragraph>
+       Thus, for a certain class of interpretations, the two notions of unfounded sets coincide. Furthermore, Van Gelder et al. only use unfounded sets to define the well-founded model construction. It follows immediately from Lemma 3.4 by Van Gelder et al. [41] that every partial interpretation {a mathematical formula}I in that construction with GRS-unfounded set U satisfies the condition in the second claim in Proposition 5.14. This means that 3-unfounded sets and GRS-unfounded sets are equivalent for all interpretations that are relevant in the original work! Essentially, we provided a new formalisation of unfounded sets that coincides with the old definition on all interpretations used in the original work.
+      </paragraph>
+      <paragraph>
+       Corollary 5.6, which states that grounded models of {a mathematical formula}P are fixpoints of {a mathematical formula}TP that permit no proper 2-unfounded sets, might sound familiar. Indeed, it has been shown that an interpretation is a stable model of a logic program if and only if it is a fixpoint of {a mathematical formula}TP and it permits no proper GRS-unfounded sets [28].
+      </paragraph>
+      <paragraph>
+       Groundedness and nondeterminism. In Section 5, we restricted our attention to logic programs with abstract constraint atoms in the bodies of rules, and we did not allow them in heads of rules. As argued by Marek et al. [29], allowing them as well in heads gives rise to a nondeterministic generalisation of the immediate consequence operator. A consistent nondeterministic operator maps every point {a mathematical formula}x∈L to a non-empty set {a mathematical formula}O(x)⊆L. Extending the notion of groundedness to this nondeterministic setting is out of the scope of this paper.
+      </paragraph>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Grounded fixpoints in Dung's argumentation frameworks and abstract dialectical frameworks
+     </section-title>
+     <paragraph>
+      Abstract argumentation frameworks (AFs) [17] are simple and abstract systems to deal with contentious information and draw conclusions from it. An AF is a directed graph where the nodes are arguments and the edges encode a notion of attack between arguments. In AFs, we are not interested in the actual content of arguments; this information is abstracted away. In spite of their conceptual simplicity, there exist many different semantics with different properties in terms of characterisation, existence and uniqueness.
+     </paragraph>
+     <paragraph>
+      Abstract dialectical frameworks (ADFs) [8], [7] are a generalisation of AFs in which not only attack, but also support, joint attack and joint support can be expressed.
+     </paragraph>
+     <paragraph>
+      Recently, Strass [38] has showed that many of the existing semantics of AFs and ADFs can be obtained by direct applications of AFT. In this section we use the aforementioned study to relate grounded fixpoints to AFs and ADFs. We first do so for the case of AFs and afterwards generalise to ADFs.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       Abstract argumentation frameworks
+      </section-title>
+      <paragraph>
+       An abstract argumentation framework Θ is a directed graph {a mathematical formula}(A,R) in which the nodes A represent arguments and the edges in R represent attacks between arguments. We say that a attacks b if {a mathematical formula}(a,b)∈R. A set {a mathematical formula}S⊆Aattacks a if some {a mathematical formula}s∈S attacks a. A set {a mathematical formula}S⊆Adefends a if it attacks all attackers of a. An interpretation of an AF {a mathematical formula}Θ=(A,R) is a subset S of A. The intended meaning of such an interpretation is that all arguments in S are accepted (or believed) and all arguments not in S are rejected. Interpretations are ordered according to the acceptance relation: {a mathematical formula}S1≤S2 iff {a mathematical formula}S1⊆S2, i.e., if {a mathematical formula}S2 accepts more arguments than {a mathematical formula}S1. There exist many different semantics of AFs which each define different sets of acceptable arguments according to different standards or intuitions. The major semantics for argumentation frameworks can be formulated using two operators: the characteristic function{a mathematical formula}FΘ, which maps an interpretation S to{a mathematical formula} and the operator {a mathematical formula}UΘ (U stands for unattacked), which maps an interpretation S to{a mathematical formula} An interpretation S is conflict-free if it is a postfixpoint of {a mathematical formula}UΘ ({a mathematical formula}S≤UΘ(S)), i.e., if no argument in S is attacked by S. The characteristic function is a monotone operator; its least fixpoint is called the grounded extension of Θ. The operator {a mathematical formula}UΘ is an anti-monotone operator; its fixpoints are called stable extensions of Θ. Many more semantics, such as admissible interpretations, complete extensions, semi-stable extensions, stage extensions and preferred extensions can be characterised using the above operators as well [17].
+      </paragraph>
+      <paragraph>
+       The following proposition shows that grounded extensions as defined in argumentation theory are indeed grounded in the sense defined in this paper.
+      </paragraph>
+      <paragraph label="Proposition 6.1">
+       The grounded extension of Θ is the unique grounded fixpoint of{a mathematical formula}FΘ.
+      </paragraph>
+      <paragraph label="Proof">
+       Follows immediately from Proposition 3.10 which states that a monotone operator has exactly one grounded fixpoint, namely its least fixpoint.  □
+      </paragraph>
+      <paragraph>
+       The grounded extension S consists of all arguments a that should definitely be accepted: all arguments that are globally unattacked, defended by globally unattacked arguments, and so on (recursively). As such, the intuition regarding the grounded extension is similar to intuitions regarding grounded fixpoints: we only accept arguments with a good, non-self-supporting defence.
+      </paragraph>
+      <paragraph label="Example 6.2">
+       Consider the following framework:{a mathematical formula} In this example a is unattacked, hence should be accepted; b is attacked by a, hence should not be accepted. The argument e is defended by a, hence can safely be accepted. c and d mutually attack each other and hence, defend themselves. Since we have already established that b is rejected, the only remaining argument that defends c is c itself. The grounded extension rejects self-defending arguments (i.e., rejects both c and d) and hence is {a mathematical formula}{a,e}.
+      </paragraph>
+      <paragraph label="Proposition 6.3">
+       An interpretation S is a stable extension of Θ if and only if it is a grounded fixpoint of{a mathematical formula}UΘ.
+      </paragraph>
+      <paragraph label="Proof">
+       Follows immediately from Proposition 3.11 which states that all postfixpoints of an antimonotone operator are grounded. Indeed, {a mathematical formula}UΘ is anti-monotone and stable extensions are exactly the fixpoints of {a mathematical formula}UΘ.  □
+      </paragraph>
+      <paragraph label="Example 6.4">
+       Example 6.2 continuedStable extensions are more liberal in accepting arguments than the grounded extension. In stable extensions, arguments are “by default” accepted, unless another accepted argument contradicts them. The framework considered in this example has two stable extensions: {a mathematical formula}{a,e,c} and {a mathematical formula}{a,e,d}.
+      </paragraph>
+     </section>
+     <section label="6.2">
+      <section-title>
+       Abstract dialectical frameworks
+      </section-title>
+      <paragraph>
+       We now extend our theory to the more general case of ADFs. In the context of AFs, grounded fixpoints characterise two existing semantics, when applied to two previously defined operators. In the context of ADFs, however, this does not hold. Here, grounded fixpoints yield a new semantics.
+      </paragraph>
+      <paragraph>
+       An abstract dialectical framework is a triple {a mathematical formula}Ξ=(S,L,C), where
+      </paragraph>
+      <list>
+       <list-item label="•">
+        S is a set of arguments,
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}L⊆S×S is a set of links; we define the parents of {a mathematical formula}s∈S as {a mathematical formula}par(s)={r∈S|(r,s)∈L},
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}C={Csin}s∈S is a collection of sets {a mathematical formula}Csin where for every s, {a mathematical formula}Csin⊆2par(s).
+       </list-item>
+      </list>
+      <paragraph>
+       Intuitively, for every s, {a mathematical formula}par(s) is the set of arguments that influence whether or not S should be accepted. This influence can be positive (support), negative (attack) or a combination of both. An argument s should be accepted if for some set {a mathematical formula}A∈Csin, all arguments in A are accepted and all arguments in {a mathematical formula}par(s)∖A are not. An argumentation framework {a mathematical formula}Θ=(A,R) is an ADF in which all links are attack relations, i.e., for every s, {a mathematical formula}par(s)={s′|(s′,s)∈R} and {a mathematical formula}Csin={∅} (the only way to accept an argument is if none of its attackers is accepted).
+      </paragraph>
+      <paragraph label="Example 6.5">
+       Let S be the set of arguments {a mathematical formula}{a,b,c,d} and L the following graph{a mathematical formula} Furthermore, {a mathematical formula}Cain={∅}, {a mathematical formula}Cbin={{b}}, {a mathematical formula}Ccin={∅,{a},{b}} and {a mathematical formula}Cdin={{a,b}}. The following observations provide an intuitive reading of the ADF {a mathematical formula}Ξ=(S,L,C).
+      </paragraph>
+      <list>
+       <list-item label="•">
+        a is a valid argument since it has trivial support.
+       </list-item>
+       <list-item label="•">
+        b supports itself: the only “reason” to believe b is b itself.
+       </list-item>
+       <list-item label="•">
+        a and b jointly attack c: since {a mathematical formula}Ccin={∅,{a},{b}}, c is only rejected if a and b are both present.
+       </list-item>
+       <list-item label="•">
+        a and b jointly support d: d is only acceptable if a and b both hold.
+       </list-item>
+      </list>
+      <paragraph>
+       With an ADF Ξ, we associate an operator {a mathematical formula}GΞ on the lattice {a mathematical formula}〈2S,⊆〉 as follows [38]:{a mathematical formula} This operator generalises the operator {a mathematical formula}UΘ for AFs.
+      </paragraph>
+      <paragraph>
+       Strass [38] showed that many of the existing semantics for ADFs can be characterised with AFT. For example, models of Ξ are fixpoints of {a mathematical formula}GΞ, stable models[7] of Ξ are ultimate stable fixpoints of {a mathematical formula}GΞ, etcetera. He also showed that there is a one to one correspondence between ultimate semantics for ADFs and for logic programs, in the sense that every ADF Ξ can be transformed to a logic program {a mathematical formula}P such that {a mathematical formula}GΞ and {a mathematical formula}TP coincide and vice versa. It is out of the scope of this paper to discuss all of the different semantics for ADFs. Here, we restrict ourselves to discussing the intuitions regarding grounded fixpoints. The intuitions underlying grounded fixpoints of ADFs are of course similar to those in other domains where AFT is applied. Groundedness serves to eliminate “ungrounded” reasoning: if the only reason for accepting an argument is that the argument itself holds, then this argument should be rejected.
+      </paragraph>
+      <paragraph label="Example 6.6">
+       Example 6.5 continuedThe operator {a mathematical formula}GΞ from this example has two fixpoints: {a mathematical formula}{a,b,d} and {a mathematical formula}{a,c}. The first of the two is not a grounded fixpoint because b itself is the only reason to accept b. Formally{a mathematical formula} thus indeed {a mathematical formula}{a,b,d} is ungrounded. On the other hand, {a mathematical formula}{a,c} is grounded; it is the unique grounded fixpoint of {a mathematical formula}GΞ.
+      </paragraph>
+      <paragraph>
+       We now study groundedness in the context of ADFs.
+      </paragraph>
+      <paragraph label="Definition 6.7">
+       SupportLet {a mathematical formula}Ξ=(S,L,C) be an ADF and {a mathematical formula}X⊆S. We say that {a mathematical formula}s∈Shas support in X if {a mathematical formula}X∩par(s)∈Csin.
+      </paragraph>
+      <paragraph label="Definition 6.8">
+       Grounded modelLet {a mathematical formula}Ξ=(S,L,C) be an ADF and {a mathematical formula}X⊆L a model of Ξ. We say that X is a grounded model of Ξ if for every set U with {a mathematical formula}∅⊊U⊆X, at least one {a mathematical formula}u∈U has support in {a mathematical formula}X∖U.
+      </paragraph>
+      <paragraph>
+       Thus, a grounded model is one without self-supporting arguments, i.e., without arguments that no longer have support once they are removed.
+      </paragraph>
+      <paragraph>
+       Below, {a mathematical formula}U¯ denotes the set complement of U, i.e., {a mathematical formula}U¯=S∖U.
+      </paragraph>
+      <paragraph label="Proposition 6.9">
+       Let{a mathematical formula}Ξ=(S,L,C)be an ADF. Then{a mathematical formula}X⊆Sis a grounded fixpoint of{a mathematical formula}GΞif and only if X is a grounded model of Ξ.
+      </paragraph>
+      <paragraph label="Proof">
+       The proof is analogous to the proof of Proposition 5.5.First, suppose X is a grounded fixpoint of {a mathematical formula}GΞ. Since X is a fixpoint of {a mathematical formula}GΞ, by definition it is a model of Ξ. If U is a set {a mathematical formula}∅⊊U⊆X, we need to show that at least one {a mathematical formula}u∈U has support in {a mathematical formula}X∖U. Suppose this condition is not satisfied, i.e., that no u has support in {a mathematical formula}X∖U. This means that {a mathematical formula}GΞ(X∖U)∩U=∅. Let {a mathematical formula}V=U¯; the previous equation translates to {a mathematical formula}GΞ(X∧V)≤V. Thus, the definition of groundedness yields {a mathematical formula}X≤V, and hence that {a mathematical formula}U∩X=∅, which contradicts with the assumption that {a mathematical formula}∅⊊U⊆X, hence X is indeed a grounded model of Ξ.The reverse direction is analogous. Suppose X is a grounded model of Ξ. Let V be such that {a mathematical formula}GΞ(X∧V)≤V and let {a mathematical formula}U=V¯∩X. Thus {a mathematical formula}U⊆X and (since {a mathematical formula}X∖U=X∧V) {a mathematical formula}GΞ(X∖U)∩U=∅. Thus, by our assumption, U is empty, i.e., {a mathematical formula}X≤V and we conclude that X is indeed a grounded fixpoint in this case.  □
+      </paragraph>
+      <paragraph>
+       It is worth noting that the set U in Definition 6.8 corresponds to a proper unfounded set in the case of logic programming.
+      </paragraph>
+      <paragraph>
+       Many semantics have been defined for ADFs. Most of these semantics are three-valued. The only two-valued semantics are conflict-free sets, supported models and two-valued stable models. Our algebraic results immediately yield that the two-valued stable semantics has the property that it only accepts grounded interpretations. Grounded fixpoints are a new element in the family of two-valued semantics of ADFs. We believe that this is an interesting new member: as illustrated above, it formalises simple and clear intuitions. Two-valued stable semantics and grounded fixpoint semantics formalise related ideas. As with logic programs, we conjecture that for large classes of ADFs these two semantics coincide; it remains an open research question to define those classes (or classes on which they differ). Since Strass [38] defined transformations between logic programs and ADFs that preserve the operator, solving this research question will also solve the related open question from Section 5 and vice versa.
+      </paragraph>
+     </section>
+     <section label="6.3">
+      <section-title>
+       Discussion
+      </section-title>
+      <paragraph>
+       Complexity. Strass has showed that there is a one to one correspondence between ultimate semantics for ADFs and for logic programs, in the sense that every ADF Ξ can be transformed to a logic program {a mathematical formula}P such that {a mathematical formula}GΞ and {a mathematical formula}TP coincide and vice versa. These results allow us to port complexity results from the field of logic programming to ADFs and vice versa. Hence, Theorem 5.7 yields that checking existence of a grounded fixpoint of an ADF is {a mathematical formula}Σ2P-complete.
+      </paragraph>
+      <paragraph>
+       In the context of ADFs, one is often also interested in other forms of reasoning such as credulous or sceptical reasoning [39]. Analysing complexity of grounded fixpoint semantics for more forms of reasoning is a topic for future work.
+      </paragraph>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      Grounded fixpoints of autoepistemic and default theories
+     </section-title>
+     <paragraph>
+      In this section, we study groundedness in the context of Moore's autoepistemic logic (AEL) [34] and Reiter's default logic (DL) [36].
+     </paragraph>
+     <paragraph>
+      In the late seventies, the field of knowledge representation and more particularly, the field of non-monotonic reasoning, increasingly became concerned with the representation of and reasoning on default statements “most P's are Q's”. The idea grew to interpret such statements as defeasible inference rules “if x is a P and it is not known that x is not a Q then (derive that) x is a Q”. This idea was developed independently in default logic by Reiter [36] and nonmonotonic logic I and II [32], [31]. Not much later, Moore [34] identified the latter sort of statements as autoepistemic statements and developed autoepistemic logic (AEL) for it.
+     </paragraph>
+     <paragraph>
+      In Moore's view, an autoepistemic theory {a mathematical formula}T is the representation of the knowledge of a perfect, rational, introspective agent. The agent is introspective in the sense that propositions in its theory may refer to its own knowledge, through the modal operator K. The informal interpretation of this operator is “I (the agent) know that …”. The agent is a perfect reasoner in the sense that its knowledge is closed under entailment. It is rational in the sense that it only believes propositions contained in or entailed by its knowledge base {a mathematical formula}T. Thus, {a mathematical formula}T expresses, directly or indirectly, all the agent knows. Levesque [27] called this assumption about T the “All I Know Assumption”. It is this assumption that distinguishes autoepistemic logic from the standard modal logic of knowledge S5. The challenge in defining such a logic lies in the fact that autoepistemic theories are self-referential: what is known by {a mathematical formula}T is made up from what is expressed by its statements, but what is expressed by a statement depends on what is known by {a mathematical formula}T.
+     </paragraph>
+     <paragraph>
+      Moore [34] formalised these ideas as follows. Let {a mathematical formula}L be the language of propositional logic based on the vocabulary Σ. Extending this language with a modal operator K, yields the language {a mathematical formula}LK of modal propositional logic. An autoepistemic theory (over Σ) is a set of formulas in {a mathematical formula}LK. A modal formula is a formula of the form Kψ, with ψ a formula. An objective formula is a formula without modal subformulas.
+     </paragraph>
+     <paragraph>
+      AEL uses the semantical concepts of standard modal logic. As before, an interpretation I is a subset of Σ. It formally represents a potential state of affairs of the world. A possible world structure is a set of interpretations. It can be seen as a Kripke structure with the total accessibility relation. The set of all possible world structures, {a mathematical formula}WΣ, is thus {a mathematical formula}2(2Σ). It forms a complete lattice under ⊆ as well as under ⊇. A possible world structure Q formally expresses a potential belief state of an agent by providing all the states of the world that the agent considers to be possible. Interpretations {a mathematical formula}I∈Q are formal representations of possible states of affairs and satisfy the propositions known by the agent. Interpretations {a mathematical formula}I∉Q represent impossible states of affairs in the sense that they violate some of the agent's propositions.
+     </paragraph>
+     <paragraph>
+      The semantics of AEL is based on the standard S5 truth assignment. For arbitrary formula φ in {a mathematical formula}LK, Q a possible world structure and I an interpretation, we define that φ is satisfied with respect to Q and I (denoted {a mathematical formula}Q,I⊨φ) by the standard recursive rules of propositional satisfaction, augmented with one additional rule:{a mathematical formula} For objective formulas φ, it holds that {a mathematical formula}Q,I⊨φ if and only if {a mathematical formula}I⊨φ. We define {a mathematical formula}Q⊨Kφ (φ is known in Q) if {a mathematical formula}Q,I⊨φ for every {a mathematical formula}I∈Q. As can be seen from the definition of satisfaction, modal formulas are evaluated with respect to the possible world structure Q, while objective formulas are evaluated with respect to the world I.
+     </paragraph>
+     <paragraph label="Example 7.1">
+      Consider a formula {a mathematical formula}φ=¬p∧¬Kp. Let Q be the possible world structure {a mathematical formula}{{p},∅} and let {a mathematical formula}I=∅. Then, {a mathematical formula}Q,I⊭p, and {a mathematical formula}Q,I⊭Kp, hence {a mathematical formula}Q,I⊨φ.
+     </paragraph>
+     <paragraph>
+      The class {a mathematical formula}WΣ of possible world structures exhibits a natural knowledge order. Intuitively Q contains less knowledge than {a mathematical formula}Q′ if it has more possible worlds. Formally we define {a mathematical formula}Q≤kQ′ if {a mathematical formula}Q⊇Q′. The intuition underlying this order is clarified by considering the concept of the objective theory of a possible world structure Q. This is the set of objective formulas that are known in Q. Formally, it is defined as {a mathematical formula}Thobj(Q)={φ∈L|Q⊨Kφ}={φ∈L|∀I∈Q:I⊨φ}. Moore [33] proved that the function {a mathematical formula}Thobj induces a one-to-one correspondence between possible world structures and sets of objective formulas closed under logical consequence. An obvious property is that {a mathematical formula}Q≤kQ′ if and only {a mathematical formula}Thobj(Q)⊆Thobj(Q′). Thus, if {a mathematical formula}Q≤kQ′ then indeed Q possesses less knowledge than {a mathematical formula}Q′.
+     </paragraph>
+     <paragraph>
+      With the order {a mathematical formula}≤k, {a mathematical formula}WΣ forms a complete lattice. For example, if {a mathematical formula}Σ={p}, the associated lattice is:{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Moore proposed to formalise the intuition that an AEL theory {a mathematical formula}T expresses “all the agent knows” in semantical terms, as a condition on the possible world structure Q representing the agent's belief state. The condition is as follows: a world I is possible according to Q if and only if I satisfies {a mathematical formula}T given Q, that is if {a mathematical formula}Q,I⊨T. Equivalently, I is impossible if and only if I violates {a mathematical formula}T given Q, or {a mathematical formula}Q,I⊭T. Formally, Moore defines that Q is an autoepistemic expansion of {a mathematical formula}T if for every world I, it holds that {a mathematical formula}I∈Q if and only if {a mathematical formula}Q,I⊨T.
+     </paragraph>
+     <paragraph>
+      The above definition is essentially a fixpoint characterisation. The underlying operator {a mathematical formula}DT is:{a mathematical formula} Clearly, Q is an autoepistemic expansion of T if and only if Q is a fixpoint of {a mathematical formula}DT. These autoepistemic expansions are the possible world structures that, according to [34] express candidate belief states of an autoepistemic agent with knowledge base {a mathematical formula}T. Moore called such structures grounded.
+     </paragraph>
+     <paragraph>
+      Soon, researchers such as Halpern and Moses [24] and Konolige [26] pointed out certain “anomalies” in the expansion semantics. The simplest example is the theory {a mathematical formula}T={Kp⇒p}. One of its expansions is {a mathematical formula}Q2={{p}}. The problem with {a mathematical formula}Q2 is that it is self-supporting: {a mathematical formula}Q2's assumption that p is known to be true, is essential for deriving p. Even from Moore's perspective there might be a problem with such self-supporting belief states. In the first part of his work [34], he argues that sets of inference rules such as the theories that arise in nonmonotonic reasoning, correspond to autoepistemic theories. Viewed from this perspective, {a mathematical formula}T is the singleton set consisting of one inference rule:{a mathematical formula} Surely, such an inference rule should be of no value, as it can only derive something that has been derived before! Therefore, the only acceptable belief state for {a mathematical formula}T seems to be {a mathematical formula}Q1, the state of total ignorance.
+     </paragraph>
+     <paragraph>
+      Several attempts were done to strengthen Moore's semantics. Halpern and Moses [24] proposed an alternative possible world semantics in which the model of an AEL theory {a mathematical formula}T is the {a mathematical formula}≤p-least prefixpoint of {a mathematical formula}DT, if it exists. Unfortunately, many simple and natural AEL theories have no model in this semantics. An example is {a mathematical formula}{¬Kp⇔q} for which several prefixpoints of {a mathematical formula}DT exist but no least one. Here, Moore's semantics makes sense. The unique expansion {a mathematical formula}{{q},{p,q}} captures the idea that there is no objective information about p, hence p is unknown; therefore, q holds.
+     </paragraph>
+     <paragraph>
+      Also Konolige [26] attempted to refine Moore's semantics. He called expansions weakly grounded and proposed alternative definitions for so called moderately grounded and strongly grounded expansions. Intuitively, a possible world structure is moderately grounded if all the information it contains can be derived from {a mathematical formula}T using only ignorance statements from Q. Thus, Q is moderately grounded if all knowledge in Q follows from {a mathematical formula}T augmented with all statements of the form {a mathematical formula}¬Kφ such that {a mathematical formula}Q⊭Kφ. Konolige proved that moderate grounded expansions are exactly the minimal fixpoints of {a mathematical formula}DT. However, he pointed out that even moderately grounded expansions can give rise to ungrounded reasoning. He illustrated this with the following example.
+     </paragraph>
+     <paragraph label="Example 7.2">
+      Consider the following theory{a mathematical formula} This theory has two moderately grounded possible world structures, namely {a mathematical formula}Q1={{p},{p,q}} and {a mathematical formula}Q2={{q},{q,p}}. {a mathematical formula}Q1 is the possible world structure in which p is known ({a mathematical formula}Kp,¬K¬p) and q is not known ({a mathematical formula}¬Kq,¬K¬q).
+     </paragraph>
+     <paragraph>
+      Again, Konolige argued that {a mathematical formula}Q1 from Example 7.2 should not be grounded. Indeed, in {a mathematical formula}Q1, the knowledge of p is self-supported. The intended model here is {a mathematical formula}Q2={{q},{q,p}}.
+     </paragraph>
+     <paragraph>
+      This motivated him to propose the strengthened notion of strongly grounded expansion. The disadvantage of this notion, as recognised by Konolige, is that it is only defined for theories in a normal form where every sentence is of the form{a mathematical formula} where α, γ and the {a mathematical formula}βi are objective. Furthermore, whether or not a possible world structure is strongly grounded depends on which transformation to the normal form is used. In other words, strong groundedness is syntactically defined and may hold for one theory and not for an equivalent theory.
+     </paragraph>
+     <paragraph label="Example 7.3">
+      Consider theories {a mathematical formula}T1={p} and {a mathematical formula}T2={Kp⇒p,¬Kp⇒p}. These theories are equivalent in the modal logic S5. However, {a mathematical formula}{{p}} is a strongly grounded expansion of {a mathematical formula}T1, while it is not a strongly grounded expansion of {a mathematical formula}T2.
+     </paragraph>
+     <paragraph>
+      We now investigate how the algebraical concept of grounded fixpoint translates to the setting of AEL and how it relates to the above ideas.
+     </paragraph>
+     <paragraph label="Definition 7.4">
+      Unfounded set of impossible worldsLet {a mathematical formula}T be an AEL theory and Q a possible world structure. A non-empty set U of worlds is an unfounded set of impossible worlds of Q if {a mathematical formula}U∩Q=∅ and for all {a mathematical formula}I∈U:(Q∪U),I⊨T.
+     </paragraph>
+     <paragraph>
+      If Q admits such a U, it contains unsupported knowledge. In particular, the knowledge that the worlds in U are impossible is unsupported, since if we weaken Q by accepting U as possible worlds, then none of the worlds of U can be dismissed as impossible. All of them satisfy {a mathematical formula}T in the revised belief state {a mathematical formula}Q∪U. The desired property that an agent's knowledge will satisfy is thus that Q does not admit such a U.
+     </paragraph>
+     <paragraph label="Definition 7.5">
+      Grounded expansionLet {a mathematical formula}T be an AEL theory. A possible world structure Q is grounded for{a mathematical formula}T if Q does not admit an unfounded set of impossible worlds.A possible world structure Q is a grounded expansion if it is an expansion and grounded.
+     </paragraph>
+     <paragraph>
+      As it turns out, this notion is again equivalent with the algebraical notion of groundedness.
+     </paragraph>
+     <paragraph label="Proposition 7.6">
+      A possible world structure Q is grounded for{a mathematical formula}Tif and only if Q is (strictly) grounded for{a mathematical formula}DTin the lattice{a mathematical formula}〈WΣ,≤k〉.
+     </paragraph>
+     <paragraph label="Proof">
+      The definition can be rephrased by focussing on {a mathematical formula}Q′=Q∪U. Q is grounded if there is no {a mathematical formula}Q′⊋Q such that {a mathematical formula}Q′⊈DT(Q′)∪Q. Then the proposition follows immediately from the fact that ⊋ is {a mathematical formula}&lt;k, ∪ is ⋀ and {a mathematical formula}⊆=≥k in the lattice {a mathematical formula}〈WΣ,≤k〉. Then Definition 7.5 equals the definition of a strictly grounded lattice element. Furthermore, Proposition 3.5 guarantees that the notion of strict groundedness coincides with groundedness in powerset lattices.  □
+     </paragraph>
+     <paragraph>
+      The intuitions expressed above correspond closely to those written down by Konolige [26]. On all the examples he gave, groundedness as we defined it, achieves the desired result. Furthermore, since grounded fixpoints are always minimal in {a mathematical formula}≤k, our notion of groundedness is indeed stronger than the notion of moderate groundedness. We show below (in Corollary 7.10) that our notion of groundedness is slightly weaker than strong groundedness. Furthermore, groundedness is defined for every AEL theory (not just for a given normal form) and it is defined purely semantically: two equivalent theories have the same grounded expansions.
+     </paragraph>
+     <paragraph label="Example 7.7">
+      Consider the following autoepistemic theory:{a mathematical formula} The intended possible world structure is clear here: p follows from T using the first sentence, hence p is known. The second sentence cannot be used to derive q, since Kp holds. Furthermore, the last sentence cannot be used to derive q since it first requires Kq. This theory has two autoepistemic expansions, namely {a mathematical formula}Q1={{p},{p,q}} (which corresponds to knowing p, and not knowing whether q holds or not) and {a mathematical formula}Q2={{p,q}} (knowing both p and q). The first one is grounded, while the second is not (it is not even a minimal fixpoint since {a mathematical formula}Q1≤kQ2). Indeed, if we remove the knowledge that q holds from {a mathematical formula}Q2 (i.e., we turn the previously impossible world {a mathematical formula}{p} into a possible world by adding it to {a mathematical formula}Q2), then {a mathematical formula}{p} remains possible; that is, the belief that {a mathematical formula}{p} is impossible is not derived anymore. Hence {a mathematical formula}Q2 is not grounded.
+     </paragraph>
+     <section label="7.1">
+      <section-title>
+       Groundedness of the AFT family of semantics for AEL
+      </section-title>
+      <paragraph>
+       As we saw, the problem of ungrounded expansions remained unsolved for several years. A new take at it was obtained when DMT applied AFT to AEL. We explain this approach.
+      </paragraph>
+      <paragraph>
+       The bilattice of {a mathematical formula}WΣ consists of pairs {a mathematical formula}(P,C) of possible worlds. Intuitively, such pairs approximate possible world structures Q such that {a mathematical formula}C⊆Q⊆P, i.e., {a mathematical formula}P≤kQ≤kC: therefore, C is to be understood as a set of certainly possible worlds and P as a set of possibly possible worlds.
+      </paragraph>
+      <paragraph>
+       For such pairs, the standard 3- and 4-valued Kleene truth valuation of propositional logic can be extended to a truth function {a mathematical formula}φ(P,C),I by adding the following rules for modal formulas:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}Kφ(P,C),I=t if for all {a mathematical formula}I′∈P, {a mathematical formula}φ(P,C),I′=t.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}Kφ(P,C),I=f if for some {a mathematical formula}I′∈C, {a mathematical formula}φ(P,C),I′=f.
+       </list-item>
+       <list-item label="•">
+        Otherwise, {a mathematical formula}Kφ(P,C),I=u.
+       </list-item>
+      </list>
+      <paragraph>
+       That is, φ is known in {a mathematical formula}(P,C) if it holds in all possibly possible worlds, it is not known if does not hold in at least one certainly possible world. Otherwise, it cannot be determined if φ is known.
+      </paragraph>
+      <paragraph>
+       This truth valuation induces a bilattice operator {a mathematical formula}AT that maps pairs {a mathematical formula}(P,C) to {a mathematical formula}(P′,C′) where{a mathematical formula}{a mathematical formula} Intuitively, the derived certainly possible worlds are those in which {a mathematical formula}T evaluates to true, and the derived possibly possible worlds are those in which {a mathematical formula}T does not evaluate to false.
+      </paragraph>
+      <paragraph>
+       DMT showed that {a mathematical formula}AT is an approximator of {a mathematical formula}DT. Hence, it induces a class of existing and new semantics for AEL: Moore's expansion semantics (supported fixpoints), Kripke–Kleene expansion semantics [9] (Kripke–Kleene fixpoints), stable extension semantics (stable fixpoints) and well-founded extension semantics (well-founded fixpoints) [11]. The latter two were new semantics induced by AFT. As a corollary of Theorem 4.6 and Proposition 4.3, we obtain the following analysis of groundedness.
+      </paragraph>
+      <paragraph label="Corollary 7.8">
+       Stable and two-valued well-founded extensions of{a mathematical formula}Tare grounded (in the sense ofDefinition 7.5). If the well-founded extension is two-valued, it is the unique stable extension and the unique grounded expansion. If the Kripke–Kleene expansion is two-valued, it is the well-founded extension, the unique expansion, the unique stable extension and it is grounded.
+      </paragraph>
+      <paragraph>
+       For the AEL theory {a mathematical formula}{Kp⇒p}, the possible world structure {a mathematical formula}{∅,{p}} is the well-founded and the unique stable extension. It is also the unique grounded expansion.
+      </paragraph>
+      <paragraph>
+       An example of an AEL theory with a grounded expansion that is not a stable extension is {a mathematical formula}{Kp⇒p,¬Kp⇒p}. Its unique grounded expansion is {a mathematical formula}{{p}} but it has no stable extensions and the well-founded extension is three-valued.
+      </paragraph>
+     </section>
+     <section label="7.2">
+      <section-title>
+       Default logic
+      </section-title>
+      <paragraph>
+       Similar to McDermott and Doyle [32], Reiter [36] proposed to implement defaults “most P's are Q's” by their defeasible inference rule “If x is known to be a P and it is consistent to believe that it is a Q, then (infer that) x is a Q”. Note that, through the standard duality of modal logic, the second condition is equivalent to “it is not known that x is not a Q”. A default logic theory consists of sentences of propositional calculus and default expressions of the form:{a mathematical formula} where {a mathematical formula}α,β1,…,βn,γ are expressions of propositional logic. The informal semantics of such an expression is “if α is known, and it is consistent to believe {a mathematical formula}β1, …, and {a mathematical formula}βn, then γ holds”. For this logic, Reiter developed his extension semantics (see below). It soon became clear that Reiter's extension semantics had some exquisite features. For example, consider the following default theory:{a mathematical formula} It has one extension, namely the theory {a mathematical formula}Thobj({∅,{p}}). Clearly, in this example default logic avoids the ungrounded model that the related AEL theory {a mathematical formula}{Kp⇒p} has. The sort of ungrounded models that existed for AEL were never discovered in DL.
+      </paragraph>
+      <paragraph>
+       There is an obvious correspondence on the informal level between default expressions and AEL formulas. This connection was explicated by Konolige [26] who proposed to translate a default theory {a mathematical formula}T to the AEL theory {a mathematical formula}Kon(T) consisting of AEL formulas:{a mathematical formula} However Kon is not equivalence preserving. Indeed, {a mathematical formula}{p:p} is a counterexample, as it translates to the AEL theory {a mathematical formula}{Kp⇒p} which under Moore's expansion semantics is not equivalent. In fact, Gottlob [23] showed that no modular translations exist from DL to AEL (but non-modular transformations exist). For a while, it was believed that AEL and DL were quite different logics. Later, DMT [11] showed that, similar as for AEL, also with a default theory {a mathematical formula}T it is possible to associate an approximator {a mathematical formula}AT. This induced again the family of AFT semantics for DL which, just like for AEL, included several existing and some new semantics for DL: weak extensions [30] (supported fixpoints), Kripke–Kleene extensions (Kripke–Kleene fixpoints), Reiter's extensions [36] (stable fixpoints) and well-founded extension semantics [3] (well-founded fixpoint). Only Kripke–Kleene extensions were a new semantics induced by AFT.
+      </paragraph>
+      <paragraph>
+       Interestingly, it then appeared that {a mathematical formula}AT=AKon(T) for every default logic theory {a mathematical formula}T. Thus, a default theory and Konolige's (modular) translation to AEL have identical approximators. Therefore, they induce the same family of semantics. For example, the extensions of a default theory correspond to the stable extensions of its AEL translation. DMT [13] argued that the different semantics of AEL and DL induced by AFT correspond to different dialects of autoepistemic reasoning. The mismatch found between AEL and DL was due to the fact that Reiter's and Moore's semantics formalised different dialects of autoepistemic reasoning. However, Konolige's translation is correct on a deeper level: it preserves equivalence under every dialect of autoepistemic reasoning!
+      </paragraph>
+      <paragraph>
+       The above exposition not only tells the story of the link between AEL and DL but also provides the formal material for an analysis of groundedness in the context of DL. Definition 7.5 also defines groundedness in DL and using the fact that AFT characterises all main semantics of DL we obtain the following corollary of Theorem 4.6 and Proposition 4.3.
+      </paragraph>
+      <paragraph label="Corollary 7.9">
+       Reiter's extensions are grounded. If the well-founded extension of a DL theory is two-valued then it is the unique extension and the unique grounded weak extension. If the Kripke–Kleene extension of a DL theory is two-valued then it is grounded (and also the well-founded extension, the unique weak extension, the unique Reiter extension).
+      </paragraph>
+      <paragraph>
+       An example of a DL theory that has no Reiter extensions but has a grounded weak extension is:{a mathematical formula} which corresponds to the AEL theory {a mathematical formula}{Kp⇒p,¬Kp⇒p}. Its unique grounded weak extension is {a mathematical formula}Thobj({{p}}).
+      </paragraph>
+      <paragraph>
+       To end the discussion of groundedness in AEL and DL, we return to AEL and the strongly grounded expansions defined by Konolige. He defined them for AEL theories consisting of formulas in the following canonical form:{a mathematical formula} Such formulas are exactly the AEL formulas in the range of Kon. Hence, every AEL theory in this canonical form is {a mathematical formula}Kon(T) for some DL theory {a mathematical formula}T. Konolige showed that the strongly grounded expansions of {a mathematical formula}Kon(T) are exactly the Reiter extensions of {a mathematical formula}T. Combining this result with the previous corollary yields the following.
+      </paragraph>
+      <paragraph label="Corollary 7.10">
+       If Q is a strongly grounded AEL expansion of{a mathematical formula}T, then Q is a grounded expansion of{a mathematical formula}T.
+      </paragraph>
+     </section>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

@@ -1,0 +1,441 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    On the query complexity of selecting minimal sets for monotone predicates.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      The practical success of Boolean Satisfiability (SAT) solvers is demonstrated by an ever increasing number of applications. While some of these applications are naturally formulated as decision problems; others are not. In many settings SAT solvers are used for solving function problems. This is the case for example with computing a minimal unsatisfiable subset (MUS) of a CNF formula, a minimal correction subset (MCS) of a CNF formula, the backbone of a propositional formula, a prime implicant or implicate of a propositional formula, the largest autark assignment of a CNF formula, among many other function problems. Some of these function problems find important practical applications. For example MUSes are routinely used in abstraction refinement loops in software model checking (e.g. [1]) but also in ontology debugging [2], [3], prime implicates and implicants are used in model checking [4], [5], but also find a wide range of applications in AI [6], and backbones are used for example in configuration and in post-silicon fault localization [7] but also in optimization [8], [9].
+     </paragraph>
+     <paragraph>
+      Despite the vast number of settings in which SAT solvers are used for solving function problems, the worst-case number of times a SAT solver is called for solving these problems is in general not known with sufficient accuracy. For example, it is not known what is the best worst-case number of calls to a SAT solver for computing the backbone of a propositional formula, or for computing the maximum autarky of a CNF formula, or for computing a minimal unsatisfiable subset, or for computing a maximally satisfiable subset, or for computing a prime implicant or implicate, among many other function problems. Moreover, the exact query complexity of computing an MUS has been an open research topic for around two decades [10]. This article shows how worst-case number of SAT calls can be improved by using a SAT oracle with a witness. However, lower bounds for the number of calls are still left for future work.
+     </paragraph>
+     <paragraph>
+      We should note that lowering the number of SAT calls is not necessarily better from the practical perspective. Indeed, if a large number of SAT calls is replaced with a low number of very hard SAT calls it is not clear that the performance improves. However, the reduction of number of SAT calls effectively delegates some work to the SAT solver but also gives it more information about the problem, which is in general beneficial. In some cases, the best performance is obtained by hybrid approaches, where the number of SAT calls is parameterized, see for instance [11]. Hence, improving the upper bounds on the number of SAT calls opens possibilities for such algorithms.
+     </paragraph>
+     <paragraph>
+      This article extends recent work on unifying the approaches used for solving a large number of function problems related to propositional formulas [12], [13], namely function problems that can be modeled as computing a minimal set subject to a monotone predicate. More concretely, this article investigates the number of times SAT solvers are called for solving function problems, and refines known upper bounds for a number of problems.
+     </paragraph>
+     <paragraph>
+      Practical algorithms for solving function problems are often modeled with polynomial time algorithms that call a SAT solver a polynomial number of times. A well-known measure of the hardness of these function problems is the number of times the SAT solver is called given the problem instance size, i.e. the query complexity of the function problem. (Other possible measures of hardness, including the size or hardness of problem instances, are not considered in this and most earlier work.) Following standard approaches in computational complexity, a SAT solver can be viewed as an oracle: given an instance, the SAT solver answers either positively (for satisfiable instances) or negatively (for unsatisfiable instances). However, the operation of SAT solvers differs substantially from the traditional NP oracle (e.g. [14], [15]). In the case of positive answers, the SAT solver also returns a satisfying truth assignment (i.e. a witness). The ability of the SAT solver to return a witness on positive answers can have a profound impact on query complexity characterizations of function problems (related results have actually been investigated in the past, e.g. [16], [17]). This article shows that for some function problems, the availability of witnesses enables reducing the worst case number of oracle queries from polynomial to logarithmic. As a result, this article proposes to use witness oracles [18], [19] to model the operation of SAT solvers, as an alternative to the standard NP oracle, and to develop query complexity characterizations of function problems using witness oracles. These query complexity characterizations can then serve to compare available algorithms against the best known theoretical results.
+     </paragraph>
+     <paragraph>
+      The contributions of this article can be summarized as follows.{sup:1} For function problems that can be represented as computing a minimal set subject to a monotone predicate in certain general forms [12], [13], and have a constant number of minimal sets, the article shows that a minimal set can be computed with a logarithmic number of calls to a witness oracle. This result has a number of consequences, which the article also analyzes. For example, the backbone of a propositional formula or the independent variables of a propositional formula can be computed with a logarithmic number of calls to a witness oracle. In addition, a few additional results are included in the article, related to special cases of other function problems when the number of minimal sets is constant. Observe that, although the article addresses function problems solved with polynomial number of calls to a SAT solver, other oracles commonly used in practice could be considered. These include for example SMT, CSP, and QBF solvers.
+     </paragraph>
+     <paragraph>
+      The article is organized as follows. Section 2 introduces the notation used in the article. Section 3 introduces the studied problem and some of its particular instances. Section 4 develops query complexity results for certain forms of monotone predicates; it is shown that minimal sets for these predicates can be computed with a logarithmic number of calls to an NP oracle that provides a witness (the class {a mathematical formula}FPNP[wit,log]). Section 5 extends the results of the previous section for function problems that have exactly a constant number of minimal sets. Section 6 relates to existing work and the article concludes in Section 7.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Preliminaries
+     </section-title>
+     <paragraph>
+      This section introduces the notation and definitions used throughout the article.
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       Propositional logic
+      </section-title>
+      <paragraph>
+       Standard propositional logic definitions are used throughout the article (e.g. [21], [22]), including propositional formulas, truth assignments, etc. Some definitions are briefly reviewed in this section.
+      </paragraph>
+      <paragraph>
+       Sets are represented in calligraphic font, e.g. {a mathematical formula}R,W. Propositional formulas are also represented in calligraphic font, e.g. {a mathematical formula}F,H,T. Propositional variables are represented with letters from the end of the alphabet, e.g. {a mathematical formula}x,y,z, and indices can be used, e.g. {a mathematical formula}x1,y1. A literal is a variable {a mathematical formula}xi or its negation {a mathematical formula}¬xi.
+      </paragraph>
+      <paragraph>
+       The set of variables of a propositional formula {a mathematical formula}F are represented by {a mathematical formula}var(F). For simplicity, if not specified otherwise, the set of variables of a formula will be denoted by {a mathematical formula}X≜var(F). A clause c is a non-tautologous set of literals, interpreted as a disjunction of literals. A CNF formula {a mathematical formula}F is set clauses, interpreted as a conjunction of clauses.
+      </paragraph>
+      <paragraph>
+       When the set of variables of a formula {a mathematical formula}F is relevant, the notation {a mathematical formula}F(X) is used, meaning that F is defined in terms of variables from X. Substitutions of variables will be used. The notation {a mathematical formula}F[xi/yi] represents formula {a mathematical formula}F with variable {a mathematical formula}xi replaced with {a mathematical formula}yi. This definition can be extended to more than one variable. For the general case, if {a mathematical formula}X={x1,…,xn} and {a mathematical formula}Y={y1,…,yn}, then the notation {a mathematical formula}F[X/Y] represents formula {a mathematical formula}F with {a mathematical formula}x1 replaced by {a mathematical formula}y1, {a mathematical formula}x2 replaced by {a mathematical formula}y2, …, and {a mathematical formula}xn replaced by {a mathematical formula}yn, simultaneously. Alternatively, we write {a mathematical formula}F[x1/y1,x2/x2,…,xn/yn].
+      </paragraph>
+      <paragraph>
+       Throughout the paper, in formulas, we use the expression {a mathematical formula}SAT(ϕ) as a predicate returning true if and only if the propositional formula ϕ is satisfiable. Some of the proofs avail of several basic equalities, such as, {a mathematical formula}SAT(ϕ∨ψ)=SAT(ϕ)∨SAT(ψ), meaning that a disjunction of formulas is satisfiable if and only if one of the formulas is satisfiable. Or, analogously, {a mathematical formula}¬SAT(ϕ∨ψ)=¬SAT(ϕ)∧¬SAT(ψ), meaning that a disjunction is unsatisfiable if both disjuncts are unsatisfiable.
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Computational complexity
+      </section-title>
+      <paragraph>
+       Standard computational complexity definitions are used throughout the article [14], [15]. The notation is adapted from [15] and more recent papers (e.g. [23]). Besides the well-known complexity classes P, NP, coNP, {a mathematical formula}Dp, as well as {a mathematical formula}PNP=Δ2p, {a mathematical formula}NPNP=Σ2p, etc., the following classes of decision and function problems are used in the article (see [15] for a definition of function problem):
+      </paragraph>
+      <list>
+       <list-item label="•">
+        FP: class of function problems solvable in deterministic polynomial time.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}FPNP: class of function problems solvable in deterministic polynomial time by executing a polynomial number of calls to an NP oracle.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}FPNP[log]: class of function problems solvable in deterministic polynomial time by executing a logarithmic number of calls to an NP oracle.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}P∥NP is the class of decision problems that can be decided by a polynomial oracle machine as follows: On a given input x, the machine computes in polynomial time a polynomial number of instance of SAT and obtains the correct answers for those using an oracle. Using those answers, the machine calculates and responds either “yes” or “no” (hence the oracle calls are parallel or non-adaptive).
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}FP∥NP is the class of function problems that can be calculated by polynomial number of parallel calls to a SAT oracle in polynomial time.
+       </list-item>
+      </list>
+      <paragraph>
+       We note that, although {a mathematical formula}PNP[log]=P∥NP (e.g., [24], [15]), it is believed that {a mathematical formula}FPNP[log]≠FP∥NP (e.g., [25]).
+      </paragraph>
+      <paragraph>
+       As indicated in the introduction, a SAT solver computes witnesses for the positive outcomes. Thus, the standard NP oracle model is inadequate given that retrieving a witness requires more than a logarithmic number of calls to an NP oracle, unless {a mathematical formula}P=NP[16, Theorem 5.4]. Nevertheless, researchers have looked into a similar issue in the past, and proposed the use of a witness oracle, i.e. an NP oracle that returns a witness for the positive outcomes. The definition of a witness oracle is taken from [18, page 4] and [19, Definition 6.3.1, page 99] (variations on this definition are discussed in Remark 1). Observe that the difference between the default NP oracle is of interest only when a better than polynomial (e.g. logarithmic) number of calls can be used for solving a given function problem. Hence, this article considers the following additional complexity class {a mathematical formula}FPNP[wit,log], which is a class of function problems that can be solved with a logarithmic number of (adaptive) calls to a witness oracle. This class is formalized by the following two definitions.
+      </paragraph>
+      <paragraph label="Definition 1">
+       Let k be a constant and let R be a binary relation on strings. Consider the predicate {a mathematical formula}Ω(x)≜(∃z,|z|&lt;|q|k)(R(x,z)). A polynomial time Turing machine M with a witness-oracle is a polynomial-time machine with a oracle response tape and a query tape to ask queries to Ω. Additionally, M has the query state and the query-accept and query-reject states. Once M enters the query state, with q written on the query tape, the next configuration of M satisfies the following.
+      </paragraph>
+      <list>
+       <list-item label="•">
+        If {a mathematical formula}Ω(q) is false, then M is in the query-reject state.
+       </list-item>
+       <list-item label="•">
+        If {a mathematical formula}Ω(q) is true, then the M is in the query-accept state and the oracle response tape contains some string b such that {a mathematical formula}|b|&lt;|q|k and {a mathematical formula}R(q,b).
+       </list-item>
+      </list>
+      <paragraph label="Definition 2">
+       {a mathematical formula}FPNP[wit,log] is a class of function problems f that are computable by a polynomial time witness-oracle Turing machine M such that:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        On an input x, the machine M makes at most {a mathematical formula}O(log⁡(|x|)) oracle queries.
+       </list-item>
+       <list-item label="•">
+        R is computable in polynomial time.
+       </list-item>
+       <list-item label="•">
+        On an input x, the machine responds with some y such that {a mathematical formula}(x,y)∈f.
+       </list-item>
+      </list>
+      <paragraph label="Example 1">
+       Computing a satisfying assignment of a formula ϕ is in {a mathematical formula}FPNP[wit,log]. Consider a relation {a mathematical formula}R(ϕ,μ) that is true iff μ is a satisfying assignment of ϕ. Observe that {a mathematical formula}|μ|∈O(|ϕ|) and that R is computable in polynomial time. The machine M needs to call the oracle just once and simply copy the content of the oracle response tape onto the output. ▴
+      </paragraph>
+      <paragraph>
+       Observe that the membership in {a mathematical formula}FPNP[wit,log] does not require the Turing machine to work for an arbitrary NP oracle—it is sufficient to construct a machine for one specific oracle. Nevertheless, finding a satisfying assignment (FSAT) is complete for FNP. Hence, SAT as a witness, gives us all the power we need.
+      </paragraph>
+      <paragraph label="Remark 1">
+       Definition variationsDefinition 2 can easily be extended so that the oracle is called {a mathematical formula}g(x)-times and the relation R is harder to compute (for instance it may lie higher up in the polynomial hierarchy). Other variations on computations with witnesses exists. For instance, one may characterize computations of an optimum by an interactive computation between teacher and a student, where the student has limited computational power (see [19, Sec. 6.3]).
+      </paragraph>
+      <paragraph>
+       Throughout the article we use the well-known problem of maximum satisfiability.
+      </paragraph>
+      <paragraph label="Definition 3">
+       Partial maximum satisfiability (MaxSAT)Let {a mathematical formula}F denote a set of soft clauses, i.e. some may be falsified. Let {a mathematical formula}H denote a set of hard clauses, i.e. all must be satisfied. The PartialMaxSATproblem is the function problem of computing a largest set {a mathematical formula}S⊆F such that {a mathematical formula}H∪S is satisfiable.
+      </paragraph>
+      <paragraph>
+       If {a mathematical formula}H=∅, then the problem is referred to as (plain) MaxSAT. Observe that this definition differs somewhat from the standard definition (e.g. [26]); in our definition the actual set of satisfied clauses is to be computed, not just the number. In many practical applications of MaxSAT, this is exactly what is to be computed. With an NP oracle, the identification of the actual set of satisfied clauses requires more than a logarithmic number of calls to an NP oracle; otherwise {a mathematical formula}P=NP[16, Theorem 5.4].
+      </paragraph>
+      <paragraph label="Theorem 1">
+       PartialMaxSATis in{a mathematical formula}FPNP[wit,log].{sup:2}
+      </paragraph>
+      <paragraph label="Proof">
+       We will use SAT as the NP witness oracle (see also Example 1). Let n be the number of clauses of {a mathematical formula}F. It is well-known that one can construct a (CNF) formula for the expression {a mathematical formula}Σi=1nri≤k in polynomial time for {a mathematical formula}k≤n a natural number [27]. This enables us to construct for a given MaxSAT instance {a mathematical formula}(F,H) the formula {a mathematical formula}Mk≜H∧Σi=1nri≤k∧⋀C∈F(rC∨C), where {a mathematical formula}rC is a fresh variable for each clause C. Observe that {a mathematical formula}Mk is satisfiable if and only if there exists an assignment that satisfies all clauses of {a mathematical formula}H and unsatisfies at most k clauses in {a mathematical formula}F. Further, if a satisfying assignment of {a mathematical formula}Mk sets a variable {a mathematical formula}rC to 0, then it must satisfy the original clause C.Using binary search and calls to the oracle on {a mathematical formula}Mk, find the minimum {a mathematical formula}ko≤n for which {a mathematical formula}Mko is satisfiable, i.e. the maximum number of simultaneously satisfiable clauses of {a mathematical formula}F under the assumption that all clauses {a mathematical formula}H are satisfied. Write on the output those clauses for which {a mathematical formula}rC=0 in the satisfying assignment of {a mathematical formula}Mko. Oracle calls occurred during the binary search, requiring thus {a mathematical formula}O(log(n)) oracle calls. Hence, MaxSAT is in {a mathematical formula}FPNP[wit,log].  □
+      </paragraph>
+      <paragraph label="Remark 2">
+       Single witness callObserve that in the proof of Proposition 1 the oracle was called logarithmically many times but the witness was needed only in the last call. This in fact holds for any problem in {a mathematical formula}FPNP[wit,log]; see Lemma 6.3.4 by Krajíček [19].
+      </paragraph>
+      <paragraph label="Remark 3">
+       Relation to {a mathematical formula}FNP//OptP[log]Literature introduces the class {a mathematical formula}FNP//OptP[log], which is characterized by a polynomial nondeterministic Turing machine that is given advice in the form of an optimum for certain function [10]. So for instance, MaxSAT could be computed in this class similarly as in proof of Proposition 1, i.e. by calculating the number {a mathematical formula}ko of simultaneously satisfiable clauses by using the advice, and, use FNP to calculate the actual clauses. We{sup:3} conjecture that this result can be generalized to the whole classes, i.e. {a mathematical formula}FNP//OptP[log]=FPNP[wit,log].
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      Minimal sets over monotone predicates
+     </section-title>
+     <paragraph label="Definition 4">
+      Monotone predicates have recently been proposed as a unifying approach for computing minimal sets [4], [5], [12], [13]. Monotone predicateLet {a mathematical formula}R be a finite set. A predicate {a mathematical formula}P:2R→{0,1} is called monotone if {a mathematical formula}P(R0)≤P(R1) for any {a mathematical formula}R0⊆R1⊆R. Additionally, we require that {a mathematical formula}P(R)=1.
+     </paragraph>
+     <paragraph>
+      Definition 4 requires {a mathematical formula}P(R)=1. If this condition is not met, a single call to {a mathematical formula}P(R) can be issued to test this property. And, if {a mathematical formula}P(R)=0, then there is no set {a mathematical formula}W⊆R such that {a mathematical formula}P(W)=1 due to the monotonicity of P.
+     </paragraph>
+     <paragraph label="Definition 5">
+      Minimal setLet P be a monotone predicate over a set {a mathematical formula}R, and let {a mathematical formula}M⊆R be such that {a mathematical formula}P(M)=1. The set {a mathematical formula}M is minimal iff {a mathematical formula}∀M′⊊M¬P(M′).
+     </paragraph>
+     <paragraph label="Definition 6">
+      MSMP problemGiven a monotone predicate P over a set {a mathematical formula}R, the Minimal Set over a Monotone Predicate (MSMP) problem consists in finding a minimal subset {a mathematical formula}M of {a mathematical formula}R such that {a mathematical formula}P(M) holds.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Monotone predicate forms and problem examples
+      </section-title>
+      <paragraph>
+       The MSMP problem was shown to model a number of function problems related with computing minimal sets on propositional formulas in [12]. This work was extended in [13] to show that a much larger set of function problems can be reduced to the MSMP problem. As shown in [13] for the considered problems, the monotone predicates end up being of one of three forms. Let {a mathematical formula}R be a reference set, and let element {a mathematical formula}u∈R represent either a literal or a clause. Moreover, {a mathematical formula}σ(u) represents a Boolean formula built from u, where new variables may be used, but such that u is the only element from {a mathematical formula}R used in {a mathematical formula}σ(u). For example, {a mathematical formula}σ(u) can represent a clause, a literal, or the negation of a literal or of a clause, etc. Let {a mathematical formula}G denote a propositional formula, and let {a mathematical formula}W⊆R. Then, from [13] the following predicate forms are defined.
+      </paragraph>
+      <paragraph label="Definition 7">
+       Predicates of form {a mathematical formula}LA predicate P is of form{a mathematical formula}L iff its general form is given by,{a mathematical formula}
+      </paragraph>
+      <paragraph label="Definition 8">
+       Predicates of form {a mathematical formula}BA predicate P is of form{a mathematical formula}B iff its general form is given by,{a mathematical formula}
+      </paragraph>
+      <paragraph label="Definition 9">
+       Predicates of form {a mathematical formula}PA predicate P is of form{a mathematical formula}P iff its general form is given by,{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The following function problems in particular are studied in this article (all of which are in one of the forms {a mathematical formula}L, {a mathematical formula}B, {a mathematical formula}P).
+      </paragraph>
+      <paragraph label="Definition 10">
+       MUS; FMUSLet {a mathematical formula}F be an unsatisfiable CNF formula. A set of clauses {a mathematical formula}M⊆F is a Minimal Unsatisfiable Subset (MUS) iff {a mathematical formula}M is unsatisfiable and any proper subset of {a mathematical formula}M is satisfiable. FMUS is the function problem of computing an MUS of {a mathematical formula}F.
+      </paragraph>
+      <paragraph label="Definition 11">
+       MCS; FMCSLet {a mathematical formula}F be an unsatisfiable CNF formula. A set of clauses {a mathematical formula}C⊆F is a Minimal Correction Subset (MCS) iff {a mathematical formula}F∖C is satisfiable and for any proper subset {a mathematical formula}C′ of {a mathematical formula}C, {a mathematical formula}F∖C′ is unsatisfiable. FMCS is the function problem of computing an MCS of {a mathematical formula}F.
+      </paragraph>
+      <paragraph label="Definition 12">
+       Backbone; FBBLet {a mathematical formula}F be a satisfiable CNF formula. The backbone of {a mathematical formula}F is the maximal set of literals {a mathematical formula}B that are true in all models of {a mathematical formula}F, i.e. {a mathematical formula}F⊨⋀l∈Bl. FBB is the function problem of computing the backbone of {a mathematical formula}F.
+      </paragraph>
+      <paragraph label="Definition 13">
+       Variable independence; FVIndA Boolean formula {a mathematical formula}F is independent from {a mathematical formula}x∈var(F) iff {a mathematical formula}F↔F[x/0] (or, {a mathematical formula}F↔F[x/1]). FVInd is the function problem of computing a maximal set of variables of which {a mathematical formula}F is independent from.
+      </paragraph>
+      <paragraph>
+       Table 1 summarizes the monotone predicates for the above-defined problems. The predicates for computing FMUS and FMCS are obtained immediately. In FMUS, the predicate holds whenever the given set of clauses is unsatisfiable. Conversely, the predicate for FMCS holds whenever the complement is satisfiable. The monotone predicates for FMUS and FMCS are studied in further detail in [12], [13].
+      </paragraph>
+      <paragraph>
+       For FBB, the subformula {a mathematical formula}G is given by, {a mathematical formula}GBB≜F[X/X]∧F[X/X′], where {a mathematical formula}X′ is a fresh set of variables so that {a mathematical formula}x′ is a fresh variable for x. Consequently, {a mathematical formula}GBB∧(x∧¬x′) is unsatisfiable iff x is a backbone variable (whenever this formula is satisfiable, there are models of {a mathematical formula}F with {a mathematical formula}x=1 and {a mathematical formula}x=0). Hence, minimizing {a mathematical formula}W for {a mathematical formula}¬SAT(GBB∧(⋁x∈R∖W(x∧¬x′))) maximizes the complement of {a mathematical formula}W, and, the complement of {a mathematical formula}W is a set of backbone variables.{sup:4}
+      </paragraph>
+      <paragraph>
+       For FVInd, the subformula {a mathematical formula}G is given by, {a mathematical formula}GVInd≜(F[X/X]⊕F[X/X′]) where {a mathematical formula}X′ is again a fresh set of variables, and ⊕ is the XOR operator. To explain the rationale behind this formula consider the following formula for some set {a mathematical formula}W⊆R.{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The formula (4) is a tautology iff {a mathematical formula}F is independent of variables outside of {a mathematical formula}W, i.e. the value of {a mathematical formula}F does not change as long as the values of variables in {a mathematical formula}W do not change. The test whether (4) is a tautology is performed by a SAT call on its negation (recall that ⊕ and ↔ are negations of one another). Minimizing variables in {a mathematical formula}W leads to maximization of independent variables.
+      </paragraph>
+      <paragraph label="Example 2">
+       Let {a mathematical formula}F=(x∨¬y)∧(x∨y), {a mathematical formula}F′=(x′∨¬y′)∧(x′∨y′) and let {a mathematical formula}W={y}. The predicate for backbones for {a mathematical formula}F and {a mathematical formula}W takes the form {a mathematical formula}¬SAT(F∧F′∧x∧¬x′). The argument formula is indeed unsatisfiable as both x and {a mathematical formula}x′ must be true in order to satisfy {a mathematical formula}F and {a mathematical formula}F′, i.e., the predicate is true on {a mathematical formula}W.On the other hand, if {a mathematical formula}W=∅, the predicate takes the form {a mathematical formula}¬SAT(F∧F′∧((x∧¬x′)∨(y∧¬y′))), where the argument formula is satisfiable as y and {a mathematical formula}y′ can take different values, i.e. the predicate is false. Hence, {a mathematical formula}{y} is a minimal set for the predicate and consequently {a mathematical formula}{x} is the backbone. ▴
+      </paragraph>
+      <paragraph label="Example 3">
+       Let {a mathematical formula}F=(x∨y∨¬z)∧(x∨y∨¬z), {a mathematical formula}F′=(x′∨y′∨¬z′)∧(x′∨y′∨¬z′) and let {a mathematical formula}W={x,y}. For (4) we obtain {a mathematical formula}((x↔x′)∧(y↔y′))→(F↔F′). This can be simplified to {a mathematical formula}((x∨y∨z)∧(x∨y∨¬z))↔((x∨y∨z′)∧(x∨y∨¬z′)). If {a mathematical formula}x∨y is true, then both sides are true. Conversely, if {a mathematical formula}x∨y is false then both sides are false. Hence the formula is a tautology. Consequently, x and y are independent variables. ▴
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     Problems in {a mathematical formula}FPNP[wit,log]
+     <paragraph>
+      Fig. 1 presents the main results presented by this section. It is shown that all predicates of the form {a mathematical formula}B have a unique minimal set. Further, for all predicates of forms {a mathematical formula}L and {a mathematical formula}B, a minimal set can be calculated by a logarithmic number of calls to a witness oracle. For predicates of the form {a mathematical formula}P, it is shown that if there is only a unique minimal set, then this minimal set can also be calculated by a logarithmic number of calls to a witness oracle. Predicates of form {a mathematical formula}P with more than one minimal set are investigated in Section 5.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Preliminary results
+      </section-title>
+      <paragraph>
+       Before we study the problems of monotone predicates, we introduce the problem MaxSet, which we will exploit in proofs throughout the article.
+      </paragraph>
+      <paragraph label="Definition 14">
+       MaxSet problemLet {a mathematical formula}{F1(X),…,Fn(X)} be a set of formulas defined on a set of variables X. The function problem of computing the subset of the formulas {a mathematical formula}Fi that are satisfiable is the MaxSet problem for {a mathematical formula}{F1,…,Fn}.
+      </paragraph>
+      <paragraph label="Theorem 2">
+       We immediately obtain that MaxSet can be solved by a polynomial number of non-adaptive calls to an NP oracle. MaxSetis in{a mathematical formula}FP∥NP.
+      </paragraph>
+      <paragraph label="Proof">
+       The satisfiability of each formula {a mathematical formula}Fi can be tested independently of the other formula. Thus, n non-adaptive calls can be used for solving the MaxSet problem and so MaxSet is in {a mathematical formula}FP∥NP.  □
+      </paragraph>
+      <paragraph>
+       A less obvious but crucial result is that MaxSet can be solved by a logarithmic number of calls to an NP witness-oracle.
+      </paragraph>
+      <paragraph label="Theorem 3">
+       MaxSetis in{a mathematical formula}FPNP[wit,log].
+      </paragraph>
+      <paragraph label="Proof">
+       We reduce MaxSet to partial MaxSAT which, by Proposition 1, is in {a mathematical formula}FPNP[wit,log]. Consider {a mathematical formula}n+1 sets of distinct variables {a mathematical formula}X1,…,Xn, and Z, with {a mathematical formula}|Xi|=|X|, {a mathematical formula}1≤i≤n, and {a mathematical formula}|Z|=n. Define {a mathematical formula}zi↔Fi[X/Xi] and let,{a mathematical formula} It is plain to conclude that the largest number of {a mathematical formula}zi variables that can be set to 1 such that {a mathematical formula}T is satisfied identifies the largest set of satisfiable formulas. Formula {a mathematical formula}T can be encoded into an equisatisfiable CNF formula in polynomial time by introducing additional variables (e.g. [28]). The resulting clauses are marked as hard. Finally, define the set of soft clauses to be the set {a mathematical formula}{zi|1≤i≤n}. Therefore, the largest set of soft clauses that can be simultaneously satisfied such that {a mathematical formula}T is satisfied represents all of the Boolean functions that are satisfiable. Thus, MaxSet is in {a mathematical formula}FPNP[wit,log].  □
+      </paragraph>
+      <paragraph label="Remark 4">
+       An immediate generalization of Proposition 3 is that {a mathematical formula}FP∥NP⊆FPNP[wit,log] as any parallel queries to an NP oracle can be replaced by a logarithmic number of calls to a witness oracle. A similar result has been shown elsewhere in the context of function oracles [29, Thm. 3.13].
+      </paragraph>
+      <paragraph>
+       We continue by deriving a couple of useful lemmas for predicates of form {a mathematical formula}B.
+      </paragraph>
+      <paragraph label="Lemma 1">
+       Let P be a predicate of the form{a mathematical formula}Bover a set{a mathematical formula}Rand let{a mathematical formula}Wbe a subset of{a mathematical formula}R. The following equality holds{a mathematical formula}P(W)=⋀u∈R∖W¬SAT(G∧σ(u)). In another words,{a mathematical formula}P(W)holds iff for all the elements u in the complement of{a mathematical formula}W, the formula{a mathematical formula}G∧σ(u)is unsatisfiable.
+      </paragraph>
+      <paragraph label="Proof">
+       The lemma is proved by a series of equalities stemming from the definition of form {a mathematical formula}B (Definition 8) and the predicate {a mathematical formula}SAT (Section 2.1).{a mathematical formula}  □
+      </paragraph>
+      <paragraph label="Lemma 2">
+       Let P be a predicate of the form{a mathematical formula}Bover a set{a mathematical formula}R. Let{a mathematical formula}Mbe a minimal set of P and let{a mathematical formula}u∈R. The formula{a mathematical formula}G∧σ(u)is satisfiable iff{a mathematical formula}u∈M, i.e.{a mathematical formula}SAT(G∧σ(u))iff{a mathematical formula}u∈M. Consequently, the set{a mathematical formula}Mis unique.
+      </paragraph>
+      <paragraph label="Proof">
+       We show the contrapositive, i.e. that {a mathematical formula}u∉M iff {a mathematical formula}¬SAT(G∧σ(u)). Let {a mathematical formula}u∉M. From Lemma 1, {a mathematical formula}¬SAT(G∧σ(u)) must hold as {a mathematical formula}P(M) holds. Conversely, if {a mathematical formula}¬SAT(G∧σ(u)), then because {a mathematical formula}P(M)=1 and due to Lemma 1, also {a mathematical formula}P(M∖{u})=1 (putting u into the complement of {a mathematical formula}W preserves the validity of P). However, since {a mathematical formula}M is minimal, it must be that {a mathematical formula}u∉M.  □
+      </paragraph>
+      <paragraph>
+       We close this subsection by showing that even for predicates of form {a mathematical formula}P there are examples of function problems that have a unique minimal set.
+      </paragraph>
+      <paragraph label="Lemma 3">
+       The function problem of computing the set of independent variables of{a mathematical formula}F(FVInd) has a unique minimal set.
+      </paragraph>
+      <paragraph label="Proof">
+       By definition, Boolean function {a mathematical formula}F is independent of {a mathematical formula}xi iff {a mathematical formula}F⇔F[xi/0]⇔F[xi/1]. Thus, we can check each variable separately for independence. Any variable {a mathematical formula}xi of which {a mathematical formula}F is independent is added to a set {a mathematical formula}I. No other variable can be added to {a mathematical formula}I and {a mathematical formula}I is unique.  □
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Main results
+      </section-title>
+      <paragraph>
+       The first result shows that minimal sets for predicates of form {a mathematical formula}L can be solved by a logarithmic number of calls to an NP witness-oracle.
+      </paragraph>
+      <paragraph label="Theorem 4">
+       Let Γ be anMSMPproblem represented by a monotone predicate P of form{a mathematical formula}Lover a set{a mathematical formula}R. Then Γ is in{a mathematical formula}FPNP[wit,log].
+      </paragraph>
+      <paragraph label="Proof">
+       We reduce the problem of computing the smallest minimal set to MaxSAT. Let {a mathematical formula}M⊆R denote some minimal set of P. Then, by definition of predicate of form {a mathematical formula}L (Definition 7), there exists an assignment that satisfies {a mathematical formula}G∧⋀u∈R∖Mσ(u). Let {a mathematical formula}zu↔σ(u), where {a mathematical formula}zu is a fresh propositional variable for each {a mathematical formula}u∈R. Any minimal set {a mathematical formula}M corresponds to a maximal set {a mathematical formula}R∖M of variables {a mathematical formula}zu assigned to 1. We compute the largest minimal set as follows. Define the formula,{a mathematical formula} which is encoded to a set of hard clauses. Moreover, let the set of soft clauses be the set of unit clauses {a mathematical formula}{zu|u∈R}. This is a MaxSAT formulation, and by Proposition 1 the largest set of satisfied {a mathematical formula}zu variables can be found with a logarithmic number of calls to a witness oracle. The non-satisfied {a mathematical formula}zu variables represent a smallest minimal set of P. Thus, any function problem Γ represented with a monotone predicate P of form {a mathematical formula}L is in {a mathematical formula}FPNP[wit,log].  □
+      </paragraph>
+      <paragraph>
+       For predicates of form {a mathematical formula}B, a minimal set can be computed with a polynomial number of non-adaptive calls to an NP oracle, or, with a logarithmic number of calls to an NP witness-oracle.
+      </paragraph>
+      <paragraph label="Theorem 5">
+       Let Γ be anMSMPproblem represented by monotone predicate P of form{a mathematical formula}Bover a set{a mathematical formula}R. Then Γ is in{a mathematical formula}FP∥NPand in{a mathematical formula}FPNP[wit,log].
+      </paragraph>
+      <paragraph label="Proof">
+       Let {a mathematical formula}M⊆R be a minimal set of P and let {a mathematical formula}u∈R. From Proposition 2, formula {a mathematical formula}G∧σ(u) is satisfiable iff {a mathematical formula}u∈M. Hence, computing {a mathematical formula}M translates to deciding the satisfiability of {a mathematical formula}G∧σ(u) for each {a mathematical formula}u∈R. This is an instance of the MaxSet problem and therefore it belongs to {a mathematical formula}FP∥NP due to Proposition 2 and to {a mathematical formula}FPNP[wit,log] due to Proposition 3.  □
+      </paragraph>
+      <paragraph>
+       Up till now we have shown that both forms {a mathematical formula}B and {a mathematical formula}L enable logarithmic number of calls to an NP witness-oracle. So it remains to investigate the predicates of form {a mathematical formula}P. For this form we are able to show logarithmic complexity only when the number of minimal sets is bounded. In this section we focus on the case when there exists one and only one minimal set in the problem. The next section generalizes this result for an arbitrary k. Note that {a mathematical formula}k=1 is particularly important as there are problems that naturally have a single minimal set (e.g. FVInd).
+      </paragraph>
+      <paragraph>
+       We begin by a lemma for an arbitrary monotone predicate P. This lemma shows that if there is a unique minimal set, this set can be obtained by a polynomial number of queries to P.
+      </paragraph>
+      <paragraph label="Lemma 4">
+       Let P be a monotone predicate on a set{a mathematical formula}Rsuch that it has a unique minimal set{a mathematical formula}M. For any element{a mathematical formula}u∈Rit holds that{a mathematical formula}u∈Miff{a mathematical formula}P(R∖{u})=0.
+      </paragraph>
+      <paragraph label="Proof">
+       (⇒) Assume for contradiction that {a mathematical formula}u∈M and {a mathematical formula}P(R∖{u})=1. Since {a mathematical formula}P(R∖{u})=1, by minimization of {a mathematical formula}R∖{u} we obtain a minimal set {a mathematical formula}M′ of P. However, since {a mathematical formula}u∉M′, the set {a mathematical formula}M′ must be different from {a mathematical formula}M, which is a contradiction since {a mathematical formula}M is a unique minimal set of P.(⇐) If {a mathematical formula}u∉M then {a mathematical formula}M⊆(R∖{u}). Since P is monotone and {a mathematical formula}P(M)=1, it also holds that {a mathematical formula}P(R∖{u})=1.  □
+      </paragraph>
+      <paragraph>
+       Lemma 4 together with the fact that {a mathematical formula}MaxSet∈FPNP[wit,log] enables constructing a minimal set for predicates of form {a mathematical formula}P whenever the minimal set is unique.
+      </paragraph>
+      <paragraph label="Theorem 6">
+       Let Γ be anMSMPproblem represented by a monotone predicate P of form{a mathematical formula}P, such that Γ has exactly one minimal set. Then,{a mathematical formula}Γ∈FP∥NPand{a mathematical formula}Γ∈FPNP[wit,log].
+      </paragraph>
+      <paragraph label="Proof">
+       We reduce the problem of computing a minimal set for P to the MaxSet problem. Lemma 4 enables us to determine whether an arbitrary element {a mathematical formula}u∈R belongs to {a mathematical formula}M or not. Hence, we construct {a mathematical formula}M by testing {a mathematical formula}P(R∖{u}) for each {a mathematical formula}u∈R. This gives rise to {a mathematical formula}|R| tests of P. For a set {a mathematical formula}W, from definition of {a mathematical formula}P (Definition 9), it holds that {a mathematical formula}P(W)=1 iff the formula {a mathematical formula}G∧⋀u∈Wσ(u) is satisfiable. Hence, each of the tests {a mathematical formula}P(R∖{u}) translates to a SAT test. This concludes the reduction of Γ to MaxSet, and thus {a mathematical formula}Γ∈FP∥NP and {a mathematical formula}Γ∈FPNP[wit,log].  □
+      </paragraph>
+     </section>
+     <section label="4.3">
+      <section-title>
+       Consequences
+      </section-title>
+      <paragraph>
+       This section highlights some of the number of consequences from the results in the previous section, namely Theorem 4, Theorem 5, Theorem 6. For the concrete case of computing prime implicates, Theorem 6 refines the claims in [4, Theorem 3] and in [5, Theorem 4.2] regarding the selection of a minimal set of P when P has a unique minimal set. The claim in [4], [5] states that the worst-case number oracle calls is necessarily linear in the size of the problem representation. If the oracle calls use a witness oracle, however, then, as Theorem 6 shows, a better worst-case is achieved.
+      </paragraph>
+      <paragraph>
+       An immediate consequence of Theorem 5 is that the backbone of a Boolean formula can be computed with a logarithmic number of calls to a witness oracle. From a query complexity perspective, this represents an exponential improvement over the best known algorithms [7].
+      </paragraph>
+      <paragraph label="Corollary 1">
+       The function problem of computing the backbone of a propositional formula FBB (but also FBBr)[13]is in{a mathematical formula}FPNP[wit,log].
+      </paragraph>
+      <paragraph>
+       We should note here that the predicate used in Section 3.1 for computing the backbone, gives us the backbone on variables rather than literals. This, however, is not an issue because such algorithm can easily issue a single SAT call at the beginning, to obtain an arbitrary satisfying assignment of the formula. Any literal that does not appear in this assignment, is definitely not in the backbone, which means that at least one literal is excluded from the backbone for each variable.
+      </paragraph>
+      <paragraph>
+       Theorem 6 and Proposition 3 provide us with the following result.
+      </paragraph>
+      <paragraph label="Corollary 2">
+       FVInd is in{a mathematical formula}FPNP[wit,log].
+      </paragraph>
+      <paragraph label="Corollary 3">
+       Corollary 2 refines the query complexity of {a mathematical formula}FPNP suggested in [30]. If the oracle computes witness (e.g. a SAT solver), then a logarithmic number of calls suffices. The main result for predicates of form {a mathematical formula}P is more restricted, due to the requirement of the problem having a unique minimal set. Nevertheless, in those cases, one can compute a minimal set with a logarithmic number of calls to a witness oracle. One concrete example is the extraction of an MUS. FMUS for formulas with a unique MUS is in{a mathematical formula}FPNP[wit,log].
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     Complexity of selecting k minimal sets
+     <paragraph>
+      This section extends the results of Section 4 to the case when it is known that there are exactly k minimal sets, for some constant k. Given the results of previous sections, form {a mathematical formula}P is the only predicate form of interest, since function problems represented with predicates of either form {a mathematical formula}L or {a mathematical formula}B can be solved with a logarithmic number of witness oracle calls (see Fig. 1).
+     </paragraph>
+     <paragraph>
+      We begin with a couple of lemmas. In the previous section, Lemma 4 shows that for monotone predicates with a unique minimal set {a mathematical formula}M it holds that {a mathematical formula}P(R∖{u})=0 iff {a mathematical formula}u∈R. The following lemma generalizes this for k minimal sets requiring that u lies in the intersection of all the minimal sets.
+     </paragraph>
+     <paragraph label="Lemma 5">
+      Let P be a monotone predicate over a set{a mathematical formula}Rsuch that it has exactly{a mathematical formula}l&gt;0minimal sets{a mathematical formula}M1,…,Ml. It holds that{a mathematical formula}P(R∖{μ})=0iff{a mathematical formula}μ∈⋂i∈1..lMi. Consequently,{a mathematical formula}P(R∖{μ})=1for any P such that{a mathematical formula}Rcontains at least two disjoint minimal sets, for any{a mathematical formula}μ∈R(since the intersection is empty).
+     </paragraph>
+     <paragraph label="Proof">
+      (⇒) Each of the {a mathematical formula}Mi is such that {a mathematical formula}P(Mi)=1 and because P is monotone, {a mathematical formula}P(W)=1 for any {a mathematical formula}W s.t. {a mathematical formula}Mi⊆W. Hence, at least one element needs to be removed from each {a mathematical formula}Mi in order to falsify {a mathematical formula}P(R∖{μ}).(⇐) Let μ be an element lying in the intersection of all {a mathematical formula}M1,…,Ml. Since the sets {a mathematical formula}Mi are minimal, the predicate P returns false on {a mathematical formula}Mi∖{μ}. Since {a mathematical formula}R does not contain any other minimal sets, {a mathematical formula}P(R∖{μ}) is also false.  □
+     </paragraph>
+     <paragraph>
+      The following lemma shows that if we have k minimal sets, then a set with a single minimal set can be obtained by removing {a mathematical formula}k−1 elements from {a mathematical formula}R.
+     </paragraph>
+     <paragraph label="Lemma 6">
+      Let P be a monotone predicate on a set{a mathematical formula}Rsuch that{a mathematical formula}Rcontains exactly k distinct minimal sets{a mathematical formula}M1,…,Mk. For any{a mathematical formula}i∈1..kthere exists a set{a mathematical formula}D⊆Rwith{a mathematical formula}|D|=k−1such that{a mathematical formula}R∖Dcontains one and only one minimal set, which is the set{a mathematical formula}Mi.
+     </paragraph>
+     <paragraph label="Proof">
+      Since the sets {a mathematical formula}Mj are minimal and distinct, there are no two sets {a mathematical formula}Mj⊆Mj′ with {a mathematical formula}j≠j′. For each {a mathematical formula}Mj, with {a mathematical formula}j≠i, add to {a mathematical formula}D an element {a mathematical formula}μj∈Mj∖Mi. Since the sets {a mathematical formula}Mj are minimal, for such {a mathematical formula}D the set {a mathematical formula}R∖D contains only one minimal set—the set {a mathematical formula}Mi. Now {a mathematical formula}D has at most{a mathematical formula}k−1 elements. Add to it arbitrary elements to make it of size {a mathematical formula}k−1. If {a mathematical formula}R∖Mi does not have enough elements to do so, add dummy elements to {a mathematical formula}R in order to ensure that it has. (For instance always add {a mathematical formula}k−1 elements to {a mathematical formula}R before the construction.)  □
+     </paragraph>
+     <paragraph>
+      In Theorem 6 we used the technique that as long as we know that there is a unique minimal set it suffices to remove each element of {a mathematical formula}R and test whether the predicate still holds. Then, the predicate does not hold for those elements that are in the minimal set. The following theorem generalizes this idea for k minimal sets by removing k elements at a time.
+     </paragraph>
+     <paragraph label="Theorem 7">
+      Let P be a monotone predicate on a set{a mathematical formula}Rsuch that{a mathematical formula}Rcontains exactly k minimal sets. All the minimal sets of{a mathematical formula}Rcan be calculated by{a mathematical formula}O(|R|k)non-adaptive queries to{a mathematical formula}¬P.
+     </paragraph>
+     <paragraph label="Proof">
+      Motivated by Lemma 6, the proof constructs queries that examine the removal of all possible subsets of {a mathematical formula}R of size {a mathematical formula}k−1. Some of these removals leave a single minimal set in {a mathematical formula}R, which is then calculated as in Theorem 6.In the remainder of the proof let {a mathematical formula}m≜|R|. Let {a mathematical formula}Dt, with {a mathematical formula}1≤t≤(mk−1), denote each of the subsets of {a mathematical formula}R with {a mathematical formula}k−1 elements, and let {a mathematical formula}Rt≜R∖Dt. Construct the queries {a mathematical formula}¬P(Rt∖{c}) for all {a mathematical formula}Rt and {a mathematical formula}c∈Rt (equivalently {a mathematical formula}¬P(R∖(Dt∪{c}))). Further, construct the queries {a mathematical formula}¬P(Rt) (equivalently {a mathematical formula}¬P(R∖Dt)).To obtain the minimal sets of P, use the results of these queries to construct the sets {a mathematical formula}St≜{c|¬P(Rt∖{c})}. Some of these sets must be discarded. First discard any {a mathematical formula}St if {a mathematical formula}¬P(Rt). Second discard all {a mathematical formula}St s.t. there is another {a mathematical formula}St′ with {a mathematical formula}St⊆St′ (this includes any empty {a mathematical formula}St). The remaining sets {a mathematical formula}St are the minimal sets of {a mathematical formula}R. To prove that, split on the following cases.
+     </paragraph>
+     <list>
+      <list-item label="(a)">
+       If {a mathematical formula}Rt does not contain any minimal sets of P, then {a mathematical formula}¬P(Rt) and therefore {a mathematical formula}St has been discarded.
+      </list-item>
+      <list-item label="(b)">
+       If {a mathematical formula}Rt contains a single minimal set of P, then {a mathematical formula}St is the minimal set due to Lemma 5. This situation is guaranteed to occur by Lemma 6.
+      </list-item>
+      <list-item label="(c)">
+       If {a mathematical formula}Rt contains two disjoint minimal sets of P, then {a mathematical formula}St is empty due to Lemma 5 and has been therefore discarded. Note also that there is no minimal set equal to {a mathematical formula}R for {a mathematical formula}k&gt;1.
+      </list-item>
+      <list-item label="(d)">
+       If all minimal sets of P in {a mathematical formula}Rt intersect, then {a mathematical formula}St is equal to their intersection due to Lemma 5. Hence, there is another {a mathematical formula}St′ where {a mathematical formula}St⊊St′ due to (b). Hence {a mathematical formula}St has been discarded.
+      </list-item>
+     </list>
+     <paragraph>
+      Proposition 7 lets us derive that a minimal set for a predicate of the form {a mathematical formula}P can be computed if the number of minimal set is bounded.
+     </paragraph>
+     <paragraph label="Theorem 8">
+      Let{a mathematical formula}k∈N+be a constant and Γ be anMSMPproblem represented by a monotone predicate P of form{a mathematical formula}Psuch that P has exactly k minimal sets. Then{a mathematical formula}Γ∈FPNP[wit,log]. Moreover, computing the k minimal sets is also in{a mathematical formula}FPNP[wit,log].
+     </paragraph>
+     <paragraph label="Proof">
+      We use the MaxSet problem to compute queries needed in the proof of Proposition 7. Construct the formulas {a mathematical formula}Ftc≜G∧⋀μ∈Rt∖{c}σ(μ) and the formulas {a mathematical formula}Ft≜G∧⋀μ∈Rtσ(μ) for all {a mathematical formula}c∈R and {a mathematical formula}Rt. Observe that {a mathematical formula}Ftc is satisfiable iff {a mathematical formula}¬P(Rt∖{c}) holds. Analogously, {a mathematical formula}Ft is satisfiable iff {a mathematical formula}¬P(Rt) holds.Using the MaxSet problem, determine satisfiability of all these formulas. The number of formulas is {a mathematical formula}O(|R|k) which can be found by {a mathematical formula}O(log⁡|R|k)=O(log⁡|R|) (for constant k) witness oracle calls. Thus, {a mathematical formula}Γ∈FPNP[wit,log] for a fixed k.  □
+     </paragraph>
+     <paragraph>
+      Theorem 8 exploits the result in Proposition 7, which lets us construct the minimal sets of P by removing elements from those sets. Removing these elements falsifies the predicate and thus identifies the sets. This technique appears in a very specific form in the context of MCSes and MUSes. There it has been shown that the set of MCSes comprises the minimal hitting sets of MUSes and the other way around [31], [32]. This has been used for MUS enumeration [33]. Proposition 7 can be seen as a generalization of theses results to arbitrary monotone predicates.
+     </paragraph>
+     <paragraph>
+      Observe that the obtained results also hold for MSMP problems when there are at most k minimal sets rather than exactly k minimal sets since one can iterate over {a mathematical formula}k′∈1..k to find the right {a mathematical formula}k′.
+     </paragraph>
+    </section>
+    <section label="6">
+     <section-title>
+      Related work
+     </section-title>
+     <paragraph>
+      Monotone predicates were studied in several recent works [4], [5], [12], [13]. The query complexity of selecting minimal/maximal sets has been studied in the past [26], [10]. The hereditary property studied in [10] resembles the monotonicity property. Nevertheless, the approaches have important differences, the most significant of which is that hereditarity is defined in terms of possible solutions; that is not the case with monotonicity.
+     </paragraph>
+     <paragraph>
+      Of the function problems studied in this article, the best studied is the selection of an MUS (e.g. [34], [10]). The actual query complexity of computing an MUS is not known. The best bounds were obtained in [10], with a lower bound in {a mathematical formula}FP∥NP and a (trivial) upper bound in {a mathematical formula}FPNP. Observe that this makes it very unlikely that selecting an MUS could be in {a mathematical formula}FPNP[log], otherwise {a mathematical formula}FewP=P, {a mathematical formula}NP=R and {a mathematical formula}coNP=US[25]. Kleine Büning and Zhao study a subclass of MUSes that requires that there is a unique satisfying assignment after a clause has been removed from the MUS [35]. As mentioned in Section 5, Proposition 7 can be seen as a generalization of the duality between MCSes and MUSes, which has been exploited in a number of works [31], [32], [33].
+     </paragraph>
+     <paragraph>
+      For computing the backbone of a formula, to the best of our knowledge, the only complexity analysis is [36], but restricted to the decision problem. For computing the set of independent variables of a formula, the best known upper bound is {a mathematical formula}FPNP[30].
+     </paragraph>
+     <paragraph>
+      Witness oracles were used in the context of theoretical analysis of bounded arithmetic [18]. Witness oracles are akin to function oracles, whose theoretical properties were extensively studied [29]. In the proof of Proposition 3 we decided the satisfiability of several formulas by constructing a MaxSAT problem that captures the satisfiability of the input formulas. This technique is to some degree similar to compressibility of NP problems studied in computational complexity [37]. Techniques similar to the ones used in the proof of Proposition 7 were used by de Haan and Szeider in the context of parameterized complexity [38].
+     </paragraph>
+     <paragraph>
+      Several complexity classes use the concept of advice, which can be seen as a single call to a witness oracle. Namely, {a mathematical formula}FNP//OptP[log]—see also Remark 3, or the class of decidable by polynomial-size circuit families, {a mathematical formula}P/poly, can be characterized as languages decidable by Turing machines with polynomial advice [39, Thm. 6.18].
+     </paragraph>
+    </section>
+    <section label="7">
+     <section-title>
+      Conclusions &amp; research directions
+     </section-title>
+     <paragraph>
+      The practical success of SAT solvers motivates their use in solving both decision and function problems. Many of these function problems are in {a mathematical formula}FPNP but a more accurate query complexity characterization is not known. For propositional formulas, this is the case, for example, with computing an MUS (for CNF formulas) (e.g. [34], [10]), computing the backbone (e.g. [36], [7]), identifying the set of independent variables (e.g. [30]), or computing prime implicants/implicates, among many others. This article studies the query complexity of function problems with a constant number of minimal sets, and shows that, if these problems can be represented with monotone predicates in certain general forms, then they are in {a mathematical formula}FPNP[wit,log], i.e. the class of function problems solved in polynomial time by using at most a logarithmic number of calls to a witness oracle [18], [19]. The main consequence of this result is that a large number of well-known function problems are shown to be solved with a logarithmic number of calls to a witness oracle. These include computing the backbone of a propositional formula, the set of independent variables of a propositional formula, computing an MUS when there exist a constant number of MUSes, and also computing prime implicants (given a term) and prime implicates (given a clause), again when there exist a constant number.
+     </paragraph>
+     <paragraph>
+      A number of future research directions can be envisioned. First, it is open whether the results for monotone predicates of form {a mathematical formula}P can be improved upon. This would have key consequences in long-standing open problems, e.g. computing an MUS [10]. Second, although the worst-case query complexity results in this article improve significantly what practical algorithms have achieved for several function problems, it would be important to also investigate lower bounds on query complexity. A potential avenue of research in this aspect would be to investigate the relation to other witness/advice-based complexity classes and use existing results for them (see also Remark 3).
+     </paragraph>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

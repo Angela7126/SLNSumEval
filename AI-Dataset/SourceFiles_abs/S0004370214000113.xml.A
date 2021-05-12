@@ -1,0 +1,779 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    An event-based distributed diagnosis framework using structural model decomposition.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      The need for increased performance, safety, and reliability of complex engineering systems motivates the development of efficient fault diagnosis methodologies. Fault diagnosis is fundamental to reduce downtime and increase system availability through the life of the system. The process of fault diagnosis includes timely fault detection, i.e., recognizing that a fault has occurred in the system; quick fault isolation, i.e., determining the root causes of the fault; and accurate fault identification, i.e., estimation of the fault size. Our focus in this work is on model-based approaches to on-line fault detection, isolation, and identification (FDII) in complex dynamic systems. An advantage of using model-based techniques against other diagnosis approaches, like expert systems or machine learning, lies in the re-usability of models and the diagnostic algorithms [1]. In particular, in this work we focus on the consistency approach to model-based diagnosis (known as consistency-based diagnosis, CBD), which has seen significant research activities from the Artificial Intelligence diagnosis (DX) [2], [3] community in the last two decades.
+     </paragraph>
+     <paragraph>
+      Typically, centralized diagnosis solutions have been proposed for model-based diagnosis, but these solutions have several inherent shortcomings. First, if the centralized diagnoser fails, the system will have to operate without a diagnosis system (this is usually known as a single point of failure), and second, centralized solutions do not scale well as the size of the system increases [4], [5], [6]. Further, the increased ubiquity of distributed, networked systems makes the use of centralized diagnosis solutions unwieldy. These shortcomings encourage the development of distributed diagnosis frameworks for complex dynamic systems.
+     </paragraph>
+     <paragraph>
+      Our approach has its roots in a CBD qualitative fault isolation (QFI) framework [7], where fault detection involves statistical testing of discrepancies (known as residuals) between observed and expected system behavior, and fault isolation is performed by analyzing the qualitative values of these residuals. In previous work, we developed a distributed diagnosis approach [8], where a set of local distributed diagnosers are designed to provide globally correct local diagnosis results, without a centralized coordinator, and with minimal communication among the local diagnosers. Subsequently, this work was integrated into the formal event-based framework developed in [9] which improved diagnosability and efficiency of the local diagnosers [10]. However, the approach proposed in [10] only distributes the fault isolation task, but the fault detection and identification tasks are still centralized because they use a global model of the system.
+     </paragraph>
+     <paragraph>
+      Model decomposition methods provide a systematic approach to decompose the diagnosis task. Several approaches have been proposed to decompose the global system model into submodels that contain sufficient analytical redundancy to perform fault detection [11], [12], [13]. In this work, we focus on the Possible Conflicts (PCs) [14] approach. The PCs approach is a structural model decomposition technique from the DX community. PCs are computed as subsets of equations containing the minimal number of constraints required to estimate a measurement. PCs decompose the system model into independent submodels by using measured signals of the global model as local inputs for the submodels. Therefore, PCs provide the subset of constraints from the global system model required to compute residuals, and each PC can operate independently, providing a natural way to distribute the residual generation process. Moreover, the PCs also provide the mechanisms to decompose the global fault identification task into reduced size local parameter estimators, that can be distributed [15]. However, PCs still require the use of a centralized coordinator for fault isolation to compute the set of diagnoses based on the triggered PCs.
+     </paragraph>
+     <paragraph>
+      In this work, we start from a common framework for diagnosis (CBD with QFI), and introducing structural model decomposition with PCs, we develop an on-line distributed diagnosis framework to design local diagnosers that fully distribute the diagnosis process. The primary contributions of this work are as follows:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       A unified distributed diagnosis framework that covers fault detection, isolation, and identification, and is able to perform on-line distributed diagnosis of dynamic systems.
+      </list-item>
+      <list-item label="2.">
+       A design approach to implement fully independent distributed diagnosers that guarantees that no central coordinator or on-line communication between the local diagnosers is necessary to provide correct diagnosis results.
+      </list-item>
+      <list-item label="3.">
+       A generalization of PCs to multi-output PCs that merges PCs to compute multi-output PCs, which are necessary to accomplish global diagnosability of the local diagnosers.
+      </list-item>
+      <list-item label="4.">
+       The development of a distributed fault identification approach, where the PCs are used to compute local parameter estimators.
+      </list-item>
+      <list-item label="5.">
+       The application of our distributed diagnosis approach to a simulation model of a four-wheeled rover testbed at NASA Ames Research Center [16], [17], to demonstrate the improved design of the proposed distributed solution. Using structural model decomposition, we compute local diagnosers of smaller size compared to the global system model. This improved design is then used to build local event-based diagnosers to demonstrate the diagnosis capabilities of this new distributed diagnosis framework. Results generated for different fault scenarios show that the proposed distributed diagnosis framework generates equivalent fault detection and isolation results to those obtained by the centralized approach. For fault identification, we use the local parameter estimators, which results in an accuracy improvement with respect to the centralized approach.
+      </list-item>
+     </list>
+     <paragraph>
+      The paper is organized as follows. Section 2 describes the background, with the system modeling methodology, the diagnosis context, and the theoretical concepts of residual generation, qualitative fault isolation, and event-based diagnosis. Section 3 formulates the distributed diagnosis design problem. Section 4 presents the PCs model decomposition approach and the proposal to generate multi-output PCs. Section 5 describes the event-based distributed diagnosis architecture. Section 6 proposes the local diagnoser design approach. Section 7 describes the methodology to construct the event-based diagnosers, and Section 8 presents the approach for distributed fault identification. Section 9 presents the rover system case study, demonstrating the validity of the approach for different diagnoser designs, and showing results obtained with a number of simulated fault scenarios. Section 10 discusses related work in distributed diagnosis, discrete-event systems, and model decomposition approaches. Finally, Section 11 concludes the paper.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Background
+     </section-title>
+     <paragraph>
+      In this work we propose a new framework for distributed diagnosis of dynamic systems within the Artificial Intelligence approach for model-based diagnosis (MBD) [3]. In MBD, diagnosis is carried out by comparing measurements in the system against the estimation of the behavior of the system computed by using a model of the system. In this section, we first present our system modeling approach, then, we introduce the diagnosis context and the assumptions of this work, and finally we present our qualitative framework for fault isolation.
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       System modeling
+      </section-title>
+      <paragraph>
+       In our approach, a model is defined as follows [18]:
+      </paragraph>
+      <paragraph label="Definition 1">
+       ModelA model{a mathematical formula}M⁎ is a tuple {a mathematical formula}M⁎=(V,C), where V is a set of variables, and C is a set of constraints among variables in V. V consists of four disjoint sets, namely, the set of state variables, X; the set of parameters, Θ; the set of inputs, U; and the set of outputs, Y. Each constraint {a mathematical formula}c=(εc,Vc), such that {a mathematical formula}c∈C, consists of an equation {a mathematical formula}εc involving variables {a mathematical formula}Vc⊆V.
+      </paragraph>
+      <paragraph label="Assumption 1">
+       The set of output variables, Y, correspond to the (measured) sensor signals. Parameters, Θ, include explicit model parameters that are used in the model constraints. Regarding input variables, we make the following assumption: Input or exogenous variables, U, are known.
+      </paragraph>
+      <paragraph>
+       Throughout this paper, we will use a standard three tank-system (Fig. 1) as a running example to illustrate the basic concepts, formulate the problem, and explain our primary definitions. The tanks are connected serially, and the model of the system is represented by the following set of constraints:{sup:4}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} where, for tank i, {a mathematical formula}ui denotes the input flow, {a mathematical formula}pi denotes the pressure in the tank, {a mathematical formula}Ai denotes the cross section of the tank, and {a mathematical formula}Rei denotes the resistance of the connected drain pipe. For tanks i and j, {a mathematical formula}Reij denotes the connecting pipe resistance. Three output sensors, {a mathematical formula}h1, {a mathematical formula}h2, and {a mathematical formula}h3, measure the level in the three tanks.
+      </paragraph>
+      <paragraph label="Example 1">
+       For the three-tank system, the model {a mathematical formula}M⁎ is represented by the variable sets {a mathematical formula}X={p1,p2,p3}, {a mathematical formula}Θ={A1,A2,A3,Re1,Re2,Re3,Re12,Re23}, {a mathematical formula}U={u1,u2,u3}, and {a mathematical formula}Y={h1,h2,h3}; and the set of constraints {a mathematical formula}C={c1,c2,c3,c4,c5,c6}.
+      </paragraph>
+      <paragraph>
+       The notion of a causal assignment is used to specify the computational causality for a constraint c, by defining which {a mathematical formula}v∈Vc is the dependent variable in equation {a mathematical formula}εc.
+      </paragraph>
+      <paragraph label="Definition 2">
+       Causal assignmentA causal assignment α to a constraint {a mathematical formula}c=(εc,Vc) is a tuple {a mathematical formula}α=(c,vcout), where {a mathematical formula}vcout∈Vc is assigned as the dependent variable in {a mathematical formula}εc.
+      </paragraph>
+      <paragraph>
+       We write a causal assignment of a constraint using its equation in a causal form, with := to explicitly denote the causal (i.e., computational) direction.
+      </paragraph>
+      <paragraph label="Definition 3">
+       Valid causal assignmentsWe say that a set of causal assignments {a mathematical formula}A, for a model {a mathematical formula}M⁎ is valid if
+      </paragraph>
+      <list>
+       <list-item label="•">
+        For all {a mathematical formula}v∈U∪Θ, {a mathematical formula}A does not contain any α such that {a mathematical formula}α=(c,v).
+       </list-item>
+       <list-item label="•">
+        For all {a mathematical formula}v∈Y, {a mathematical formula}A does not contain any {a mathematical formula}α=(c,vcout) where {a mathematical formula}v∈Vc−{vcout}.
+       </list-item>
+       <list-item label="•">
+        For all {a mathematical formula}v∈V−U−Θ, {a mathematical formula}A contains exactly one {a mathematical formula}α=(c,v).
+       </list-item>
+      </list>
+      <paragraph>
+       The definition of valid causal assignments implies that input or parameter variables cannot be the dependent variables in the causal assignment, a measured variable can be used as the dependent variable, and every variable, which is not input or parameter, is only computed by one (causal) constraint. Based on this, a causal model is a model extended with a valid set of causal assignments.
+      </paragraph>
+      <paragraph label="Definition 4">
+       Causal modelGiven a model {a mathematical formula}M⁎=(V,C), a causal model for {a mathematical formula}M⁎ is a tuple {a mathematical formula}M=(V,C,A), where {a mathematical formula}A is a set of valid causal assignments.
+      </paragraph>
+      <paragraph label="Example 2">
+       For the three-tank system model, the causal constraints are as follows.{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}The causal model {a mathematical formula}M is represented by the variable sets {a mathematical formula}X={p1, {a mathematical formula}p2, {a mathematical formula}p3}, {a mathematical formula}Θ={A1, {a mathematical formula}A2, {a mathematical formula}A3, {a mathematical formula}Re1, {a mathematical formula}Re2, {a mathematical formula}Re3, {a mathematical formula}Re12, {a mathematical formula}Re23}, {a mathematical formula}U={u1,u2,u3}, and {a mathematical formula}Y={h1,h2,h3}; the set of constraints {a mathematical formula}C={c1, {a mathematical formula}c2, {a mathematical formula}c3, {a mathematical formula}c4, {a mathematical formula}c5, {a mathematical formula}c6}; and the set of causal assignments {a mathematical formula}A={α1, {a mathematical formula}α2, {a mathematical formula}α3, {a mathematical formula}α4, {a mathematical formula}α5, {a mathematical formula}α6}.
+      </paragraph>
+      <paragraph>
+       We can visualize a causal model {a mathematical formula}M using a directed graph {a mathematical formula}G=(N,A), where N is the set of nodes corresponding directly to the variables V in {a mathematical formula}M, and A is the set of arcs, where for every {a mathematical formula}(c,vcout)∈A, we include an arc {a mathematical formula}(v′,vcout) for each {a mathematical formula}v′∈Vc−{vcout}.
+      </paragraph>
+      <paragraph label="Example 3">
+       The causal graph corresponding to the three-tank system model is given in Fig. 2. In the graph, we mark inputs with dashed circles, state variables with dashed squares, and outputs with solid squares.
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Consistency-based diagnosis
+      </section-title>
+      <paragraph>
+       As we previously mentioned, in this work we will approach the fault diagnosis problem using model-based diagnosis. More precisely, our proposal is based on the consistency-based diagnosis (CBD) approach as proposed by Reiter in [2]. But, we extend the approach to dynamic and distributed systems using concepts from the Control Engineering approach to MBD, known as the FDI approach, given the ongoing interest in both communities to develop a common framework for MBD [20], [21], [22], [23].
+      </paragraph>
+      <paragraph>
+       As pointed out in several reviews of the CBD field [5], [21], there is no general theoretical framework for CBD of dynamic systems [24], but a collection of several works following the same consistency-based principles for diagnosis using different kind of models and different temporal ontologies exists [5], [7], [25], [26], [27]. As a consequence, we will start from the basic principles stated by de Kleer and Kurien [21] for static systems, and we will state the relevant working hypotheses [5] in our diagnosis process for dynamic systems:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Our system model is equation-based, not component-based. That is, it is made up of a set of equations that contains variables and/or parameters. Changes in some of these parameters will be responsible for the faulty behavior of the system. In many engineered systems it is possible to go from an equation-based to a component-based model, thus providing a higher level of abstraction in the results.
+       </list-item>
+       <list-item label="•">
+        We assume that the presence of faults will not introduce “genuine” new equations in the system, i.e. will not change the model structure.{sup:5}
+       </list-item>
+       <list-item label="•">
+        The system model describes the behavior of the system, not how to diagnose it (e.g., as it happens in expert systems).
+       </list-item>
+       <list-item label="•">
+        A domain-independent reasoning engine performs the diagnosis task using the model.
+       </list-item>
+       <list-item label="•">
+        We assume that the set of measurements are fixed, and all of the diagnostic reasoning is based on the equation-based model and the values observed for the measurements. No additional measurements and model information becomes available once the diagnosis is initiated.{sup:6}
+       </list-item>
+       <list-item label="•">
+        Finally, we do not impose that all of the computations required to generate diagnostic candidates is done on-line. Information may be pre-computed from the model. But this assumption can be relaxed.{sup:7}
+       </list-item>
+      </list>
+      <paragraph>
+       MBD proceeds in an iterative process of fault detection, fault isolation (or localization), and fault identification. In our context, a fault is the cause of an unexpected, persistent deviation of the system behavior from the acceptable nominal behavior. Moreover, since our proposal is equation-based and not component-based, we will link fault candidates to the set of parameters Θ in {a mathematical formula}M.
+      </paragraph>
+      <paragraph>
+       In CBD, fault detection is carried out based on conflicts, that are related to a set of correctness assumptions for the model components that are not consistent with current measured values in the system. In this work, we associate the correct behavior assumptions to the nominal value of the parameters in Θ[2], [28],{sup:8} and conflicts are computed as subsets of the elements {a mathematical formula}θ∈Θ.{sup:9}
+      </paragraph>
+      <paragraph>
+       The set of conflicts can be computed on-line using an ATMS-like engine [28], [31], propagating backward in a causal model [7], [26], or can be precomputed using off-line dependency-recording techniques such as Possible Conflicts [14], Potential Conflicts [23], or equivalent techniques. It should be noted that the works by Cordier et al. [23] and de Kleer and Kurien [21] stated the similarities between Reiter's theory for diagnosis and the FDI approach based on ARRs. In that work, the support for an ARR was the set of correctness assumption linked to components that were involved in an ARR, and they were considered as equivalent to the correctness assumptions in a conflict. In an equation-based approach the parameters play the role of components, with respect to correctness assumptions. In that way we can redefine a conflict as:
+      </paragraph>
+      <paragraph label="Definition 5">
+       ConflictA conflict is the set of correctness assumptions, {a mathematical formula}θ⊆Θ, related to the equations required to estimate a discrepancy.
+      </paragraph>
+      <paragraph>
+       In our framework, a conflict will arise from the discrepancy between a measurement and an estimation of the measurement. Fault isolation is straightforward in CBD once we have conflicts. We only need to compute the minimal hitting sets of the conflicts, thus leading to faulty parameters that are inconsistent with the whole set of detected discrepancies.
+      </paragraph>
+      <paragraph label="Definition 6">
+       In our approach, we go a step further because our model is able to predict faulty behavior too. Thus we can provide a more precise set of candidates if we take into account how faults are related to parameters [11], [32]: FaultA fault is a deviation of exactly one parameter of the system model from its nominal value.
+      </paragraph>
+      <paragraph>
+       A fault is denoted as f, and it is modeled, in our work, as an unexpected step change in a system model parameter value, {a mathematical formula}θ∈Θ, and F represents the fault set. Faults are named by the associated parameter and the direction of change, i.e., {a mathematical formula}θ+ (resp., {a mathematical formula}θ−) denotes a fault defined as an abrupt increase (resp., decrease) in the value of parameter θ.
+      </paragraph>
+      <paragraph label="Example 4">
+       In the three-tank system in Fig. 1, the fault set considered is {a mathematical formula}F={A1−,A2−,A3−,Re1+,Re2+,Re3+,Re12+,Re23+}.
+      </paragraph>
+      <paragraph label="Assumption 2">
+       We make the following assumption regarding faults: Only single faults occur in the system.{sup:10}
+      </paragraph>
+      <paragraph label="Definition 7">
+       Since our main goal is the accurate identification of a single fault, we can define diagnosis in this context as: DiagnosisA diagnosis is a set of single fault hypotheses that are consistent with the observations.
+      </paragraph>
+      <paragraph>
+       In this work we will not use the classical GDE approach to consistency-based diagnosis extended for dynamic systems. We will use a structural approach to determine off-line the submodels that can generate a discrepancy, as will be explained in Section 4. These submodels will contain a set of correctness assumptions that can be identified as potential conflicts [14], [23]. Once the submodels are computed off-line, we build an executable model that will be responsible for behavior estimation. Whenever we find a discrepancy between observed and estimated behavior we consider that the potential or possible conflict is present, and we can obtain the set of fault candidates by computing the minimal hitting-set for the sets of correctness assumptions.
+      </paragraph>
+      <paragraph>
+       Since we work with dynamic systems and a given set of measurements, in order to isolate fault diagnosis candidates we can proceed in different ways: waiting for more observations to deviate, using qualitative information about the system measurements, or using predictive fault models. In our approach, we will use the three options within a CBD approach with fault models, where we will reject inconsistent fault mode assignments, as we describe next.
+      </paragraph>
+     </section>
+     <section label="2.3">
+      <section-title>
+       Qualitative framework for fault isolation
+      </section-title>
+      <paragraph>
+       In this subsection, we recapitulate the basic theoretical concepts that our diagnosis approach is based on. We first present the concept of residual, review the theoretical framework for qualitative fault isolation [7], and then review the framework for event-based fault modeling [9].
+      </paragraph>
+      <paragraph label="Definition 8">
+       Faults in the system manifest as persistent abrupt changes in the value of the system parameters, causing transients in the system variables that are observed as deviations of measured values from predicted values, triggering residuals. The evolution of these deviations caused in the residuals are used to isolate the true faults. A residual is an equivalent concept to discrepancy, used by researchers from both the Artificial Intelligence and the Control Engineering fields, and it is defined as follows: ResidualA residual, {a mathematical formula}ry, is a time-varying signal computed as the difference between a measurement, {a mathematical formula}y⊆Y, and a predicted value of the measurement y, denoted as {a mathematical formula}yˆ.
+      </paragraph>
+      <paragraph>
+       Concerning fault diagnosis, a residual is a fault indicator, based on an observed deviation between measurements and model-based estimations. The predicted value of the measurement is computed by using the model of the system [7] (this model can be either the global model of the system or a submodel of this global model with enough redundancy to estimate the measured variable y). Hence, the residual is ideally zero in the nominal situation, and nonzero when a fault occurs in the system. The residual set is denoted as R.
+      </paragraph>
+      <paragraph label="Example 5">
+       In the three-tank system example, since we measure the level in each one of the tanks, we can compute three different residuals, {a mathematical formula}rh1, {a mathematical formula}rh2, and {a mathematical formula}rh3, where {a mathematical formula}rh1 (cf., {a mathematical formula}rh2 and {a mathematical formula}rh3) is computed as the difference between the measurement of the level in tank 1 (cf., 2 and 3) and the prediction of the level in tank 1 (cf., 2 and 3).
+      </paragraph>
+      <paragraph>
+       When faults occur, they produce deviations in the residuals from zero, and it is this information that is used to generate conflicts and isolate faults. Because reasoning over the continuous residual signals is difficult and computationally demanding, we abstract a residual into a symbolic form. The transient in the residual signal at the time it is triggered is abstracted using qualitative +, −, and 0 values in the signal magnitude and derivatives, justified by the Taylor series expansion of the signal [33]. Consequently, the interpretation for these qualitative values is: a “0” means the observation is within the nominal thresholds, i.e., {a mathematical formula}yˆ−T&lt;y&lt;yˆ+T; a “+” simply means the observation y is above the predicted output {a mathematical formula}yˆ plus the threshold T, i.e., {a mathematical formula}y&gt;yˆ+T; and a “−” means the observation is below the predicted output minus the threshold, i.e., {a mathematical formula}y&lt;yˆ−T. We retain only the change in magnitude and the first nonzero derivative change, which, over time, will manifest as a change in slope.
+      </paragraph>
+      <paragraph label="Definition 9">
+       Fault signatureA fault signature for a fault f and residual r, denoted by {a mathematical formula}σf,r, is pair of symbols {a mathematical formula}s1s2 representing potential qualitative changes in magnitude and slope of r caused by f at the point of the occurrence of f. The set of fault signatures for f and r is denoted as {a mathematical formula}Σf,r.
+      </paragraph>
+      <paragraph>
+       Note that this definition of a fault signature is independent of the system inputs and fault magnitude. If, for example, for f and r, the fault signature set {a mathematical formula}Σf,r={+−}, this means that the fault will always produce an immediate increase in residual magnitude followed by a decrease in residual slope. {a mathematical formula}Σf,r is usually a singleton because signatures are defined with respect to the residual, which is a difference. An observed fault signature on residual {a mathematical formula}ry for measurement y is written as {a mathematical formula}rys1s2, e.g., {a mathematical formula}rh1+−.
+      </paragraph>
+      <paragraph>
+       The complete set of possible fault signatures for a residual we consider here is {a mathematical formula}{+−,−+,0+,0−,+0,−0}. Residual deviations in the positive direction and their corresponding signatures are shown in Fig. 3.
+      </paragraph>
+      <paragraph>
+       Fault signatures form the basis for fault isolation. We use both the qualitative values of the fault signature and the temporal order of the residual deviations as discriminatory information. The temporal order of residual deviations for a given model, termed relative residual orderings[34], are based on the intuition that fault effects will manifest in some parts of the system before others. As previously described in this section, for a given model, there is a residual defined for each measurement in the model. Within this model, the relative ordering of the residual deviations can be computed based on analysis of the transfer functions from faults to residuals, as proven in [34].
+      </paragraph>
+      <paragraph label="Definition 10">
+       Relative residual orderingIf fault f always manifests in residual {a mathematical formula}ri before residual {a mathematical formula}rj, then we define a relative residual ordering between {a mathematical formula}ri and {a mathematical formula}rj for fault f, denoted by {a mathematical formula}ri≺frj. We denote the set of all residual orderings for f as {a mathematical formula}Ωf,R.
+      </paragraph>
+      <paragraph>
+       Note that in this definition, we are referring specifically to deviations in the residuals caused by faults. In this paper, to make the approach as general as possible, we assume that fault signatures and relative residual orderings are given as inputs. In practice, this information can be generated by manual analysis of the system model, by simulation, or automatically from certain types of models, e.g., as presented in [35].
+      </paragraph>
+      <paragraph label="Example 6">
+       Table 1 shows the predicted fault signatures and residual orderings for the model of a three-tank system with {a mathematical formula}F={A1−, {a mathematical formula}A2−, {a mathematical formula}A3−, {a mathematical formula}Re1+, {a mathematical formula}Re2+, {a mathematical formula}Re3+, {a mathematical formula}Re12+, {a mathematical formula}Re23+}, {a mathematical formula}Y={h1,h2,h3}, and {a mathematical formula}R={rh1,rh2,rh3}. For example, consider {a mathematical formula}A1−. An abrupt decrease in {a mathematical formula}A1− would cause an abrupt increase in {a mathematical formula}p1 (see {a mathematical formula}c1), and an abrupt increase in {a mathematical formula}h1 (see {a mathematical formula}c4). The increase in {a mathematical formula}p1 would cause an increase in the flow to the second tank, which through the integration manifests as a first-order increase in {a mathematical formula}p2 and {a mathematical formula}h2 (resulting in {a mathematical formula}rh20+). Similarly the increase in {a mathematical formula}p2 causes a second-order increase in {a mathematical formula}p3 and {a mathematical formula}h3 (resulting in {a mathematical formula}rh30+). The first-order increase in {a mathematical formula}p2 also causes a second-order decrease in {a mathematical formula}p1 and {a mathematical formula}h1, resulting in {a mathematical formula}rh1+−. Because of the integrations, the abrupt change in {a mathematical formula}rh1 is observed first, followed by the change in {a mathematical formula}rh2 and then {a mathematical formula}rh3, resulting in the residual orderings {a mathematical formula}rh1≺rh2, {a mathematical formula}rh1≺rh3, and {a mathematical formula}rh2≺rh3.
+      </paragraph>
+      <paragraph>
+       Together, fault signatures and relative residual orderings establish an event-based form of diagnostic information. For a given fault, the combination of all fault signatures and residual orderings yields all the possible ways a fault can manifest in the residuals. We define each of these possibilities as a fault trace.
+      </paragraph>
+      <paragraph label="Definition 11">
+       Fault traceA fault trace for a fault f over residuals R, denoted by {a mathematical formula}λf,R, is a sequence of fault signatures, of length {a mathematical formula}⩽|R| that includes, for every {a mathematical formula}r∈R that will deviate due to f, a fault signature {a mathematical formula}σf,r, such that the sequence of fault signatures satisfies {a mathematical formula}Ωf,R.
+      </paragraph>
+      <paragraph>
+       Note that fault traces are required to be maximal in such way that a fault signature is included in the trace for every residual that will deviate due to the fault.
+      </paragraph>
+      <paragraph label="Example 7">
+       Given {a mathematical formula}R={rh1,rh2,rh3}, for fault {a mathematical formula}A2−, from Table 1 we see that the fault effects will appear first on {a mathematical formula}rh2, and then it is unknown whether {a mathematical formula}rh1 or {a mathematical formula}rh3 will deviate next. Hence, there are two possible fault traces: {a mathematical formula}rh2+−rh10+rh30+ and {a mathematical formula}rh2+−rh30+rh10+. On the other hand, for {a mathematical formula}A3−, there is only one possible fault trace, {a mathematical formula}rh3+−rh20+rh10+.
+      </paragraph>
+      <paragraph>
+       We group the set of all fault traces into a fault language. The fault model, defined by a finite automaton, concisely represents the fault language of a fault.
+      </paragraph>
+      <paragraph label="Definition 12">
+       Fault languageThe fault language of a fault {a mathematical formula}f∈F with residual set R, denoted by {a mathematical formula}Lf,R, is the set of all fault traces for f over the residuals in R.
+      </paragraph>
+      <paragraph label="Definition 13">
+       Fault modelThe fault model for a fault {a mathematical formula}f∈F with residual set R, is the finite automaton that accepts exactly the language {a mathematical formula}Lf,R, and is given by {a mathematical formula}Lf,R=(S,s0,Σ,δ,A) where S is a set of states, {a mathematical formula}s0∈S is an initial state, Σ is a set of events, {a mathematical formula}δ:S×Σ→S is a transition function, and {a mathematical formula}A⊆S is a set of accepting states.
+      </paragraph>
+      <paragraph label="Example 8">
+       Selected fault models for the three-tank system are shown in Fig. 4. For example, as seen in {a mathematical formula}LA2−,R, the fault {a mathematical formula}A2− may manifest as the fault traces {a mathematical formula}rh2+−rh10+rh30+ or {a mathematical formula}rh2+−rh30+rh10+, as implied by the fault signatures and residual orderings.
+      </paragraph>
+      <paragraph>
+       From the fault models, it is clear that each fault may manifest in the residuals in several ways. This ambiguity arises from two sources. First, there may be more than one fault signature for a given fault and residual. Second, the residual orderings, in general, define only a partial ordering of the residual deviations. As a result, there are several potential fault traces associated with each fault.
+      </paragraph>
+      <paragraph>
+       In this framework, our set of correctness assumptions state that each potential faulty parameter in the model is initially at a nominal value. In on-line diagnosis, until a residual is observed to deviate, the minimal diagnosis is the empty diagnosis, ∅, since each (observable) fault is predicted to generate at least one residual deviation. When the first residual is observed to deviate, we observe the fault signature through signal processing methods (as it is explained in Section 5). We then generate a conflict and we perform fault isolation through the sets of faults whose signatures are consistent with observed residual deviations. In CBD, the first diagnosis set is derived as the minimal hitting set of the current diagnosis set, ∅, with the conflict, so the new diagnosis set is the conflict. From this point on, since we make the single fault assumption (Assumption 2), the new diagnosis set is computed simply as the intersection of the current diagnosis set and the new conflict. When the next residual is observed to deviate, we generate the next conflict following the same procedure. Formally, for an observed fault signature {a mathematical formula}σi on residual r, with {a mathematical formula}λi−1σi being the observed fault trace up to this point, the fault candidates are generated as the set of faults where for f, there exists a trace {a mathematical formula}λf,R∈Lf,R such that {a mathematical formula}λi−1σi⊑λf,R. The new diagnosis set is computed as the minimal hitting set of the conflict and the previous diagnosis. As new fault signatures are observed, the process continues.
+      </paragraph>
+      <paragraph label="Example 9">
+       Consider the set of faults {a mathematical formula}{A2−,Re2+,Re23+,A3−,Re3+}, and the set of residuals {a mathematical formula}{rh1,rh2,rh3} (see Fig. 4). Say that the first observed fault signature is {a mathematical formula}rh20+. Then the conflict is {a mathematical formula}{Re2+,Re23+}, and the new diagnosis set is {a mathematical formula}{Re2+,Re23+}. Say the next signature is {a mathematical formula}rh30+. The conflict is {a mathematical formula}{Re2+}, as only that fault can produce that {a mathematical formula}rh20+rh30+ as the beginning of a fault trace. The new diagnosis set is then {a mathematical formula}{Re2+}, and a unique diagnosis is achieved.
+      </paragraph>
+      <paragraph>
+       Although our diagnosis framework will make an extensive use of qualitative information about residuals, it should be pointed out that we need to use quantitative models for behavior estimation, because a precise estimation will allow our diagnoser to perform quick fault detection, and will be the input for quantitative fault identification later. This issue will be further discussed in Section 5.
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      Problem formulation
+     </section-title>
+     <paragraph>
+      As mentioned in Section 1, consistency-based diagnosis frameworks for continuous systems are typically implemented using a centralized approach. This centralized approach is based on the global model of the system. However, centralized approaches face several drawbacks: they are expensive in memory and computation, do not scale well as the size of the system grows [4], [5], [6], and also introduce a single point of failure.
+     </paragraph>
+     <paragraph>
+      Distributed diagnosis approaches break down the diagnosis problem into different subtasks that may be executed on separate processors, however a central coordinator is typically needed in distributed solutions to form a consistent global diagnosis from the local diagnoses [36], [37]. To overcome such a drawback, we propose a distributed diagnosis approach capable of designing local diagnosers that generate globally correct local diagnosis results, with no central coordinator.
+     </paragraph>
+     <paragraph>
+      Diagnoser design uses the notion of global diagnosability, i.e., every local diagnoser must produce globally correct results [8], [10]. Given a model of a system, and the set of faults (F) and residuals (R), we may establish the notions of distinguishability and diagnosability. Using these definitions, we can formally define the globally diagnosable diagnosis submodel design problem.
+     </paragraph>
+     <paragraph>
+      In general, two faults are distinguishable if they always, in finite time, produce different residuals. In our diagnosis framework, distinguishability between faults is characterized using fault traces and languages.
+     </paragraph>
+     <paragraph label="Definition 14">
+      DistinguishabilityGiven a residual set, R, a fault {a mathematical formula}fi is distinguishable from a fault {a mathematical formula}fj, denoted by {a mathematical formula}fi≁Rfj, if there does not exist a pair of fault traces {a mathematical formula}λfi,R∈Lfi,R and {a mathematical formula}λfj,R∈Lfj,R, such that {a mathematical formula}λfi⊑λfj.
+     </paragraph>
+     <paragraph>
+      One fault will be distinguishable from another fault if it cannot produce a fault trace that is a prefix{sup:11} (denoted by ⊑) of a trace that can be produced by the other fault. If this is not the case, then when that trace manifests, the first fault cannot be distinguished from the second. This implementation of distinguishability should be clear from the description of how conflicts are generated and diagnoses are computed in Section 2.3. Consider the following example.
+     </paragraph>
+     <paragraph label="Example 10">
+      Consider the faults {a mathematical formula}Re2+ and {a mathematical formula}Re23+, and the set of residuals {a mathematical formula}{rh1,rh2,rh3} (see Table 1 and Fig. 4). {a mathematical formula}Re2+ is distinguishable from {a mathematical formula}Re3+ because if {a mathematical formula}Re3+ occurs, it will produce either {a mathematical formula}rh20+rh30+rh10+ or {a mathematical formula}rh20+rh10+rh30+, neither of which {a mathematical formula}Re23+ can produce. Consider now the same faults but residuals {a mathematical formula}{rh1,rh2}. {a mathematical formula}Re2+ will produce only {a mathematical formula}rh20+rh10+, which can also be produced by {a mathematical formula}Re23+, therefore, with this set of residuals {a mathematical formula}Re2+ is not distinguishable from {a mathematical formula}Re23+. Similarly, {a mathematical formula}Re23+ is not distinguishable from {a mathematical formula}Re2+ because it can produce {a mathematical formula}rh20+rh10+, which {a mathematical formula}Re2+ can also produce.
+     </paragraph>
+     <paragraph>
+      Distinguishability requires that in all circumstances two faults cannot produce the same observable behavior. For example, if a fault {a mathematical formula}f1 can produce a trace that another fault {a mathematical formula}f2 cannot, but can also produce a trace that {a mathematical formula}f2 can, we still say they are not distinguishable. In practice, if the second trace is the one that manifests, we will distinguish them, however, since we are tackling a design problem in which we want to guarantee distinguishability, we must take into account that either trace can be produced, so we cannot claim that the faults will always be distinguished.
+     </paragraph>
+     <paragraph>
+      Distinguishability is used to define the diagnosability of a diagnosis model under a given fault isolation framework. A diagnosis model is an abstraction of a system model with only diagnosis relevant information, and it is defined as follows.
+     </paragraph>
+     <paragraph label="Definition 15">
+      Diagnosis modelA diagnosis model{a mathematical formula}S is a tuple {a mathematical formula}(F,Y,R,LF,R), where {a mathematical formula}F={f1,f2,…,fn} is a set of faults, Y is a set of measurements, R is a set of residuals, and {a mathematical formula}LF,R={Lf1,R,Lf2,R,…,Lfn,R} is the set of fault languages.
+     </paragraph>
+     <paragraph label="Example 11">
+      A diagnosis model {a mathematical formula}S for the three-tank system is represented by the variable sets {a mathematical formula}F={A1−, {a mathematical formula}A2−, {a mathematical formula}A3−, {a mathematical formula}Re1+, {a mathematical formula}Re2+, {a mathematical formula}Re3+, {a mathematical formula}Re12+, {a mathematical formula}Re23+}, {a mathematical formula}Y={h1, {a mathematical formula}h2, {a mathematical formula}h3}, {a mathematical formula}R={rh1, {a mathematical formula}rh2, {a mathematical formula}rh3}, and the set of fault languages {a mathematical formula}LF,R={LA1−,R, {a mathematical formula}LA2−,R, {a mathematical formula}LA3−,R, {a mathematical formula}LRe1+,R, {a mathematical formula}LRe2+,R, {a mathematical formula}LRe3+,R, {a mathematical formula}LRe12+,R, {a mathematical formula}LRe23+,R}.
+     </paragraph>
+     <paragraph>
+      If a diagnosis model is diagnosable, then we can guarantee about the unique isolation of every fault in the diagnosis model.
+     </paragraph>
+     <paragraph label="Definition 16">
+      DiagnosabilityA diagnosis model {a mathematical formula}S=(F,Y,R,LF,R) is diagnosable if and only if {a mathematical formula}(∀fi,fj∈F)fi≠fj⇒fi≁Rfj.
+     </paragraph>
+     <paragraph>
+      If {a mathematical formula}S is diagnosable, then every pair of faults is distinguishable using the residual set R. Hence, we can uniquely isolate all faults of interest. If {a mathematical formula}S is not diagnosable, then ambiguities will remain after fault isolation, i.e., after all possible fault effects on the residuals have been observed.
+     </paragraph>
+     <paragraph label="Example 12">
+      Consider the {a mathematical formula}M-based residual set given in Table 1. A diagnosis model defined with these residuals is diagnosable when both fault signatures and residual orderings are used (without orderings, faults {a mathematical formula}Re1+, {a mathematical formula}Re2+, and {a mathematical formula}Re3+ have all the same signatures and cannot be distinguished from one another).
+     </paragraph>
+     <paragraph>
+      Our objective is to decompose the overall diagnosis task into smaller subtasks performed by local diagnosers with the following properties: (i) all single faults of interest in the diagnosis model can be diagnosed, and (ii) the local diagnosis results are globally correct. These two properties eliminate the need for a centralized coordinator. In order to decompose the diagnosis task based on diagnosability, the diagnosis model must be diagnosable, hence we have the following assumption.
+     </paragraph>
+     <paragraph label="Assumption 3">
+      The global system is always diagnosable for the {a mathematical formula}M-based residual set.
+     </paragraph>
+     <paragraph>
+      However, if the diagnosis model is not diagnosable, we can define aggregate faults, where an aggregate fault is a set of faults that are indistinguishable from each other. Our diagnosis approach can be applied to the modified fault set that includes the aggregate faults. If an aggregate fault is diagnosed, that implies that one of its constituent faults has occurred.
+     </paragraph>
+     <paragraph>
+      The diagnosis model {a mathematical formula}S is split into n diagnosis submodels {a mathematical formula}S1,S2,…,Sn, where each diagnosis submodel gets a subset of the fault set, a subset of the measurement set, and a subset of the residual set. The desired distribution of faults and measurements within each diagnosis submodel in initially provided by the user as input, e.g., based on subsystems of the system.
+     </paragraph>
+     <paragraph label="Definition 17">
+      Diagnosis submodelA diagnosis submodel{a mathematical formula}Si from a diagnosis model {a mathematical formula}S=(F,Y,R,LF,R) is a tuple {a mathematical formula}(Fi,Yi,Ri,LFi,Ri), where {a mathematical formula}Fi⊆F, {a mathematical formula}Yi⊆Y, and {a mathematical formula}Ri⊆R.
+     </paragraph>
+     <paragraph>
+      We are interested in a set of diagnosis submodels having enough local diagnostic information to get the correct global answer. This is referred to as global correctness, which says that for any fault that occurs, the union of indistinguishable faults over all diagnosis submodels will be that fault itself.
+     </paragraph>
+     <paragraph label="Definition 18">
+      Global correctnessA set of n diagnosis submodels {a mathematical formula}{Si=(Fi,Yi,Ri,LFi,Ri):i=1,…,n} from a diagnosis model {a mathematical formula}S=(F,Y,R,LF,R) is globally correct if for all {a mathematical formula}f∈F, {a mathematical formula}⋃Si{fi∈Fi:fi∼Rif}={f}.
+     </paragraph>
+     <paragraph>
+      Note that global correctness enforces the constraint that the set of diagnosis submodels covers all faults, i.e., that each fault {a mathematical formula}f∈F is contained in at least one {a mathematical formula}Fi. To keep local diagnosers as small as possible, we will enforce a stricter constraint that each fault is contained in exactly one {a mathematical formula}Fi, so that every fault has exactly one diagnosis submodel that is responsible for it.
+     </paragraph>
+     <paragraph>
+      Diagnosis submodels may be locally diagnosable. A locally diagnosable diagnosis submodel is one in which its own faults can be uniquely isolated using its own residuals.
+     </paragraph>
+     <paragraph label="Definition 19">
+      Local diagnosabilityA diagnosis submodel {a mathematical formula}Si=(Fi,Yi,Ri,LFi,Ri) is locally diagnosable if {a mathematical formula}(∀fi,fj∈Fi)fi≠fj⇒fi≁Rifj. We say fault {a mathematical formula}fi∈Fi is locally distinguishable from {a mathematical formula}fj∈Fi if {a mathematical formula}fi≁Rifj.
+     </paragraph>
+     <paragraph>
+      Note that the definition of local diagnosability for a diagnosis submodel is equivalent to the definition of diagnosability for a diagnosis model (Definition 16). For a set of diagnosis submodels, local diagnosability is not a strong enough condition to ensure global correctness. The problem is that for two different diagnosis submodels, {a mathematical formula}Si and {a mathematical formula}Sj, there may be some faults {a mathematical formula}fi∈Fi and {a mathematical formula}fj∈Fj, such that both {a mathematical formula}fi and {a mathematical formula}fj produce the same effects on {a mathematical formula}Ri. Hence, if fault {a mathematical formula}fj occurs in the system, the local diagnoser for {a mathematical formula}Si will think that fault {a mathematical formula}fi has occurred, which is not globally correct, i.e., we may have faults that are distinguishable from faults inside the diagnosis submodel, but not distinguishable from faults outside the diagnosis submodel.
+     </paragraph>
+     <paragraph label="Example 13">
+      Consider a diagnosis submodel {a mathematical formula}Si where {a mathematical formula}Fi={A1−,Re1+}, {a mathematical formula}Yi={h1}, and {a mathematical formula}Ri={rh1}. This diagnosis submodel is locally diagnosable, because its two faults produce different effects on its single residual: {a mathematical formula}A1− produces {a mathematical formula}rh1+− and {a mathematical formula}Re1+ produces {a mathematical formula}rh10+ (see Table 1). But every fault in {a mathematical formula}F−Fi can also produce {a mathematical formula}rh10+, so if one of those faults occurs, the diagnoser for {a mathematical formula}Si would isolate {a mathematical formula}Re1+ as the fault, which is not globally correct.
+     </paragraph>
+     <paragraph>
+      Therefore, we require a notion of global diagnosability.
+     </paragraph>
+     <paragraph label="Definition 20">
+      Global diagnosabilityA diagnosis submodel {a mathematical formula}Si=(Fi,Yi,Ri,LFi,Ri) from diagnosis model {a mathematical formula}S=(F,Y,R,LF,R) is globally diagnosable if {a mathematical formula}(∀fi∈Fi,fj∈F)fi≠fj⇒fi≁Rifj. We say fault {a mathematical formula}fi∈Fi is globally distinguishable from {a mathematical formula}fj∈F if {a mathematical formula}fi≁Rifj.
+     </paragraph>
+     <paragraph>
+      That is, a diagnosis submodel {a mathematical formula}Si is globally diagnosable if all the faults {a mathematical formula}Fi are distinguishable from every other fault in F, i.e., all other faults in S, using only the residuals in {a mathematical formula}Ri.
+     </paragraph>
+     <paragraph label="Example 14">
+      Consider again the diagnosis submodel {a mathematical formula}Si where {a mathematical formula}Fi={A1−,Re1+}, {a mathematical formula}Yi={h1}, and {a mathematical formula}Ri={rh1}. This diagnosis submodel is not globally diagnosable, because faults not included in {a mathematical formula}Fi can produce the same observations as a fault in {a mathematical formula}Fi, as demonstrated in the previous example. Now consider that {a mathematical formula}Yi={h1,h2}, and {a mathematical formula}Ri={rh1,rh2}. Now {a mathematical formula}Re1+ is distinguishable from {a mathematical formula}Re12+ and {a mathematical formula}A2− because the effect on {a mathematical formula}rh2 is different, and {a mathematical formula}Re1+ is distinguishable from the remaining faults not in {a mathematical formula}Fi because it produces a change in {a mathematical formula}rh1 before {a mathematical formula}rh2, whereas the others produce a change in {a mathematical formula}rh2 before {a mathematical formula}rh1.
+     </paragraph>
+     <paragraph>
+      If the diagnosis submodels can be structured such that all faults in F are covered and each diagnosis submodel {a mathematical formula}Si is globally diagnosable, then each diagnosis submodel will generate globally correct diagnoses without communicating its diagnosis results to other diagnosis submodels. The following lemma shows that global diagnosability ensures the desired quality of global correctness.
+     </paragraph>
+     <paragraph label="Proof">
+      If each diagnosis submodel in a set of n diagnosis submodels{a mathematical formula}{Si=(Fi,Yi,Ri,LFi,Ri):i=1,…,n}, from a diagnosis model{a mathematical formula}S=(F,Y,R,LF,R)where{a mathematical formula}F=F1∪F2∪⋯∪Fn, is globally diagnosable, then the set of diagnosis submodels is globally correct.Given any fault {a mathematical formula}f∈F, because all diagnosis submodels are globally diagnosable, the fault must be distinguishable from every local and nonlocal fault except for that fault itself. Hence, since f must be contained in at least one diagnosis submodel, the union of all indistinguishable faults from each diagnosis submodel must equal {a mathematical formula}{f}. Therefore, the set of diagnosis submodels is globally correct.  □
+     </paragraph>
+     <paragraph>
+      In this paper, we focus on the problem where the diagnosis model {a mathematical formula}S is diagnosable and the user provides the initial distribution of the measurement and fault sets.{sup:12} Usually, each {a mathematical formula}Si may not be globally diagnosable. The globally diagnosable diagnosis submodel design problem is defined as determining, for each {a mathematical formula}Si, the minimal set of residuals in the complete set of possible residuals, R, to achieve global diagnosability. Formally, the problem is defined as follows:
+     </paragraph>
+     <paragraph label="Problem">
+      Globally diagnosable diagnosis submodel designGiven n diagnosis submodels, where {a mathematical formula}Si=(Fi,Yi,Ri,LFi,Ri), {a mathematical formula}i={1,2,…,n}, such that: (i) {a mathematical formula}F=F1∪F2∪⋯∪Fn; and (ii) {a mathematical formula}∀i≠j∈{1,2,…,n}, {a mathematical formula}Fi∩Fj=∅; construct, for each diagnosis submodel, a residual set {a mathematical formula}Ri+⊆R such that: (iii) {a mathematical formula}Ri+−Ri is minimal; (iv) {a mathematical formula}Yi+⊆Y are the measurements involved in {a mathematical formula}Ri+; and (v) {a mathematical formula}Si′=(Fi,Yi+,Ri+,LFi,Ri+) is globally diagnosable.
+     </paragraph>
+     <paragraph>
+      Initial distribution of measurements and faults within the diagnosis submodels are provided by the user. That initial decomposition must fulfill constraints (i) and (ii) from the design problem, i.e., all faults in the diagnosis model are covered by the diagnosis submodels, and each fault will be included in only one diagnosis submodel. The rest of the constraints must be satisfied by the design approach. The algorithm we present in Section 6 solves the diagnosis submodel design problem and determines the residuals needed for each diagnosis submodel {a mathematical formula}Si to become globally diagnosable. Our proposal in this work is to compute such residuals from submodels of the global system model, thus allowing the implementation of residuals in a distributed way. The next section presents our structural model decomposition approach to compute such submodels. Then, in Section 6 we use the submodels to design globally diagnosable diagnosis submodels. Later, in Section 7, we use these globally diagnosable diagnosis submodels to create local diagnosers which are used to define a comprehensive distributed diagnosis architecture.
+     </paragraph>
+    </section>
+    <section label="4">
+     <section-title>
+      Structural model decomposition
+     </section-title>
+     <paragraph>
+      As we previously mentioned, residuals can be computed using either the global model of a system or a submodel of this global model with enough analytical redundancy. Structural model decomposition methods, like PCs, have been proposed to decompose a system model into minimal over-determined submodels that are sufficient for fault diagnosis [11], [12], [14]. This decomposition into minimal submodels provides a natural way to distribute the residual generation process into independent computational units, since residuals based on PCs are independent from one another given the measurement set, Y. This approach is fundamentally different from a distributed observer scheme based on a global model [38], where each local observer requires inputs from other local observers.
+     </paragraph>
+     <paragraph>
+      In this section, we first describe the fundamentals of the PCs approach, and then we generalize PCs to submodels with multiple outputs. Later, in Section 6, we will show how this generalization is necessary for distributed diagnoser design.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Possible conflicts
+      </section-title>
+      <paragraph>
+       In this work, we are interested in generating submodels that allow for the computation of a given set of variables that can be used for residual computation. To do it, the PCs approach considers sensor measurements in the global system as potential local inputs to the submodel. Given the set of potential local inputs (selected from {a mathematical formula}U∪Y) and the set of variables to be computed by the submodel (selected from Y, since the submodels have to estimate measured variables to compute residuals for such variables), we create from a causal model {a mathematical formula}M a causal submodel {a mathematical formula}MYi, in which {a mathematical formula}Yi⊆Y is computed using {a mathematical formula}Ci⊆C. In this way, each submodel computes its variable values independently from all other submodels. A causal submodel can be defined as follows.
+      </paragraph>
+      <paragraph label="Definition 21">
+       Causal submodelA causal submodel{a mathematical formula}MYi of a causal model {a mathematical formula}M=(V,C,A) is a tuple {a mathematical formula}MYi=(Vi,Ci,Ai), where {a mathematical formula}Vi⊆V, {a mathematical formula}Ci⊆C, and {a mathematical formula}Ai∩A≠∅.
+      </paragraph>
+      <paragraph>
+       When using measurements (from Y) as local inputs for a causal submodel, the causality of these constraints must be reversed, and so, in general, {a mathematical formula}Ai is not a subset of {a mathematical formula}A.{sup:13} All remaining causal assignments in {a mathematical formula}Ai will still be found in {a mathematical formula}A.
+      </paragraph>
+      <paragraph>
+       A PC is a special kind of causal submodel, where the output set, {a mathematical formula}Yi⊆Y, is a singleton, and the set of constraints {a mathematical formula}Ci is the minimal set of constraints necessary to compute {a mathematical formula}Yi. Hence, a PC is minimal regarding its constituent constraints. This way, PCs are capable of computing, off-line, the set of minimal conflicts in a system model. Formally, a PC can be defined as follows:
+      </paragraph>
+      <paragraph label="Definition 22">
+       Possible conflictA causal submodel, {a mathematical formula}MYi=(Vi,Ci,Ai), is a possible conflict if {a mathematical formula}|Yi|=1, and there is no other causal submodel, {a mathematical formula}MYj=(Vj,Cj,Aj), such that {a mathematical formula}Cj⊆Ci.
+      </paragraph>
+      <paragraph label="Example 15">
+       Consider the three-tank system model. A PC, {a mathematical formula}Mh1, can be computed for the level in tank 1, {a mathematical formula}h1, since {a mathematical formula}h1 is a measured variable (Fig. 5a shows the causal graph of {a mathematical formula}Mh1). Variable {a mathematical formula}h1 can be computed from causal constraint {a mathematical formula}α4. Constraint {a mathematical formula}α4 needs the value of {a mathematical formula}p1, which is computed from the causal constraint {a mathematical formula}α1. Since {a mathematical formula}u1 is an input variable, which is known, and {a mathematical formula}p1 is already computed by {a mathematical formula}α1, the only unknown variable within {a mathematical formula}α1 is {a mathematical formula}p2. In the global model approach, {a mathematical formula}p2 is computed from causal constraint {a mathematical formula}α2. However, in the PCs approach, since the measurements are considered as inputs to the system, {a mathematical formula}h2 is an input variable, and {a mathematical formula}p2 can by computed from {a mathematical formula}h2 by inverting causality in {a mathematical formula}α5. No unknown variables remain to be computed, consequently we have the PC {a mathematical formula}Mh1. This PC can then be used to compute a residual for the level of tank 1, with a reduced number of constraints than the global system model.
+      </paragraph>
+      <paragraph>
+       The procedure for generating a PC from a causal model is given as Algorithm 1[18]. Given a causal model {a mathematical formula}M, and an output variable to be computed y, the GeneratePC algorithm derives a causal submodel {a mathematical formula}Mi that computes y using as local inputs only variables from {a mathematical formula}U⁎=U∪(Y−{y}). We provide here a simplified version of the algorithm presented in [18], and refer the reader to [18] for the extended algorithm and additional details. We briefly summarize the algorithm below.
+      </paragraph>
+      <paragraph>
+       In Algorithm 1, the {a mathematical formula}variables queue represents the set of variables that have been added to the submodel but have not yet been resolved, i.e., they cannot yet be computed by the submodel. This queue is initialized to {a mathematical formula}{y}, and the algorithm then iterates until this queue has been emptied, i.e., the submodel can compute y using only variables in {a mathematical formula}U⁎. For each variable v that must be resolved, we use the GetBestConstraint subroutine (Subroutine 2) to find the constraint that should be used to resolve v in the minimal way.
+      </paragraph>
+      <paragraph>
+       The GetBestConstraint subroutine tries to find a constraint that completely resolves the variable, i.e., resolves v without further backward propagation (all other variables involved in the constraint are in {a mathematical formula}Vi∪Θ∪U⁎). Such a constraint may be the one that computes v in the current causality, if all needed variables are already in the submodel (in {a mathematical formula}Vi) or are available local inputs (in {a mathematical formula}U⁎); or such a constraint may be one that computes a measured output {a mathematical formula}y⁎∈U⁎, in which case the causality will be modified such that {a mathematical formula}y⁎ becomes an input, i.e., the constraint in the new causality will compute v rather than {a mathematical formula}y⁎. If no such constraint exists, then the constraint that computes v in the current causal assignment is chosen, and further backward propagation will be necessary.
+      </paragraph>
+      <paragraph>
+       Clearly, there are many submodels that compute any given y using a given {a mathematical formula}U⁎. The global model is one of these solutions. Algorithm 1 finds a minimal (with respect to subset of constraints) submodel that satisfies this, which is guaranteed in Subroutine 2 by resolving a variable without further backward propagation whenever possible. Since submodels computed by the algorithm are minimal, they are by definition possible conflicts. There may be multiple submodels that are equally minimal (i.e., due to a choice of which local input to use), and the algorithm returns the first that it finds.
+      </paragraph>
+      <paragraph>
+       The algorithm also generates only complete submodels, i.e., the submodels contain at least the variables needed to compute its y. This is guaranteed because the algorithm only stops propagation at variables included in {a mathematical formula}Vi∪Θ∪U⁎[18].
+      </paragraph>
+      <paragraph>
+       In the worst case, the algorithm must visit all variables and constraints. On each variable, Subroutine 2 is called, which in the worst case considers all variables in {a mathematical formula}Y∪U⁎. So the overall worst-case time complexity is {a mathematical formula}O((|V|+|E|)⋅|Y∩U⁎|). Since {a mathematical formula}(Y∩U⁎)⊂V, the algorithm is polynomial in the model size. On average the connectivity among constraints and variables will not be high, and the complexity will be much lower in practice.
+      </paragraph>
+      <paragraph label="Example 16">
+       Applying Algorithm 1,{sup:14} to the three-tank system model, we find a set of three minimal submodels, each one of them estimating the level in one of the tanks (Fig. 5 shows the causal graphs of these three PCs):{a mathematical formula}{a mathematical formula}{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The main advantage of the PC submodels is that, since they estimate a measured variable, they will be the source of conflicts, i.e., they can be used to compute a residual for that variable with a reduced number of constraints compared to the global system model. We denote a residual computed from a PC as {a mathematical formula}ry(Yi), where y is the measurement estimated by the residual, and {a mathematical formula}Yi refers to the submodel with those measurements as outputs, {a mathematical formula}MYi. For example, {a mathematical formula}rh1(h1) denotes the residual that estimates {a mathematical formula}h1 from submodel {a mathematical formula}Mh1.
+      </paragraph>
+      <paragraph>
+       Similarly to what is shown in Section 2, fault signatures can be computed for the residuals of the PCs. However, there is an important difference. Since residual orderings may be defined only within a given submodel, and residuals are now decoupled in the submodels, we cannot define the orderings between residuals in different submodels. For example, we cannot derive an ordering between {a mathematical formula}rh1(h1) and {a mathematical formula}rh2(h2) for {a mathematical formula}Re12+.
+      </paragraph>
+      <paragraph label="Example 17">
+       The fault signatures derived for the residual set {a mathematical formula}R={rh1(h1),rh2(h2),rh3(h3)}, computed from the PCs, are shown in Table 2. In this case, the PCs are able to decouple the effect of faults in the residuals, and so each residual is only affected by a subset of the faults. For example, a decrease in the capacitance of tank 1, denoted by {a mathematical formula}A1−, causes a discontinuous increase in the residuals related to tank 1 pressure, {a mathematical formula}rh1(h1), followed by a smooth decrease, denoted by the signature +−. But fault {a mathematical formula}A1− has no effect on residuals {a mathematical formula}rh2(h2) and {a mathematical formula}rh3(h3), as denoted by the 00 signature, since the constraint {a mathematical formula}c1, which contains fault parameter {a mathematical formula}A1, is not included in {a mathematical formula}Mh2 or {a mathematical formula}Mh3.
+      </paragraph>
+      <paragraph>
+       Consider the residual set given for the global model, {a mathematical formula}M, of the three-tank system (Table 1). A diagnosis model defined with these residuals is diagnosable. However, given the residual set for the PCs (see Table 2), the diagnosis model is not diagnosable since fault {a mathematical formula}Re1+ cannot be distinguished from fault {a mathematical formula}Re12+, and fault {a mathematical formula}Re2+ cannot be distinguished from fault {a mathematical formula}Re23+. For example, if {a mathematical formula}Re1+ occurs, then a 0+ will be observed on {a mathematical formula}rh1(h1) activation. At this point, that observation is consistent with both {a mathematical formula}Re1+ and {a mathematical formula}Re12+ occurring, and a diagnoser would not able to determine which has occurred, because the deviation in {a mathematical formula}rh2(h2) has not manifested yet. Since we would have to wait infinitely long to ensure that no deviation occurs, {a mathematical formula}Re1+ cannot be distinguished from {a mathematical formula}Re12+. Consequently, with PCs we can decompose the diagnosis model into smaller submodels, which can be used to implement residuals in a distributed way. However, this decomposition can decrease the diagnosability compared to the diagnosis model. To avoid this problem, our proposal in this work is to merge PCs, when necessary, so that distributed diagnosers can be implemented in a distributed way, maintaining the diagnosability properties of the global diagnosis model, and without a central coordinator. Next, we show our proposal for submodel merging. Later, in Section 6, we show how this merging process can be used to design globally diagnosable diagnosis submodels.
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Multi-output possible conflicts
+      </section-title>
+      <paragraph>
+       By definition, possible conflicts are submodels computed as minimal subsets of constraints that estimate a single measurement. Therefore, one PC is derived for each system measurement, and consequently can only be used to compute one residual. In this work, we propose to use the PCs to derive submodels computed as minimal subsets of constraints that estimate several measurements. We call these submodels multi-output PCs.
+      </paragraph>
+      <paragraph label="Definition 23">
+       Multi-output PCsA causal submodel, {a mathematical formula}MYi=(Vi,Ci,Ai), is a multi-output PC if {a mathematical formula}|Yi|&gt;1, and there is no other causal submodel, {a mathematical formula}MYj=(Vj,Cj,Aj), such that {a mathematical formula}Yi=Yj and {a mathematical formula}Cj⊆Ci.
+      </paragraph>
+      <paragraph>
+       The advantage of generating multi-output PCs is that additional residuals may then be defined for all the measurements within these multi-output PCs (not just one measurement as in the PCs), but at the same time will have a smaller size than the global model. Multi-output PCs can be derived by merging two or more PCs. The merge operation ⊕ between two causal submodels is defined by Algorithm 3. As shown in the algorithm, the merged submodel must have all the states, outputs, parameters, and constraints of its constituent submodels, and must have all the inputs, minus those that have become outputs in the merged submodel. For the causal assignments, the merged submodel retains all of the causal assignments of its constituent submodels except for those that are different in the two submodels. This can happen only due to causality inversion of outputs in the global model, causing them to become inputs in the submodel. The causal assignment for the related constraints must be in the form where the output variable belongs to the output set of the merged submodel. Recall that we denote merged submodels by the set of outputs they compute, e.g., the submodel formed by merging PCs {a mathematical formula}Mh1 and {a mathematical formula}Mh2 is denoted as {a mathematical formula}Mh1,h2.{sup:15}
+      </paragraph>
+      <paragraph label="Example 18">
+       Fig. 6 shows the causal graph of the multi-output PC {a mathematical formula}Mh1,h2. This submodel estimates two output variables {a mathematical formula}h1 and {a mathematical formula}h2, contains two state variables {a mathematical formula}p1 and {a mathematical formula}p2, and the only measurement used as input is {a mathematical formula}h3. A residual may be defined for each measurement in each submodel. Recall that we denote a residual as {a mathematical formula}ry(Yi), where y is the measurement estimated by the residual, and {a mathematical formula}Yi refers to the submodel with those measurements as outputs. Hence, {a mathematical formula}rh1(h1,h2) denotes the residual that estimates the variable {a mathematical formula}h1 from submodel {a mathematical formula}Mh1,h2, and {a mathematical formula}rh2(h1,h2) the residual that estimates the variable {a mathematical formula}h2 from submodel {a mathematical formula}Mh1,h2.
+      </paragraph>
+      <paragraph label="Example 19">
+       Using Algorithm 3 for the three-tank system, we obtained the following multi-output PCs:{a mathematical formula}{a mathematical formula}{a mathematical formula}As an example, Table 3 shows the fault signatures and residual orderings derived for submodels {a mathematical formula}Mh1,h2 and {a mathematical formula}Mh3, i.e., PCs {a mathematical formula}Mh1 and {a mathematical formula}Mh2 are merged. For this scenario, {a mathematical formula}R={rh1(h1,h2),rh2(h1,h2),rh3(h3)} and now we have a trade-off between using the global model and using minimal submodels. As a consequence of merging {a mathematical formula}Mh1 and {a mathematical formula}Mh2, residual orderings can now be computed between residuals {a mathematical formula}rh1(h1,h2) and {a mathematical formula}rh2(h1,h2).
+      </paragraph>
+      <paragraph>
+       Now that we have presented the fundamental ideas of structural model decomposition, PCs, and our proposal for PC merging into multi-output PCs, the next section presents our distributed diagnosis architecture using PCs.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Distributed diagnosis architecture
+     </section-title>
+     <paragraph>
+      The architecture of the proposed distributed diagnosis framework is shown in Fig. 7. This framework has been implemented in Matlab and it runs, given the inputs, in a completely automatic way. In the architecture, each local diagnoser takes a subset of the inputs, {a mathematical formula}Ui, and outputs, {a mathematical formula}Yi, of the system and provides diagnosis results, i.e., {a mathematical formula}U1 and {a mathematical formula}Y1 represent a subset of the inputs and a subset of the outputs, respectively, used by local diagnoser 1. For each one of the local diagnosers we can distinguish between the off-line modules (in dashed lines) and the on-line modules (in solid lines). The off-line modules are related with the design of the distributed diagnosis system, and are used to implement the on-line modules that are used for the diagnosis process.
+     </paragraph>
+     <paragraph>
+      Regarding the off-line modules, we start with a global model of the system, and compute the Possible Conflicts. The PCs are computed using the approach presented in Section 4, however, our framework is independent of this, and any other structural decomposition method could be used to decompose the system instead of the PCs [29]. Based on the computed PCs and the initial fault/measurements partition provided by the user, the diagnosis submodel design module (Section 6), first computes the initial submodels for each diagnosis submodel (by merging PCs if necessary), and then determines the PCs that need to be merged with the initial submodels to create globally diagnosable diagnosis submodels. Once the globally diagnosable diagnosis submodels have been designed, the result is used in three different modules: (i) the residual design module (Section 6), which implements the residual generators for system tracking for each local diagnoser; (ii) the diagnoser implementation module (Section 7), which implements the event-based local diagnosers for fault isolation; and (iii) the local parameter estimator design module (Section 8), which implements the local parameter estimators for each fault within each local diagnoser for fault identification. There is one main assumption in our approach, that is also present in other distributed diagnosis approaches, such as [40]:
+     </paragraph>
+     <paragraph label="Assumption 4">
+      The observation system is complete, reliable, and all symbol generation is correct.
+     </paragraph>
+     <paragraph label="Assumption 5">
+      A communication channel between two components is bounded.
+     </paragraph>
+     <paragraph>
+      Hence the communication will not introduce new or spurious states in the system.
+     </paragraph>
+     <paragraph>
+      Regarding the on-line modules, our implementation is similar to the qualitative fault isolation (QFI) framework described in [7], [9], but in this case we use submodels for fault detection and identification, instead of the global model. First, the tracking module estimates the output measurements, {a mathematical formula}Yˆi, defined for each local diagnoser. Tracking is performed in discrete-time using standard techniques. Typically, a robust method, such as the extended or unscented Kalman filter [41], or the particle filter [42], provides tracking of the nominal system behavior in the presence of process noise and discretization error. Then, output estimates {a mathematical formula}Yˆi are compared against the real measurements of the system {a mathematical formula}Yi using a statistical test within the fault detection module. In our approach, the fault detection module employs the Z-test to look for nonzero residual signals, as described in [43]. Because we use a simulation for predictions, fault detection can be achieved very quickly. A statistically significant nonzero value for the residual, {a mathematical formula}Ri, indicates a fault occurrence and triggers the symbol generation module, where the measurement and slope values of the residual signals, {a mathematical formula}Ri, are converted to qualitative values, {a mathematical formula}σi. These deviations are then used by the event-based diagnoser to isolate faults. Fault candidates whose predicted signatures remain consistent with the observed measurements are considered fault candidates, {a mathematical formula}Fi, others are dropped. Finally, from the subset {a mathematical formula}Fi of fault candidates, the parameter estimation block performs fault identification to determine the fault that has occurred in the system (described by the parameter associated to the fault, {a mathematical formula}θi⁎), together with its estimation accuracy, {a mathematical formula}Ei2. In our framework, optimization is done by using the local parameter estimator and iteratively modifying the value of the parameter to minimize the difference between the estimated outputs and the measured outputs, although any other appropriate parameter estimation technique could be used. The next three sections develop further each part of the proposed architecture.
+     </paragraph>
+    </section>
+    <section label="6">
+     <section-title>
+      Globally diagnosable diagnosis submodel design
+     </section-title>
+     <paragraph>
+      Recall that the globally diagnosable diagnosis submodel design problem is to find for each diagnosis submodel the minimal set of residuals needed to make the diagnosis submodel globally diagnosable. A solution to this problem is one in which each diagnosis submodel is globally diagnosable. An optimal solution is one in which the number of residuals assigned to each diagnosis submodel is minimal, i.e., there is no smaller set of residuals for any one diagnosis submodel for which it is also globally diagnosable. There may be several optimal solutions.
+     </paragraph>
+     <paragraph>
+      We can treat this design problem as a search problem, where the search space for a given diagnosis submodel is defined by the residuals that may be added to the diagnosis submodel. However, this space is extremely large, because the number of possible submodels, and, consequently, the size of the complete residual set, grows exponentially with the number of measurements. For a system with {a mathematical formula}|Y| measurements the number of possible submodels is {a mathematical formula}2|Y|−1, and the number of residuals over all possible submodels is {a mathematical formula}|Y|×2|Y|−1.
+     </paragraph>
+     <paragraph>
+      The advantage of PCs is that, since measurements are used as local inputs to decompose the system, they are capable of decoupling the effects of faults in the system. This results in an improvement in diagnosability in a local sense. The intuition, then, is that including PC-based residuals will lead to improved diagnosis submodel design (i.e., fewer residuals) because of this improvement in diagnosability, thus requiring less search overall.
+     </paragraph>
+     <paragraph label="Example 20">
+      Let us assume that the three-tank system is split into three diagnosis submodels, {a mathematical formula}S1, {a mathematical formula}S2, and {a mathematical formula}S3, where for {a mathematical formula}S1, {a mathematical formula}F1={A1−,Re1+,Re12+}, {a mathematical formula}Y1={h1}; for {a mathematical formula}S2, {a mathematical formula}F2={A2−,Re2+,Re23+}, {a mathematical formula}Y2={h2}; and for {a mathematical formula}S3, {a mathematical formula}F3={A3−,Re3+}, {a mathematical formula}Y3={h3}. Also assume that we use the {a mathematical formula}M-based residuals, so {a mathematical formula}R1={rh1}, {a mathematical formula}R2={rh2}, and {a mathematical formula}R3={rh3}. Analyzing global diagnosability, we see that none of the diagnosis submodels is globally diagnosable, i.e., we will have to add new residuals to each diagnosis submodel in order to satisfy our design constraints. For example, consider diagnosis submodel {a mathematical formula}S3. Looking at Table 1, we see that the diagnosis submodel is not globally diagnosable, since effects produced by {a mathematical formula}Re3+ on {a mathematical formula}rh3 are not unique. Now assume we use the PC-based residuals, {a mathematical formula}R1={rh1(h1)}, {a mathematical formula}R2={rh2(h2)}, and {a mathematical formula}R3={rh3(h3)}. We see that now {a mathematical formula}S3 is globally diagnosable because only one nonlocal fault, {a mathematical formula}Re23+, produces an effect on {a mathematical formula}rh3(h3), and it is a different effect from those produced by the local faults. So if {a mathematical formula}S3 uses the PC-based residual instead of the global model-based residual, it produces an improved diagnosis submodel design. However, the other diagnosis submodels are still not globally diagnosable, and cannot be made so by including any other PC-based residual, because those diagnosis submodels contain the faults that make the system as a whole nondiagnosable using only the PC-based residuals.
+     </paragraph>
+     <paragraph>
+      As shown in the previous example, PC-based residuals can improve global diagnosability over the global model in some diagnosis submodels, but typically it is not enough to guarantee global diagnosability for all diagnosis submodels. This suggests that we require a more general approach that considers residuals from the complete set, R, considering all possible submodels.
+     </paragraph>
+     <paragraph>
+      As previously pointed out, the size of the search space is dependent on the number of possible residuals, and the complete set is very large. Further, there is much overlap of information between the different residuals, for example, compare Table 1, Table 2, Table 3. So, instead of searching over the residual space ({a mathematical formula}|Y|×2|Y|−1), we perform a search over the measurement space ({a mathematical formula}2|Y|−1), which is much smaller than the residual space, and define residuals in a particular way. Specifically, given a set of measurements {a mathematical formula}Yi, we use the residuals for the submodel that includes exactly the measurements in {a mathematical formula}Yi as outputs, i.e., for {a mathematical formula}Yi we use the residual set {a mathematical formula}{ry(Yi):y∈Yi} (recall that y refers to the measured variable estimated by the residual, and {a mathematical formula}Yi refers to the submodel with those measurements as outputs, {a mathematical formula}MYi, used to compute the residual). For example, if {a mathematical formula}Yi={h1,h2}, then {a mathematical formula}Ri={rh1(h1,h2),rh2(h1,h2)}. This approach significantly reduces the search space, because we accept only diagnosis submodel definitions for which the residuals are those from the submodel defined by the diagnosis submodel measurements. Further, by defining residuals in this way, each local diagnoser will have its own submodel to compute residuals independently of other local diagnosers. This is in contrast to an approach where residuals are computed in a centralized way [8], [10], and allows the local diagnosers to be independent of each other for residual generation. As previously described in Section 3, the diagnosers will become independent of each other with respect to fault isolation once they have been designed to be globally diagnosable.
+     </paragraph>
+     <paragraph>
+      The search problem for a diagnosis submodel is now defined by (i) the initial state, which is from the user-provided initial diagnosis submodel definition;{sup:16} (ii) the successor function, which adds a measurement to the diagnosis submodel, thus reformulating the submodel and defining a new set of residuals, (iii) the goal state, which is a derived diagnosis submodel that is globally diagnosable; and (iv) the path cost, which is the number of measurements associated with the diagnosis submodel. The search problem is to find the globally diagnosable extension of the given diagnosis submodel with the fewest measurements added to all of the diagnosis submodels.
+     </paragraph>
+     <paragraph>
+      Using this formulation, breadth-first search (BFS) will find the optimal solution since the path costs are uniform. BFS will also find the optimal solution using the alternate formulation that searches over the complete residual space. As a much more efficient alternative, we present here a greedy algorithm that, in our experience, has a high probability of also finding the optimal solution. Our heuristic is to compute the number of faults which are not globally distinguishable when adding a proposed measurement. The locally optimal action is to add the measurement that minimizes this number.
+     </paragraph>
+     <paragraph>
+      The greedy diagnosis submodel design approach is shown in Algorithm 4. The algorithm is provided as inputs an initial assignment of faults and measurements to diagnosis submodels. It first computes the single-output PCs for all the measurements, storing in {a mathematical formula}M. For each diagnosis submodel, we first construct the multi-output PC for its current set of measurements using the submodel merging algorithm, and then extract its residuals (recall that {a mathematical formula}ry(Yi) refers to the residual for measurement y in submodel {a mathematical formula}MYi). We then compute the subset of measurements over which we will consider adding to the diagnosis submodel as {a mathematical formula}Y′=Y−Yi.{sup:17} We then identify the best measurement within {a mathematical formula}Y′ to add to {a mathematical formula}Yi, using the FindBestY subroutine, which implements our heuristic. For each possible measurement to add, this subroutine constructs the new set of residuals, then determines the faults, {a mathematical formula}Fi⁎, that are not globally distinguishable for the diagnosis submodel and this residual set. To do this, the algorithm constructs new diagnosis submodels by merging the previous submodel, {a mathematical formula}MYi, with the PC for the new measurement, {a mathematical formula}My. The fault language for the new diagnosis submodel is then derived to establish distinguishability properties. The measurement that results in the smallest {a mathematical formula}Fi⁎ (this is the {a mathematical formula}score variable in our algorithm) is selected as the best measurement and becomes the output {a mathematical formula}yi⁎. We then update {a mathematical formula}Yi, reconstruct the residual set for the new measurement set, and continue in this fashion until {a mathematical formula}Si is globally diagnosable.
+     </paragraph>
+     <paragraph>
+      {a mathematical formula}
+     </paragraph>
+     <paragraph>
+      GenerateLocalLanguage, given as Subroutine 6, performs a syntactic transformation on the global fault language for a model to derive a local fault language for its submodel. Within each trace, the fault signature is replaced by the version for the submodel by changing the subscript to that of the submodel. This is only a syntactic transformation; here we take advantage of the fact that residuals are defined in a consistent way between models and submodels, where the residual deviation for a measurement in a local submodel will be the same as its deviation in the global model (e.g., compare Table 1, Table 3), and if the measurement does not appear in the local submodel, there will be no associated residual deviation (it is replaced by the empty trace ϵ).
+     </paragraph>
+     <paragraph>
+      Based on our assumptions, the design algorithm will always find globally diagnosable diagnosis submodels, as stated in Theorem 1. This result applies equally to the BFS version of the design algorithm.
+     </paragraph>
+     <paragraph label="Proof">
+      For a set of n diagnosis submodels{a mathematical formula}{Si=(Fi,Yi,Ri,∅):i=1,…,n},Algorithm 4always returns globally diagnosable diagnosis submodels.For a given diagnosis submodel, {a mathematical formula}Si, the algorithm continually adds {a mathematical formula}y∈Y to {a mathematical formula}Yi until the diagnosis submodel is globally diagnosable. This will always terminate because, in the worst case, all {a mathematical formula}y∈Y are added to {a mathematical formula}Yi, in which case the global model is recovered, which is diagnosable (Assumption 3 in Section 3).  □
+     </paragraph>
+     <paragraph>
+      The worst-case performance of both algorithms occurs when all the system measurements are added to a diagnosis submodel, which refers to the case where the diagnosis problem cannot be decomposed. In the worst case, the BFS algorithm explores a space of size {a mathematical formula}O(2|Y|), whereas the greedy algorithm explores only a space of size {a mathematical formula}O(|Y|). With appropriate sensors, this is a very unlikely scenario. Because the greedy algorithm adds measurements incrementally, it is, in general, non-optimal, but here we trade off optimality for computational efficiency. However, as we will see in the following examples and in the case study, the greedy algorithm still obtains the optimal solution as determined by BFS. Both algorithms have additional work at each point in the search space explored, to compute the corresponding submodel, compute the local fault language, and check diagnosability. In an overall complexity analysis this appears as an additional factor that is not relevant in comparing the performance of BFS and the greedy algorithm.
+     </paragraph>
+     <paragraph label="Example 21">
+      We apply this algorithm to the three-tank system previously described. The system is split into three diagnosis submodels, {a mathematical formula}S1, {a mathematical formula}S2, and {a mathematical formula}S3, where for {a mathematical formula}S1, {a mathematical formula}F1={A1−, {a mathematical formula}Re1+, {a mathematical formula}Re12+}, {a mathematical formula}Y1={h1}, for {a mathematical formula}S2, {a mathematical formula}F2={A2−, {a mathematical formula}Re2+, {a mathematical formula}Re23+}, {a mathematical formula}Y2={h2}, and for {a mathematical formula}S3, {a mathematical formula}F3={A3−, {a mathematical formula}Re3+}, {a mathematical formula}Y3={h3}, and we use the PC-based residuals, {a mathematical formula}R1={rh1(h1)}, {a mathematical formula}R2={rh2(h2)}, and {a mathematical formula}R3={rh3(h3)}. As a result, we have to add one residual only to the diagnosis submodels {a mathematical formula}S1 and {a mathematical formula}S2, and none have to be added to diagnosis submodel {a mathematical formula}S3, because, as previously shown, {a mathematical formula}S3 is already globally diagnosable with only {a mathematical formula}rh3(h3). Using both the greedy algorithm and BFS, diagnosis submodel {a mathematical formula}S1 gets residuals {a mathematical formula}rh1(h1,h2) and {a mathematical formula}rh2(h1,h2), and diagnosis submodel {a mathematical formula}S2 gets residuals {a mathematical formula}rh2(h2,h3) and {a mathematical formula}rh3(h2,h3). This improves the algorithm presented in [10], because in that case, diagnosis submodel {a mathematical formula}S2 needs three residuals, and diagnosis submodel {a mathematical formula}S3 needs two residuals, so the size of the event-based diagnosers will be smaller.
+     </paragraph>
+     <paragraph label="Example 22">
+      As another design scenario, consider now the three-tank system with {a mathematical formula}F={A1−,A2−,A3−,Re12+,Re23+} and {a mathematical formula}Y={h1,h2,h3}. Assume that the system is again split into three diagnosis submodels, {a mathematical formula}S1, {a mathematical formula}S2, and {a mathematical formula}S3, where for {a mathematical formula}S1, {a mathematical formula}F1={A1−,Re12+}, {a mathematical formula}Y1={h1}, for {a mathematical formula}S2, {a mathematical formula}F2={A2−,Re23+}, {a mathematical formula}Y2={h2}, and for {a mathematical formula}S3, {a mathematical formula}F3={A3−}, {a mathematical formula}Y3={h3}. If we use the PC-based residuals, {a mathematical formula}R1={rh1(h1)}, {a mathematical formula}R2={rh2(h2)}, and {a mathematical formula}R3={rh3(h3)}, we see that all three diagnosis submodels, {a mathematical formula}S1, {a mathematical formula}S2, and {a mathematical formula}S3, are globally diagnosable. This is clear from the set of fault signatures obtained using these residuals, shown in Table 2. The PCs decouple the diagnosis submodels to the extent that only the {a mathematical formula}Reij+ faults affect multiple diagnosis submodels, and the effects they produce are unique. Hence, global diagnosability is satisfied and the diagnosis submodel design algorithm is not needed. For this design scenario, our PC-based approach also improves over the approach in [10], because in that case, diagnosis submodel {a mathematical formula}S1 needs two residuals, and diagnosis submodel {a mathematical formula}S2 also needs two residuals, so the size of the event-based diagnosers will be reduced and the search process will be completely avoided.
+     </paragraph>
+     <paragraph>
+      As seen in the examples, by using PCs the design approach developed in this paper improves upon the design results in [10]. Moreover, in [10], each diagnosis submodel uses the global model for residual generation. In the approach developed in this paper, however, each diagnosis submodel needs only a submodel for residual generation. So, residual generation could be implemented in a distributed way and will be more efficient.
+     </paragraph>
+    </section>
+    <section label="7">
+     <section-title>
+      Diagnoser implementation
+     </section-title>
+     <paragraph>
+      In this section, we describe the construction of the event-based diagnosers for fault isolation, built from the designed diagnosis submodels. An event-based diagnoser implements a diagnosis submodel, and we describe a procedure for transforming a diagnosis submodel into an event-based diagnoser. We then show that if there is a correspondence between diagnosability of a diagnosis submodel and unique isolation of faults by its diagnoser, and that if the diagnosis submodel is globally diagnosable, this unique isolation result will be globally correct.
+     </paragraph>
+     <paragraph>
+      The goal of an event-based diagnoser for a set of faults and residuals is to determine which faults are consistent with the observed sequence of residual deviation events. We define a diagnoser in our framework [9] as follows.
+     </paragraph>
+     <paragraph label="Definition 24">
+      DiagnoserA diagnoser for a fault set F and residual set R is a tuple {a mathematical formula}DF,R=(S,s0,Σ,δ,A,D,G) where S is a set of states, {a mathematical formula}s0∈S is an initial state, Σ is a set of events, {a mathematical formula}δ:S×Σ→S is a transition function, {a mathematical formula}A⊆S is a set of accepting states, {a mathematical formula}D⊆2F is a set of diagnosis sets, and {a mathematical formula}G:S→D is a diagnosis map.
+     </paragraph>
+     <paragraph>
+      A diagnoser is a finite automaton extended by a set of diagnosis sets and a diagnosis map. As with fault models, events correspond to residual deviations. From the current state, a residual deviation event causes a transition to a new state. The diagnosis set for that new state, defined by the diagnosis map, represents the set of faults that are consistent with the sequence of events seen up to the current point in time. Under the single fault assumption, the space of possible diagnosis sets is the power set of faults, {a mathematical formula}2F. We denote the diagnoser result (a diagnosis set) for some trace λ as {a mathematical formula}DF,R(λ), which is {a mathematical formula}G(s) for the s reached by λ. If there is no state corresponding to that trace, the diagnoser will block, and the result is ∅. Accepting states correspond to fault isolation results.
+     </paragraph>
+     <paragraph>
+      We want to construct only correct diagnosers, i.e., ones that faithfully capture the corresponding fault language and correctly define the diagnosis map.
+     </paragraph>
+     <paragraph label="Definition 25">
+      CorrectnessA diagnoser {a mathematical formula}DF,R is correct, if (i) there is a corresponding {a mathematical formula}s∈S only for prefixes of traces in {a mathematical formula}LF,R, (ii) for all {a mathematical formula}f∈F and {a mathematical formula}s∈S, {a mathematical formula}f∈G(s) if and only if there is a {a mathematical formula}λ⊑λf,R∈LF,R that reaches s, and (iii) for all {a mathematical formula}λf,R∈LF,R, the state reached by {a mathematical formula}λf,R, is in A.
+     </paragraph>
+     <paragraph>
+      That is, a diagnoser is correct if it captures all valid traces, {a mathematical formula}G(s) contains the correct faults, and fault traces correspond to accepting states. Here, we denote a that a diagnoser is correct with the {a mathematical formula}⁎ superscript, e.g., {a mathematical formula}DF,R⁎. It is trivial to construct a correct diagnoser given a fault language; for a detailed procedure see [9].
+     </paragraph>
+     <paragraph label="Example 23">
+      A fragment of the resulting centralized diagnoser for the three-tank system is given in Fig. 8, for {a mathematical formula}F={A2−,Re2+,Re23+} and {a mathematical formula}R={rh1,rh2,rh3}. For example, consider the trace {a mathematical formula}rh20+rh10+rh30+. After {a mathematical formula}rh20+, two faults are consistent, {a mathematical formula}Re2+ and {a mathematical formula}Re23+, and diagnoser moves to a state where these two faults are contained in the diagnosis set. After {a mathematical formula}rh10+, the diagnoser moves to a new state and the corresponding diagnosis set remains the same. After {a mathematical formula}rh30+, now only {a mathematical formula}Re2+ is consistent, and as this trace now corresponds to a fault trace, the state is an accepting state.
+     </paragraph>
+     <paragraph>
+      The same procedure to construct a correct centralized diagnoser applies to constructing a local diagnoser, as we simply use the diagnosis submodel with the local fault set {a mathematical formula}Fi and local residual set {a mathematical formula}Ri to obtain {a mathematical formula}DFi,Ri⁎.
+     </paragraph>
+     <paragraph label="Example 24">
+      The local diagnosers for the diagnosis submodel design example from the previous section are given in Fig. 9. Recall that diagnosis submodels {a mathematical formula}S1 and {a mathematical formula}S2 need to add one residual to become globally diagnosable, and diagnosis submodel {a mathematical formula}S3 does not need any; whereas the centralized diagnoser needs all the global model residuals.
+     </paragraph>
+     <paragraph>
+      A diagnoser isolates a fault if it accepts all possible valid traces for the fault and the accepting states map to diagnosis sets containing the fault.
+     </paragraph>
+     <paragraph label="Definition 26">
+      IsolationA diagnoser {a mathematical formula}DF,Risolates fault {a mathematical formula}f∈F if {a mathematical formula}DF,R accepts all {a mathematical formula}λf,R∈Lf,R and for each {a mathematical formula}s∈A that accepts some {a mathematical formula}λf,R, {a mathematical formula}f∈G(s).
+     </paragraph>
+     <paragraph>
+      A correct diagnoser will clearly isolate all its faults; this is guaranteed by the second and third conditions of Definition 25.
+     </paragraph>
+     <paragraph label="Lemma 2">
+      If{a mathematical formula}DF,Ris correct,{a mathematical formula}DF,Risolates all faults{a mathematical formula}f∈F.
+     </paragraph>
+     <paragraph>
+      Unique isolation corresponds to diagnosis model diagnosability. A diagnoser uniquely isolates a fault if each accepting state maps to the single fault.
+     </paragraph>
+     <paragraph label="Definition 27">
+      Unique isolationA diagnoser {a mathematical formula}DF,Runiquely isolates fault {a mathematical formula}f∈F if {a mathematical formula}DF,R accepts all {a mathematical formula}λf,R∈Lf,R and for each {a mathematical formula}s∈A that accepts some {a mathematical formula}λf,R, {a mathematical formula}{f}=G(s).
+     </paragraph>
+     <paragraph>
+      We can prove that a correct diagnoser {a mathematical formula}DF,R⁎ uniquely isolates all {a mathematical formula}f∈F if and only if {a mathematical formula}S is diagnosable (adapted from [9]).
+     </paragraph>
+     <paragraph label="Proof">
+      A diagnosis model{a mathematical formula}S=(F,Y,R,LF,R)is diagnosable if and only if{a mathematical formula}DF,R⁎uniquely isolates all{a mathematical formula}f∈F.Assume some {a mathematical formula}fi∈F with fault trace {a mathematical formula}λfi,R∈LF,R. {a mathematical formula}DF,R⁎ accepts {a mathematical formula}λfi,R and for the corresponding accepting state {a mathematical formula}sa,fi∈G(sa) by Lemma 2 and Definition 26. Since F is diagnosable, there is no {a mathematical formula}fj∈F with fault trace {a mathematical formula}λfj,R∈Lfj,R where {a mathematical formula}λfi,R⊑λfj,R. Therefore, {a mathematical formula}fj∉G(sa). So, {a mathematical formula}G(sa)=fi and {a mathematical formula}DF,R⁎ uniquely isolates each {a mathematical formula}f∈F. Assume that {a mathematical formula}DF,R⁎ uniquely isolates each {a mathematical formula}f∈F. Then each possible fault trace {a mathematical formula}λfi,R has an associated accepting state {a mathematical formula}sa, where {a mathematical formula}G(sa)=fi. Thus, there cannot be some {a mathematical formula}λ⊑λfi,R for {a mathematical formula}fi≠fj that can reach {a mathematical formula}sa, otherwise {a mathematical formula}fj∈G(sa). Therefore, {a mathematical formula}fi≁fj, so F is diagnosable. Thus {a mathematical formula}S is diagnosable if and only if {a mathematical formula}DF,R⁎ uniquely isolates each {a mathematical formula}f∈F.  □
+     </paragraph>
+     <paragraph label="Corollary 1">
+      We can apply Theorem 2 directly to a diagnosis submodel and local diagnosability, since for a diagnosis submodel, local diagnosability is equivalent to diagnosability (recall Definition 16, Definition 19), to arrive at the following corollary. A diagnosis submodel{a mathematical formula}Siis (locally) diagnosable if and only if{a mathematical formula}DFi,Ri⁎uniquely isolates all{a mathematical formula}fi∈Fi.
+     </paragraph>
+     <paragraph>
+      This is simply a restatement of Theorem 2 as applied to a diagnosis submodel, so no proof is necessary. In Section 3, we showed that if all diagnosis submodels are globally diagnosable, then the set of diagnosis submodels is globally correct, i.e., they have the potential to generate the correct diagnosis. Given correct local diagnosers, we can show now that the correct global result will be generated.
+     </paragraph>
+     <paragraph label="Proof">
+      If each diagnosis submodel in a set of n diagnosis submodels{a mathematical formula}{Si=(Fi,Yi,Ri,LFi,Ri):i=1,…,n}, from a diagnosis model{a mathematical formula}S=(F,Y,R,LF,R)where{a mathematical formula}F=F1∪F2∪⋯∪Fn, is globally diagnosable, then for all faults{a mathematical formula}f∈Foccurring with local fault traces{a mathematical formula}λf,R1,{a mathematical formula}λf,R2,…,λf,Rn,{a mathematical formula}⋃iDFi,Ri⁎(λf,Ri)={f}.If all {a mathematical formula}Si are globally diagnosable, then all {a mathematical formula}Si are also locally diagnosable, since {a mathematical formula}Fi⊆F, by the definition of local diagnosability (Definition 19). Since they are locally diagnosable, then, by Corollary 1, {a mathematical formula}DFi,Ri⁎ uniquely isolates all faults in {a mathematical formula}Fi. So, if some {a mathematical formula}f∈F occurs, for {a mathematical formula}Si, if {a mathematical formula}f∈Fi, then {a mathematical formula}DFi,Ri⁎(λf,Ri)={f} because it must uniquely isolate f. If {a mathematical formula}f∉Fi, then since {a mathematical formula}Si is globally diagnosable, f must be distinguishable from every fault in {a mathematical formula}Fi using {a mathematical formula}Ri, so the diagnoser will block and {a mathematical formula}DFi,Ri⁎(λf,Ri)=∅. Therefore, since f must be contained in at least one {a mathematical formula}Fi, the union of all local diagnoses is always {a mathematical formula}{f}.  □
+     </paragraph>
+     <paragraph>
+      The local event-based diagnosers work as follows. Each local diagnoser starts in its initial state. A local residual deviation event is received by its corresponding diagnoser. If there is a matching event from the current state, a local diagnoser will follow that path to the next state, and remain active. If not, the local diagnoser will block, and its diagnosis result will be ∅. The process continues until a local diagnoser reaches an accepting state. At this point, a globally correct diagnosis is known, if this diagnosis submodel was designed to be globally diagnosable. If so, no other local diagnoser may reach an accepting state, since no two diagnosis submodels share a fault. Therefore, a globally correct diagnosis result is achieved without the use of a centralized coordinator. If the diagnosis submodels are not globally diagnosable, then two or more local diagnosers may both reach an accepting state and a coordinator would be needed to resolve the ambiguity. This holds by Theorem 3.
+     </paragraph>
+     <paragraph>
+      If a local diagnoser has not yet reached an accepting state, but has a unique diagnosis, a globally correct diagnosis result may only be declared (under the single fault assumption) if all other local diagnosers have blocked, but in this case, some kind of communication between the local diagnosers would be necessary to broadcast when they have blocked. A globally correct diagnosis result may otherwise only be declared when all residuals that are predicted to deviate for a particular fault do deviate, i.e., an accepting state is reached. These conditions correspond directly to those outlined in [8] in the absence of the event-based framework.
+     </paragraph>
+     <paragraph>
+      We can prove that the distributed approach is more scalable than the centralized approach, in terms of the diagnostic information they need to represent. We do this using the minimal representation of the diagnostic information in the form of an {a mathematical formula}|Fi||Ri| matrix to capture the fault signatures and {a mathematical formula}|Fi| matrices of size {a mathematical formula}|R|2 to represent the residual orderings (for each fault, residual orderings can be compactly represented in a Boolean {a mathematical formula}|Ri|×|Ri| matrix where an 1 in entry {a mathematical formula}(n,m) means there is an ordering {a mathematical formula}rn≺rm, and a 0 entry means there is not); here, the total minimum space required by a diagnoser for {a mathematical formula}Fi and {a mathematical formula}Ri is {a mathematical formula}|Fi|(|Ri|+|Ri|2). A centralized diagnoser will require {a mathematical formula}|F|(|R|+|R|2) space and the local diagnosers will require {a mathematical formula}∑i|Fi|(|Ri|+|Ri|2) space.
+     </paragraph>
+     <paragraph label="Proof">
+      The total information requirements of a distributed diagnoser design will grow more slowly than the information requirements of a centralized diagnoser design as the size of the system increases.Assume that a distributed diagnoser design is possible, i.e., that for each {a mathematical formula}Ri, {a mathematical formula}|Ri|&lt;|R| (recall that the design procedure guarantees that {a mathematical formula}|Ri|⩽|R|, because {a mathematical formula}|Yi|⩽|Y|). In the worst case, {a mathematical formula}|Ri|=|R|−1. The centralized diagnoser requires {a mathematical formula}|F|(|R|+|R|2) space, and the local diagnosers {a mathematical formula}∑i|Fi|(|R|−1+(|R|−1)2)=|F|(|R|−1+(|R|−1)2) space (recall that we partition the fault set, so {a mathematical formula}∑i|Fi|=|F|). If the size of the fault set grows, i.e., {a mathematical formula}|F| becomes {a mathematical formula}|F|+1, the centralized approach requires {a mathematical formula}(|F|+1)(|R|+|R|2) space and the distributed approach requires {a mathematical formula}(|F|+1)(|R|−1+(|R|−1)2) space. The global approach grows by a larger factor. If the size of the measurement set grows, so R increases in size, i.e., {a mathematical formula}|R| becomes {a mathematical formula}|R|+1, then the centralized approach requires {a mathematical formula}(|F|)(|R|+1+(|R|+1)2) space and the distributed approach requires {a mathematical formula}(|F|)(|R|+|R|2) space, and here again, the centralized approach grows by a larger factor. Therefore the distributed approach scales better than the centralized approach as the size of the system increases.  □
+     </paragraph>
+    </section>
+    <section label="8">
+     <section-title>
+      Distributed fault identification
+     </section-title>
+     <paragraph>
+      Once the fault has been isolated by the local event-based diagnoser as described in the previous section, the next step for our distributed diagnosis system is to perform distributed fault identification. In this section, we develop our proposal to include fault identification within the event-based distributed diagnosis framework. To do this, we combine our qualitative fault isolation approach with a quantitative fault identification approach that uses minimal parameter estimators similar to those presented in [15]. Minimal parameter estimators can perform fault identification in an efficient, distributed way. The basic idea underlying minimal parameter estimators is to use the PC submodels to solve a nonlinear optimization problem, for one parameter within the PC, based on its input and output values.
+     </paragraph>
+     <paragraph label="Example 25">
+      Each PC contains a subset of the parameters in the system, and can be used to estimate any combination of these subsets of parameters. For example, PC {a mathematical formula}Mh1 can be used to estimate the subset of parameters {a mathematical formula}{A1}, {a mathematical formula}{Re1}, {a mathematical formula}{Re12}, {a mathematical formula}{A1,Re1}, {a mathematical formula}{A1,Re12}, {a mathematical formula}{Re1,Re12}, or {a mathematical formula}{A1,Re1,Re12}. However, since we work under the single fault assumption, we consider that each PC will only be used to estimate one parameter from the set {a mathematical formula}Θi in {a mathematical formula}Mh1.
+     </paragraph>
+     <paragraph>
+      We define a nonlinear optimization problem using the inputs {a mathematical formula}Ui and the outputs {a mathematical formula}Yi of the PC to estimate the value of the parameter, {a mathematical formula}θj∈Θi related to the fault {a mathematical formula}fj. More formally, the parameter estimation problem using a PC, {a mathematical formula}PCi, computes the value of the unknown parameter, {a mathematical formula}θj∈Θi, given the values {a mathematical formula}Ui and {a mathematical formula}Yi, by solving the following nonlinear optimization problem:{a mathematical formula}{a mathematical formula} where {a mathematical formula}eMYi(Ui(k),θj) is a local estimation function (that we call a local parameter estimator) obtained directly from the constraints of the PC {a mathematical formula}MYi, that computes an estimation of the outputs of the submodel, {a mathematical formula}Yˆi, based on its inputs and an estimated value of the parameter to identify, {a mathematical formula}θˆj. Optimization is done by using the local parameter estimator and iteratively modifying the value of {a mathematical formula}θˆj to minimize the difference between the estimated outputs, {a mathematical formula}Yˆi, and the measured outputs, {a mathematical formula}Yi (as indicated by Eq. (2)).
+     </paragraph>
+     <paragraph>
+      Given a diagnosis submodel {a mathematical formula}Si=(Fi,Yi,Ri,LFi,Ri), where the residual set is defined as {a mathematical formula}Ri={ry1(Yi), {a mathematical formula}ry2(Yi),…}, a local parameter estimator for a parameter {a mathematical formula}θj, related to a fault {a mathematical formula}fj∈Fi, can be derived directly from the equations of the PC {a mathematical formula}MYi, or from any of the constituent PCs of {a mathematical formula}MYi containing the parameter {a mathematical formula}θj if {a mathematical formula}MYi is a multi-output PC.
+     </paragraph>
+     <paragraph label="Example 26">
+      Consider the three-tank system. The diagnosis submodel design algorithm determined that diagnosis submodel {a mathematical formula}S1 gets residuals {a mathematical formula}rh1(h1,h2) and {a mathematical formula}rh2(h1,h2), hence a local parameter estimator for this diagnosis submodel and parameter {a mathematical formula}Re12 can be computed from either the multi-output PC {a mathematical formula}Mh1,h2 or any of its constituent PCs {a mathematical formula}Mh1 and {a mathematical formula}Mh2. However, a local parameter estimator for diagnosis submodel {a mathematical formula}S1 and parameter {a mathematical formula}Re1 can only be computed from either the multi-output PC {a mathematical formula}Mh1,h2 or the constituent PC {a mathematical formula}Mh1 (in this case {a mathematical formula}Mh2 cannot be used as local parameter estimator since parameter {a mathematical formula}Re1 is not included in {a mathematical formula}Mh2).
+     </paragraph>
+     <paragraph>
+      As shown in the example, different local parameter estimators can be used to estimate the same parameter value. Each one of these local parameter estimators provides different features regarding accuracy and estimation time, and it is up to the user to choose which one of the local parameter estimators must be used, as described in [15]. On one hand, if the PC is chosen, the estimation process will be faster than using the multi-output PC, since it contains a smaller number of equations. On the other hand, if the multi-output PC is chosen, the estimation process will be slower than using the PCs, but, since it uses more measurements for the estimation, the result will likely be more accurate.
+     </paragraph>
+     <paragraph>
+      At run time, we use a time limit, and fault identification is triggered either when a unique diagnosis is obtained or when the time limit is reached [44]. If the local diagnoser reaches an accepting state, the local diagnoser has been able to uniquely isolate a fault, and the parameter estimation is run only for the isolated fault candidate to determine its fault magnitude. If the local diagnoser has not been able to reach an accepting state after a predefined amount of time (for example, when enough data for accurate fault identification are available), the fault identification is started for all the isolated candidates at that time.
+     </paragraph>
+    </section>
+    <section label="9">
+     <section-title>
+      Case study
+     </section-title>
+     <paragraph>
+      As a case study, we apply our distributed diagnosis framework to a simulation model of a rover testbed developed at NASA Ames Research Center [16], [17]. In this section, we first describe the model for the rover, then, we show several globally diagnosable diagnosis submodel design examples, and finally, we provide on-line diagnosis results in simulation for different fault situations.
+     </paragraph>
+     <section label="9.1">
+      <section-title>
+       Rover modeling
+      </section-title>
+      <paragraph>
+       The rover model (Fig. 10) assumes a symmetric rigid frame with four independently-driven wheels and four motors, one for each wheel. The rover is powered by four batteries connected in series. Four sensors, {a mathematical formula}V1⁎, {a mathematical formula}V2⁎, {a mathematical formula}V3⁎, and {a mathematical formula}V4⁎, measure the voltage in each one of the batteries, and another four sensors, {a mathematical formula}ωFL⁎, {a mathematical formula}ωFR⁎, {a mathematical formula}ωBL⁎, and {a mathematical formula}ωBR⁎, measure the wheel velocities.{sup:18} The subscripts F, B, L, and R subscripts stand for “front”, “back”, “left” and “right”, respectively. Here, we summarize the model and refer the reader to [16], [17] for additional details. The state equations governing the dynamic behavior are given as follows. First, the wheel speeds are governed by{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} The ω variables denote rotational wheel speeds, {a mathematical formula}Jw denotes the wheel inertia, {a mathematical formula}rw denotes the wheel radius, and for wheel w, {a mathematical formula}μf,w is a friction coefficient. The wheel forces are summarized in Fig. 11. For a wheel w, {a mathematical formula}Fgl,w=μgl(vw−v) is the longitudinal ground force on a wheel, where {a mathematical formula}μgl is a friction coefficient, {a mathematical formula}vw is the translational wheel velocity, and v is the translational velocity of the rover frame. When there is a difference in the relative velocity between the wheel and the ground, a force is produced, due to friction, that pushes the wheel along the ground. Forces are also present resisting the rotational movement, {a mathematical formula}Fgr,w=μrωw for wheel w, where {a mathematical formula}μr is a friction coefficient. Since {a mathematical formula}μr is the same for all wheels, all the {a mathematical formula}Fgr,w forces are the same and so we drop the w subscript. For wheel w, the {a mathematical formula}kτiw term is for the motor torque, where {a mathematical formula}iw is the motor current and {a mathematical formula}kτ is an energy transformation gain. The angle {a mathematical formula}γ=arctanlb, where l is the rover length, and b is its width.
+      </paragraph>
+      <paragraph>
+       The translational velocity v and rotational velocity ω of the rover are governed by{a mathematical formula}{a mathematical formula} where m is the rover mass, J is its rotational inertia, d is the distance from the center of the rover to each wheel.
+      </paragraph>
+      <paragraph>
+       The wheels are driven by DC motors with PID control that sets the voltages V applied to the motors. The motor currents i are governed by{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} where L is the motor inductance, R is the motor resistance, and {a mathematical formula}kω is an energy transformation term.
+      </paragraph>
+      <paragraph>
+       The batteries are described by an electrical circuit equivalent model that includes a large capacitance {a mathematical formula}Kb in parallel with a resistance {a mathematical formula}Rep, together in series with another resistance {a mathematical formula}Res. The battery charge variables {a mathematical formula}qi are governed by{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       As we previously mentioned, we measure the wheel speeds and the battery voltages.{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       In this work we consider the following faults: increases in motor friction ({a mathematical formula}μf,FL+, {a mathematical formula}μf,FR+, {a mathematical formula}μf,BL+, {a mathematical formula}μf,BR+), capacitance loss in the batteries ({a mathematical formula}Kb1−, {a mathematical formula}Kb2−, {a mathematical formula}Kb3−, {a mathematical formula}Kb4−), and increases in electrical resistance in the motors ({a mathematical formula}ReFL+, {a mathematical formula}ReFR+, {a mathematical formula}ReBL+, {a mathematical formula}ReBR+). The fault signatures for the set of faults and measurements for the rover are listed in Table 4.{sup:19} To improve readability, only a subset of the residual orderings is shown.
+      </paragraph>
+      <paragraph>
+       We have a set of eight PCs in the rover, one for each measurement, as generated by Algorithm 1. The PCs are defined as follows:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Fault signatures for the minimal submodels are shown in Table 5. As it happens with the three-tank system, the PCs are able to decouple the faults from the measurements, so that each residual is only affected by a subset of the faults.
+      </paragraph>
+      <paragraph>
+       Next, we show the application of our distributed diagnosis framework to the rover. First, we show different design scenarios and compare the design obtained with the proposed approach (using PCs) against the design obtained using the approach in [10] (using the global system model). Then, we apply our unified distributed diagnosis framework to several fault scenarios to illustrate on-line fault diagnosis capabilities of the approach.
+      </paragraph>
+     </section>
+     <section label="9.2">
+      <section-title>
+       Globally diagnosable diagnosis submodel design experiments
+      </section-title>
+      <paragraph>
+       Let us consider the initial rover configuration with {a mathematical formula}F={μf,FL+,μf,FR+,μf,BL+,μf,BR+,Kb1−,Kb2−,Kb3−,Kb4−,ReFL+,ReFR+,ReBL+,ReBR+} and {a mathematical formula}Y={V1⁎,V2⁎,V3⁎,V4⁎,ωFL⁎,ωFR⁎,ωBL⁎,ωBR⁎}. Now, assume that the system is split into five diagnosis submodels (see Fig. 10): {a mathematical formula}S1 related to the front-left wheel components, {a mathematical formula}S2 for the front-right wheel components, {a mathematical formula}S3 for the back-left wheel components, {a mathematical formula}S4 for the back-right wheel components, and {a mathematical formula}S5 for the components of the battery. {a mathematical formula}Yi and {a mathematical formula}Fi subsets for each diagnosis submodel are described as follows:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       First, let us assume we use the {a mathematical formula}M-based residuals, hence {a mathematical formula}R1={rωFL}, {a mathematical formula}R2={rωFR}, {a mathematical formula}R3={rωBL}, {a mathematical formula}R4={rωBR}, and {a mathematical formula}R5={rV1,rV2,rV3,rV4}. Analyzing global diagnosability from Table 4, we see that only diagnosis submodel {a mathematical formula}S5 is globally diagnosable, since faults {a mathematical formula}Kb1− to {a mathematical formula}Kb4− can be distinguished from the rest of the faults in the system, since the effects produced by the faults (+0 for all of them) are different from the rest of effects produced in sensors {a mathematical formula}V1 to {a mathematical formula}V4 for the rest of the faults considered. None of the remaining diagnosis submodels is globally diagnosable, hence we have to add new residuals to each of those diagnosis submodels in order to satisfy the global diagnosability design constraints. In particular, diagnosis submodels {a mathematical formula}S1 to {a mathematical formula}S4 need to merge three residuals each. Table 6 shows the design results using {a mathematical formula}M-based residuals as in [10]. The table indicates the initial residual sets for each diagnosis submodel and the additional residuals needed to make the diagnosis submodels globally diagnosable.
+      </paragraph>
+      <paragraph>
+       Now assume that we use the PC-based residuals, i.e., {a mathematical formula}R1={rωFL(ωFL)}, {a mathematical formula}R2={rωFR(ωFR)}, {a mathematical formula}R3={rωBL(ωBL)}, {a mathematical formula}R4={rωBR(ωBR)}, and {a mathematical formula}R5={rV1(V1),rV2(V2),rV3(V3),rV4(V4)}. If we look at Table 5, we see that diagnosis submodel {a mathematical formula}S5 is globally diagnosable, and the remaining diagnosis submodels are not globally diagnosable, hence they all need to run the design algorithm to find the minimal submodels that need to be merged to get all diagnosis submodels globally diagnosable. Using both the greedy algorithm and BFS, we obtained that only two PCs need to be merged with the to make diagnosis submodels {a mathematical formula}S1 to {a mathematical formula}S4 globally diagnosable. Table 7 shows the design results using PC-based residuals.
+      </paragraph>
+      <paragraph>
+       As shown in Table 6, Table 7, using PC-based residuals the design results are improved in two different ways: (1) the size of the local diagnosers for diagnosis submodels {a mathematical formula}S1 to {a mathematical formula}S4 after the design process is smaller than the size of the diagnosers using {a mathematical formula}M-based residuals (using PC-based residuals, only one additional residual, instead of two, is needed); and (2), PC-based residuals allow to have a fully distributed approach, not only regarding local diagnosers, but also regarding the residual generators (with {a mathematical formula}M-based residuals the diagnosis process will be distributed, but the residual computation will still be centralized).
+      </paragraph>
+      <paragraph>
+       Another additional advantage of our approach is that, it would be able to provide globally diagnosable diagnosis submodel with almost no design effort. As an example of this situation, consider now the rover with the same set of measurements Y, but a reduced set of fault candidates: {a mathematical formula}F={μf,FL+,μf,FR+,μf,BL+,μf,BR+,Kb1−,Kb2−,Kb3−,Kb4−}. Diagnosis submodels are similar to the first scenario:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       After analyzing global diagnosability for this example, we find that when {a mathematical formula}M-based residuals are used, design for diagnosis submodels {a mathematical formula}S1 to {a mathematical formula}S4 is still needed, but if PC-based residuals are used, all diagnosis submodels are globally diagnosable, and no further design is needed. Table 8, Table 9 show these results.
+      </paragraph>
+      <paragraph>
+       Having shown the design properties of our distributed framework, the next section shows the performance of the distributed diagnosis approach using simulated data for several fault diagnosis experiments and compares the results obtained against a centralized approach.
+      </paragraph>
+     </section>
+     <section label="9.3">
+      <section-title>
+       On-line fault diagnosis
+      </section-title>
+      <paragraph>
+       As a particular example to demonstrate on-line diagnosis in this framework, consider a 20% friction increase in the front-left wheel of the rover, {a mathematical formula}μf,FL+, occurring at time 50 s. Fig. 12 shows the plots of the residuals for this fault when the centralized approach is used. At time 50.05 s, a decrease in residual {a mathematical formula}rωFL is detected by the centralized diagnoser, and the diagnoser moves to a state where faults {a mathematical formula}μf,FL+ and {a mathematical formula}ReFL+ are generated as the initial set of candidates. Later, at 50.15 s, decreases in residuals {a mathematical formula}rV1, {a mathematical formula}rV2, {a mathematical formula}rV3, and {a mathematical formula}rV4 are detected, and the diagnoser moves to a state with diagnosis {a mathematical formula}{μf,FL+}. Hence, the hypothesized path to the state with {a mathematical formula}{ReFL+} is eliminated and the diagnosis is confirmed as {a mathematical formula}{μf,FL+}. At this point, the fault identification for {a mathematical formula}μf,FL+ is triggered, computing the fault magnitude with an accuracy of 97.22%.
+      </paragraph>
+      <paragraph>
+       Now, let us consider the distributed diagnosis approach for the same fault and the first diagnosis submodel configuration (Table 7). Fig. 13 shows the plots of the residuals of the local diagnoser for diagnosis submodel {a mathematical formula}S1 ({a mathematical formula}rωFL(ωFL,V4) and {a mathematical formula}rV4(ωFL,V4)). At time 50.05 s, a decrease in residual {a mathematical formula}rωFL(ωFL,V4) is detected in the local diagnoser for {a mathematical formula}S1, which moves to a state with diagnosis {a mathematical formula}{μf,FL+, {a mathematical formula}ReFL+} as the initial set of candidates. No deviations are detected in the residuals for the rest of the local diagnosers. At 50.20 s, a decrease in {a mathematical formula}rV4(ωFL,V4) is detected and the diagnoser moves to a state with diagnosis {a mathematical formula}{μf,FL+}. Since the diagnoser has reached to an accepting state, a global diagnosis has been achieved. Similarly to the centralized approach, the fault identification is triggered, determining the fault magnitude with an accuracy of 99.01%.
+      </paragraph>
+      <paragraph>
+       To make a more detailed study regarding the quality of our approach, we ran a set of several diagnosis experiments for each one of the faults in the system and considered different fault magnitudes (here we only show results for 5%, 10%, and 20% faults). Each run covered 100 s, and the faults were introduced at time {a mathematical formula}t=50 s. Gaussian measurement noise with a power level set to 5% of the average signal power was added to each measurement. For each experiment we randomly varied the noise signal.
+      </paragraph>
+      <paragraph>
+       Table 10 shows the results we obtained, comparing the performance of the centralized diagnosis approach against our distributed diagnosis approach for the first design scenario (Table 7). The metrics in Table 10 consist of the mean time in seconds to detect faults {a mathematical formula}Mfd, the mean time in seconds to isolate faults {a mathematical formula}Mfi, and the mean of the accuracy and standard deviation in the fault identification {a mathematical formula}Mda and {a mathematical formula}Mstd, respectively.
+      </paragraph>
+      <paragraph>
+       For fault detection, a threshold based on the Z-test is computed, and to account for modeling error, an additional error term E is added to the threshold [43]. When the absolute value of the mean residual value over a small window is over this combined threshold, a fault is detected. From Table 10, it is clear that both approaches perform in a very similar way. In 66.6% of the experiments, the average detection time was the same for both approaches, and for the rest 33.3% of the experiments, the centralized approach behaved a little bit better than the distributed. This is due to the PCs decomposition, which partition the system model by using sensors as inputs, which are noisy, and this corrupts the predictions with noise. Since the detectors were tuned to avoid false alarms, the detectors for the distributed approach could not be tuned to be as sensitive as for the centralized approach. However, the differences were not significant.
+      </paragraph>
+      <paragraph>
+       Fault isolation works, as explained in Section 7, by capturing the qualitative values of residual deviations [7]. Results in Table 10 show very similar isolation times for both approaches, except for the capacitance in the batteries ({a mathematical formula}Kb−) fault experiments. In these cases, the distributed approach was able to isolate faults in only 0.05 s, while the centralized approach took up to 0.5 s. This is explained by the enhanced diagnosability obtained by the decoupling of PCs. However, as it happens with fault detection times, the differences are not significant in general, and we can consider that both approaches obtain equivalent fault isolation results.
+      </paragraph>
+      <paragraph>
+       Fault identification works as detailed in Section 8. In our particular implementation, we used nonlinear least squares (LS) as the optimization algorithm and 0.5 s for the time limit. The fault candidate with the smallest LS error will be selected as the correct fault candidate. Experimental results show that, for most of the experiments, the performance is better for the distributed approach. The smaller size of the local parameter estimators, together with the reduced number of measurements used by each one, makes the distributed identification approach to converge faster than the centralized approach. In particular, the mean value of accuracy in the fault identification for the centralized approach for motor friction ({a mathematical formula}μf+) and resistance in the motors ({a mathematical formula}R+) faults, was 97.5% and 94.7%, respectively. Meanwhile, the mean value of accuracy in the fault identification for the same faults but for the distributed approach was 99.2% and 96.8%, respectively. For capacitance in the batteries ({a mathematical formula}Kb−) faults, both approaches achieved practically the same accuracy, 99.8% for the centralized approach against 99.6% for the distributed approach. Regarding standard deviation, in both cases the results are very accurate, although the results for the centralized approach are slightly better in most of the experiments than the results for the distributed approach. Similarly to the fault detection results, this was caused by the noisy sensors used as input by the distributed approach.
+      </paragraph>
+     </section>
+    </section>
+    <section label="10">
+     <section-title>
+      Related work
+     </section-title>
+     <paragraph>
+      Researchers have developed several decentralized and distributed diagnosis schemes in the past, mostly in the discrete-event framework [6], [36], [37], [45]. Distributed schemes, e.g., [46], unlike decentralized schemes, such as [37], do not make use of the global system model; instead, they use subsystem models for diagnosis, and the local diagnosers for each diagnosis submodel communicate their diagnosis results to each other to obtain the global solution. Decentralized diagnosis approaches, e.g., [37], typically start with a global system model to generate the local diagnosers among which the diagnosis computations get distributed. Each local decentralized diagnoser makes their diagnosis decision based on only a subset of observable events, and they communicate these decisions to other diagnosers, or to a centralized coordinator, which uses the global model to generate globally consistent diagnosis solutions. The level of coordination required between the local diagnosers depends on how each local diagnoser is designed. In [37], three coordinated decentralized protocols for diagnosis are presented. Coordination is necessary in the first and second protocols to generate the correct diagnosis result, but the third protocol generates correct results without a coordinator. Our diagnosis approach is similar to this third protocol, since we do not need a central coordinator, and a failure in the local diagnoser does not affect the diagnosis capability of the other diagnosers. We attribute this property of our diagnosis algorithm to the careful design of the local diagnosers based on global diagnosability properties.
+     </paragraph>
+     <paragraph>
+      Other researchers avoid coordination between local diagnosers by representing the system as a network of communicating finite state machines, such as in [40], [47]. In these approaches, first, the observable events for each subsystem are used to generate the individual subsystem diagnoses. Then the subsystem diagnoses are merged to generate the global diagnosis result. The approach presented in [47] assumes all observable events are received in the same order that they were transmitted in. The on-line approach described in [40] does not assume the ordering of observations is preserved. Our approach avoids these problems since it works only with local observations, and does not communicate observations or results to other local diagnosers.
+     </paragraph>
+     <paragraph>
+      In [48], the authors describe an approach where each local diagnoser generates a set of local diagnoses, and then communicates with its neighbors to reduce the number of hypotheses. The graph of constraints between the fault hypotheses and the observations is partitioned to minimize communication between local diagnosers. A similar approach is presented in [46], where the partitioning is based on physical connections.
+     </paragraph>
+     <paragraph>
+      In [49], the authors also use structural model decomposition (Analytical Redundancy Relations (ARRs) [12] in their case) to propose a decentralized but coordinated architecture for distributed fault diagnosis of continuous systems. The system is decomposed into functional subsystems which are provided by the user as input. The architecture is hierarchical and composed of local diagnosers for subsystems which work with local models. The local diagnosers are made up of a set of residual generators built upon the ARR concept. Each local diagnoser has a different residual generator. The hierarchical approach means that the scheme can be replicated at different levels, and work at different levels in the hierarchy. Unlike our approach, local results need to be communicated to a central supervisor which is responsible for the fault isolation task.
+     </paragraph>
+     <paragraph>
+      One of the main differences of our framework regarding other continuous distributed diagnosis approaches is that we use minimal submodels to design local diagnosers off-line, which yields smaller size diagnosers, and allows a fully distributed approach. Then, at runtime, all the local diagnosers operate independently to generate local diagnosis results that are globally correct. Our approach does not require a coordinator, and there is no exchange of diagnosis information among the diagnosers, only the exchange of measurements.
+     </paragraph>
+     <paragraph>
+      Our event-based framework is similar to traditional discrete event systems (DES) approaches [36], [45], except that the event-based models are derived from the continuous model and capture only fault-specific dynamics in a qualitative abstraction. One difference with pure DES approaches for diagnosis is that we use the local event-based diagnosis to perform fault isolation, after a robust fault detection stage, thus limiting the event analysis. Other continuous systems diagnosis approaches also use temporal information in similar ways, e.g., [50], [51], [52], [53], [54], [55]. An advantage in our approach is that temporal information can be automatically generated given the equations and the structural model of the system.
+     </paragraph>
+    </section>
+    <section label="11">
+     <section-title>
+      Conclusions
+     </section-title>
+     <paragraph>
+      In this work, we have developed a novel comprehensive framework for distributed qualitative fault diagnosis of continuous systems using structural model decomposition, where PCs are used to decouple the faults from the measurements and compute minimal submodels for distributed diagnosis. Then, the basic PC framework is extended to allow merging of PCs to design globally diagnosable diagnosis submodels. We proposed an algorithm that merges PCs (when necessary) to design local distributed diagnosis submodels based on global diagnosability. These local distributed diagnosis submodels are then used to construct local event-based distributed diagnosers. Finally, we use the model decomposition capabilities of the PCs not only to improve the design, but also to integrate within our framework a distributed fault identification approach by developing independent local parameter estimators. Our main conclusion is that using a structural model decomposition method, such as PCs, together with the existing consistency-based diagnosis approach using qualitative information, results in an event-based distributed diagnosis framework covering fault detection, isolation, and identification that scales well, and where the local diagnosers are independent at every level (no communication between them at any stage is required), do not need a central coordinator, and have no single point of failure.
+     </paragraph>
+     <paragraph>
+      Experimental results on a rover showed the improvement of the design using submodels against the approach that uses the global model of the system [10]. The decoupling obtained by the PCs improved the design process and the size of the local diagnosers, thus providing a scalable solution. Using the rover, we also ran several experiments to compare the performance of a centralized approach against our distributed approach regarding fault detection, isolation and identification. Results for different kinds of faults with several fault magnitudes have shown that the distributed approach is able to obtain similar detection and isolation results to the centralized approach, while avoiding the problems related to the centralized scheme. Regarding fault identification, results obtained using the distributed approach with the local parameter estimators showed an improvement in the accuracy of the estimation with just a small loss in precision.
+     </paragraph>
+     <paragraph>
+      Some limitations of the current approach are the single fault assumption, and the applicability to only continuous systems. In future work, we plan to extend our approach to multiple faults, based on results presented in [35], and to hybrid systems, based on results presented in [56], [57]. We are also planning to integrate our distributed diagnosis framework into a distributed prognostics framework (that also uses structural model decomposition with PCs [58]) to develop an integrated distributed diagnostics and prognostics framework.
+     </paragraph>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

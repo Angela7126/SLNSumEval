@@ -1,0 +1,895 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Ambiguity-aware Ensemble Training for Semi-supervised Dependency Parsing</title>
+<!--Generated on Tue Jun 10 17:38:30 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Ambiguity-aware Ensemble Training for Semi-supervised 
+<br class="ltx_break"/>Dependency Parsing</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Zhenghua Li ,     Min Zhang ,     Wenliang Chen
+<br class="ltx_break"/>Provincial Key Laboratory for Computer Information Processing Technology 
+<br class="ltx_break"/>Soochow University 
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">zhli13,minzhang,wlchen</span>}<span class="ltx_text ltx_font_typewriter">@suda.edu.cn</span>
+
+</span><span class="ltx_author_notes"><span>  Correspondence author</span></span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">This paper proposes a simple yet effective framework for semi-supervised dependency parsing at entire tree level, referred to as <em class="ltx_emph">ambiguity-aware ensemble training</em>.
+Instead of only using 1-best parse trees in previous work, our core idea is to utilize parse forest (<em class="ltx_emph">ambiguous labelings</em>) to combine multiple 1-best parse trees generated from diverse parsers on unlabeled data.
+With a conditional random field based probabilistic dependency parser, our training objective is to maximize mixed likelihood of labeled data and auto-parsed unlabeled data with ambiguous labelings.
+This framework offers two promising advantages.
+1) ambiguity encoded in parse forests compromises noise in 1-best parse trees.
+During training, the parser is aware of these ambiguous structures, and has the flexibility to distribute probability mass to its preferred parse trees as long as the likelihood improves.
+2) diverse syntactic structures produced by different parsers can be naturally compiled into forest,
+offering complementary strength to our single-view parser.
+Experimental results on benchmark data show that our method significantly outperforms the baseline supervised parser and other entire-tree based semi-supervised methods, such as self-training, co-training and tri-training.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Supervised dependency parsing has made great progress during the past decade.
+However, it is very difficult to further improve performance of supervised parsers. For example, <cite class="ltx_cite"/> and <cite class="ltx_cite"/> show that incorporating higher-order features into a graph-based parser only leads to modest increase in parsing accuracy.
+In contrast, semi-supervised approaches, which can make use of large-scale unlabeled data, have attracted more and more interest.
+Previously, unlabeled data is explored to derive useful local-context features such as word clusters <cite class="ltx_cite">[]</cite>, subtree frequencies <cite class="ltx_cite">[]</cite>, and
+word co-occurrence counts <cite class="ltx_cite">[]</cite>.
+A few effective learning methods are also proposed for dependency parsing to implicitly utilize distributions on unlabeled data <cite class="ltx_cite">[]</cite>.
+All above work leads to significant improvement on parsing accuracy.</p>
+</div>
+<div id="S1.F1" class="ltx_figure"><span class="ltx_ERROR undefined ltx_centering">{dependency}</span>
+<p class="ltx_p ltx_align_center">[arc edge, arc angle=80, text only label, label style=above] <span class="ltx_ERROR undefined">{deptext}</span>[column sep=.2cm, row sep=0.1cm]
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m1" class="ltx_Math" alttext="w_{0}" display="inline"><msub><mi>w</mi><mn>0</mn></msub></math> &amp; He<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m2" class="ltx_Math" alttext="{}_{1}" display="inline"><msub><mi/><mn>1</mn></msub></math> &amp; saw<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m3" class="ltx_Math" alttext="{}_{2}" display="inline"><msub><mi/><mn>2</mn></msub></math> &amp; a<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m4" class="ltx_Math" alttext="{}_{3}" display="inline"><msub><mi/><mn>3</mn></msub></math> &amp; deer<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m5" class="ltx_Math" alttext="{}_{4}" display="inline"><msub><mi/><mn>4</mn></msub></math> &amp; riding<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m6" class="ltx_Math" alttext="{}_{5}" display="inline"><msub><mi/><mn>5</mn></msub></math> &amp; a<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m7" class="ltx_Math" alttext="{}_{6}" display="inline"><msub><mi/><mn>6</mn></msub></math> &amp; bicycle<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m8" class="ltx_Math" alttext="{}_{7}" display="inline"><msub><mi/><mn>7</mn></msub></math> &amp; in<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m9" class="ltx_Math" alttext="{}_{8}" display="inline"><msub><mi/><mn>8</mn></msub></math> &amp; the<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m10" class="ltx_Math" alttext="{}_{9}" display="inline"><msub><mi/><mn>9</mn></msub></math> &amp; park<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m11" class="ltx_Math" alttext="{}_{10}" display="inline"><msub><mi/><mn>10</mn></msub></math> &amp; .<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m12" class="ltx_Math" alttext="{}_{11}" display="inline"><msub><mi/><mn>11</mn></msub></math></p><span class="ltx_ERROR undefined ltx_centering">\depedge</span>
+<p class="ltx_p ltx_align_center">32
+<span class="ltx_ERROR undefined">\depedge</span>13
+<span class="ltx_ERROR undefined">\depedge</span>54
+<span class="ltx_ERROR undefined">\depedge</span>35
+<span class="ltx_ERROR undefined">\depedge</span>[edge style=blue,dotted, thick]56
+<span class="ltx_ERROR undefined">\depedge</span>87
+<span class="ltx_ERROR undefined">\depedge</span>68
+<span class="ltx_ERROR undefined">\depedge</span>[edge style=red,dotted, thick, edge above]39
+<span class="ltx_ERROR undefined">\depedge</span>1110
+<span class="ltx_ERROR undefined">\depedge</span>911
+<span class="ltx_ERROR undefined">\depedge</span>[edge height=5ex]312
+<span class="ltx_ERROR undefined">\depedge</span>[edge style=blue, dotted, thick, edge below]36
+<span class="ltx_ERROR undefined">\depedge</span>[edge style=red, dotted, thick, edge below]69</p>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>
+An example sentence with an ambiguous parse forest.
+</div>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Another line of research is to pick up some high-quality auto-parsed training instances from unlabeled data using bootstrapping methods, such as self-training <cite class="ltx_cite">[]</cite>, co-training <cite class="ltx_cite">[]</cite>, and tri-training <cite class="ltx_cite">[]</cite>. However, these methods gain limited success in dependency parsing.
+Although working well on constituent parsing <cite class="ltx_cite">[]</cite>,
+self-training is shown unsuccessful for dependency parsing <cite class="ltx_cite">[]</cite>. The reason may be that dependency parsing models are prone to amplify previous mistakes during training on self-parsed unlabeled data. <cite class="ltx_cite"/> apply a variant of co-training to dependency parsing and report positive results on out-of-domain text.
+<cite class="ltx_cite"/> combine tri-training and parser ensemble to boost parsing accuracy. Both work employs two parsers to process the unlabeled data, and only select as extra training data sentences on which the 1-best parse trees of the two parsers are identical.
+In this way, the auto-parsed unlabeled data becomes more reliable.
+However, one obvious drawback of these methods is that they are unable to
+exploit unlabeled data with divergent outputs from different parsers.
+Our experiments show that unlabeled data with identical outputs from different parsers tends to be short (18.25 words per sentence on average), and only has a small proportion of 40% (see Table <a href="#S4.T6" title="Table 6 ‣ 4.4 Analysis ‣ 4 Experiments and Analysis ‣ Ambiguity-aware Ensemble Training for Semi-supervised  Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>).
+More importantly, we believe that unlabeled data with divergent outputs is equally (if not more) useful.
+Intuitively, an unlabeled sentence with divergent outputs should contain some ambiguous syntactic structures (such as preposition phrase attachment) that are very hard to resolve and lead to the disagreement of different parsers.
+Such sentences can provide more discriminative instances for training
+which may be unavailable in labeled data.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">To solve above issues,
+this paper proposes a more general and effective framework for semi-supervised dependency parsing, referred to as <em class="ltx_emph">ambiguity-aware ensemble training</em>.
+Different from traditional self/co/tri-training which only use 1-best parse trees on unlabeled data,
+our approach adopts ambiguous labelings, represented by parse forest, as gold-standard for unlabeled sentences.
+Figure <a href="#S1.F1" title="Figure 1 ‣ 1 Introduction ‣ Ambiguity-aware Ensemble Training for Semi-supervised  Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> shows an example sentence with an ambiguous parse forest.
+The forest is formed by two parse trees, respectively shown at the upper and lower sides of the sentence.
+The differences between the two parse trees are highlighted using dashed arcs.
+The upper tree take <em class="ltx_emph">“deer”</em> as the subject of <em class="ltx_emph">“riding”</em>,
+whereas the lower one indicates that <em class="ltx_emph">“he”</em> rides the bicycle.
+The other difference is where the preposition phrase (PP) <em class="ltx_emph">“in the park”</em> should be attached, which is also known as the PP attachment problem, a notorious challenge for parsing.
+Reserving such uncertainty has three potential advantages.
+First, noise in unlabeled data is largely alleviated, since parse forest encodes only a few highly possible parse trees with high oracle score.
+Please note that the parse forest in Figure <a href="#S1.F1" title="Figure 1 ‣ 1 Introduction ‣ Ambiguity-aware Ensemble Training for Semi-supervised  Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> contains four parse trees after combination of the two different choices.
+Second, the parser is able to learn useful features from the unambiguous parts of the parse forest.
+Finally, with sufficient unlabeled data, it is possible that the parser can learn to resolve such uncertainty
+by biasing to more reasonable parse trees.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">To construct parse forest on unlabeled data,
+we employ three supervised parsers based on different paradigms, including
+our baseline graph-based dependency parser, a transition-based dependency parser <cite class="ltx_cite">[]</cite>, and a generative constituent parser <cite class="ltx_cite">[]</cite>.
+The 1-best parse trees of these three parsers are aggregated in different ways.
+Evaluation on labeled data shows the oracle accuracy of parse forest is much higher than that of 1-best outputs of single parsers (see Table <a href="#S4.T3" title="Table 3 ‣ 4 Experiments and Analysis ‣ Ambiguity-aware Ensemble Training for Semi-supervised  Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>).
+Finally, using a conditional random field (CRF) based probabilistic parser,
+we train a better model by
+maximizing mixed likelihood of labeled data and auto-parsed unlabeled data with ambiguous labelings.
+Experimental results on both English and Chinese datasets demonstrate that the proposed ambiguity-aware ensemble training outperforms other entire-tree based methods such as self/co/tri-training.
+In summary, we make following contributions.</p>
+<ol id="I1" class="ltx_enumerate">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">1.</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p">We propose a generalized ambiguity-aware ensemble training framework for semi-supervised dependency parsing, which can make better use of unlabeled data, especially when parsers from different views produce divergent syntactic structures.</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">2.</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p">We first employ a generative constituent parser for semi-supervised dependency parsing. Experiments show that the constituent parser is very helpful since it produces more divergent structures for our semi-supervised parser than discriminative dependency parsers.</p>
+</div></li>
+<li id="I1.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">3.</span> 
+<div id="I1.i3.p1" class="ltx_para">
+<p class="ltx_p">We build the first state-of-the-art CRF-based dependency parser. Using the probabilistic parser, we benchmark and conduct systematic comparisons among ours and all previous bootstrapping methods, including self/co/tri-training.</p>
+</div></li>
+</ol>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Supervised Dependency Parsing</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">Given an input sentence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m1" class="ltx_Math" alttext="\mathbf{x}=w_{0}w_{1}...w_{n}" display="inline"><mrow><mi>𝐱</mi><mo>=</mo><mrow><msub><mi>w</mi><mn>0</mn></msub><mo>⁢</mo><msub><mi>w</mi><mn>1</mn></msub><mo>⁢</mo><mi mathvariant="normal">…</mi><mo>⁢</mo><msub><mi>w</mi><mi>n</mi></msub></mrow></mrow></math>,
+the goal of dependency parsing is to build a dependency tree as depicted in Figure <a href="#S1.F1" title="Figure 1 ‣ 1 Introduction ‣ Ambiguity-aware Ensemble Training for Semi-supervised  Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+denoted by
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m2" class="ltx_Math" alttext="\mathbf{d}=\{(h,m):0\leq h\leq n,0&lt;m\leq n\}" display="inline"><mrow><mi>𝐝</mi><mo>=</mo><mrow><mo>{</mo><mrow><mrow><mo>(</mo><mrow><mi>h</mi><mo>,</mo><mi>m</mi></mrow><mo>)</mo></mrow><mo separator="true">:</mo><mrow><mrow><mn>0</mn><mo>≤</mo><mi>h</mi><mo>≤</mo><mi>n</mi></mrow><mo>,</mo><mrow><mn>0</mn><mo>&lt;</mo><mi>m</mi><mo>≤</mo><mi>n</mi></mrow></mrow></mrow><mo>}</mo></mrow></mrow></math>,
+where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m3" class="ltx_Math" alttext="(h,m)" display="inline"><mrow><mo>(</mo><mrow><mi>h</mi><mo>,</mo><mi>m</mi></mrow><mo>)</mo></mrow></math> indicates a directed arc
+from the <em class="ltx_emph">head</em> word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m4" class="ltx_Math" alttext="w_{h}" display="inline"><msub><mi>w</mi><mi>h</mi></msub></math>
+to the <em class="ltx_emph">modifier</em> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m5" class="ltx_Math" alttext="w_{m}" display="inline"><msub><mi>w</mi><mi>m</mi></msub></math>, and
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m6" class="ltx_Math" alttext="w_{0}" display="inline"><msub><mi>w</mi><mn>0</mn></msub></math> is an artificial node linking to the root of the sentence.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">In parsing community,
+two mainstream methods tackle the dependency parsing problem from different perspectives but achieve comparable accuracy on a variety of languages.
+The graph-based method views the problem as finding an optimal tree from a fully-connected directed graph <cite class="ltx_cite">[]</cite>,
+while the transition-based method tries to find a highest-scoring transition sequence that leads to a legal dependency tree <cite class="ltx_cite">[]</cite>.</p>
+</div>
+<div id="S2.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.1 </span>Graph-based Dependency Parser (GParser)</h3>
+
+<div id="S2.SS1.p1" class="ltx_para">
+<p class="ltx_p">In this work, we adopt the graph-based paradigm because it allows us to naturally derive conditional probability of a dependency tree <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m1" class="ltx_Math" alttext="\mathbf{d}" display="inline"><mi>𝐝</mi></math> given a sentence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m2" class="ltx_Math" alttext="\mathbf{x}" display="inline"><mi>𝐱</mi></math>, which is required to compute likelihood of both labeled and unlabeled data.
+Under the graph-based model, the score of a dependency tree is factored into the scores of small subtrees <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m3" class="ltx_Math" alttext="\mathbf{p}" display="inline"><mi>𝐩</mi></math>.</p>
+<table id="S2.Ex1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex1.m1" class="ltx_Math" alttext="\begin{split}Score(\mathbf{x},\mathbf{d};\mathbf{w})&amp;=\mathbf{w}\cdot\mathbf{f%&#10;}(\mathbf{x},\mathbf{d})\\&#10;&amp;=\sum_{\mathbf{p}\subseteq\mathbf{d}}{Score(\mathbf{x},\mathbf{p};\mathbf{w})}\end{split}" display="block"><mrow><mrow><mi>S</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>𝐱</mi><mo>,</mo><mi>𝐝</mi><mo>;</mo><mi>𝐰</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mrow><mi>𝐰</mi><mo>⋅</mo><mi>𝐟</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>𝐱</mi><mo>,</mo><mi>𝐝</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>𝐩</mi><mo>⊆</mo><mi>𝐝</mi></mrow></munder><mrow><mi>S</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>𝐱</mi><mo>,</mo><mi>𝐩</mi><mo>;</mo><mi>𝐰</mi></mrow><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S2.SS1.p2" class="ltx_para">
+<p class="ltx_p">We adopt the second-order graph-based dependency parsing model of <cite class="ltx_cite"/> as our core parser, which incorporates features from the two kinds of subtrees in Fig. <a href="#S2.F2" title="Figure 2 ‣ 2.1 Graph-based Dependency Parser (GParser) ‣ 2 Supervised Dependency Parsing ‣ Ambiguity-aware Ensemble Training for Semi-supervised  Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>Higher-order models of <cite class="ltx_cite"/> and <cite class="ltx_cite"/> can achieve higher accuracy, but has much higher time cost (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m1" class="ltx_Math" alttext="O(n^{4})" display="inline"><mrow><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><msup><mi>n</mi><mn>4</mn></msup><mo>)</mo></mrow></mrow></math>). Our approach is applicable to these higher-order models, which we leave for future work.</span></span></span>
+Then the score of a dependency tree is:</p>
+<table id="S2.Ex2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex2.m1" class="ltx_Math" alttext="\begin{split}Score(\mathbf{x},\mathbf{d};\mathbf{w})=\sum_{\{(h,m)\}\subseteq%&#10;\mathbf{d}}{\mathbf{w}_{{dep}}\cdot\mathbf{f}_{{dep}}(\mathbf{x},h,m)}&amp;\\&#10;+\sum_{\{(h,s),(h,m)\}\subseteq\mathbf{d}}{\mathbf{w}_{{sib}}\cdot\mathbf{f}_{%&#10;{sib}}(\mathbf{x},h,s,m)}\end{split}" display="block"><mrow><mrow><mi>S</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>𝐱</mi><mo>,</mo><mi>𝐝</mi><mo>;</mo><mi>𝐰</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mrow><mo>{</mo><mrow><mo>(</mo><mrow><mi>h</mi><mo>,</mo><mi>m</mi></mrow><mo>)</mo></mrow><mo>}</mo></mrow><mo>⊆</mo><mi>𝐝</mi></mrow></munder><mrow><mrow><msub><mi>𝐰</mi><mrow><mi>d</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>p</mi></mrow></msub><mo>⋅</mo><msub><mi>𝐟</mi><mrow><mi>d</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>p</mi></mrow></msub></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>𝐱</mi><mo>,</mo><mi>h</mi><mo>,</mo><mi>m</mi></mrow><mo>)</mo></mrow></mrow></mrow><mo>+</mo><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mrow><mo>{</mo><mrow><mrow><mo>(</mo><mrow><mi>h</mi><mo>,</mo><mi>s</mi></mrow><mo>)</mo></mrow><mo>,</mo><mrow><mo>(</mo><mrow><mi>h</mi><mo>,</mo><mi>m</mi></mrow><mo>)</mo></mrow></mrow><mo>}</mo></mrow><mo>⊆</mo><mi>𝐝</mi></mrow></munder><mrow><mrow><msub><mi>𝐰</mi><mrow><mi>s</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>b</mi></mrow></msub><mo>⋅</mo><msub><mi>𝐟</mi><mrow><mi>s</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>b</mi></mrow></msub></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>𝐱</mi><mo>,</mo><mi>h</mi><mo>,</mo><mi>s</mi><mo>,</mo><mi>m</mi></mrow><mo>)</mo></mrow></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m2" class="ltx_Math" alttext="\mathbf{f}_{dep}(\mathbf{x},h,m)" display="inline"><mrow><msub><mi>𝐟</mi><mrow><mi>d</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>p</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>𝐱</mi><mo>,</mo><mi>h</mi><mo>,</mo><mi>m</mi></mrow><mo>)</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m3" class="ltx_Math" alttext="\mathbf{f}_{{sib}}(\mathbf{x},h,s,m)" display="inline"><mrow><msub><mi>𝐟</mi><mrow><mi>s</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>b</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>𝐱</mi><mo>,</mo><mi>h</mi><mo>,</mo><mi>s</mi><mo>,</mo><mi>m</mi></mrow><mo>)</mo></mrow></mrow></math> are the feature vectors of the two subtree in Fig. <a href="#S2.F2" title="Figure 2 ‣ 2.1 Graph-based Dependency Parser (GParser) ‣ 2 Supervised Dependency Parsing ‣ Ambiguity-aware Ensemble Training for Semi-supervised  Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>;
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m4" class="ltx_Math" alttext="\mathbf{w}_{dep/sib}" display="inline"><msub><mi>𝐰</mi><mrow><mrow><mrow><mi>d</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>p</mi></mrow><mo>/</mo><mi>s</mi></mrow><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>b</mi></mrow></msub></math> are feature weight vectors; the dot product gives scores contributed by corresponding subtrees.</p>
+</div>
+<div id="S2.F2" class="ltx_figure"><img src="" id="S2.F2.g1" class="ltx_graphics ltx_centering" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>Two types of scoring subtrees in our second-order graph-based parsers.</div>
+</div>
+<div id="S2.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">Dependency features </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m1" class="ltx_Math" alttext="\mathbf{f}_{{dep}}(\mathbf{x},h,m)" display="inline"><mrow><msub><mi>𝐟</mi><mrow><mi>d</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>p</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>𝐱</mi><mo>,</mo><mi>h</mi><mo>,</mo><mi>m</mi></mrow><mo>)</mo></mrow></mrow></math><span class="ltx_text ltx_font_small">:</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m2" class="ltx_Math" alttext="w_{h}" display="inline"><msub><mi>w</mi><mi>h</mi></msub></math><span class="ltx_text ltx_font_small">, </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m3" class="ltx_Math" alttext="w_{m}" display="inline"><msub><mi>w</mi><mi>m</mi></msub></math><span class="ltx_text ltx_font_small">, </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m4" class="ltx_Math" alttext="t_{h}" display="inline"><msub><mi>t</mi><mi>h</mi></msub></math><span class="ltx_text ltx_font_small">, </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m5" class="ltx_Math" alttext="t_{m}" display="inline"><msub><mi>t</mi><mi>m</mi></msub></math><span class="ltx_text ltx_font_small">, </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m6" class="ltx_Math" alttext="t_{h\pm 1}" display="inline"><msub><mi>t</mi><mrow><mi>h</mi><mo>±</mo><mn>1</mn></mrow></msub></math><span class="ltx_text ltx_font_small">, </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m7" class="ltx_Math" alttext="t_{m\pm 1}" display="inline"><msub><mi>t</mi><mrow><mi>m</mi><mo>±</mo><mn>1</mn></mrow></msub></math><span class="ltx_text ltx_font_small">, </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m8" class="ltx_Math" alttext="t_{b}" display="inline"><msub><mi>t</mi><mi>b</mi></msub></math><span class="ltx_text ltx_font_small">, </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m9" class="ltx_Math" alttext="dir(h,m)" display="inline"><mrow><mi>d</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>h</mi><mo>,</mo><mi>m</mi></mrow><mo>)</mo></mrow></mrow></math><span class="ltx_text ltx_font_small">, </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m10" class="ltx_Math" alttext="dist(h,m)" display="inline"><mrow><mi>d</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>h</mi><mo>,</mo><mi>m</mi></mrow><mo>)</mo></mrow></mrow></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">Sibling features </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m11" class="ltx_Math" alttext="\mathbf{f}_{{sib}}(\mathbf{x},h,m,s)" display="inline"><mrow><msub><mi>𝐟</mi><mrow><mi>s</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>b</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>𝐱</mi><mo>,</mo><mi>h</mi><mo>,</mo><mi>m</mi><mo>,</mo><mi>s</mi></mrow><mo>)</mo></mrow></mrow></math><span class="ltx_text ltx_font_small">:</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m12" class="ltx_Math" alttext="w_{h}" display="inline"><msub><mi>w</mi><mi>h</mi></msub></math><span class="ltx_text ltx_font_small">, </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m13" class="ltx_Math" alttext="w_{s}" display="inline"><msub><mi>w</mi><mi>s</mi></msub></math><span class="ltx_text ltx_font_small">, </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m14" class="ltx_Math" alttext="w_{m}" display="inline"><msub><mi>w</mi><mi>m</mi></msub></math><span class="ltx_text ltx_font_small">, </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m15" class="ltx_Math" alttext="t_{h}" display="inline"><msub><mi>t</mi><mi>h</mi></msub></math><span class="ltx_text ltx_font_small">, </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m16" class="ltx_Math" alttext="t_{m}" display="inline"><msub><mi>t</mi><mi>m</mi></msub></math><span class="ltx_text ltx_font_small">, </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m17" class="ltx_Math" alttext="t_{s}" display="inline"><msub><mi>t</mi><mi>s</mi></msub></math><span class="ltx_text ltx_font_small">, </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m18" class="ltx_Math" alttext="t_{h\pm 1}" display="inline"><msub><mi>t</mi><mrow><mi>h</mi><mo>±</mo><mn>1</mn></mrow></msub></math><span class="ltx_text ltx_font_small">, </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m19" class="ltx_Math" alttext="t_{m\pm 1}" display="inline"><msub><mi>t</mi><mrow><mi>m</mi><mo>±</mo><mn>1</mn></mrow></msub></math><span class="ltx_text ltx_font_small">, </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m20" class="ltx_Math" alttext="t_{s\pm 1}" display="inline"><msub><mi>t</mi><mrow><mi>s</mi><mo>±</mo><mn>1</mn></mrow></msub></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m21" class="ltx_Math" alttext="dir(h,m)" display="inline"><mrow><mi>d</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>h</mi><mo>,</mo><mi>m</mi></mrow><mo>)</mo></mrow></mrow></math><span class="ltx_text ltx_font_small">, </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m22" class="ltx_Math" alttext="dist(h,m)" display="inline"><mrow><mi>d</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>h</mi><mo>,</mo><mi>m</mi></mrow><mo>)</mo></mrow></mrow></math></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 1: </span>Brief illustration of the syntactic features. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m31" class="ltx_Math" alttext="t_{i}" display="inline"><msub><mi mathsize="normal" stretchy="false">t</mi><mi mathsize="normal" stretchy="false">i</mi></msub></math> denotes the POS tag of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m32" class="ltx_Math" alttext="w_{i}" display="inline"><msub><mi mathsize="normal" stretchy="false">w</mi><mi mathsize="normal" stretchy="false">i</mi></msub></math>. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m33" class="ltx_Math" alttext="b" display="inline"><mi mathsize="normal" stretchy="false">b</mi></math> is an index between <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m34" class="ltx_Math" alttext="h" display="inline"><mi mathsize="normal" stretchy="false">h</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m35" class="ltx_Math" alttext="m" display="inline"><mi mathsize="normal" stretchy="false">m</mi></math>. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m36" class="ltx_Math" alttext="dir(i,j)" display="inline"><mrow><mi mathsize="normal" stretchy="false">d</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">r</mi><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="small" stretchy="false">,</mo><mi mathsize="normal" stretchy="false">j</mi></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m37" class="ltx_Math" alttext="dist(i,j)" display="inline"><mrow><mi mathsize="normal" stretchy="false">d</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">s</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="small" stretchy="false">,</mo><mi mathsize="normal" stretchy="false">j</mi></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></mrow></math> denote the direction and distance of the dependency <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m38" class="ltx_Math" alttext="(i,j)" display="inline"><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="small" stretchy="false">,</mo><mi mathsize="normal" stretchy="false">j</mi></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></math>.
+</div>
+</div>
+<div id="S2.SS1.p3" class="ltx_para">
+<p class="ltx_p">For syntactic features, we adopt those of <cite class="ltx_cite"/>
+which
+include two categories corresponding to the two types of scoring subtrees in Fig. <a href="#S2.F2" title="Figure 2 ‣ 2.1 Graph-based Dependency Parser (GParser) ‣ 2 Supervised Dependency Parsing ‣ Ambiguity-aware Ensemble Training for Semi-supervised  Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+We summarize the atomic features used in each feature category in Table <a href="#S2.T1" title="Table 1 ‣ 2.1 Graph-based Dependency Parser (GParser) ‣ 2 Supervised Dependency Parsing ‣ Ambiguity-aware Ensemble Training for Semi-supervised  Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+These atomic features are concatenated in different combinations to compose rich feature sets.
+Please refer to Table 4 of <cite class="ltx_cite"/> for the complete feature list.</p>
+</div>
+</div>
+<div id="S2.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.2 </span>CRF-based GParser</h3>
+
+<div id="S2.SS2.p1" class="ltx_para">
+<p class="ltx_p">Previous work on graph-based dependency parsing mostly adopts linear models and perceptron based training procedures,
+which lack probabilistic explanations of dependency trees and do not need to compute likelihood of labeled training data.
+Instead, we build a log-linear CRF-based dependency parser, which is similar to the CRF-based constituent parser of <cite class="ltx_cite"/>.
+Assuming the feature weights <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m1" class="ltx_Math" alttext="\mathbf{w}" display="inline"><mi>𝐰</mi></math> are known, the probability of a dependency tree <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m2" class="ltx_Math" alttext="\mathbf{d}" display="inline"><mi>𝐝</mi></math> given an input sentence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m3" class="ltx_Math" alttext="\mathbf{x}" display="inline"><mi>𝐱</mi></math> is defined as:</p>
+<table id="S2.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E1.m1" class="ltx_Math" alttext="\begin{split}p(\mathbf{d}|\mathbf{x};\mathbf{w})&amp;=\frac{exp\{Score(\mathbf{x},%&#10;\mathbf{d};\mathbf{w})\}}{Z(\mathbf{x};\mathbf{w})}\\&#10;Z(\mathbf{x};\mathbf{w})&amp;=\sum_{\mathbf{d^{\prime}}\in\mathcal{Y}(\mathbf{x})}%&#10;{exp\{Score(\mathbf{x},\mathbf{d^{\prime}};\mathbf{w})\}}\end{split}" display="block"><mrow><mi>p</mi><mrow><mo>(</mo><mi>𝐝</mi><mo>|</mo><mi>𝐱</mi><mo>;</mo><mi>𝐰</mi><mo>)</mo></mrow><mo>=</mo><mfrac><mrow><mi>e</mi><mo>⁢</mo><mi>x</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mrow><mo>{</mo><mrow><mi>S</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>𝐱</mi><mo>,</mo><mi>𝐝</mi><mo>;</mo><mi>𝐰</mi></mrow><mo>)</mo></mrow></mrow><mo>}</mo></mrow></mrow><mrow><mi>Z</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>𝐱</mi><mo>;</mo><mi>𝐰</mi></mrow><mo>)</mo></mrow></mrow></mfrac><mi>Z</mi><mrow><mo>(</mo><mi>𝐱</mi><mo>;</mo><mi>𝐰</mi><mo>)</mo></mrow><mo>=</mo><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><msup><mi>𝐝</mi><mo>′</mo></msup><mo>∈</mo><mrow><mi class="ltx_font_mathcaligraphic">𝒴</mi><mo>⁢</mo><mrow><mo>(</mo><mi>𝐱</mi><mo>)</mo></mrow></mrow></mrow></munder><mi>e</mi><mi>x</mi><mi>p</mi><mrow><mo>{</mo><mi>S</mi><mi>c</mi><mi>o</mi><mi>r</mi><mi>e</mi><mrow><mo>(</mo><mi>𝐱</mi><mo>,</mo><msup><mi>𝐝</mi><mo>′</mo></msup><mo>;</mo><mi>𝐰</mi><mo>)</mo></mrow><mo>}</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m4" class="ltx_Math" alttext="Z(\mathbf{x})" display="inline"><mrow><mi>Z</mi><mo>⁢</mo><mrow><mo>(</mo><mi>𝐱</mi><mo>)</mo></mrow></mrow></math> is the normalization factor and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m5" class="ltx_Math" alttext="\mathcal{Y}(\mathbf{x})" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒴</mi><mo>⁢</mo><mrow><mo>(</mo><mi>𝐱</mi><mo>)</mo></mrow></mrow></math> is the set of all legal dependency trees for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m6" class="ltx_Math" alttext="\mathbf{x}" display="inline"><mi>𝐱</mi></math>.</p>
+</div>
+<div id="S2.SS2.p2" class="ltx_para">
+<p class="ltx_p">Suppose the labeled training data is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m1" class="ltx_Math" alttext="\mathcal{D}=\{(\mathbf{x}_{i},\mathbf{d}_{i})\}_{i=1}^{N}" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒟</mi><mo>=</mo><msubsup><mrow><mo>{</mo><mrow><mo>(</mo><mrow><msub><mi>𝐱</mi><mi>i</mi></msub><mo>,</mo><msub><mi>𝐝</mi><mi>i</mi></msub></mrow><mo>)</mo></mrow><mo>}</mo></mrow><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>N</mi></msubsup></mrow></math>.
+Then the log likelihood of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m2" class="ltx_Math" alttext="\mathcal{D}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒟</mi></math> is:</p>
+<table id="S2.Ex3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex3.m1" class="ltx_Math" alttext="\mathcal{L}(\mathcal{D};\mathbf{w})=\sum\limits_{i=1}^{N}\log{p(\mathbf{d}_{i}%&#10;|\mathbf{x}_{i};\mathbf{w})}" display="block"><mrow><mi class="ltx_font_mathcaligraphic">ℒ</mi><mrow><mo>(</mo><mi class="ltx_font_mathcaligraphic">𝒟</mi><mo>;</mo><mi>𝐰</mi><mo>)</mo></mrow><mo>=</mo><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>N</mi></munderover><mi>log</mi><mi>p</mi><mrow><mo>(</mo><msub><mi>𝐝</mi><mi>i</mi></msub><mo>|</mo><msub><mi>𝐱</mi><mi>i</mi></msub><mo>;</mo><mi>𝐰</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S2.SS2.p3" class="ltx_para">
+<p class="ltx_p">The training objective is to maximize the log likelihood of the training data <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m1" class="ltx_Math" alttext="\mathcal{L}(\mathcal{D})" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">ℒ</mi><mo>⁢</mo><mrow><mo>(</mo><mi class="ltx_font_mathcaligraphic">𝒟</mi><mo>)</mo></mrow></mrow></math>.
+The partial derivative with respect to the feature weights <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m2" class="ltx_Math" alttext="\mathbf{w}" display="inline"><mi>𝐰</mi></math> is:</p>
+<table id="S2.E2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E2.m1" class="ltx_Math" alttext="\frac{\partial\mathcal{L}(\mathcal{D};\mathbf{w})}{\partial\mathbf{w}}=\sum%&#10;\limits_{i=1}^{N}\left(\begin{aligned}&amp;\displaystyle\mathbf{f}(\mathbf{x}_{i},%&#10;\mathbf{d}_{i})~{}~{}~{}-\\&#10;\displaystyle\sum_{\mathbf{d^{\prime}}\in\mathcal{Y}(\mathbf{x}_{i})}&amp;%&#10;\displaystyle p(\mathbf{d^{\prime}}|\mathbf{x}_{i};\mathbf{w})\mathbf{f}(%&#10;\mathbf{x}_{i},\mathbf{d^{\prime}})\end{aligned}\right)" display="block"><mrow><mfrac><mrow><mrow><mo>∂</mo><mo>⁡</mo><mi class="ltx_font_mathcaligraphic">ℒ</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><mi class="ltx_font_mathcaligraphic">𝒟</mi><mo>;</mo><mi>𝐰</mi></mrow><mo>)</mo></mrow></mrow><mrow><mo>∂</mo><mo>⁡</mo><mi>𝐰</mi></mrow></mfrac><mo>=</mo><mrow><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>N</mi></munderover><mrow><mo>(</mo><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd/><mtd columnalign="left"><mrow><mrow><mi>𝐟</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>𝐱</mi><mi>i</mi></msub><mo>,</mo><msub><mi>𝐝</mi><mi>i</mi></msub></mrow><mo>)</mo></mrow></mrow><mo>-</mo></mrow></mtd></mtr><mtr><mtd columnalign="right"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><msup><mi>𝐝</mi><mo>′</mo></msup><mo>∈</mo><mrow><mi class="ltx_font_mathcaligraphic">𝒴</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>𝐱</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></mrow></munder></mtd><mtd columnalign="left"><mrow><mi>p</mi><mrow><mo>(</mo><msup><mi>𝐝</mi><mo>′</mo></msup><mo>|</mo><msub><mi>𝐱</mi><mi>i</mi></msub><mo>;</mo><mi>𝐰</mi><mo>)</mo></mrow><mi>𝐟</mi><mrow><mo>(</mo><msub><mi>𝐱</mi><mi>i</mi></msub><mo>,</mo><msup><mi>𝐝</mi><mo>′</mo></msup><mo>)</mo></mrow></mrow></mtd></mtr></mtable><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+<p class="ltx_p">where the first term is the empirical counts and the second term is the model expectations.
+Since <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m3" class="ltx_Math" alttext="\mathcal{Y}(\mathbf{x}_{i})" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒴</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>𝐱</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math> contains exponentially many dependency trees, direct calculation of the second term is
+prohibitive.
+Instead, we can use the classic inside-outside algorithm to efficiently
+compute the model expectations within <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m4" class="ltx_Math" alttext="O(n^{3})" display="inline"><mrow><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><msup><mi>n</mi><mn>3</mn></msup><mo>)</mo></mrow></mrow></math> time complexity, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m5" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> is the input sentence length.</p>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Ambiguity-aware Ensemble Training</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">In standard entire-tree based semi-supervised methods such as self/co/tri-training,
+automatically parsed unlabeled sentences are used as additional training data, and
+noisy 1-best parse trees are considered as gold-standard.
+To alleviate the noise, the tri-training method only uses unlabeled data on which multiple parsers from different views produce identical parse trees.
+However, unlabeled data with divergent syntactic structures should be more useful.
+Intuitively, if several parsers disagree on an unlabeled sentence,
+it implies that the unlabeled sentence contains some difficult syntactic phenomena which are not sufficiently covered in manually labeled data.
+Therefore, exploiting such unlabeled data may introduce more discriminative syntactic knowledge,
+largely compensating labeled training data.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">To address above issues, we propose <em class="ltx_emph">ambiguity-aware ensemble training</em>, which can be interpreted as
+a <em class="ltx_emph">generalized tri-training</em> framework.
+The key idea is the use of <em class="ltx_emph">ambiguous labelings</em> for the purpose of aggregating multiple 1-best parse trees produced by several diverse parsers.
+Here, “ambiguous labelings” mean an unlabeled sentence may have multiple parse trees as gold-standard reference, represented by parse forest (see Figure <a href="#S1.F1" title="Figure 1 ‣ 1 Introduction ‣ Ambiguity-aware Ensemble Training for Semi-supervised  Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>).
+The training procedure aims to maximize mixed likelihood of both manually labeled and auto-parsed unlabeled data with ambiguous labelings.
+For an unlabeled instance, the model is updated to maximize the probability of its parse forest, instead of a single parse tree in traditional tri-training.
+In other words, the model is free to distribute probability mass among the trees in the parse forest to its liking,
+as long as the likelihood improves <cite class="ltx_cite">[]</cite>.</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Likelihood of the Unlabeled Data</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">The auto-parsed unlabeled data with ambiguous labelings is denoted as
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m1" class="ltx_Math" alttext="\mathcal{D^{\prime}}=\{(\mathbf{u}_{i},\mathcal{V}_{i})\}_{i=1}^{M}" display="inline"><mrow><msup><mi class="ltx_font_mathcaligraphic">𝒟</mi><mo>′</mo></msup><mo>=</mo><msubsup><mrow><mo>{</mo><mrow><mo>(</mo><mrow><msub><mi>𝐮</mi><mi>i</mi></msub><mo>,</mo><msub><mi class="ltx_font_mathcaligraphic">𝒱</mi><mi>i</mi></msub></mrow><mo>)</mo></mrow><mo>}</mo></mrow><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>M</mi></msubsup></mrow></math>, where
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m2" class="ltx_Math" alttext="\mathbf{u}_{i}" display="inline"><msub><mi>𝐮</mi><mi>i</mi></msub></math> is an unlabeled sentence, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m3" class="ltx_Math" alttext="\mathcal{V}_{i}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒱</mi><mi>i</mi></msub></math> is the corresponding parse forest.
+Then the log likelihood of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m4" class="ltx_Math" alttext="\mathcal{D^{\prime}}" display="inline"><msup><mi class="ltx_font_mathcaligraphic">𝒟</mi><mo>′</mo></msup></math> is:</p>
+<table id="S3.Ex4" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex4.m1" class="ltx_Math" alttext="\mathcal{L}(\mathcal{D^{\prime}};\mathbf{w})=\sum\limits_{i=1}^{M}\log{\left(%&#10;\sum_{\mathbf{d^{\prime}}\in\mathcal{V}_{i}}p(\mathbf{d^{\prime}}|\mathbf{u}_{%&#10;i};\mathbf{w})\right)}" display="block"><mrow><mi class="ltx_font_mathcaligraphic">ℒ</mi><mrow><mo>(</mo><msup><mi class="ltx_font_mathcaligraphic">𝒟</mi><mo>′</mo></msup><mo>;</mo><mi>𝐰</mi><mo>)</mo></mrow><mo>=</mo><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>M</mi></munderover><mi>log</mi><mrow><mo>(</mo><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><msup><mi>𝐝</mi><mo>′</mo></msup><mo>∈</mo><msub><mi class="ltx_font_mathcaligraphic">𝒱</mi><mi>i</mi></msub></mrow></munder><mi>p</mi><mrow><mo>(</mo><msup><mi>𝐝</mi><mo>′</mo></msup><mo>|</mo><msub><mi>𝐮</mi><mi>i</mi></msub><mo>;</mo><mi>𝐰</mi><mo>)</mo></mrow><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m5" class="ltx_Math" alttext="p(\mathbf{d^{\prime}}|\mathbf{u}_{i};\mathbf{w})" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><msup><mi>𝐝</mi><mo>′</mo></msup><mo>|</mo><msub><mi>𝐮</mi><mi>i</mi></msub><mo>;</mo><mi>𝐰</mi><mo>)</mo></mrow></mrow></math> is the conditional probability of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m6" class="ltx_Math" alttext="\mathbf{d^{\prime}}" display="inline"><msup><mi>𝐝</mi><mo>′</mo></msup></math> given <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m7" class="ltx_Math" alttext="\mathbf{u}_{i}" display="inline"><msub><mi>𝐮</mi><mi>i</mi></msub></math>, as defined in Eq. (<a href="#S2.E1" title="(1) ‣ 2.2 CRF-based GParser ‣ 2 Supervised Dependency Parsing ‣ Ambiguity-aware Ensemble Training for Semi-supervised  Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>).
+For an unlabeled sentence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m8" class="ltx_Math" alttext="\mathbf{u}_{i}" display="inline"><msub><mi>𝐮</mi><mi>i</mi></msub></math>,
+the probability of its parse forest <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m9" class="ltx_Math" alttext="\mathcal{V}_{i}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒱</mi><mi>i</mi></msub></math> is the summation of the probabilities of all the parse trees contained in the forest.</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">Then we can derive the partial derivative of the log likelihood with respect to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m1" class="ltx_Math" alttext="\mathbf{w}" display="inline"><mi>𝐰</mi></math>:</p>
+<table id="S3.E3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E3.m1" class="ltx_Math" alttext="\small\frac{\partial\mathcal{L}(\mathcal{D^{\prime}};\mathbf{w})}{\partial%&#10;\mathbf{w}}=\sum\limits_{i=1}^{M}\left(\begin{aligned}\displaystyle\sum_{%&#10;\mathbf{d^{\prime}}\in\mathcal{V}_{i}}\tilde{p}(\mathbf{d^{\prime}}|\mathbf{u}%&#10;_{i},\mathcal{V}_{i};\mathbf{w})\mathbf{f}(\mathbf{u}_{i},\mathbf{d^{\prime}})%&#10;&amp;\\&#10;\displaystyle-\sum_{\mathbf{d^{\prime}}\in\mathcal{Y}(\mathbf{u}_{i})}p(%&#10;\mathbf{d^{\prime}}|\mathbf{u}_{i};\mathbf{w})\mathbf{f}(\mathbf{u}_{i},%&#10;\mathbf{d^{\prime}})&amp;\end{aligned}\right)" display="block"><mrow><mfrac><mrow><mrow><mo mathsize="small" stretchy="false">∂</mo><mo>⁡</mo><mi class="ltx_font_mathcaligraphic" mathsize="small" stretchy="false">ℒ</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi class="ltx_font_mathcaligraphic" mathsize="small" stretchy="false">𝒟</mi><mo mathsize="small" stretchy="false">′</mo></msup><mo>;</mo><mi mathsize="small" stretchy="false">𝐰</mi></mrow><mo>)</mo></mrow></mrow><mrow><mo mathsize="small" stretchy="false">∂</mo><mo>⁡</mo><mi mathsize="small" stretchy="false">𝐰</mi></mrow></mfrac><mo mathsize="small" stretchy="false">=</mo><mrow><munderover><mo largeop="true" mathsize="small" movablelimits="false" stretchy="false" symmetric="true">∑</mo><mrow><mi mathsize="small" stretchy="false">i</mi><mo mathsize="small" stretchy="false">=</mo><mn mathsize="small" stretchy="false">1</mn></mrow><mi mathsize="small" stretchy="false">M</mi></munderover><mrow><mo>(</mo><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="right"><mrow><munder><mo largeop="true" mathsize="small" movablelimits="false" stretchy="false" symmetric="true">∑</mo><mrow><msup><mi mathsize="small" stretchy="false">𝐝</mi><mo mathsize="small" stretchy="false">′</mo></msup><mo mathsize="small" stretchy="false">∈</mo><msub><mi class="ltx_font_mathcaligraphic" mathsize="small" stretchy="false">𝒱</mi><mi mathsize="small" stretchy="false">i</mi></msub></mrow></munder><mover accent="true"><mi mathsize="small" stretchy="false">p</mi><mo mathsize="small" stretchy="false">~</mo></mover><mrow><mo mathsize="small" stretchy="false">(</mo><msup><mi mathsize="small" stretchy="false">𝐝</mi><mo mathsize="small" stretchy="false">′</mo></msup><mo mathsize="small" stretchy="false">|</mo><msub><mi mathsize="small" stretchy="false">𝐮</mi><mi mathsize="small" stretchy="false">i</mi></msub><mo mathsize="small" stretchy="false">,</mo><msub><mi class="ltx_font_mathcaligraphic" mathsize="small" stretchy="false">𝒱</mi><mi mathsize="small" stretchy="false">i</mi></msub><mo mathsize="small" stretchy="false">;</mo><mi mathsize="small" stretchy="false">𝐰</mi><mo mathsize="small" stretchy="false">)</mo></mrow><mi mathsize="small" stretchy="false">𝐟</mi><mrow><mo mathsize="small" stretchy="false">(</mo><msub><mi mathsize="small" stretchy="false">𝐮</mi><mi mathsize="small" stretchy="false">i</mi></msub><mo mathsize="small" stretchy="false">,</mo><msup><mi mathsize="small" stretchy="false">𝐝</mi><mo mathsize="small" stretchy="false">′</mo></msup><mo mathsize="small" stretchy="false">)</mo></mrow></mrow></mtd><mtd/></mtr><mtr><mtd columnalign="right"><mrow><mo mathsize="small" stretchy="false">-</mo><munder><mo largeop="true" mathsize="small" movablelimits="false" stretchy="false" symmetric="true">∑</mo><mrow><msup><mi mathsize="small" stretchy="false">𝐝</mi><mo mathsize="small" stretchy="false">′</mo></msup><mo mathsize="small" stretchy="false">∈</mo><mrow><mi class="ltx_font_mathcaligraphic" mathsize="small" stretchy="false">𝒴</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi mathsize="small" stretchy="false">𝐮</mi><mi mathsize="small" stretchy="false">i</mi></msub><mo>)</mo></mrow></mrow></mrow></munder><mi mathsize="small" stretchy="false">p</mi><mrow><mo mathsize="small" stretchy="false">(</mo><msup><mi mathsize="small" stretchy="false">𝐝</mi><mo mathsize="small" stretchy="false">′</mo></msup><mo mathsize="small" stretchy="false">|</mo><msub><mi mathsize="small" stretchy="false">𝐮</mi><mi mathsize="small" stretchy="false">i</mi></msub><mo mathsize="small" stretchy="false">;</mo><mi mathsize="small" stretchy="false">𝐰</mi><mo mathsize="small" stretchy="false">)</mo></mrow><mi mathsize="small" stretchy="false">𝐟</mi><mrow><mo mathsize="small" stretchy="false">(</mo><msub><mi mathsize="small" stretchy="false">𝐮</mi><mi mathsize="small" stretchy="false">i</mi></msub><mo mathsize="small" stretchy="false">,</mo><msup><mi mathsize="small" stretchy="false">𝐝</mi><mo mathsize="small" stretchy="false">′</mo></msup><mo mathsize="small" stretchy="false">)</mo></mrow></mrow></mtd><mtd/></mtr></mtable><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m2" class="ltx_Math" alttext="\tilde{p}(\mathbf{d^{\prime}}|\mathbf{u}_{i},\mathcal{V}_{i};\mathbf{w})" display="inline"><mrow><mover accent="true"><mi>p</mi><mo stretchy="false">~</mo></mover><mrow><mo>(</mo><msup><mi>𝐝</mi><mo>′</mo></msup><mo>|</mo><msub><mi>𝐮</mi><mi>i</mi></msub><mo>,</mo><msub><mi class="ltx_font_mathcaligraphic">𝒱</mi><mi>i</mi></msub><mo>;</mo><mi>𝐰</mi><mo>)</mo></mrow></mrow></math> is the probability of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m3" class="ltx_Math" alttext="\mathbf{d^{\prime}}" display="inline"><msup><mi>𝐝</mi><mo>′</mo></msup></math> under the space constrained by the parse forest <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m4" class="ltx_Math" alttext="\mathcal{V}_{i}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒱</mi><mi>i</mi></msub></math>.</p>
+<table id="S3.Ex5" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex5.m1" class="ltx_Math" alttext="\begin{split}&amp;\tilde{p}(\mathbf{d^{\prime}}|\mathbf{u}_{i},\mathcal{V}_{i};%&#10;\mathbf{w})=\frac{\exp\{Score(\mathbf{u}_{i},\mathbf{d^{\prime}};\mathbf{w})\}%&#10;}{Z(\mathbf{u}_{i},\mathcal{V}_{i};\mathbf{w})}\\&#10;&amp;Z(\mathbf{u}_{i},\mathcal{V}_{i};\mathbf{w})=\sum_{\mathbf{d^{\prime}}\in%&#10;\mathcal{V}_{i}}\exp\{Score(\mathbf{u}_{i},\mathbf{d^{\prime}};\mathbf{w})\}\end{split}" display="block"><mrow><mover accent="true"><mi>p</mi><mo stretchy="false">~</mo></mover><mrow><mo>(</mo><msup><mi>𝐝</mi><mo>′</mo></msup><mo>|</mo><msub><mi>𝐮</mi><mi>i</mi></msub><mo>,</mo><msub><mi class="ltx_font_mathcaligraphic">𝒱</mi><mi>i</mi></msub><mo>;</mo><mi>𝐰</mi><mo>)</mo></mrow><mo>=</mo><mfrac><mrow><mi>exp</mi><mo>⁡</mo><mrow><mo>{</mo><mrow><mi>S</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>𝐮</mi><mi>i</mi></msub><mo>,</mo><msup><mi>𝐝</mi><mo>′</mo></msup><mo>;</mo><mi>𝐰</mi></mrow><mo>)</mo></mrow></mrow><mo>}</mo></mrow></mrow><mrow><mi>Z</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>𝐮</mi><mi>i</mi></msub><mo>,</mo><msub><mi class="ltx_font_mathcaligraphic">𝒱</mi><mi>i</mi></msub><mo>;</mo><mi>𝐰</mi></mrow><mo>)</mo></mrow></mrow></mfrac><mi>Z</mi><mrow><mo>(</mo><msub><mi>𝐮</mi><mi>i</mi></msub><mo>,</mo><msub><mi class="ltx_font_mathcaligraphic">𝒱</mi><mi>i</mi></msub><mo>;</mo><mi>𝐰</mi><mo>)</mo></mrow><mo>=</mo><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><msup><mi>𝐝</mi><mo>′</mo></msup><mo>∈</mo><msub><mi class="ltx_font_mathcaligraphic">𝒱</mi><mi>i</mi></msub></mrow></munder><mi>exp</mi><mrow><mo>{</mo><mi>S</mi><mi>c</mi><mi>o</mi><mi>r</mi><mi>e</mi><mrow><mo>(</mo><msub><mi>𝐮</mi><mi>i</mi></msub><mo>,</mo><msup><mi>𝐝</mi><mo>′</mo></msup><mo>;</mo><mi>𝐰</mi><mo>)</mo></mrow><mo>}</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">The second term in Eq. (<a href="#S3.E3" title="(3) ‣ 3.1 Likelihood of the Unlabeled Data ‣ 3 Ambiguity-aware Ensemble Training ‣ Ambiguity-aware Ensemble Training for Semi-supervised  Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>) is the same with the second term in Eq. (<a href="#S2.E2" title="(2) ‣ 2.2 CRF-based GParser ‣ 2 Supervised Dependency Parsing ‣ Ambiguity-aware Ensemble Training for Semi-supervised  Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>). The first term in Eq. (<a href="#S3.E3" title="(3) ‣ 3.1 Likelihood of the Unlabeled Data ‣ 3 Ambiguity-aware Ensemble Training ‣ Ambiguity-aware Ensemble Training for Semi-supervised  Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>) can be efficiently computed by running the inside-outside algorithm in the constrained search space <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m5" class="ltx_Math" alttext="\mathcal{V}_{i}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒱</mi><mi>i</mi></msub></math>.</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Stochastic Gradient Descent (SGD) Training</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">We apply L2-norm regularized SGD training to iteratively learn feature weights <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m1" class="ltx_Math" alttext="\mathbf{w}" display="inline"><mi>𝐰</mi></math> for our CRF-based baseline and semi-supervised parsers.
+We follow the implementation in CRFsuite.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup><a href="http://www.chokkan.org/software/crfsuite/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter ltx_font_script">http://www.chokkan.org/software/crfsuite/</span></a></span></span></span>
+At each step, the algorithm approximates a gradient with a small subset of the training examples,
+and then updates the feature weights. <cite class="ltx_cite"/> show that SGD achieves optimal test performance with far fewer iterations than other optimization routines such as L-BFGS.
+Moreover, it is very convenient to parallel SGD
+since computations among examples in the same batch is mutually independent.</p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p">Training with the combined labeled and unlabeled data, the objective is to maximize the mixed likelihood:</p>
+<table id="S3.Ex6" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex6.m1" class="ltx_Math" alttext="\mathcal{L}(\mathcal{D};\mathcal{D^{\prime}})=\mathcal{L}(\mathcal{D})+%&#10;\mathcal{L}(\mathcal{D^{\prime}})" display="block"><mrow><mrow><mi class="ltx_font_mathcaligraphic">ℒ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi class="ltx_font_mathcaligraphic">𝒟</mi><mo>;</mo><msup><mi class="ltx_font_mathcaligraphic">𝒟</mi><mo>′</mo></msup></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mrow><mi class="ltx_font_mathcaligraphic">ℒ</mi><mo>⁢</mo><mrow><mo>(</mo><mi class="ltx_font_mathcaligraphic">𝒟</mi><mo>)</mo></mrow></mrow><mo>+</mo><mrow><mi class="ltx_font_mathcaligraphic">ℒ</mi><mo>⁢</mo><mrow><mo>(</mo><msup><mi class="ltx_font_mathcaligraphic">𝒟</mi><mo>′</mo></msup><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">Since <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m1" class="ltx_Math" alttext="\mathcal{D^{\prime}}" display="inline"><msup><mi class="ltx_font_mathcaligraphic">𝒟</mi><mo>′</mo></msup></math> contains much more instances than <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m2" class="ltx_Math" alttext="\mathcal{D}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒟</mi></math> (1.7M vs. 40K for English, and 4M vs. 16K for Chinese),
+it is likely that the unlabeled data may overwhelm the labeled data during SGD training.
+Therefore, we propose a simple corpus-weighting strategy, as shown in Algorithm <a href="#S3.SS2" title="3.2 Stochastic Gradient Descent (SGD) Training ‣ 3 Ambiguity-aware Ensemble Training ‣ Ambiguity-aware Ensemble Training for Semi-supervised  Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>,
+where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m3" class="ltx_Math" alttext="\mathcal{D}_{i,k}^{b}" display="inline"><msubsup><mi class="ltx_font_mathcaligraphic">𝒟</mi><mrow><mi>i</mi><mo>,</mo><mi>k</mi></mrow><mi>b</mi></msubsup></math> is the subset of training data used in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m4" class="ltx_Math" alttext="k^{th}" display="inline"><msup><mi>k</mi><mrow><mi>t</mi><mo>⁢</mo><mi>h</mi></mrow></msup></math> update and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m5" class="ltx_Math" alttext="b" display="inline"><mi>b</mi></math> is the batch size;
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m6" class="ltx_Math" alttext="\eta_{k}" display="inline"><msub><mi>η</mi><mi>k</mi></msub></math> is the update step, which is adjusted following the simulated annealing procedure <cite class="ltx_cite">[]</cite>.
+The idea is to use a fraction of training data (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m7" class="ltx_Math" alttext="\mathcal{D}_{i}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒟</mi><mi>i</mi></msub></math>) at each iteration, and do corpus weighting by randomly sampling labeled and unlabeled instances in a certain proportion (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m8" class="ltx_Math" alttext="N_{1}" display="inline"><msub><mi>N</mi><mn>1</mn></msub></math> vs. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m9" class="ltx_Math" alttext="M_{1}" display="inline"><msub><mi>M</mi><mn>1</mn></msub></math>).</p>
+</div>
+<div id="S3.SS2.p3" class="ltx_para">
+<p class="ltx_p">Once the feature weights <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m1" class="ltx_Math" alttext="\mathbf{w}" display="inline"><mi>𝐰</mi></math> are learnt, we can parse the test data to find the optimal parse tree.</p>
+<table id="S3.Ex7" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex7.m1" class="ltx_Math" alttext="\begin{split}\mathbf{d^{*}}&amp;=\mathop{\operator@font arg~{}max}_{\mathbf{d^{%&#10;\prime}}\in\mathcal{Y}(\mathbf{x})}{p(\mathbf{d^{\prime}}|\mathbf{x};\mathbf{w%&#10;})}\\&#10;&amp;=\mathop{\operator@font arg~{}max}_{\mathbf{d^{\prime}}\in\mathcal{Y}(\mathbf%&#10;{x})}{Score(\mathbf{x},\mathbf{d^{\prime}};\mathbf{w})}\end{split}" display="block"><mrow><msup><mi>𝐝</mi><mo>*</mo></msup><mo>=</mo><msub><mrow><mpadded width="+3.3pt"><mi>arg</mi></mpadded><mo>⁢</mo><mi>max</mi></mrow><mrow><msup><mi>𝐝</mi><mo>′</mo></msup><mo>∈</mo><mrow><mi class="ltx_font_mathcaligraphic">𝒴</mi><mo>⁢</mo><mrow><mo>(</mo><mi>𝐱</mi><mo>)</mo></mrow></mrow></mrow></msub><mi>p</mi><mrow><mo>(</mo><msup><mi>𝐝</mi><mo>′</mo></msup><mo>|</mo><mi>𝐱</mi><mo>;</mo><mi>𝐰</mi><mo>)</mo></mrow><mo>=</mo><msub><mrow><mpadded width="+3.3pt"><mi>arg</mi></mpadded><mo>⁢</mo><mi>max</mi></mrow><mrow><msup><mi>𝐝</mi><mo>′</mo></msup><mo>∈</mo><mrow><mi class="ltx_font_mathcaligraphic">𝒴</mi><mo>⁢</mo><mrow><mo>(</mo><mi>𝐱</mi><mo>)</mo></mrow></mrow></mrow></msub><mi>S</mi><mi>c</mi><mi>o</mi><mi>r</mi><mi>e</mi><mrow><mo>(</mo><mi>𝐱</mi><mo>,</mo><msup><mi>𝐝</mi><mo>′</mo></msup><mo>;</mo><mi>𝐰</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">This can be done with the Viterbi decoding algorithm described in <cite class="ltx_cite"/> in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m2" class="ltx_Math" alttext="O(n^{3})" display="inline"><mrow><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><msup><mi>n</mi><mn>3</mn></msup><mo>)</mo></mrow></mrow></math> parsing time.</p>
+</div><span class="ltx_ERROR undefined">{algorithm}</span>
+<div id="S3.SS2.p4" class="ltx_para">
+<p class="ltx_p">[tb]
+<span class="ltx_text ltx_caption ltx_align_center">SGD training with mixed labeled and unlabeled data.</span>
+<span class="ltx_text ltx_font_footnote ltx_align_center">
+<span class="ltx_ERROR undefined">{algorithmic}</span>[1]
+<span class="ltx_ERROR undefined">\STATE</span><span class="ltx_text ltx_font_bold">Input:</span> Labeled data <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m1" class="ltx_Math" alttext="\mathcal{D}=\{(\mathbf{x}_{i},\mathbf{d}_{i})\}_{i=1}^{N}" display="inline"><mrow><mi class="ltx_font_mathcaligraphic" mathsize="normal" stretchy="false">𝒟</mi><mo mathsize="normal" stretchy="false">=</mo><msubsup><mrow><mo mathsize="small" stretchy="false">{</mo><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><msub><mi mathsize="normal" stretchy="false">𝐱</mi><mi mathsize="normal" stretchy="false">i</mi></msub><mo mathsize="small" stretchy="false">,</mo><msub><mi mathsize="normal" stretchy="false">𝐝</mi><mi mathsize="normal" stretchy="false">i</mi></msub></mrow><mo mathsize="small" stretchy="false">)</mo></mrow><mo mathsize="small" stretchy="false">}</mo></mrow><mrow><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="normal" stretchy="false">=</mo><mn mathsize="normal" stretchy="false">1</mn></mrow><mi mathsize="normal" stretchy="false">N</mi></msubsup></mrow></math>, and unlabeled data <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m2" class="ltx_Math" alttext="\mathcal{D^{\prime}}=\{(\mathbf{u}_{i},\mathcal{V}_{i})\}_{j=1}^{M}" display="inline"><mrow><msup><mi class="ltx_font_mathcaligraphic" mathsize="normal" stretchy="false">𝒟</mi><mo mathsize="normal" stretchy="false">′</mo></msup><mo mathsize="normal" stretchy="false">=</mo><msubsup><mrow><mo mathsize="small" stretchy="false">{</mo><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><msub><mi mathsize="normal" stretchy="false">𝐮</mi><mi mathsize="normal" stretchy="false">i</mi></msub><mo mathsize="small" stretchy="false">,</mo><msub><mi class="ltx_font_mathcaligraphic" mathsize="normal" stretchy="false">𝒱</mi><mi mathsize="normal" stretchy="false">i</mi></msub></mrow><mo mathsize="small" stretchy="false">)</mo></mrow><mo mathsize="small" stretchy="false">}</mo></mrow><mrow><mi mathsize="normal" stretchy="false">j</mi><mo mathsize="normal" stretchy="false">=</mo><mn mathsize="normal" stretchy="false">1</mn></mrow><mi mathsize="normal" stretchy="false">M</mi></msubsup></mrow></math>; Parameters: <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m3" class="ltx_Math" alttext="I" display="inline"><mi mathsize="normal" stretchy="false">I</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m4" class="ltx_Math" alttext="N_{1}" display="inline"><msub><mi mathsize="normal" stretchy="false">N</mi><mn mathsize="normal" stretchy="false">1</mn></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m5" class="ltx_Math" alttext="M_{1}" display="inline"><msub><mi mathsize="normal" stretchy="false">M</mi><mn mathsize="normal" stretchy="false">1</mn></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m6" class="ltx_Math" alttext="b" display="inline"><mi mathsize="normal" stretchy="false">b</mi></math>
+<span class="ltx_ERROR undefined">\STATE</span><span class="ltx_text ltx_font_bold">Output:</span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m7" class="ltx_Math" alttext="\mathbf{w}" display="inline"><mi mathsize="normal" stretchy="false">𝐰</mi></math>
+<span class="ltx_ERROR undefined">\STATE</span><span class="ltx_text ltx_font_bold">Initialization: <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m8" class="ltx_Math" alttext="\mathbf{w}^{(0)}=\mathbf{0}" display="inline"><mrow><msup><mi mathsize="normal" stretchy="false">𝐰</mi><mrow><mo mathsize="small" mathvariant="bold" stretchy="false">(</mo><mn mathsize="normal" mathvariant="normal" stretchy="false">0</mn><mo mathsize="small" mathvariant="bold" stretchy="false">)</mo></mrow></msup><mo mathsize="normal" mathvariant="normal" stretchy="false">=</mo><mn mathsize="normal" stretchy="false">𝟎</mn></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m9" class="ltx_Math" alttext="k=0" display="inline"><mrow><mi mathsize="normal" stretchy="false">k</mi><mo mathsize="normal" mathvariant="normal" stretchy="false">=</mo><mn mathsize="normal" mathvariant="normal" stretchy="false">0</mn></mrow></math></span>;
+<span class="ltx_ERROR undefined">\FOR</span>[<span class="ltx_text ltx_font_slanted">iterations</span>]<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m10" class="ltx_Math" alttext="i=1" display="inline"><mrow><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="normal" stretchy="false">=</mo><mn mathsize="normal" stretchy="false">1</mn></mrow></math> <span class="ltx_ERROR undefined">\TO</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m11" class="ltx_Math" alttext="I" display="inline"><mi mathsize="normal" stretchy="false">I</mi></math>
+<span class="ltx_ERROR undefined">\STATE</span>Randomly select <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m12" class="ltx_Math" alttext="N_{1}" display="inline"><msub><mi mathsize="normal" stretchy="false">N</mi><mn mathsize="normal" stretchy="false">1</mn></msub></math> instances from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m13" class="ltx_Math" alttext="\mathcal{D}" display="inline"><mi class="ltx_font_mathcaligraphic" mathsize="normal" stretchy="false">𝒟</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m14" class="ltx_Math" alttext="M_{1}" display="inline"><msub><mi mathsize="normal" stretchy="false">M</mi><mn mathsize="normal" stretchy="false">1</mn></msub></math> instances from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m15" class="ltx_Math" alttext="\mathcal{D^{\prime}}" display="inline"><msup><mi class="ltx_font_mathcaligraphic" mathsize="normal" stretchy="false">𝒟</mi><mo mathsize="normal" stretchy="false">′</mo></msup></math> to compose a new dataset <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m16" class="ltx_Math" alttext="\mathcal{D}_{i}" display="inline"><msub><mi class="ltx_font_mathcaligraphic" mathsize="normal" stretchy="false">𝒟</mi><mi mathsize="normal" stretchy="false">i</mi></msub></math>, and shuffle it.
+<span class="ltx_ERROR undefined">\STATE</span>Traverse <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m17" class="ltx_Math" alttext="\mathcal{D}_{i}" display="inline"><msub><mi class="ltx_font_mathcaligraphic" mathsize="normal" stretchy="false">𝒟</mi><mi mathsize="normal" stretchy="false">i</mi></msub></math>: a small batch <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m18" class="ltx_Math" alttext="\mathcal{D}^{b}_{i,k}\subseteq\mathcal{D}_{i}" display="inline"><mrow><msubsup><mi class="ltx_font_mathcaligraphic" mathsize="normal" stretchy="false">𝒟</mi><mrow><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="small" stretchy="false">,</mo><mi mathsize="normal" stretchy="false">k</mi></mrow><mi mathsize="normal" stretchy="false">b</mi></msubsup><mo mathsize="normal" stretchy="false">⊆</mo><msub><mi class="ltx_font_mathcaligraphic" mathsize="normal" stretchy="false">𝒟</mi><mi mathsize="normal" stretchy="false">i</mi></msub></mrow></math> at one step.
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m19" class="ltx_Math" alttext="~{}~{}~{}~{}~{}" display="inline"><mi/></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m20" class="ltx_Math" alttext="\mathbf{w}_{k+1}=\mathbf{w}_{k}+\eta_{k}\frac{1}{b}\nabla\mathcal{L}(\mathcal{%&#10;D}_{i,k}^{b};\mathbf{w}_{k})" display="inline"><mrow><msub><mi mathsize="normal" stretchy="false">𝐰</mi><mrow><mi mathsize="normal" stretchy="false">k</mi><mo mathsize="normal" stretchy="false">+</mo><mn mathsize="normal" stretchy="false">1</mn></mrow></msub><mo mathsize="normal" stretchy="false">=</mo><mrow><msub><mi mathsize="normal" stretchy="false">𝐰</mi><mi mathsize="normal" stretchy="false">k</mi></msub><mo mathsize="normal" stretchy="false">+</mo><mrow><msub><mi mathsize="normal" stretchy="false">η</mi><mi mathsize="normal" stretchy="false">k</mi></msub><mo mathsize="small" stretchy="false">⁢</mo><mfrac><mn mathsize="normal" stretchy="false">1</mn><mi mathsize="normal" stretchy="false">b</mi></mfrac><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo mathsize="normal" stretchy="false">∇</mo><mo mathsize="small" stretchy="false">⁡</mo><mi class="ltx_font_mathcaligraphic" mathsize="normal" stretchy="false">ℒ</mi></mrow><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><msubsup><mi class="ltx_font_mathcaligraphic" mathsize="normal" stretchy="false">𝒟</mi><mrow><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="small" stretchy="false">,</mo><mi mathsize="normal" stretchy="false">k</mi></mrow><mi mathsize="normal" stretchy="false">b</mi></msubsup><mo mathsize="small" stretchy="false">;</mo><msub><mi mathsize="normal" stretchy="false">𝐰</mi><mi mathsize="normal" stretchy="false">k</mi></msub></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></mrow></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m21" class="ltx_Math" alttext="~{}~{}~{}~{}~{}" display="inline"><mi/></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m22" class="ltx_Math" alttext="k=k+1" display="inline"><mrow><mi mathsize="normal" stretchy="false">k</mi><mo mathsize="normal" stretchy="false">=</mo><mrow><mi mathsize="normal" stretchy="false">k</mi><mo mathsize="normal" stretchy="false">+</mo><mn mathsize="normal" stretchy="false">1</mn></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\ENDFOR</span>
+</span></p>
+</div>
+</div>
+<div id="S3.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.3 </span>Forest Construction with Diverse Parsers</h3>
+
+<div id="S3.SS3.p1" class="ltx_para">
+<p class="ltx_p">To construct parse forests for unlabeled data, we employ three diverse parsers,
+i.e., our baseline GParser, a transition-based parser (ZPar<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup><a href="http://people.sutd.edu.sg/~yue_zhang/doc/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter ltx_font_script">http://people.sutd.edu.sg/~yue_zhang/doc/</span></a></span></span></span>) <cite class="ltx_cite">[]</cite>, and a generative constituent parser (Berkeley Parser<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup><a href="https://code.google.com/p/berkeleyparser/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter ltx_font_script">https://code.google.com/p/berkeleyparser/</span></a></span></span></span>) <cite class="ltx_cite">[]</cite>.
+These three parsers are trained on labeled data and then used to parse each unlabeled sentence.
+We aggregate the three parsers’ outputs on unlabeled data in different ways and evaluate the effectiveness through experiments.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Experiments and Analysis</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">To verify the effectiveness of our proposed approach,
+we conduct experiments on Penn Treebank (PTB) and Penn Chinese Treebank 5.1 (CTB5).
+For English, we follow the popular practice to split data into training (sections 2-21), development (section 22), and test (section 23).
+For CTB5, we adopt the data split of <cite class="ltx_cite">[]</cite>.
+We convert original bracketed structures into dependency structures using Penn2Malt with its default head-finding rules.</p>
+</div>
+<div id="S4.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r ltx_border_t"/>
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Train</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Dev</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Test</span></th>
+<th class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">Unlabeled</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">PTB</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">39,832</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">1,700</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">2,416</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">1.7M</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">CTB5</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">16,091</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">803</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">1,910</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_small">4M</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 2: </span>Data sets (in sentence number).</div>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">For unlabeled data, we follow <cite class="ltx_cite"/> and use the BLLIP WSJ corpus <cite class="ltx_cite">[]</cite>
+for English and Xinhua portion of Chinese Gigaword Version 2.0 (LDC2009T14) <cite class="ltx_cite">[]</cite> for Chinese.
+We build a CRF-based bigram part-of-speech (POS) tagger with the features described in <cite class="ltx_cite">[]</cite>, and produce POS tags for all train/development/test/unlabeled sets (10-way jackknifing for training sets).
+The tagging accuracy on test sets is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m1" class="ltx_Math" alttext="97.3\%" display="inline"><mrow><mn>97.3</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> on English and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m2" class="ltx_Math" alttext="94.0\%" display="inline"><mrow><mn>94.0</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> on Chinese.
+Table <a href="#S4.T2" title="Table 2 ‣ 4 Experiments and Analysis ‣ Ambiguity-aware Ensemble Training for Semi-supervised  Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> shows the data statistics.</p>
+</div>
+<div id="S4.p3" class="ltx_para">
+<p class="ltx_p">We measure parsing performance using the standard unlabeled attachment score (UAS),
+excluding punctuation marks.
+For significance test, we adopt Dan Bikel’s randomized parsing evaluation comparator <cite class="ltx_cite">[]</cite>.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup><a href="http://www.cis.upenn.edu/~dbikel/software.html" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter ltx_font_script">http://www.cis.upenn.edu/~dbikel/software.html</span></a></span></span></span></p>
+</div>
+<div id="S4.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_t" colspan="3"><span class="ltx_text ltx_font_small">English</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_t" colspan="3"><span class="ltx_text ltx_font_small">Chinese</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">UAS</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Oracle</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Head/Word</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">UAS</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Oracle</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">Head/Word</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">GParser</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">92.85</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t" rowspan="3"><span class="ltx_text ltx_font_small">—</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t" rowspan="3"><span class="ltx_text ltx_font_small">—</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">82.28</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t" rowspan="3"><span class="ltx_text ltx_font_small">—</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t" rowspan="3"><span class="ltx_text ltx_font_small">—</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">Supervised</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">ZPar</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">92.50</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">81.04</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Berkeley</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">92.70</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">82.46</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Unlabeled </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m1" class="ltx_Math" alttext="\leftarrow" display="inline"><mo>←</mo></math><span class="ltx_text ltx_font_small"> G </span><span class="ltx_text ltx_font_script">(self-train)</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">92.88</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">92.85</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t" rowspan="4"><span class="ltx_text ltx_font_small">1.000</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">82.14</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">82.28</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t" rowspan="4"><span class="ltx_text ltx_font_small">1.000</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">Semi-supervised GParser</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Unlabeled </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m2" class="ltx_Math" alttext="\leftarrow" display="inline"><mo>←</mo></math><span class="ltx_text ltx_font_small"> Z </span><span class="ltx_text ltx_font_script">(co-train)</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">93.15 </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m3" class="ltx_Math" alttext="{\dagger}" display="inline"><mo>†</mo></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">92.50</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">82.54</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">81.04</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">with Single 1-best Trees</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Unlabeled </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m4" class="ltx_Math" alttext="\leftarrow" display="inline"><mo>←</mo></math><span class="ltx_text ltx_font_small"> B </span><span class="ltx_text ltx_font_script">(co-train)</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">93.40 </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m5" class="ltx_Math" alttext="{\dagger}" display="inline"><mo>†</mo></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">92.70</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">83.34</span><span class="ltx_text ltx_font_small"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m6" class="ltx_Math" alttext="{\dagger}" display="inline"><mo>†</mo></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">82.46</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Unlabeled </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m7" class="ltx_Math" alttext="\leftarrow" display="inline"><mo>←</mo></math><span class="ltx_text ltx_font_small"> B=Z </span><span class="ltx_text ltx_font_script">(tri-train)</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">93.50</span><span class="ltx_text ltx_font_small"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m8" class="ltx_Math" alttext="{\dagger}" display="inline"><mo>†</mo></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">97.52</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">83.10 </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m9" class="ltx_Math" alttext="{\dagger}" display="inline"><mo>†</mo></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">95.05</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Unlabeled </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m10" class="ltx_Math" alttext="\leftarrow" display="inline"><mo>←</mo></math><span class="ltx_text ltx_font_small"> Z+G</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">93.18 </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m11" class="ltx_Math" alttext="{\dagger}" display="inline"><mo>†</mo></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">94.97</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">1.053</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">82.78</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">86.66</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">1.136</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Unlabeled </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m12" class="ltx_Math" alttext="\leftarrow" display="inline"><mo>←</mo></math><span class="ltx_text ltx_font_small"> B+G</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">93.35 </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m13" class="ltx_Math" alttext="{\dagger}" display="inline"><mo>†</mo></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">96.37</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">1.080</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">83.24 </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m14" class="ltx_Math" alttext="{\dagger}" display="inline"><mo>†</mo></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">89.72</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">1.188</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">Semi-supervised GParser</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Unlabeled </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m15" class="ltx_Math" alttext="\leftarrow" display="inline"><mo>←</mo></math><span class="ltx_text ltx_font_small"> B+Z</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">93.78</span><span class="ltx_text ltx_font_small"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m16" class="ltx_Math" alttext="{\dagger}" display="inline"><mo>†</mo></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m17" class="ltx_Math" alttext="{\ddagger}" display="inline"><mo>‡</mo></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">96.18</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">1.082</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">83.86 </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m18" class="ltx_Math" alttext="{\dagger}" display="inline"><mo>†</mo></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m19" class="ltx_Math" alttext="{\ddagger}" display="inline"><mo>‡</mo></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">89.54</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">1.199</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">Ambiguity-aware Ensemble</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Unlabeled </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m20" class="ltx_Math" alttext="\leftarrow" display="inline"><mo>←</mo></math><span class="ltx_text ltx_font_small"> B+(Z</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m21" class="ltx_Math" alttext="\cap" display="inline"><mo>∩</mo></math><span class="ltx_text ltx_font_small">G)</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">93.77 </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m22" class="ltx_Math" alttext="{\dagger}" display="inline"><mo>†</mo></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m23" class="ltx_Math" alttext="{\ddagger}" display="inline"><mo>‡</mo></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">95.60</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">1.050</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">84.26</span><span class="ltx_text ltx_font_small"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m24" class="ltx_Math" alttext="{\dagger}" display="inline"><mo>†</mo></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m25" class="ltx_Math" alttext="{\ddagger}" display="inline"><mo>‡</mo></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">87.76</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">1.106</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_b ltx_border_r"/>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">Unlabeled </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m26" class="ltx_Math" alttext="\leftarrow" display="inline"><mo>←</mo></math><span class="ltx_text ltx_font_small"> B+Z+G</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">93.50 </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m27" class="ltx_Math" alttext="{\dagger}" display="inline"><mo>†</mo></math></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">96.95</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">1.112</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">83.30 </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m28" class="ltx_Math" alttext="{\dagger}" display="inline"><mo>†</mo></math></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">91.50</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">1.281</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 3: </span>Main results on development data. G is short for GParser, Z for ZPar, and
+B for Berkeley Parser. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m32" class="ltx_Math" alttext="{\dagger}" display="inline"><mo mathsize="normal" stretchy="false">†</mo></math> means the corresponding parser significantly outperforms supervised parsers, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m33" class="ltx_Math" alttext="{\ddagger}" display="inline"><mo mathsize="normal" stretchy="false">‡</mo></math> means the result significantly outperforms co/tri-training at confidence level of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m34" class="ltx_Math" alttext="p&lt;0.01" display="inline"><mrow><mi mathsize="normal" stretchy="false">p</mi><mo mathsize="normal" stretchy="false">&lt;</mo><mn mathsize="normal" stretchy="false">0.01</mn></mrow></math>.
+</div>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Parameter Setting</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">When training our CRF-based parsers with SGD, we use the batch size <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m1" class="ltx_Math" alttext="b=100" display="inline"><mrow><mi>b</mi><mo>=</mo><mn>100</mn></mrow></math> for all experiments.
+We run SGD for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m2" class="ltx_Math" alttext="I=100" display="inline"><mrow><mi>I</mi><mo>=</mo><mn>100</mn></mrow></math> iterations and choose the model that performs best on development data.
+For the semi-supervised parsers trained with Algorithm <a href="#S3.SS2" title="3.2 Stochastic Gradient Descent (SGD) Training ‣ 3 Ambiguity-aware Ensemble Training ‣ Ambiguity-aware Ensemble Training for Semi-supervised  Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>, we use <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m3" class="ltx_Math" alttext="N_{1}=20" display="inline"><mrow><msub><mi>N</mi><mn>1</mn></msub><mo>=</mo><mn>20</mn></mrow></math>K and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m4" class="ltx_Math" alttext="M_{1}=50" display="inline"><mrow><msub><mi>M</mi><mn>1</mn></msub><mo>=</mo><mn>50</mn></mrow></math>K for English, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m5" class="ltx_Math" alttext="N_{1}=15" display="inline"><mrow><msub><mi>N</mi><mn>1</mn></msub><mo>=</mo><mn>15</mn></mrow></math>K and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m6" class="ltx_Math" alttext="M_{1}=50" display="inline"><mrow><msub><mi>M</mi><mn>1</mn></msub><mo>=</mo><mn>50</mn></mrow></math>K for Chinese,
+based on a few preliminary experiments.
+To accelerate the training, we adopt parallelized implementation of SGD and employ 20 threads for each run.
+For semi-supervised cases, one iteration takes about 2 hours on an IBM server having 2.0 GHz Intel Xeon CPUs and 72G memory.</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">Default parameter settings are used for training ZPar and Berkeley Parser.
+We run ZPar for 50 iterations, and choose the model that achieves highest accuracy on the development data.
+For Berkeley Parser, we use the model after 5 split-merge iterations to avoid over-fitting the training data according to the manual.
+The phrase-structure outputs of Berkeley Parser are converted into dependency structures using the same
+head-finding rules.</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Methodology Study on Development Data</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">Using three supervised parsers, we have many options to construct parse forest on unlabeled data.
+To examine the effect of different ways for forest construction, we conduct extensive methodology study on development data.
+Table <a href="#S4.T3" title="Table 3 ‣ 4 Experiments and Analysis ‣ Ambiguity-aware Ensemble Training for Semi-supervised  Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> presents the results.
+We divide the systems into three types: 1) supervised single parsers; 2) CRF-based GParser with conventional self/co/tri-training; 3) CRF-based GParser with our approach.
+For the latter two cases, we also present the oracle accuracy and averaged head number per word (“Head/Word”) of parse forest when applying different ways to construct forests on development datasets.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">The first major row</span> presents performance of the three supervised parsers.
+We can see that the three parsers achieve comparable performance on English, but the performance of ZPar is largely inferior on Chinese.</p>
+</div>
+<div id="S4.SS2.p3" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">The second major row</span> shows the results when we use single 1-best parse trees on unlabeled data.
+When using the outputs of GParser itself (“Unlabeled <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m1" class="ltx_Math" alttext="\leftarrow" display="inline"><mo>←</mo></math> G”), the experiment reproduces traditional self-training.
+The results on both English and Chinese re-confirm that <em class="ltx_emph">self-training may not work for dependency parsing</em>, which is
+consistent with previous studies <cite class="ltx_cite">[]</cite>.
+The reason may be that dependency parsers are prone to amplify previous mistakes on unlabeled data during training.</p>
+</div>
+<div id="S4.SS2.p4" class="ltx_para">
+<p class="ltx_p">The next two experiments in the second major row reimplement <em class="ltx_emph">co-training</em>, where
+another parser’s 1-best results are projected into unlabeled data to help the core parser.
+Using unlabeled data with the results of ZPar (“Unlabeled <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m1" class="ltx_Math" alttext="\leftarrow" display="inline"><mo>←</mo></math> Z”) significantly outperforms the baseline GParser by 0.30% (93.15-82.85) on English. However, the improvement on Chinese is not significant.
+Using unlabeled data with the results of Berkeley Parser (“Unlabeled <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m2" class="ltx_Math" alttext="\leftarrow" display="inline"><mo>←</mo></math> B”) significantly improves parsing accuracy by 0.55% (93.40-92.85) on English and 1.06% (83.34-82.28) on Chinese.
+We believe the reason is that being a generative model designed for constituent parsing,
+Berkeley Parser is more different from discriminative dependency parsers, and therefore can
+provide more divergent syntactic structures.
+This kind of syntactic divergence is helpful because it can provide complementary knowledge from a different perspective.
+<cite class="ltx_cite"/> also show that the diversity of parsers is important for performance improvement when integrating different parsers in the supervised track.
+Therefore, we can conclude that <em class="ltx_emph">co-training helps dependency parsing, especially when using a more divergent parser</em>.</p>
+</div>
+<div id="S4.SS2.p5" class="ltx_para">
+<p class="ltx_p">The last experiment in the second major row is known as <em class="ltx_emph">tri-training</em>, which only uses unlabeled sentences on which Berkeley Parser and ZPar produce identical outputs (“Unlabeled <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p5.m1" class="ltx_Math" alttext="\leftarrow" display="inline"><mo>←</mo></math> B=Z”).
+We can see that with the verification of two views, the oracle accuracy is much higher than using single parsers (97.52% vs. 92.85% on English, and 95.06% vs. 82.46% on Chinese).
+Although using less unlabeled sentences (0.7M for English and 1.2M for Chinese), <em class="ltx_emph">tri-training achieves comparable performance to co-training</em> (slightly better on English and slightly worse on Chinese).</p>
+</div>
+<div id="S4.SS2.p6" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">The third major row</span> shows the results of the semi-supervised GParser with our proposed approach.
+We experiment with different combinations of the 1-best parse trees of the three supervised parsers.
+The first three experiments combine 1-best outputs of two parsers
+to compose parse forest on unlabeled data.
+“Unlabeled <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p6.m1" class="ltx_Math" alttext="\leftarrow" display="inline"><mo>←</mo></math> B+(Z<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p6.m2" class="ltx_Math" alttext="\cap" display="inline"><mo>∩</mo></math>G)” means that the parse forest is initialized with the Berkeley parse and augmented with the intersection of dependencies of the 1-best outputs of ZPar and GParser.
+In the last setting, the parse forest contains all three 1-best results.</p>
+</div>
+<div id="S4.SS2.p7" class="ltx_para">
+<p class="ltx_p">When the parse forests of the unlabeled data are the union of the outputs of GParser and ZPar, denoted as “Unlabeled <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p7.m1" class="ltx_Math" alttext="\leftarrow" display="inline"><mo>←</mo></math> Z+G”,
+each word has 1.053 candidate heads on English and 1.136 on Chinese, and
+the oracle accuracy is higher than using 1-best outputs of single parsers (94.97% vs. 92.85% on English, 86.66% vs. 82.46% on Chinese).
+However, we find that although the parser significantly outperforms the supervised GParser on English,
+it does not gain significant improvement over co-training with ZPar (“Unlabeled <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p7.m2" class="ltx_Math" alttext="\leftarrow" display="inline"><mo>←</mo></math> Z”) on both English and Chinese.</p>
+</div>
+<div id="S4.SS2.p8" class="ltx_para">
+<p class="ltx_p">Combining the outputs of Berkeley Parser and GParser (“Unlabeled <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p8.m1" class="ltx_Math" alttext="\leftarrow" display="inline"><mo>←</mo></math> B+G”),
+we get higher oracle score (96.37% on English and 89.72% on Chinese) and higher syntactic divergence (1.085 candidate heads per word on English, and 1.188 on Chinese) than “Unlabeled <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p8.m2" class="ltx_Math" alttext="\leftarrow" display="inline"><mo>←</mo></math> Z+G”, which verifies our earlier discussion that Berkeley Parser produces more different structures than ZPar.
+However, it leads to slightly worse accuracy than co-training with Berkeley Parser (“Unlabeled <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p8.m3" class="ltx_Math" alttext="\leftarrow" display="inline"><mo>←</mo></math> B”).
+This indicates that adding the outputs of GParser itself does not help the model.</p>
+</div>
+<div id="S4.SS2.p9" class="ltx_para">
+<p class="ltx_p">Combining the outputs of Berkeley Parser and ZPar (“Unlabeled <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p9.m1" class="ltx_Math" alttext="\leftarrow" display="inline"><mo>←</mo></math> B+Z”),
+we get the best performance on English,
+which is also significantly better than both co-training (“Unlabeled <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p9.m2" class="ltx_Math" alttext="\leftarrow" display="inline"><mo>←</mo></math> B”) and tri-training (“Unlabeled <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p9.m3" class="ltx_Math" alttext="\leftarrow" display="inline"><mo>←</mo></math> B=Z”) on both English and Chinese.
+This demonstrates that <em class="ltx_emph">our proposed approach can better exploit unlabeled data than traditional self/co/tri-training</em>. More analysis and discussions are in Section <a href="#S4.SS4" title="4.4 Analysis ‣ 4 Experiments and Analysis ‣ Ambiguity-aware Ensemble Training for Semi-supervised  Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.4</span></a>.</p>
+</div>
+<div id="S4.SS2.p10" class="ltx_para">
+<p class="ltx_p">During experimental trials, we find that “Unlabeled <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p10.m1" class="ltx_Math" alttext="\leftarrow" display="inline"><mo>←</mo></math> B+(Z<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p10.m2" class="ltx_Math" alttext="\cap" display="inline"><mo>∩</mo></math>G)” can further boost performance on Chinese. A possible explanation is that by using the intersection of the outputs of GParser and ZPar, the size of the parse forest is better controlled, which is helpful considering that ZPar performs worse on this data than both Berkeley Parser and GParser.</p>
+</div>
+<div id="S4.SS2.p11" class="ltx_para">
+<p class="ltx_p">Adding the output of GParser itself (“Unlabeled <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p11.m1" class="ltx_Math" alttext="\leftarrow" display="inline"><mo>←</mo></math> B+Z+G”) leads to accuracy drop,
+although the oracle score is higher (96.95% on English and 91.50% on Chinese) than “Unlabeled <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p11.m2" class="ltx_Math" alttext="\leftarrow" display="inline"><mo>←</mo></math> B+Z”.
+We suspect the reason is that the model is likely to distribute the probability mass to these parse trees produced by itself instead of those by Berkeley Parser or ZPar under this setting.</p>
+</div>
+<div id="S4.SS2.p12" class="ltx_para">
+<p class="ltx_p">In summary, we can conclude that <em class="ltx_emph">our proposed ambiguity-aware ensemble training is significantly better than both the supervised approaches and the semi-supervised approaches that use 1-best parse trees</em>.
+Appropriately composing the forest parse, our approach outperforms the best results of co-training or tri-training by 0.28% (93.78-93.50) on English and 0.92% (84.26-83.34) on Chinese.</p>
+</div>
+</div>
+<div id="S4.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.3 </span>Comparison with Previous Work</h3>
+
+<div id="S4.SS3.p1" class="ltx_para">
+<p class="ltx_p">We adopt the best settings on development data for semi-supervised GParser with our proposed approach, and make comparison with
+previous results on test data.
+Table <a href="#S4.T4" title="Table 4 ‣ 4.3 Comparison with Previous Work ‣ 4 Experiments and Analysis ‣ Ambiguity-aware Ensemble Training for Semi-supervised  Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> shows the results.</p>
+</div>
+<div id="S4.SS3.p2" class="ltx_para">
+<p class="ltx_p">The first major row lists several state-of-the-art supervised methods.
+<cite class="ltx_cite"/> propose a second-order graph-based parser, but use a smaller feature set than our work.
+<cite class="ltx_cite"/> propose a third-order graph-based parser.
+<cite class="ltx_cite"/> explore higher-order features for graph-based dependency parsing,
+and adopt beam search for fast decoding.
+<cite class="ltx_cite"/> propose a feature-rich transition-based parser.
+All work in the second major row adopts semi-supervised methods.
+The results show that our approach achieves comparable accuracy with most previous semi-supervised methods.
+Both <cite class="ltx_cite"/> and <cite class="ltx_cite"/> adopt the higher-order parsing model of <cite class="ltx_cite"/>, and <cite class="ltx_cite"/> also incorporate word cluster features proposed by <cite class="ltx_cite"/> in their system.
+We expect our approach may achieve higher performance with such enhancements, which we leave for future work.
+Moreover, our method may be combined with other semi-supervised approaches,
+since they are orthogonal in methodology and utilize unlabeled data from different perspectives.</p>
+</div>
+<div id="S4.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Sup</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">Semi</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><cite class="ltx_cite"/></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">91.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t" rowspan="3"><span class="ltx_text ltx_font_small">—</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r"><cite class="ltx_cite"/><span class="ltx_text ltx_font_small"> </span><span class="ltx_text ltx_font_script">[higher-order]</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">93.04</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r"><cite class="ltx_cite"/><span class="ltx_text ltx_font_small"> </span><span class="ltx_text ltx_font_script">[higher-order]</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">93.06</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r"><cite class="ltx_cite"/><span class="ltx_text ltx_font_small"> </span><span class="ltx_text ltx_font_script">[higher-order]</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">92.9</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><cite class="ltx_cite"/><span class="ltx_text ltx_font_small"> </span><span class="ltx_text ltx_font_script">[higher-order]</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">92.02</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">93.16</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r"><cite class="ltx_cite"/><span class="ltx_text ltx_font_small"> </span><span class="ltx_text ltx_font_script">[higher-order]</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">92.40</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">93.16</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r"><cite class="ltx_cite"/><span class="ltx_text ltx_font_small"> </span><span class="ltx_text ltx_font_script">[higher-order,cluster]</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">92.70</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">93.79</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r"><cite class="ltx_cite"/><span class="ltx_text ltx_font_small"> </span><span class="ltx_text ltx_font_script">[higher-order]</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">91.98</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">92.64</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r"><cite class="ltx_cite"/><span class="ltx_text ltx_font_small"> </span><span class="ltx_text ltx_font_script">[higher-order]</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">92.76</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">93.77</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">This work</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">92.34</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">93.19</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 4: </span>UAS comparison on English test data. </div>
+</div>
+<div id="S4.T5" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">UAS</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t" rowspan="4"><span class="ltx_text ltx_font_small">Supervised</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><cite class="ltx_cite"/><span class="ltx_text ltx_font_small"> </span><span class="ltx_text ltx_font_script">[joint]</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">82.37</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r"><cite class="ltx_cite"/><span class="ltx_text ltx_font_small"> </span><span class="ltx_text ltx_font_script">[joint]</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">81.42</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r"><cite class="ltx_cite"/><span class="ltx_text ltx_font_small"> </span><span class="ltx_text ltx_font_script">[higher-order]</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">81.01</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">This work</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">81.14</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_b ltx_border_r ltx_border_t" rowspan="2"><span class="ltx_text ltx_font_small">Semi</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><cite class="ltx_cite"/><span class="ltx_text ltx_font_small"> </span><span class="ltx_text ltx_font_script">[higher-order]</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">83.08</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">This work</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">82.89</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 5: </span>UAS comparison on Chinese test data. </div>
+</div>
+<div id="S4.SS3.p3" class="ltx_para">
+<p class="ltx_p">Table <a href="#S4.T5" title="Table 5 ‣ 4.3 Comparison with Previous Work ‣ 4 Experiments and Analysis ‣ Ambiguity-aware Ensemble Training for Semi-supervised  Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> make comparisons with previous results on Chinese test data.
+<cite class="ltx_cite"/>
+and
+<cite class="ltx_cite"/> use joint models for POS tagging and dependency parsing, significantly outperforming their pipeline counterparts.
+Our approach can be combined with their work to utilize unlabeled data to improve both POS tagging and parsing simultaneously.
+Our work achieves comparable accuracy with <cite class="ltx_cite"/>, although they adopt the higher-order model of <cite class="ltx_cite"/>. Again, our method may be combined with their work to achieve higher performance.</p>
+</div>
+</div>
+<div id="S4.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.4 </span>Analysis</h3>
+
+<div id="S4.SS4.p1" class="ltx_para">
+<p class="ltx_p">To better understand the effectiveness of our proposed approach, we make detailed analysis using the semi-supervised GParser with “Unlabeled <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p1.m1" class="ltx_Math" alttext="\leftarrow" display="inline"><mo>←</mo></math> B+Z” on English datasets.</p>
+</div>
+<div id="S4.T6" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Unlabeled data</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">UAS</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">#Sent</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Len</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Head/Word</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">Oracle</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">NULL</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">92.34</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">—</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">—</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">—</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">Consistent </span><span class="ltx_text ltx_font_script">(tri-train)</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">92.94</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.7M</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">18.25</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">1.000</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">97.65</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">Low divergence</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">92.94</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.5M</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">28.19</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">1.062</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">96.53</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">High divergence</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">93.03</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.5M</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">27.85</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">1.211</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">94.28</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">ALL</span></th>
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">93.19</span></th>
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">1.7M</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">24.15</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">1.087</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">96.09</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 6: </span>Performance of our semi-supervised GParser with different sets of “Unlabeled <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T6.m2" class="ltx_Math" alttext="\leftarrow" display="inline"><mo>←</mo></math> B+Z” on English test set.
+“Len” means averaged sentence length.
+</div>
+</div>
+<div id="S4.SS4.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Contribution of unlabeled data with regard to syntactic divergence: </span>
+We divide the unlabeled data into three sets according to the divergence of the 1-best outputs of Berkeley Parser and ZPar.
+The first set contains those sentences that the two parsers produce identical parse trees, denoted by “consistent”, which corresponds to the setting for tri-training.
+Other sentences are split into two sets according to averaged number of heads per word in parse forests, denoted by “low divergence” and “high divergence” respectively.
+Then we train semi-supervised GParser using the three sets of unlabeled data.
+Table <a href="#S4.T6" title="Table 6 ‣ 4.4 Analysis ‣ 4 Experiments and Analysis ‣ Ambiguity-aware Ensemble Training for Semi-supervised  Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> illustrates the results and statistics.
+We can see that unlabeled data with identical outputs from Berkeley Parser and ZPar tends to be short sentences (18.25 words per sentence on average).
+Results show all the three sets of unlabeled data can help the parser.
+Especially, the unlabeled data with highly divergent structures leads to slightly higher improvement.
+This demonstrates that <em class="ltx_emph">our approach can better exploit unlabeled data on which parsers of different views produce divergent structures</em>.</p>
+</div>
+<div id="S4.SS4.p3" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Impact of unlabeled data size: </span>
+To understand how our approach performs with regards to the unlabeled data size,
+we train semi-supervised GParser with different sizes of unlabeled data.
+Fig. <a href="#S4.F3" title="Figure 3 ‣ 4.4 Analysis ‣ 4 Experiments and Analysis ‣ Ambiguity-aware Ensemble Training for Semi-supervised  Dependency Parsing" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> shows the accuracy curve on the test set.
+We can see that the parser consistently achieves higher accuracy with more unlabeled data,
+demonstrating the effectiveness of our approach. We expect that our approach has potential to achieve higher accuracy with more additional data.</p>
+</div>
+<div id="S4.F3" class="ltx_figure"><img src="" id="S4.F3.g1" class="ltx_graphics ltx_centering" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 3: </span>Performance of GParser with different sizes of “Unlabeled <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.F3.m2" class="ltx_Math" alttext="\leftarrow" display="inline"><mo>←</mo></math> B+Z” on English test set.</div>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Related Work</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">Our work is originally inspired by the work of <cite class="ltx_cite"/>.
+They first apply the idea of ambiguous labelings to multilingual parser transfer in the unsupervised parsing field, which
+aims to build a dependency parser for a resource-poor target language by making use of source-language treebanks.
+Different from their work, we explore the idea for semi-supervised dependency parsing where a certain amount of labeled training data is available.
+Moreover, we for the first time build a state-of-the-art CRF-based dependency parser and conduct in-depth comparisons with previous methods.
+Similar ideas of learning with ambiguous labelings are previously explored for classification <cite class="ltx_cite">[]</cite> and sequence labeling problems <cite class="ltx_cite">[]</cite>.</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">Our work is also related with the parser ensemble approaches such as stacked learning and re-parsing in the supervised track.
+Stacked learning uses one parser’s outputs as guide features for another parser, leading to improved performance <cite class="ltx_cite">[]</cite>.
+Re-parsing merges the outputs of several parsers into a dependency graph, and then apply Viterbi decoding to find a better tree <cite class="ltx_cite">[]</cite>.
+One possible drawback of parser ensemble is that several parsers are required to parse the same sentence during the test phase.
+Moreover, our approach can benefit from these methods in that we can get parse forests of higher quality on unlabeled data <cite class="ltx_cite">[]</cite>.</p>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Conclusions</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">This paper proposes a generalized training framework of semi-supervised dependency parsing based on ambiguous labelings.
+For each unlabeled sentence,
+we combine the 1-best parse trees of several diverse parsers to compose ambiguous labelings, represented by a parse forest.
+The training objective is to maximize the mixed likelihood of both the labeled data and the auto-parsed unlabeled data with ambiguous labelings.
+Experiments show that our framework can make better use of the unlabeled data, especially those with divergent outputs from different parsers, than traditional tri-training.
+Detailed analysis demonstrates the effectiveness of our approach.
+Specifically, we find that our approach is very effective when using divergent parsers such as the generative parser, and it is also helpful to properly balance the size and oracle accuracy of the parse forest of the unlabeled data.</p>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p class="ltx_p">For future work, among other possible extensions, we would like to see how our approach performs when employing more diverse parsers to compose the parse forest of higher quality for the unlabeled data, such as the easy-first non-directional dependency parser <cite class="ltx_cite">[]</cite> and other constituent parsers <cite class="ltx_cite">[]</cite>.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">The authors would like to thank the critical and insightful comments from our anonymous reviewers.
+This work was supported by National Natural Science Foundation of China (Grant No. 61373095, 61333018).</p>
+</div>
+<div id="Sx1.p2" class="ltx_para">
+<p class="ltx_p">./ref/reference.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 17:38:30 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

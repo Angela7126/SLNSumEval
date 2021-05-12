@@ -1,0 +1,790 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Relating constraint answer set programming languages and algorithms.
+   </title>
+   <abstract>
+    Recently a logic programming language AC was proposed by Mellarkod et al. [1] to integrate answer set programming and constraint logic programming. Soon after that, a clingcon language integrating answer set programming and finite domain constraints, as well as an ezcsp language integrating answer set programming and constraint logic programming were introduced. The development of these languages and systems constitutes the appearance of a new AI subarea called constraint answer set programming. All these languages have something in common. In particular, they aim at developing new efficient inference algorithms that combine traditional answer set programming procedures and other methods in constraint programming. Yet, the exact relation between the constraint answer set programming languages and the underlying systems is not well understood. In this paper we address this issue by formally stating the precise relation between several constraint answer set programming languages – AC, clingcon, ezcsp – as well as the underlying systems.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Constraint answer set programming (CASP) is a novel, promising direction of research whose roots can be traced back to propositional satisfiability (SAT). SAT solvers are efficient tools for solving Boolean constraint satisfaction problems that arise in different areas of computer science, including software and hardware verification. Answer set programming (ASP) extends computational methods of SAT using ideas from knowledge representation, logic programming, and nonmonotonic reasoning. As a declarative programming paradigm, it provides a rich, and yet simple modeling language that, among other features, incorporates recursive definitions. Satisfiability modulo theories (SMT) extends computational methods of SAT by integrating non-Boolean symbols defined via a background theory in other formalisms, such as first order theory or a constraint processing language. The key ideas behind such integration are that (a) some constraints are more naturally expressed by non-Boolean constructs and (b) computational methods developed in other areas of automated reasoning than SAT may complement its technology in an effective manner processing these constraints.
+     </paragraph>
+     <paragraph>
+      Constraint answer set programming draws on both of these extensions of SAT technology: it integrates answer set programming with constraint processing. This new area has already demonstrated promising results, including the development of the CASP solvers acsolver[1] (Texas Tech University), clingcon{sup:1}[2], [3] (Potsdam University, Germany), ezcsp{sup:2}[4] (KODAK), idp{sup:3}[5] (KU Leuven). These systems provide new horizons to knowledge representation as a field by broadening the applicability of its computational tools. CASP not only provides new modeling features for answer set programming but also improves grounding and solving performance by delegating processing of constraints over large and possibly infinite domains to specialized systems. The origins of this work go back to [6], [7].
+     </paragraph>
+     <paragraph>
+      Drescher and Walsh [8], [9] (inca, NICTA, Australia), Liu et al. [10] (mingo, Aalto University, Finland) took an alternative approach to tackling CASP languages – a translational approach. In the former case, the CASP programs are translated into ASP programs (Drescher and Walsh proposed a number of translations). In the latter, the program is translated into integer linear programming formalism. The empirical results demonstrate that this is also a viable approach towards tackling CASP programs.
+     </paragraph>
+     <paragraph>
+      The general interest towards CASP paradigms illustrates the importance of developing synergistic approaches in the automated reasoning community. To do so effectively one requires a clear understanding of the important features of the CASP-like languages and underlying systems. Current CASP languages are based on the same principal ideas yet relating them is not a straightforward task. One difficulty lies in the fact that these languages are introduced together with a specific system architecture in mind that rely on various answer set programming, constraint satisfaction processing, constraint logic programming, and integer linear programming technologies. The syntactic differences stand in the way of clear understanding of the key features of the languages. For example, the only CASP language that was compared to its earlier sibling was the language ezcsp. Balduccini [4] formally stated that the ezcsp language is a special case of AC. Relating CASP systems formally is an even more complex task. The variations in underlying technologies complicate clear articulation of their similarities and differences. For instance, the main building blocks of the CASP solver acsolver[1] are the ASP system smodels[11] and sicstus Prolog.{sup:4} The technology behind clingcon[2], [3] is developed from the ASP solver clasp[12] and the constraint solver gecode[13]. In addition, the CASP solvers adopt different communication schemes among their heterogeneous solving components. For instance, the system ezcsp relies on blackbox integration of ASP and CSP tools in order to process the ezcsp language [4]. Systems acsolver and clingcon promote tighter integration of multiple automated reasoning methods.
+     </paragraph>
+     <paragraph>
+      The broad attention to CASP suggests a need for a principled and general study of methods to develop unifying terminology and formalisms suitable to capture variants of the languages and solvers. This work can be seen as a step in this direction. First, it presents a formal account that illustrates a precise relationship between the languages of acsolver, clingcon, and ezcsp. Second, it formally relates the systems that take a hybrid approach to solving in CASP. In particular, it accounts for systems acsolver, clingcon, and ezcsp.
+     </paragraph>
+     <paragraph>
+      Usually backtrack search procedures (Davis–Putnam–Logemann–Loveland (DPLL)-like procedures [14]), the backbone of CASP computational methods are described in terms of pseudocode. In [15], the authors proposed an alternative approach to describing DPLL-like algorithms. They introduced an abstract graph-based framework that captures what the “states of computation” are and what transitions between states are allowed. This approach allows us to model a DPLL-like algorithm by a mathematically simple and elegant object, a graph, rather than a collection of pseudocode statements. We develop a similar abstract framework for performing precise formal analysis on relating the constraint answer set solvers acsolver, clingcon, and ezcsp. Furthermore, this framework allows an alternative proof of correctness of these systems. This work clarifies and extends state-of-the-art developments in the area of constraint answer set programming and, we believe, will promote further progress in the area.
+     </paragraph>
+     <section>
+      <section>
+       <section>
+        <section-title>
+         More on related work
+        </section-title>
+        <paragraph>
+         Another direction of work related to the developments in CASP is research on HEX-programs [16]. These programs integrate logic programs under answer set semantics with external computation sources via external atoms. They were motivated by the need to interface ASP with external computation sources, for example, to allow the synergy of ASP and description logic computations within the context of the semantic web. CASP has a lot in common with HEX-programs. System dlvhex{sup:5}[17] computes models of such programs. It allows defining plug-ins for inference on external atoms and as such can be used as a general framework for developing CASP solvers (but it does not provide any specific computational mechanism by default).
+        </paragraph>
+        <paragraph>
+         Heterogeneous nonmonotonic multi-context systems [18] is another formalism related both to CASP and HEX-programs. CASP and HEX-programs can be seen as one of the possible incarnations of a special case of multi-context systems. Multi-context systems provide a more general formalism where “contexts” written in different logics relate with each other via bridge rules. Intuitively, CASP provides two contexts: one in the language of answer set programming and another one in the language of constraint programming. Yet, the bridge rules are of extremely simplistic nature in CASP, in particular, they relate atoms in a logic program to constraints of constraint processing.
+        </paragraph>
+       </section>
+       <section>
+        <section-title>
+         Paper structure
+        </section-title>
+        <paragraph>
+         We start by reviewing AC programs introduced by Mellarkod et al. [1] and the notion of an answer set for such programs. In the subsequent section we introduce the clingcon language and formally state its relation to the AC language. We then define a new class of weakly-simple programs and demonstrate that the acsolver algorithm is applicable also to such programs. We review a transition system introduced by Lierler [19], [20] to model smodels. We extend this transition system to model the acsolver algorithm and show how the newly defined graph can characterize the computation behind the system acsolver. We define a graph suitable for modeling the system clingcon and state a formal result on the relation between the acsolver and clingcon algorithms. At last we illustrate how the same graph may model the ezcsp system. The final section presents the proofs of the formal results stated in the paper.
+        </paragraph>
+        <paragraph>
+         A report on some of the results of this paper has been presented at [21] and [22]. This work extends earlier efforts by introducing a transition system that captures advanced CASP solvers clingcon and ezcsp featuring learning and backjumping. This paper also provides a complete account of proofs for the formal results.
+        </paragraph>
+       </section>
+      </section>
+     </section>
+    </section>
+    <section label="2">
+     <section-title>
+      Review: AC programs
+     </section-title>
+     <paragraph>
+      A sort (type) is a non-empty countable collection of strings over some fixed alphabet. A signature Σ is a collection of sorts, properly typed predicate symbols, constants, and variables. Sorts of Σ are divided into regular and constraint sorts. All variables in Σ are of a constraint sort. Each variable takes on values of a unique constraint sort. For example, let signature {a mathematical formula}Σ1 contain three regular sorts {a mathematical formula}step={0..1}, {a mathematical formula}action={a}, {a mathematical formula}fluent={f}; and two constraint sorts {a mathematical formula}time={0..200}, {a mathematical formula}computer={1..2}; variable T, {a mathematical formula}T′ of constraint sort {a mathematical formula}time; and predicates{a mathematical formula} A term of Σ is either a constant or a variable.
+     </paragraph>
+     <paragraph>
+      An atom is of the form {a mathematical formula}p(t1,…,tn) where p is an n-ary predicate symbol, and {a mathematical formula}t1,…,tn are terms of the proper sorts. A literal is either an atom a or its negation ¬a. A constraint sort is often a large numerical set with primitive constraint relations (examples include arithmetic constraint relations like ⩽).
+     </paragraph>
+     <paragraph>
+      The partitioning of sorts induces a partition of predicates of the AC language:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Regular predicates denote relations among constants of regular sorts;
+      </list-item>
+      <list-item label="•">
+       Constraint predicates denote primitive constraint relations on constraint sorts;
+      </list-item>
+      <list-item label="•">
+       Defined predicates denote relations between constants that belong to regular sort and constants that belong to constraint sorts; such predicates can be defined in terms of constraint, regular, and defined predicates;
+      </list-item>
+      <list-item label="•">
+       Mixed predicates denote relations between constants that belong to regular sort and constants that belong to constraint sorts. Mixed predicates are not defined by the rules of a program and are similar to abducible relations of abductive logic programming [23].
+      </list-item>
+     </list>
+     <paragraph>
+      For example, for signature {a mathematical formula}Σ1, we define {a mathematical formula}at(step,time) to be a mixed predicate; {a mathematical formula}occurs(action,step), on, {a mathematical formula}next(step,step), {a mathematical formula}holds(fluent,step) to be regular predicates; {a mathematical formula}okTime(time) and {a mathematical formula}okComp(computer,time) to be defined predicates.
+     </paragraph>
+     <paragraph>
+      An atom formed by a regular predicate is called regular. Similarly for constraint, defined, and mixed atoms. We say that an atom is a non-mixed atom if it is regular, constraint, or defined. For signature {a mathematical formula}Σ1, atoms {a mathematical formula}at(0,T) and {a mathematical formula}occurs(a,1) are sample mixed and regular atoms respectively.
+     </paragraph>
+     <paragraph>
+      A nested program is a finite set of rules of the form{a mathematical formula} where {a mathematical formula}a0 is ⊥ or a ground non-constraint atom, and each {a mathematical formula}ai ({a mathematical formula}1⩽i⩽n) is a ground non-constraint atom or symbols ⊤, ⊥. If {a mathematical formula}a0=⊥, we often omit ⊥ from the notation. This is a special case of programs with nested expressions [24]. The expression {a mathematical formula}a0 is the head of a rule (1). If B denotes the body of (1), the right hand side of the arrow, we write {a mathematical formula}Bpos for the elements occurring in the positive part of the body, i.e., {a mathematical formula}Bpos={a1,…,al}; {a mathematical formula}Bneg for the elements occurring under single negation as failure, i.e., {a mathematical formula}Bneg={al+1,…,am}; and {a mathematical formula}Bneg2 for the elements occurring under double negation as failure, i.e., {a mathematical formula}Bneg2={am+1,…,an}. We frequently identify the body of (1) with the conjunction of its elements (in which not is replaced with the classical negation connective ¬):{a mathematical formula} Similarly, we often interpret a rule (1) as a clause{a mathematical formula} (in the case when {a mathematical formula}a0=⊥ in (1){a mathematical formula}a0 is absent in (3)). Given a program Π, we write {a mathematical formula}Πcl for the set of clauses (3) corresponding to the rules in Π.
+     </paragraph>
+     <paragraph>
+      We restate the definition of an answer set due to Lifschitz et al. [24] for nested programs in a form convenient for our purposes. The reduct{a mathematical formula}ΠX of a nested program Π with respect to set X of atoms is obtained from Π by deleting each rule (1) such that X does not satisfy its body (recall that we identify its body with (2)), and replacing each remaining rule (1) by {a mathematical formula}a0←Bpos where B stands for the body of (1). A set X of atoms is an answer set of a nested program Π if it is minimal among sets of atoms satisfying {a mathematical formula}(ΠX)cl.
+     </paragraph>
+     <paragraph>
+      According to [25], a choice rule construct [11]{a mathematical formula} of the lparse{sup:6} language can be seen as an abbreviation for a rule{a mathematical formula} We adopt this abbreviation in the rest of the paper. For a program that consists of this rule both ∅ and {a mathematical formula}{a} form its answer sets.
+     </paragraph>
+     <paragraph>
+      The rules and programs are called regular if the bodies of the rules do not contain symbols ⊤ or ⊥.
+     </paragraph>
+     <paragraph>
+      An (AC) program is a finite set of rules of the form (1) where
+     </paragraph>
+     <list>
+      <list-item label="•">
+       {a mathematical formula}a0 is ⊥, a regular, or a defined atom,
+      </list-item>
+      <list-item label="•">
+       each {a mathematical formula}ai, {a mathematical formula}1⩽i⩽l, is a non-mixed atom if {a mathematical formula}a0 is a defined atom,
+      </list-item>
+      <list-item label="•">
+       each {a mathematical formula}ai, {a mathematical formula}l+1⩽i⩽n, is a non-mixed atom.
+      </list-item>
+     </list>
+     <paragraph>
+      We assume that any mixed atom occurring in AC program is of the restricted form {a mathematical formula}m(r→,V), where {a mathematical formula}r→ is a sequence of regular constants and V is a variable. This assumption does not impact applicability of the language but is made for the ease of the presentation.
+     </paragraph>
+     <paragraph>
+      For instance, a sample AC program over signature {a mathematical formula}Σ1 follows{a mathematical formula} The implementation of such language requires the declaration of the signature {a mathematical formula}Σ1 itself. In syntax proposed by Mellarkod et al. [1] we encode the declaration of {a mathematical formula}Σ1 as follows:{a mathematical formula} This sample program is inspired by Example 1 in [1] that encodes a small planning domain. It is well known that answer set programming provides a convenient language for encoding planning problems. Yet if in a problem actions have to be mapped to real time that is represented by a large integer domain, grounding becomes a bottleneck for answer set programming. Mellarkod et al. illustrated how AC language allows us to overcome this limitation in Example 1.
+     </paragraph>
+     <paragraph>
+      Mellarkod et al. [1] considered programs of different syntax than discussed here. For instance, in [1] classical negation may precede atoms in rules. Also signature Σ may contain variables of regular sort. Nevertheless, the AC language discussed here is sufficient to capture the class of programs covered by the acsolver algorithm.
+     </paragraph>
+     <section label="2.1">
+      Semantics of the AC language
+      <paragraph>
+       We define the semantics of AC programs by transforming a program into a nested program using grounding. For an AC program Π over signature Σ, by the set {a mathematical formula}ground(Π) we denote the set of all ground instances of the rules in Π. The set {a mathematical formula}ground⁎(Π) is obtained from {a mathematical formula}ground(Π) by replacing a constraint atom a by ⊤ or ⊥ if a is true or false respectively. A ground constraint atom evaluates to true or false under a standard interpretations of its symbols. For example, a constraint atom {a mathematical formula}1=1 evaluates to true, whereas a constraint atom {a mathematical formula}1≠1 evaluates to false. It is easy to see that {a mathematical formula}ground⁎(Π) is a nested program.
+      </paragraph>
+      <paragraph>
+       For instance, let {a mathematical formula}ground(Π) consist of two rules{a mathematical formula}{a mathematical formula}{a mathematical formula} then {a mathematical formula}ground⁎(Π) is{a mathematical formula}{a mathematical formula}{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       If we define the semantics of an AC program as the semantics of a corresponding nested program {a mathematical formula}ground⁎(Π) then mixed atoms will never be part of answer sets (indeed, mixed atoms never occur in the heads of the rules). This is different from an intended meaning of these atoms that suppose to “connect” the values of regular constants and their constraint counterpart. We now introduce notion of a functional set composed of mixed atoms that is crucial in defining answer sets of AC programs. We say that a sequence of (regular) constants {a mathematical formula}r→ is specified by a mixed predicate m if {a mathematical formula}r→ follows the sorts of the regular arguments of m. For instance, for program (4) a sequence 0 of constants (of type step) is the only sequence specified by mixed predicate at. For a set X of atoms, we say that a sequence {a mathematical formula}r→ of regular constants is bound in X by a (constraint) constant c w.r.t. predicate m if there is an atom {a mathematical formula}m(r→,c) in X. A set M of ground mixed atoms is functional over the underlying signature if for every mixed predicate m, every sequence of regular constants specified by m is bound in M by a unique constraint constant w.r.t. m. For instance, for the signature of program (4) sets {a mathematical formula}{at(0,1),at(1,1)} and {a mathematical formula}{at(0,2),at(1,1)} are functional, whereas {a mathematical formula}{at(0,1)} and {a mathematical formula}{at(0,1),at(0,2)} are not functional sets.
+      </paragraph>
+      <paragraph label="Definition 1">
+       For an AC program Π, a set X of atoms is called an answer set of Π if there is a functional set M of ground mixed atoms of Σ such that X is an answer set of {a mathematical formula}ground⁎(Π)∪M.
+      </paragraph>
+      <paragraph>
+       For example, sets of atoms{a mathematical formula} and{a mathematical formula} are among answer sets of (4).
+      </paragraph>
+      <paragraph>
+       The definition of an answer set for AC programs presented here is different from the original definition in [1] (even when we restrict our attention to programs without doubly negated atoms), but there is a close relation between them:
+      </paragraph>
+      <paragraph label="Proposition 1">
+       For an AC program Π over signature Σ such that Π contains no doubly negated atoms and the set S of all true ground constraint literals over Σ, X is an answer set of Π if and only if{a mathematical formula}X∪Sis an answer set (in the sense of[1]) of Π.
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     The clingcon language
+     <paragraph>
+      Consider a subset of the AC language, denoted {a mathematical formula}AC−, so that any AC program without defined atoms is an {a mathematical formula}AC− program. The language of the constraint answer set solver clingcon defined in [2], [3]{sup:7} can be seen as a syntactic variant of the {a mathematical formula}AC− language.
+     </paragraph>
+     <paragraph>
+      We now review clingcon programs and show how they map into {a mathematical formula}AC− programs. For a signature Σ, a clingcon variable is an expression of the form {a mathematical formula}p(r→), where p is a mixed predicate and {a mathematical formula}r→ is a sequence of regular constants. For any clingcon variable {a mathematical formula}p(r→), by {a mathematical formula}p(r→)0 we denote its predicate symbol p and by {a mathematical formula}p(r→)s we denote its sequence of regular constants {a mathematical formula}r→.
+     </paragraph>
+     <paragraph>
+      We say that an atom is a clingcon atom over Σ if it has the following form{a mathematical formula} where {a mathematical formula}vi is a clingcon variable; {a mathematical formula}ci is a constraint constant; ∘ are primitive constraint operations (note that ∘ denotes an occurrence of an operation so that a different operation can be used at each occurrence); and ⊙ is a primitive constraint relation.
+     </paragraph>
+     <paragraph>
+      A clingcon program is a finite set of rules of the form (1) where (i) {a mathematical formula}a0 is ⊥ or a regular atom, (ii) each {a mathematical formula}ai, {a mathematical formula}1⩽i⩽n, is a regular or clingcon atom. The system clingcon accepts rules where {a mathematical formula}a0 is a clingcon atom but it should be seen as an abbreviation for the same rule with ⊥ as the head and {a mathematical formula}nota0 occurring in the body.
+     </paragraph>
+     <paragraph>
+      Any clingcon program Π can be rewritten in {a mathematical formula}AC− using a function ν that maps the set of clingcon variables occurring in Π to the set of distinct variables over Σ. For a clingcon variable v, {a mathematical formula}vν denotes a variable assigned to v by ν.
+     </paragraph>
+     <paragraph>
+      For each occurrence of clingcon atom (6) in some rule r of Π (i) add a set of mixed atoms {a mathematical formula}vi0(vis,viν) for {a mathematical formula}1⩽i⩽l to the body of r, and (ii) replace (6) in r by a constraint atom{a mathematical formula} We denote resulting {a mathematical formula}AC− program by {a mathematical formula}ac(Π).
+     </paragraph>
+     <paragraph>
+      For instance, let clingcon program Π over {a mathematical formula}Σ1 without defined predicates consist of a single rule{a mathematical formula} Given ν that maps {a mathematical formula}at(0) to {a mathematical formula}T′, {a mathematical formula}ac(Π) has the form{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      The following proposition makes the relation between a clingcon program and its {a mathematical formula}AC− counterpart precise.
+     </paragraph>
+     <paragraph label="Proposition 2">
+      For a clingcon program Π over signature Σ, a set X is a constraint answer set of Π according to the definition in[2], [3]iff there is a functional set M of ground mixed atoms of Σ such that{a mathematical formula}X∪Mis an answer set of{a mathematical formula}ac(Π).
+     </paragraph>
+     <paragraph>
+      We demonstrated how any clingcon program can be seen as a program in the language of {a mathematical formula}AC−. There is an important class of AC programs called safe. In fact, Mellarkod et al. [1] only considered such programs in devising the algorithm for processing the AC programs. We will now illustrate that given any safe {a mathematical formula}AC− program, we can syntactically transform this program into a clingcon one. Thus the languages of {a mathematical formula}AC− and clingcon (for which the solving procedures have been proposed) are truly only syntactic variants of each other. We now define a two step transformation that first transforms a safe {a mathematical formula}AC− program into what we call a super-safe program and then into a corresponding clingcon program.
+     </paragraph>
+     <paragraph>
+      Rule (1) is called a defined rule if {a mathematical formula}a0 is a defined atom. We say that an AC program Π is safe[1] if every variable occurring in a non-defined rule in Π also occurs in a mixed atom of this rule. In other words, any constraint variable occurring in a non-defined rule is mapped to some sequence of regular constants {a mathematical formula}r→ specified by a mixed predicate. Consider, a safe program (8). A constraint variable {a mathematical formula}T′ of sort {a mathematical formula}time maps to a regular constant 0 of sort {a mathematical formula}step specified by mixed predicate at.
+     </paragraph>
+     <paragraph>
+      An AC program Π is super-safe if Π is safe and
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       if a mixed atom {a mathematical formula}m(c→,X) occurs in Π then a mixed atom {a mathematical formula}m(c→,X′) does not occur in Π (where X and {a mathematical formula}X′ are distinct variable names),
+      </list-item>
+      <list-item label="2.">
+       if a mixed atom {a mathematical formula}m(c→,X) occurs in Π then neither a mixed atom {a mathematical formula}m′(c→′,X) such that {a mathematical formula}c→≠c→′ nor a mixed atom {a mathematical formula}m′(c→,X) such that {a mathematical formula}m≠m′ occurs in Π.
+      </list-item>
+     </list>
+     <paragraph>
+      For example, program (4) is super-safe. On the other hand, if we replace the sixth rule of (4) by semantically the same rule (8) the program is not super-safe (but safe) as both conditions 1 and 2 are violated. Intuitively, super-safeness ensures that a constraint variable maps uniquely to some sequence of (regular) constants {a mathematical formula}r→ specified by a specific mixed predicate m and the other way around. For instance, in program (4) constraint variable T of sort time corresponds to regular constant 0 of sort step specified by mixed predicate at, whereas constraint variable {a mathematical formula}T′ of sort {a mathematical formula}time corresponds to constant 1 of sort step specified by at.
+     </paragraph>
+     <paragraph>
+      We note that any safe AC program Π can be converted to a super-safe program so that the resulting program has the same answer sets:
+     </paragraph>
+     <paragraph label="Proposition 3">
+      For any safe AC program Π, there is a transformation on Π that produces a super-safe AC program which has the same answer sets as Π.
+     </paragraph>
+     <paragraph>
+      Appendix A presents such a transformation.
+     </paragraph>
+     <paragraph>
+      For any super-safe {a mathematical formula}AC− program Π, by {a mathematical formula}con(Π) we denote a clingcon program constructed as follows: (i) all mixed atoms in Π are dropped, (ii) every constraint variable X is replaced by an expression {a mathematical formula}m(c→) where {a mathematical formula}m(c→,X) is a mixed atom in Π in which X occurs (given the conditions of super-safeness we are guaranteed that there is a unique mixed atom of the form {a mathematical formula}m(c→,X) for each constraint variable X in Π).
+     </paragraph>
+     <paragraph>
+      For instance, let {a mathematical formula}AC− program Π over {a mathematical formula}Σ1 (without defined predicates) consist of a single rule (8). This program is clearly super-safe. The corresponding clingcon program {a mathematical formula}con(Π) is (7).
+     </paragraph>
+     <paragraph>
+      The following proposition makes the relation between a super-safe {a mathematical formula}AC− program and its clingcon counterpart precise.
+     </paragraph>
+     <paragraph label="Proposition 4">
+      For a super-safe program Π over signature Σ, there is a functional set M of ground mixed atoms of Σ such that{a mathematical formula}X∪Mis an answer set of Π iff a set X is a constraint answer set of{a mathematical formula}con(Π)according to the definition in[2], [3].
+     </paragraph>
+     <paragraph>
+      In other words, Proposition 4 suggests that the languages {a mathematical formula}AC− and clingcon are syntactic variants of each other.
+     </paragraph>
+    </section>
+    <section label="4">
+     Weakly-simple AC programs
+     <paragraph>
+      To the best of our knowledge system acsolver was the first CASP solver implemented. The correctness of the acsolver algorithm was shown for simple AC programs.{sup:8} We start this section by reviewing simple programs. We then define a more general class of programs called weakly-simple. In Section 6 we present a generalization of the acsolver algorithm and state its correctness for such programs.
+     </paragraph>
+     <paragraph>
+      A part of the AC program Π that consists of defined rules is called a defined part denoted by {a mathematical formula}ΠD. By {a mathematical formula}ΠR we denote a non-defined part of Π, i.e., {a mathematical formula}Π∖ΠD. For program (4), the rules{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} form its defined part whereas the other rules form {a mathematical formula}ΠR.
+     </paragraph>
+     <paragraph>
+      We say that an AC program Π is simple if it is super-safe and its defined part contains no regular atoms and has a unique answer set. In weakly-simple programs that we define here we first lift the restriction that a defined part of a program has a unique answer set. Second, weakly-simple programs allow regular atoms in defined rules under some syntactic conditions that we define by means of a predicate dependency graph. For any AC program Π, the predicate dependency graph{sup:9} of Π is a directed graph that
+     </paragraph>
+     <list>
+      <list-item label="•">
+       has all predicates occurring in Π as its vertices, and
+      </list-item>
+      <list-item label="•">
+       for each rule (1) in Π has an edge from {a mathematical formula}a00 to {a mathematical formula}ai0 where {a mathematical formula}1⩽i⩽l.
+      </list-item>
+     </list>
+     <paragraph label="Definition 2">
+      We say that an AC program Π is weakly-simple if
+     </paragraph>
+     <list>
+      <list-item label="•">
+       it is super-safe,
+      </list-item>
+      <list-item label="•">
+       each strongly connected component of the predicate dependency graph of Π is a subset of either regular predicates of Π or defined predicates.
+      </list-item>
+     </list>
+     <paragraph>
+      It is easy to see that any simple program is also a weakly-simple program but not the other way around. For example, program (4) is weakly-simple but not simple since its defined part contains a regular atom on.
+     </paragraph>
+    </section>
+    <section label="5">
+     Abstract smodels
+     <paragraph>
+      Most state-of-the-art answer set solvers are based on algorithms closely related to the dpll procedure [14]. Nieuwenhuis et al. described dpll by means of a transition system that can be viewed as an abstract framework underlying dpll computation [15]. Lierler [19], [20] proposed a similar framework, {a mathematical formula}smΠ, for specifying an answer set solver smodels following the lines of its pseudocode description [27]. Our goal is to design such a framework for describing an algorithm behind acsolver. As a step in this direction we review the graph {a mathematical formula}smΠ that underlines an algorithm of smodels, one of the main building blocks of acsolver. The presentation follows [19].
+     </paragraph>
+     <paragraph>
+      For a set σ of atoms, a record relative to σ is a list M of literals over σ, some possibly annotated by Δ, which marks them as decision literals. A state relative to σ is a record relative to σ possibly preceding symbol ⊥. For instance, some states relative to a singleton set {a mathematical formula}{a} of atoms are{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      We say that a state is inconsistent if either ⊥ or two complementary literals occur in it, e.g., a and ¬a. For example, states {a mathematical formula}a¬a and a⊥ are inconsistent. Frequently, we identify a state M with a set of literals occurring in it possibly with the symbol ⊥, ignoring both the annotations and the order between its elements. In some cases we identify a set of literals with a conjunction of its members, thus we can write {a mathematical formula}M⊨ϕ where M is a state and ⊨ is understood as a satisfiability relation. If neither a literal l nor its complement {a mathematical formula}l¯ occur in M, then l is unassigned by M. For a set M of literals, by {a mathematical formula}M+ and {a mathematical formula}M− we denote the set of atoms stemming from positive and negative literals in M respectively. For instance, {a mathematical formula}{a,¬b}+={a} and {a mathematical formula}{a,¬b}−={b}.
+     </paragraph>
+     <paragraph>
+      If C is a disjunction (conjunction) of literals then by {a mathematical formula}C¯ we understand the conjunction (disjunction) of the complements of the literals occurring in C. In some situations, we will identify disjunctions and conjunctions of literals with the sets of these literals.
+     </paragraph>
+     <paragraph>
+      By {a mathematical formula}Bodies(Π,a) we denote the set of the bodies of all rules of a regular program Π with the head a. We recall that a set U of atoms occurring in a regular program Π is unfounded[28], [29] on a consistent set M of literals with respect to Π if for every {a mathematical formula}a∈U and every {a mathematical formula}B∈Bodies(Π,a), {a mathematical formula}M⊨B¯ (where B is identified with the conjunction of its elements), or {a mathematical formula}U∩Bpos≠∅.
+     </paragraph>
+     <paragraph>
+      Each regular program Π determines its Smodels graph{a mathematical formula}smΠ. The set of nodes of {a mathematical formula}smΠ consists of the states relative to the set of atoms occurring in Π. The edges of the graph {a mathematical formula}smΠ are specified by the transition rules presented in Fig. 1. A node is terminal in a graph if no edge leaves this node.
+     </paragraph>
+     <paragraph>
+      The graph {a mathematical formula}smΠ can be used for deciding whether a regular program Π has an answer set by constructing a path from ∅ to a terminal node. Following proposition serves as a proof of correctness and termination for any procedure that is captured by the graph {a mathematical formula}smΠ.
+     </paragraph>
+     <paragraph label="Proposition 5">
+      For any regular{sup:10}program Π,
+     </paragraph>
+     <list>
+      <list-item label="(a)">
+       graph{a mathematical formula}smΠis finite and acyclic,
+      </list-item>
+      <list-item label="(b)">
+       for any terminal state M of{a mathematical formula}smΠother than ⊥,{a mathematical formula}M+is an answer set of Π,
+      </list-item>
+      <list-item label="(c)">
+       state ⊥ is reachable from ∅ in{a mathematical formula}smΠif and only if Π has no answer sets.
+      </list-item>
+     </list>
+    </section>
+    <section label="6">
+     Abstract acsolver
+     <section label="6.1">
+      <section-title>
+       Query, extensions, and consequences
+      </section-title>
+      <paragraph>
+       In order to present the transition system suitable for capturing acsolver we introduce several concepts.
+      </paragraph>
+      <paragraph>
+       Given an AC program Π and a set p of predicate symbols, a set X of atoms is a p-input answer set (or an input answer set w.r.t. p) of Π if X is an answer set of {a mathematical formula}Π∪Xp where by {a mathematical formula}Xp we denote the set of atoms in X whose predicate symbols are different from the ones occurring in p. For instance, let X be a set {a mathematical formula}{a(1),b(1)} of atoms and let p be a set {a mathematical formula}{a} of predicates, then {a mathematical formula}Xp is {a mathematical formula}{b(1)}. The set X is a p-input answer set of a program {a mathematical formula}a(1)←b(1). On the other hand, it is not an input answer set for the same program with respect to a set {a mathematical formula}{a,b} of predicate symbols. Intuitively set p denotes a set of intentional predicates [30]: The concept of p-input answer sets is closely related to “p-stable models” in [30].
+      </paragraph>
+      <paragraph label="Proposition 6">
+       For a nested program Π, a complete set X of literals, and a setpof predicate symbols such that predicate symbols occurring in the heads of Π form a subset ofp,{a mathematical formula}X+is ap-input answer set of Π iff X is a model of{a mathematical formula}SMp[Π] (i.e.,p-stable model of Π).
+      </paragraph>
+      <paragraph>
+       For a set S of literals, by {a mathematical formula}SR, {a mathematical formula}SD, and {a mathematical formula}SC we denote the set of regular, defined, and constraint literals occurring in S respectively. By {a mathematical formula}SR,D and {a mathematical formula}SD,C we denote the unions {a mathematical formula}SR∪SD and {a mathematical formula}SD∪SC respectively. By {a mathematical formula}At(Π) we denote the set of atoms occurring in a program Π. Recall that a substitution Θ is a finite set of the form{a mathematical formula} where {a mathematical formula}v1,…,vn are distinct variables and each {a mathematical formula}ti is a term other than {a mathematical formula}vi. Given a substitution Θ and a set X of literals, we write XΘ for the result of a substitution.
+      </paragraph>
+      <paragraph>
+       For an AC program Π, a (complete) query Q is a (complete) consistent set of literals over {a mathematical formula}At(ΠD)R∪At(ΠR)D,C. For a query Q of Π, a complete query E is a satisfying extension of Q w.r.t. Π if {a mathematical formula}Q⊆E and there is a (sort respecting) substitution γ of variables in E by ground terms so that the result of this substitution, Eγ, satisfies the conditions
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        if a constraint literal {a mathematical formula}l∈Eγ then l is true under the intended interpretation of its symbols, and
+       </list-item>
+       <list-item label="2.">
+        there is an input answer set A of {a mathematical formula}ΠD w.r.t. defined predicates of Π such that {a mathematical formula}EγR,D+⊆A and {a mathematical formula}EγR,D−∩A=∅.
+       </list-item>
+      </list>
+      <paragraph>
+       We say that literal l is a consequence of Π and Q if for every satisfying extension E of Q w.r.t. Π, {a mathematical formula}l∈E. By {a mathematical formula}Cons(Π,Q), we denote the set of all consequences of Π and Q. If there are no satisfying extensions of Q w.r.t. Π we identify {a mathematical formula}Cons(Π,Q) with the singleton {a mathematical formula}{⊥}.
+      </paragraph>
+      <paragraph>
+       Let Π be (4) and Q be {a mathematical formula}{okTime(T),T≠1}. A set{a mathematical formula} forms a satisfying extension of Q w.r.t. Π. Indeed, consider substitutions {a mathematical formula}{T/106}. This is the only satisfying extension of Q w.r.t. Π. Consequently, it forms {a mathematical formula}Cons(Π,Q). On the other hand, there are no satisfying extensions for a query {a mathematical formula}{¬on,okTime(T)} so that {a mathematical formula}{⊥} corresponds to {a mathematical formula}Cons(Π,Q).
+      </paragraph>
+     </section>
+     <section label="6.2">
+      The graph {a mathematical formula}ACΠ
+      <paragraph>
+       For each constraint and defined atom A of signature Σ, select a new symbol {a mathematical formula}Aξ, called the name of A. By {a mathematical formula}Σξ we denote the signature obtained from Σ by adding all names {a mathematical formula}Aξ as additional regular predicate symbols (so that {a mathematical formula}Aξ itself is a regular atom).
+      </paragraph>
+      <paragraph>
+       For an AC program Π, by {a mathematical formula}Πξ we denote a set of rules consisting of (i) choice rules {a mathematical formula}{aξ} for each constraint and defined atom a occurring in {a mathematical formula}ΠR, and (ii) {a mathematical formula}ΠR whose mixed atoms are dropped, and constraint and defined atoms are replaced by their names. Note that {a mathematical formula}Πξ is a regular program.
+      </paragraph>
+      <paragraph>
+       For instance, let Π be (4) then {a mathematical formula}Πξ consists of the rules{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       For a set M of atoms over {a mathematical formula}Σξ, by {a mathematical formula}Mξ− we denote a set of atoms over Σ by replacing each name {a mathematical formula}Aξ occurring in M with a corresponding atom A. For instance, {a mathematical formula}{okTime(T)ξ,T≠1ξ}ξ− is {a mathematical formula}{okTime(T),T≠1}.
+      </paragraph>
+      <paragraph>
+       Let Π be an AC program. The nodes of the graph {a mathematical formula}ACΠ are the states relative to the set {a mathematical formula}At(Πξ)∪At(ΠD)R of atoms.
+      </paragraph>
+      <paragraph>
+       For a state M of {a mathematical formula}ACΠ, by {a mathematical formula}query(M) we denote the largest subset of {a mathematical formula}Mξ− over {a mathematical formula}At(ΠD)R∪At(ΠR)D,C. For example, for program (4) and the state M{a mathematical formula}{a mathematical formula}query(M) is {a mathematical formula}{¬on,okTime(T)}.
+      </paragraph>
+      <paragraph>
+       The edges of the graph {a mathematical formula}ACΠ are described by the transition rules of {a mathematical formula}smΠξ and the additional transition rule Query Propagate presented in Fig. 2. We abuse notation and identify {a mathematical formula}⊥ξ with ⊥ itself.
+      </paragraph>
+      <paragraph label="Proposition 7">
+       The graph {a mathematical formula}ACΠ can be used for deciding whether a weakly-simple AC program Π has an answer set by constructing a path from ∅ to a terminal node: For any weakly-simple AC program Π,
+      </paragraph>
+      <list>
+       <list-item label="(a)">
+        graph{a mathematical formula}ACΠis finite and acyclic,
+       </list-item>
+       <list-item label="(b)">
+        for any terminal state M of{a mathematical formula}ACΠother than ⊥,{a mathematical formula}(Mξ−)R+is a set of all regular atoms in some answer set of Π,
+       </list-item>
+       <list-item label="(c)">
+        state ⊥ is reachable from ∅ in{a mathematical formula}ACΠif and only if Π has no answer sets.
+       </list-item>
+      </list>
+      <paragraph>
+       Proposition 7 shows that algorithms that find a path in the graph {a mathematical formula}ACΠ from ∅ to a terminal node can be regarded as AC solvers for weakly-simple programs.
+      </paragraph>
+      <paragraph>
+       Let Π be an AC program (4). Here is a path in {a mathematical formula}ACΠ with every edge annotated by the name of a transition rule that justifies the presence of this edge in the graph:{a mathematical formula} Since the last state in the path is terminal, Proposition 7 asserts that{a mathematical formula} forms the set of all regular atoms in some answer set of Π. Indeed, recall answer set (5).
+      </paragraph>
+     </section>
+     <section label="6.3">
+      acsolver algorithm
+      <paragraph>
+       We can view a path in the graph {a mathematical formula}ACΠ as a description of a process of search for a set of regular atoms in some answer set of Π by applying the graphʼs transition rules. Therefore, we can characterize an algorithm of a solver that utilizes the transition rules of {a mathematical formula}ACΠ by describing a strategy for choosing a path in this graph. A strategy can be based, in particular, on assigning priorities to transition rules of {a mathematical formula}ACΠ, so that a solver never follows a transition due to a rule in a state if a rule with higher priority is applicable. A strategy may also include restrictions on ruleʼs applications.
+      </paragraph>
+      <paragraph>
+       We use this approach to describe the acsolver algorithm [1, Fig. 1]. The acsolver selects edges according to the priorities on the transition rules of the graph {a mathematical formula}ACΠ as follows:{a mathematical formula} where by {a mathematical formula}Query Propagate⊥ we denote a transition due to the rule Query Propagate if there are no satisfying extensions of {a mathematical formula}query(M) w.r.t. {a mathematical formula}ΠD, i.e., {a mathematical formula}Cons(Π,query(M))={⊥}. It is easy to show that Proposition 7 also holds for subgraphs of {a mathematical formula}ACΠ that are constructed by dropping all other edges due to Query Propagate but {a mathematical formula}Query Propagate⊥. Let Π be an AC program (4). Path (10) in {a mathematical formula}ACΠ does not comply with the priorities of the acsolver algorithm. On the other hand, the path{a mathematical formula} is a valid path of acsolver. Indeed, this path respects the fact that the transition rule Unit Propagate has a higher priority than Decide.
+      </paragraph>
+      <paragraph>
+       Mellarkod et al. [1] demonstrated the correctness of the acsolver algorithm for the class of safe canonical programs by analyzing the properties of its pseudocode. Proposition 7 provides an alternative proof of correctness for this algorithm for a more general class of weakly-simple programs that relies on the transition system {a mathematical formula}ACΠ. Furthermore, Proposition 7 encapsulates the proof of correctness for a class of algorithms that can be described using {a mathematical formula}ACΠ. For instance, it immediately follows that the acsolver algorithm modified to follow different priorities of transition rules is still correct.
+      </paragraph>
+      <paragraph>
+       Note that for a clingcon program Π, {a mathematical formula}ac(Π) is a weakly-simple program (in fact, it is a simple program). It follows that a class of algorithms captured by the graph {a mathematical formula}ACΠ is applicable to clingcon programs after minor syntactic transformations. Nevertheless the graph {a mathematical formula}ACΠ is not suitable for describing the clingcon system. In the next section we present another graph for this purpose.
+      </paragraph>
+     </section>
+    </section>
+    <section label="7">
+     Abstract clingcon
+     <paragraph>
+      The clingcon system is based on tight coupling of the answer set solver clasp and the constraint solver gecode. The clasp system starts its computation by building a propositional formula called completion [31] of a given program so that its propagation relies not only on the program but also on the completion. Furthermore, it implements such backtracking search techniques as backjumping, learning, forgetting, and restarts. Lierler and Truszczynski [32] introduced the transition system {a mathematical formula}sml(asp)F,Π and demonstrated how it captures the clasp algorithm. It turns out that {a mathematical formula}sml(asp)F,Π augmented with the transition rule Query Propagate is appropriate for describing clingcon. The graph {a mathematical formula}sml(asp)F,Π extends a simpler graph {a mathematical formula}sm(asp)F,Π[32]. These extensions are essential for capturing such advanced features of clasp and clingcon as conflict-driven backjumping and learning. In this section we start by reviewing the graph {a mathematical formula}sm(asp)F,Π and showing that augmenting it with the rule Query Propagate captures basicclingcon algorithm implementing a simple backtrack strategy in place of conflict-driven backjumping and learning. We call new graph {a mathematical formula}conF,Π. This abstract view on basic clingcon allows us to compare it to acsolver in formal terms. To capture full clingcon algorithm we extend {a mathematical formula}conF,Π with the rules Backjump and Learn in a similar manner as the graph {a mathematical formula}sm(asp)F,Π was extended to the graph {a mathematical formula}sml(asp)F,Π in [32].
+     </paragraph>
+     <paragraph>
+      We write {a mathematical formula}Head(Π) for the set of non-empty heads of rules in a program Π. For a clause {a mathematical formula}C=¬a1∨⋯∨¬al∨al+1∨⋯∨am we write {a mathematical formula}Cr to denote the rule{a mathematical formula} For a set F of clauses, we define {a mathematical formula}Fr={Cr|C∈F}. For a set A of atoms, by {a mathematical formula}Π(A) we denote a program Π extended with the rules {a mathematical formula}{a} for each atom {a mathematical formula}a∈A.
+     </paragraph>
+     <paragraph>
+      The transition graph {a mathematical formula}sm(asp)F,Π for a set F of clauses and a regular program Π is defined as follows. The set of nodes of {a mathematical formula}sm(asp)F,Π consists of the states relative to {a mathematical formula}At(F∪Π). There are five transition rules that characterize the edges of {a mathematical formula}sm(asp)F,Π. The transition rules Unit Propagate, Decide, Fail, Backtrack of the graph {a mathematical formula}smFr∪Π, and the transition rule Unfoundedʼ presented in Fig. 3.
+     </paragraph>
+     <paragraph>
+      Lierler and Truszczynski [11] demonstrated how {a mathematical formula}sm(asp)ED-Comp(Π),Π models basicclasp (without conflict-driven backjumping and learning) where {a mathematical formula}ED-Comp(Π) denotes classified completion with the use of auxiliary atoms. Formula {a mathematical formula}ED-Comp(Π) exhibits an important property that Lierler and Truszczynski call Π-safe. We now extend this notion to AC programs. For an AC program Π, a set F of clauses is Π-safe if
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       {a mathematical formula}At(Πξ)∪At(ΠD)R⊆At(F),
+      </list-item>
+      <list-item label="2.">
+       {a mathematical formula}F⊨¬a, for every {a mathematical formula}a∈At(Πξ)∖Head(Πξ), and
+      </list-item>
+      <list-item label="3.">
+       for every answer set X of {a mathematical formula}Πξ there is a model M of F such that {a mathematical formula}X=M+∩Head(Πξ).
+      </list-item>
+     </list>
+     <paragraph>
+      We note that, a set F of clauses is Π-safe if it is {a mathematical formula}Πξ-safe according to the “safeness” definition given in [32]. If all regular atoms in Π also occur in its regular part, formula {a mathematical formula}Πξcl is a straightforward example of Π-safe formula. Under the same restriction, formulas {a mathematical formula}Comp(Πξ) and {a mathematical formula}ED-Comp(Πξ) are also Π-safe, where the former stands for the completion of {a mathematical formula}Πξ whose formulas are classified in a straightforward way by applying distributivity. We refer the reader to [32] for precise definitions of {a mathematical formula}Comp(Π) and {a mathematical formula}ED-Comp(Π) constructed from the Clarkʼs completion of Π[31]. We call AC programs, which satisfy the restriction that all regular atoms in Π also occur in its regular part, friendly. This restriction is inessential as for such atoms adding simple constraints will turn a non-friendly program into a friendly one.
+     </paragraph>
+     <paragraph>
+      We now define the graph {a mathematical formula}conF,Π for AC programs that extends {a mathematical formula}sm(asp)F,Π in a similar way as {a mathematical formula}ACΠ extends {a mathematical formula}smΠ.
+     </paragraph>
+     <paragraph>
+      For an AC program Π and a set F of clauses, the nodes of {a mathematical formula}conF,Π are the states relative to the set {a mathematical formula}At(F∪Πξ)∪At(ΠD)R. The edges of {a mathematical formula}conF,Π are described by the transition rules of {a mathematical formula}sm(asp)F,Πξ and the transition rule Query Propagate of {a mathematical formula}ACΠ.
+     </paragraph>
+     <paragraph label="Proposition 8">
+      For any weakly-simple AC program Π and a Π-safe set F of clauses,
+     </paragraph>
+     <list>
+      <list-item label="(a)">
+       graph{a mathematical formula}conF,Πis finite and acyclic,
+      </list-item>
+      <list-item label="(b)">
+       for any terminal state M of{a mathematical formula}conF,Πother than ⊥,{a mathematical formula}(Mξ−)R+∩At(Π)is a set of all regular atoms in some answer set of Π,
+      </list-item>
+      <list-item label="(c)">
+       state ⊥ is reachable from ∅ in{a mathematical formula}conF,Πif and only if Π has no answer sets.
+      </list-item>
+     </list>
+     <paragraph>
+      For friendly programs, the algorithm behind basic clingcon is modeled by means of the graph {a mathematical formula}conED-Comp(Πξ),Π with the following priorities{a mathematical formula}Proposition 8 demonstrates that the basic clingcon algorithm is applicable not only to clingcon programs but also to a broader class of weakly-simple AC programs.
+     </paragraph>
+     <section label="7.1">
+      On the relation of acsolver and basic clingcon
+      <paragraph>
+       Following concept helps us to formulate the relation between {a mathematical formula}ACΠ and {a mathematical formula}conF,Π precisely. An edge {a mathematical formula}M⟹M′ in the graph {a mathematical formula}ACΠ ({a mathematical formula}conF,Π) is singular if:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        the only transition rule justifying this edge is Unfounded, and
+       </list-item>
+       <list-item label="•">
+        some edge {a mathematical formula}M⟹M″ can be justified by a transition rule other than Unfounded or Decide.
+       </list-item>
+      </list>
+      <paragraph>
+       It is easy to see that due to priorities of acsolver and clingcon, singular edges are inessential. Indeed, given that Unfounded is assigned lowest priority, the singular edges will never be followed as other transitions such as Unit Propagate are available (see the second condition of the definition of a singular edge).
+      </paragraph>
+      <paragraph>
+       We define {a mathematical formula}ACΠ− ({a mathematical formula}conF,Π−) as the graph obtained by removing all singular edges from {a mathematical formula}ACΠ ({a mathematical formula}conF,Π).
+      </paragraph>
+      <paragraph label="Proposition 9">
+       For a friendly AC program Π, the graphs{a mathematical formula}ACΠ−and{a mathematical formula}conComp(Πξ),Π−are equal.
+      </paragraph>
+      <paragraph>
+       It follows that the graph {a mathematical formula}conComp(Πξ),Π− also provides an abstract model of acsolver. Hence the difference between abstract acsolver and basic clingcon algorithms can be stated in terms of difference in Π-safe formulas {a mathematical formula}Comp(Πξ) and {a mathematical formula}ED-Comp(Πξ) that they are applied to.
+      </paragraph>
+     </section>
+     <section label="7.2">
+      The {a mathematical formula}conlF,Π graph
+      <paragraph>
+       The clingcon algorithm incorporates backjumping and learning, modern techniques of dpll-like procedures. Nieuwenhuis et al. [15] provide comprehensive description of these techniques. We start by briefly describing the main ideas behind them. We then proceed to defining the graph {a mathematical formula}conlF,Π that will allow us to model the clingcon algorithm featuring backjumping and learning.
+      </paragraph>
+      <paragraph>
+       Consider a state{a mathematical formula} where {a mathematical formula}l1Δ…lnΔ are the only decision literals. We say that all the literals of each {a mathematical formula}liMi belong to decision level i. Consider a state of the form (12) such that the transition rule Backtrack is applicable to it. It is easy to see that the rule Backtrack has an effect of backtracking from decision level n to level {a mathematical formula}n−1. At times, it is safe to backtrack to a decision level prior to {a mathematical formula}n−1. This process is called backjumping.
+      </paragraph>
+      <paragraph>
+       Learning technique is responsible for augmenting the database of given clauses or logic rules in the hope that newly acquired information is instrumental in future search. This technique proved to be of extreme importance to the success of modern SAT and ASP technology.
+      </paragraph>
+      <paragraph>
+       We now define the graph {a mathematical formula}conlF,Π. To accommodate the fact that this graph has to capture learning, we introduce the notion of an augmented state that includes not only currently assigned literals but also of “learned information”. Such learned information corresponds to newly derived constraints that become available for future propagations. In case of clingcon these constraints are represented as clauses. We say that a regular program Π entails a clause C when for each consistent and complete set M of literals, if {a mathematical formula}M+ is an answer set for Π, then {a mathematical formula}M⊨C. For instance, any regular program entails each rule (understood as a clause) occurring in it. For an AC program Π and a set F of clauses, an augmented state relative to F and Π is either a distinguished state ⊥ or a pair {a mathematical formula}M||Γ where M is a record relative to the set {a mathematical formula}At(F∪Πξ)∪At(ΠD)R, and Γ is a set of clauses over {a mathematical formula}At(F∪Πξ)∪At(ΠD)R such that {a mathematical formula}F⊨Γ or {a mathematical formula}Πξ⊨Γ.
+      </paragraph>
+      <paragraph>
+       For an AC program Π and a set F of clauses, the nodes of {a mathematical formula}conlF,Π are the augmented state relative to F and Π. The rules Decide, Unfounded, and Fail of {a mathematical formula}sm(asp)F,Π are extended to {a mathematical formula}conlF,Π as follows: {a mathematical formula}M||Γ⟹M′||Γ ({a mathematical formula}M||Γ⟹⊥, respectively) is an edge in {a mathematical formula}conlF,Π justified by Decide or Unfounded (Fail, respectively) if and only if {a mathematical formula}M⟹M′ ({a mathematical formula}M⟹⊥) is an edge in {a mathematical formula}sm(asp)F,Π justified by Decide or Unfounded (Fail, respectively). The other transition rules of {a mathematical formula}conlF,Π are presented in Fig. 4. The transition rule Backjump describes the essence of backjumping procedure that replaces backtracking. The rule Learn captures the essence of learning in terms of hybrid constraint answer set solvers exemplified by clingcon. The rule Unit Propagate Learn is a modification of the transition rule Unit Propagate in {a mathematical formula}conF,Π. This modification addresses the effect of learning. Indeed, this unit propagate derives atoms not only from given F and Π (that are identical in all sets of states in {a mathematical formula}conlF,Π), but also from a set of learnt clauses Γ that depends on a particular state in {a mathematical formula}conlF,Π. We refer to the transition rules Unit Propagate Learn, Unfounded′, Backjump, Decide, and Fail of the graph {a mathematical formula}sml(asp)F,Π as basic. We say that a node in the graph is semi-terminal if no rule other than Learn is applicable to it. We omit the word “augmented” before “state” when this is clear from a context.
+      </paragraph>
+      <paragraph>
+       The graph {a mathematical formula}conlF,Π can be used for deciding whether a weakly-simple AC program Π has a model in the following sense.
+      </paragraph>
+      <paragraph label="Proposition 10">
+       For any weakly-simple AC program Π and a Π-safe set F of clauses,
+      </paragraph>
+      <list>
+       <list-item label="(a)">
+        every path in{a mathematical formula}conlF,Πcontains only finitely many edges justified by basic transition rules,
+       </list-item>
+       <list-item label="(b)">
+        for any semi-terminal state{a mathematical formula}M||Γof{a mathematical formula}conlF,Πreachable from{a mathematical formula}∅||∅,{a mathematical formula}(Mξ−)R+∩At(Π)is the set of all regular atoms in some answer set of Π,
+       </list-item>
+       <list-item label="(c)">
+        state ⊥ is reachable from{a mathematical formula}∅||∅in{a mathematical formula}conlF,Πif and only if Π has no answer sets.
+       </list-item>
+      </list>
+      <paragraph>
+       On the one hand, Proposition 10(a) asserts that if we construct a path from {a mathematical formula}∅||∅ so that basic transition rules periodically appear in it then some semi-terminal state is eventually reached. On the other hand, parts (b) and (c) of Proposition 10 assert that as soon as a semi-terminal state is reached the problem of deciding whether Π has an answer set is solved. In other words, Proposition 10 shows that the graph {a mathematical formula}conlF,Π gives rise to a class of correct algorithms for computing answer sets for weakly-simple AC programs. It gives a proof of correctness to every CASP solver in this class and a proof of termination under the assumption that basic transition rules periodically appear in a path constructed from {a mathematical formula}∅||∅.
+      </paragraph>
+      <paragraph>
+       Nieuwenhuis et al. [15] proposed transition rules to model such techniques as forgetting and restarts. The graph {a mathematical formula}conlF,Π can easily be extended with such rules.
+      </paragraph>
+     </section>
+     <section label="7.3">
+      clingcon algorithm
+      <paragraph>
+       The algorithm behind clingcon is modeled by means of the graph {a mathematical formula}conlED-Comp(Πξ),Π with the following priorities{a mathematical formula} By {a mathematical formula}Backjump(Learn) we denote the fact that learning occurs in clingcon every time backjump occurs. Proposition 10 demonstrates that the clingcon algorithm is applicable not only to clingcon programs but also to a broader class of weakly-simple AC programs.
+      </paragraph>
+     </section>
+    </section>
+    <section label="8">
+     The ezcsp language and algorithm
+     <paragraph>
+      Balduccini [4] demonstrated that the ezcsp language may be seen as a subset of the AC language. In fact, it is a subset of the {a mathematical formula}AC− language. ezcsp restricts the {a mathematical formula}AC− by requiring that constraint atoms occur only in the rules whose head is symbol ⊥. The ezcsp system is based on loose coupling of answer set solvers, e.g., smodels or clasp, and constraint logic programming systems, e.g., sicstus Prolog. The system ezcsp treats a given program as a regular program (with slight modifications accounting for the special treatment of constraint atoms) and allows an answer set solver to find an answer set. This answer set is used to form a query that is then processed by a constraint logic programming system. This process may be repeated. To make these ideas precise we may model the system ezcsp that couples the answer set solver smodels and sicstus Prolog using the graph {a mathematical formula}ACΠ. The ezcsp algorithm selects edges according to the priorities on the transition rules of {a mathematical formula}ACΠ as follows:{a mathematical formula} Note that this set of priorities highlights the difference between acsolver and ezcsp (based on smodels) as the difference in priorities on the transitions that the systems follow. Indeed, ezcsp always follows the transition Decide prior to exploring the transition due to Query Propagate.
+     </paragraph>
+     <paragraph>
+      Similarly, we can use the graph {a mathematical formula}conlF,Π to capture the ezcsp algorithm based on the answer set solver clasp. It will demonstrate that the difference between clingcon and ezcsp (based on clasp) roots in the same place as the difference between acsolver and ezcsp. The ezcsp selects edges according to the priorities on the transition rules of {a mathematical formula}conlED-Comp(Πξ),Π as follows:{a mathematical formula}ezcsp always follows the transition Decide prior to exploring the transition due to Query Propagate. Furthermore, unlike clingcon which allows Query Propagate to propagate new atoms ezcsp uses only limited version of this transition rule, in particular {a mathematical formula}Query Propagate⊥. In other words, ezcsp may only conclude that constraint atoms of a program are conflicting but not able to derive any inferences from it.
+     </paragraph>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     <section-title>
+      Proofs of formal results
+     </section-title>
+     <paragraph>
+      We start by introducing the necessary terminology used in [1].
+     </paragraph>
+     <paragraph>
+      A consistent set S of ground atoms over the signature Σ is called a partial interpretation of an AC program Π if it satisfies the following conditions:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       A constraint atom {a mathematical formula}l∈S iff l is true under its intended interpretation;
+      </list-item>
+      <list-item label="2.">
+       The mixed atoms of S form the functional set w.r.t. the signature of Π.
+      </list-item>
+     </list>
+     <paragraph>
+      The definition of semantics of AC program follows [1]. By replacing “nested program” with “ground AC program”, the definition of reduct in Section 2 is trivially extended to ground AC programs. A partial interpretation S of Σ is an acc-answer set of an AC program Π if S is minimal (in the sense of set-theoretic inclusion) among the partial interpretations of Σ satisfying the rules of {a mathematical formula}(ground(Π)∪M)S, where M is the set of all mixed atoms occurring in S. We note that this is a generalization of the answer set definition presented in [1] to the case of programs with doubly negated atoms.
+     </paragraph>
+     <paragraph label="Proposition 1">
+      For an AC program Π over signature Σ and the set T of all true ground constraint literals over Σ, X is an answer set of Π if and only if{a mathematical formula}X∪Tis an answer set (in the sense of[1]) of Π.
+     </paragraph>
+     <paragraph label="Proof">
+      Left-to-right: Let X be an answer set of Π. By definition, there is a functional set M of ground mixed atoms such that X is an answer set of {a mathematical formula}ground⁎(Π)∪M, i.e., minimal among sets of atoms satisfying{a mathematical formula} Obviously, M forms the set of all mixed atoms occurring in X.Let the set Y of atoms be any model of (13). It is easy to see that (i) {a mathematical formula}Y∪T is a partial interpretation, and (ii) {a mathematical formula}Y∪T satisfies{a mathematical formula} Indeed, from the construction of (13) and (14) it immediately follows that we obtain (13) from (14) by replacing every atom from T with ⊤. Thus {a mathematical formula}Y∪T satisfies (14) iff Y satisfies (13). It follows that {a mathematical formula}X∪T is a minimal partial interpretation satisfying (14) (since X is minimal among sets of atoms satisfying (13)) and hence is an acc-answer set of Π.Right-to-left: Let {a mathematical formula}X∪T be an acc-answer set of Π. By M we denote the set of all mixed atoms occurring in X.Let {a mathematical formula}Y∪T be any partial interpretation satisfying (14). Using the argument from left-to-right direction we derive that Y is a model satisfying (13). From the fact that {a mathematical formula}X∪T is a minimal partial interpretation satisfying (14) (i.e., it is an acc-answer set of Π) it follows that X is a minimal model satisfying (13).  □
+     </paragraph>
+     <paragraph>
+      A splitting set[35] for a nested program Π is any set U of atoms such that, for every rule {a mathematical formula}r∈Π, if {a mathematical formula}Head(r)∩U then {a mathematical formula}At(r)∈U. The set of rules {a mathematical formula}r∈Π such that {a mathematical formula}At(r)∈U is called a bottom of Π relative to the splitting set U and denoted by {a mathematical formula}bU(Π). The set {a mathematical formula}Π∖bU(Π) is the top of Π relative to U. By {a mathematical formula}eU(Π,X), we denote the program consisting of all rules obtained from Π by replacing an atom a in U, if {a mathematical formula}a∈X with ⊤ and ⊥ otherwise.
+     </paragraph>
+     <paragraph label="Proposition 11">
+      Splitting set theorem(See[35].) Let U be a splitting set for a nested program Π. A set A of atoms is an answer set for Π iff{a mathematical formula}A=X∪Ywhere X is an answer set for{a mathematical formula}bU(Π)and Y is an answer set for{a mathematical formula}eU(Π∖bU(Π),X).
+     </paragraph>
+     <paragraph>
+      For a set M of ground mixed atoms over Σ, by {a mathematical formula}M˜ we denote the following set of atoms{a mathematical formula} i.e., the set consisting of all ground mixed atoms over Σ that are not in M.
+     </paragraph>
+     <paragraph label="Observation 1">
+      A set of atoms is an answer set of nested program Π if and only if it is an answer set of the regular program constructed from Π by
+     </paragraph>
+     <list>
+      <list-item label="•">
+       dropping the rules where ⊥ occurs in{a mathematical formula}Bpos∪Bneg2and ⊤ occurs in{a mathematical formula}Bneg,
+      </list-item>
+      <list-item label="•">
+       dropping ⊤,{a mathematical formula}not⊥, and{a mathematical formula}notnot⊤from the rest of the rules.
+      </list-item>
+     </list>
+     <paragraph label="Proposition 2">
+      For a clingcon program Π over signature Σ, a set X is a constraint answer set of Π according to the definition in[2], [3]iff there is a functional set M of ground mixed atoms of Σ such that{a mathematical formula}X∪Mis an answer set of{a mathematical formula}ac(Π).
+     </paragraph>
+     <paragraph label="Proof">
+      It is easy to see that {a mathematical formula}ac(Π) is a super-safe program (by its construction and function V definition).Left-to-right: Let X be a constraint answer set of Π according to the definition in [2]. Then there is an assignment{a mathematical formula}A:V[Π]→D[Π] such that X is an answer set of {a mathematical formula}ΠA defined in [2], where {a mathematical formula}V[Π] denotes the set of all clingcon variables occurring in Π and {a mathematical formula}D[Π] is a set of constraint constants. For a clingcon variable c in Π, by {a mathematical formula}A(c) we denote a constraint constant assigned by A to c. Let us construct a substitution γ using A as follows: for each clingcon variable c in Π add {a mathematical formula}cV/A(c) to γ.For a clingcon variable {a mathematical formula}p(r→) by {a mathematical formula}p(r→)M we denote a mixed atom {a mathematical formula}p(r→,p(r→)V). We say that such mixed atom is matching for {a mathematical formula}p(r→). Let S denote the set of matching mixed atoms constructed from all the clingcon variables occurring in Π. It is easy to see that Sγ is a functional set of ground mixed atoms. Let M be Sγ. We now show that {a mathematical formula}X∪M is an answer set of {a mathematical formula}ac(Π). By the definition, {a mathematical formula}X∪M is an answer set of {a mathematical formula}ac(Π) if {a mathematical formula}X∪M is an answer set of{a mathematical formula} By Proposition 11, {a mathematical formula}X∪M is an answer set of (15) iff X is an answer set of{a mathematical formula} The transformation described in Observation 1 applied to (16) will result in {a mathematical formula}ΠA. We are given that X is an answer set of {a mathematical formula}ΠA. Consequently, it is an answer set of (16).Right-to-left: Let M be a functional set of ground atoms of Σ and X be a set of ground atoms such that {a mathematical formula}X∪M is an answer set of {a mathematical formula}ac(Π). Let {a mathematical formula}V[Π] denote the set of all clingcon variables occurring in Π. From the fact that M is a functional set it follows that for every variable {a mathematical formula}p(r→)∈V[Π] there is an atom of the form {a mathematical formula}p(r→,c) in M. We can construct an assignment A for {a mathematical formula}V[Π] as follows: for every variable {a mathematical formula}p(r→)∈V[Π], {a mathematical formula}A(p(r→))=c where {a mathematical formula}p(r→,c)∈M.By the definition of an answer set for an AC program, {a mathematical formula}X∪M is an answer set of (15). Furthermore, by Proposition 11, X is an answer set of (16). From {a mathematical formula}ΠA construction and it follows that the transformation described in Observation 1 applied to (16) will result in {a mathematical formula}ΠA. We are given that X is an answer set of {a mathematical formula}ΠA. Consequently, X is an answer set of {a mathematical formula}ΠA and therefore a constraint answer set of Π.  □
+     </paragraph>
+     <paragraph label="Proposition 3">
+      For any safe AC program Π, there is a transformation on Π that produces a super-safe AC program which has same answer sets as Π.
+     </paragraph>
+     <paragraph label="Proof">
+      In this proof, {a mathematical formula}c→ always denotes a sequence of regular constants, and m denotes a mixed predicate.Let T denote the following transformation.{a mathematical formula}Let {a mathematical formula}Π′ be the new program produced by the transformation T. It is easy to see that {a mathematical formula}Π′ is indeed a super-safe program as a unique new variable is associated with every pair {a mathematical formula}〈m,c→〉 and {a mathematical formula}Π′ is constructed from Π to preserve the requirements of super-safe program.To prove that Π and {a mathematical formula}Π′ have the same answer sets, let M be any functional set. It is easy to see that {a mathematical formula}M˜ is a splitting set of {a mathematical formula}ground⁎(Π)∪M and {a mathematical formula}ground⁎(Π′)∪M, where the bottom of both programs is formed by empty set of rules. By Proposition 11, it follows that a set X of atoms is an answer set of {a mathematical formula}ground⁎(Π)∪M (thus, of Π) iff X is an answer set of{a mathematical formula}Similarly, X is an answer set of {a mathematical formula}ground⁎(Π′)∪M (thus, of {a mathematical formula}Π′) iff it is an answer set of{a mathematical formula}It is easy to see that the transformation described in Observation 1 applied to (17) and (18) results in the same program. Thus any set X of atoms is an answer set of Π iff it is an answer set of {a mathematical formula}Π′.  □
+     </paragraph>
+     <paragraph>
+      Proposition 4 is proved in the same spirit as Proposition 2.
+     </paragraph>
+     <paragraph>
+      We refer the reader to [30] for the review of operator SM but we state several formal results from [30] and [26] in the form convenient for our presentation.
+     </paragraph>
+     <paragraph label="Proposition 12">
+      Special case of Theorem 1(See[30].) For any nested program Π and a complete set X of literals over{a mathematical formula}At(Π), the following conditions are equivalent
+     </paragraph>
+     <list>
+      <list-item label="•">
+       {a mathematical formula}X+is an answer set of Π,
+      </list-item>
+      <list-item label="•">
+       X is ap-stable model[30], wherepis the list of all predicate symbols in Π (i.e., X is a model of{a mathematical formula}SMp[Π]).
+      </list-item>
+     </list>
+     <paragraph label="Proposition 13">
+      Special case of Symmetric Splitting Theorem(See[26].) Let Π and{a mathematical formula}Π′be nested programs and letp,qbe disjoint tuples of distinct predicate symbols. If
+     </paragraph>
+     <list>
+      <list-item label="•">
+       each strongly connected component of predicate dependency graph of{a mathematical formula}Π∪Π′is a subset ofpor a subset ofq,
+      </list-item>
+      <list-item label="•">
+       no atom with predicate symbols inqoccurs in any head in Π,
+      </list-item>
+      <list-item label="•">
+       no atom with predicate symbols inpoccurs in any head in{a mathematical formula}Π′,
+      </list-item>
+     </list>
+     <paragraph>
+      For a set A of atoms by {a mathematical formula}pred(A) we denote the set of predicate symbols of atoms in A. We will sometime abuse the notation and use {a mathematical formula}pred(Π) to denote the set of predicate symbols occurring in program Π.
+     </paragraph>
+     <paragraph label="Proposition 6">
+      For a nested program Π, a complete set X of literals, and a setpof predicate symbols such that predicate symbols occurring in the heads of Π form a subset ofp (i.e.,{a mathematical formula}pred(Heads(Π))⊆p),{a mathematical formula}X+is ap-input answer set of Π iff X is a model of{a mathematical formula}SMp[Π] (i.e.,p-stable model of Π).
+     </paragraph>
+     <paragraph label="Proof">
+      By the definition, {a mathematical formula}X+ is a p-input answer set of Π iff {a mathematical formula}X+ is an answer set of {a mathematical formula}Π∪X+(p). By Proposition 12, {a mathematical formula}X+ is an answer set of {a mathematical formula}Π∪X+(p) iff X is a model of{a mathematical formula}From the fact that {a mathematical formula}pred(Heads(Π))⊆p, it follows that{a mathematical formula} so that atoms with predicate symbols different from p occur in the heads only of the facts of {a mathematical formula}X+(p). Consequently, by Proposition 13, (19) is equivalent to{a mathematical formula}Obviously, set X is a model of the second conjunct of (20). We derive that X is a model of (20) iff X is a model of {a mathematical formula}SMpred(Π)[Π]. Recall that {a mathematical formula}pred(Heads(Π))⊆p. By Proposition 13, the following expressions are equivalent
+     </paragraph>
+     <list>
+      <list-item label="•">
+       {a mathematical formula}SMpred(Π)[Π],
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}SMpred(Heads(Π))[Π],
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}SMp[Π]. □
+      </list-item>
+     </list>
+     <paragraph>
+      Weakly-simple AC programs satisfy important syntactic properties that allow to characterize their answer sets by means of queries based on them. The proof of Proposition 7 relies on this alternative characterization that we make precise in Lemma 1. To state the lemma we introduce several concepts that we rely on in the proof.
+     </paragraph>
+     <paragraph>
+      For an AC program Π, we say that a query Q is based on Π if it is a complete and consistent set of literals over {a mathematical formula}At(ΠD)R∪At(ΠR)D,C. If Q is a satisfying extension of itself, then there is a substitution γ of variables in Q by ground terms such that the result, Qγ, satisfies the conditions 1 and 2 of the definition of satisfying extension. We say that Qγ is an interpretation of Q. We call such queries satisfiable (i.e., queries that are satisfying extensions).
+     </paragraph>
+     <paragraph>
+      For an AC program Π and a query Q based on Π, by {a mathematical formula}Π(Q) we denote a program constructed from Π by
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       eliminating {a mathematical formula}ΠD,
+      </list-item>
+      <list-item label="2.">
+       dropping removing each occurrence of a mixed atom,
+      </list-item>
+      <list-item label="3.">
+       replacing an atom a by ⊤ if {a mathematical formula}a∈QD,C,
+      </list-item>
+      <list-item label="4.">
+       replacing an atom a by ⊥ if {a mathematical formula}¬a∈QD,C,
+      </list-item>
+      <list-item label="5.">
+       for each regular literal {a mathematical formula}l∈QR adding a rule
+      </list-item>
+     </list>
+     <paragraph>
+      It is easy to see that for a query Q based on an AC program Π, {a mathematical formula}Π(Q) is a nested program. For instance, let Π be program (4). A query Q consisting of literals{a mathematical formula} is based on Π. Program {a mathematical formula}Π(Q) follows{a mathematical formula} Let {a mathematical formula}Q1 be a query based on Π consisting of literals{a mathematical formula} Program {a mathematical formula}Π(Q) follows{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      An expression is a term, an atom, or a rule. Given a substitution Θ and an expression e, we write eΘ for the result of replacing {a mathematical formula}vi in e by {a mathematical formula}ti for every {a mathematical formula}i⩽n.
+     </paragraph>
+     <paragraph>
+      Recall that for a set S of literals, by {a mathematical formula}SR, {a mathematical formula}SD, and {a mathematical formula}SC we denote the set of regular, defined, and constraint literals occurring in S respectively. By {a mathematical formula}SMix we denote a set of mixed literals occurring in S.
+     </paragraph>
+     <paragraph>
+      We call a rule (1) with {a mathematical formula}a0=⊥ a constraint.
+     </paragraph>
+     <paragraph label="Lemma 1">
+      For a weakly-simple AC program Π, Π has an answer set iff there is a query Q based on Π such that Q is satisfiable w.r.t. Π and{a mathematical formula}Π(Q)has an answer set. Furthermore, if I is a query interpretation for Q w.r.t. Π and X is an answer set of{a mathematical formula}Π(Q)then{a mathematical formula}X∪ID+is a subset of some answer set of Π such that X is the set of all regular atoms in it.
+     </paragraph>
+     <paragraph label="Proof">
+      Left-to-right: Assume that Π has an answer set. Let S be a complete and consistent set of ground{sup:11} literals over Σ such that {a mathematical formula}S+ is an answer set of Π. By the definition of an answer set, there exists a functional set M of ground mixed atoms over Σ such that {a mathematical formula}S+ is an answer set of the nested program {a mathematical formula}ground⁎(Π)∪M.It is sufficient to construct a satisfiable query based on Π such that {a mathematical formula}Π(Q) has an answer set. We start by constructing a query Q based on Π using S. Then we demonstrate that
+      <list>
+       this Q is satisfiable w.r.t. Π, and{a mathematical formula}Π(Q) has an answer set.Let
+      </list>
+      <paragraph>
+       {a mathematical formula}ΠMix be a subset of {a mathematical formula}ΠR that consists of all rules in {a mathematical formula}ΠR whose bodies contain mixed, defined, or constraint literals. Since Π is a weakly-simple program and every weakly-simple program is safe, it follows that each rule in {a mathematical formula}ΠMix contains a mixed atom. From the fact that M is a functional set of mixed atoms and Π is a weakly-simple program and hence super-safe (see conditions 1 and 2), it follows that for each rule r in {a mathematical formula}ΠMix there is a substitution Θ such that {a mathematical formula}rΘ∈ground(Π) so that every mixed atom m occurring in rΘ also occurs in M; furthermore, there is no substitution {a mathematical formula}Θ′ different from Θ such that every mixed atom m occurring in {a mathematical formula}rΘ′ also occurs in M. Let us denote such rule rΘ that corresponds to r in {a mathematical formula}ground(Π) by {a mathematical formula}r(ground(Π),M).We now construct a query Q as follows:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        Let Q contain every regular literal in {a mathematical formula}SR whose atom occurs in {a mathematical formula}ΠD.
+       </list-item>
+       <list-item label="2.">
+        For each rule r in {a mathematical formula}ΠMix, so that by Ξ we denote the substitution such that {a mathematical formula}rΞ=r(ground(Π),M), let Q contain
+       </list-item>
+      </list>
+      <paragraph>
+       From the query Q construction (and the fact that {a mathematical formula}ΠMix consists of all rules in {a mathematical formula}ΠR whose bodies contain mixed, defined, or constraint literals) it immediately follows that Q is based on Π. Let γ be the union of Ξ for each rule r in {a mathematical formula}ΠMix such that Ξ is the substitution so that {a mathematical formula}rΞ=r(ground(Π),M). From the fact that Π is a weakly-simple program and hence super-safe and the choice of Ξ that relies on a functional set M of mixed atoms it follows that γ is also a substitution.In order to demonstrate (i) and (ii) we introduce the following notation and state additional observations. By {a mathematical formula}R(Π), {a mathematical formula}D(Π), {a mathematical formula}Mix(Π) we denote the set of regular, defined, and mixed predicates of Π respectively. From Proposition 12, Proposition 13 and the fact that Π is a weakly-simple program it follows that {a mathematical formula}S+ is an answer set of Π iff S is a model of{a mathematical formula} Consequently, S is a model of{a mathematical formula} By Proposition 6, {a mathematical formula}S+ is an input answer set of {a mathematical formula}ground⁎(ΠD) w.r.t. {a mathematical formula}D(Π). Hence, {a mathematical formula}S+ is an input answer set of {a mathematical formula}ΠD w.r.t. {a mathematical formula}D(Π). This constitutes observation (a).Similarly, S is a model of{a mathematical formula} Furthermore, from Proposition 13, (22), and the fact that mixed atoms appear in the heads only in facts in M, it follows that S is a model of{a mathematical formula} By Proposition 6, {a mathematical formula}S+ is an input answer set of {a mathematical formula}ground⁎(ΠR) w.r.t. {a mathematical formula}R(Π). This constitutes observation (b).(i) We now show that Qγ is a query interpretation for a query Q w.r.t. Π. From the Q construction (see conditions 2(c) and 2(d)) it follows that if a constraint literal {a mathematical formula}l∈Qγ then l is true under the intended interpretation of its symbols. It is left to show that there is an input answer set A of {a mathematical formula}ΠD w.r.t. defined predicates of Π, so that {a mathematical formula}QγR,D+⊆A and {a mathematical formula}QγR,D−∩A=∅: Let A be {a mathematical formula}S+ and recall observation (a) and the construction of Q (see conditions 2(a) and 2(b)).(ii) We now show that {a mathematical formula}Π(Q) has an answer set. Recall observation (b). By the definition of an input answer set, {a mathematical formula}S+ is an answer set of{a mathematical formula} Recall that for a set X of atoms, by {a mathematical formula}Xp we denote the set of atoms in X whose predicate symbols are different from the ones occurring in p. It is easy to see that {a mathematical formula}SR(Π)+=SD+∪SMix+. In other words, {a mathematical formula}ground⁎(ΠR)∪SR(Π)+ is equal to{a mathematical formula} It is easy to see that {a mathematical formula}SD+∪SMix+∪SD−∪SMix− is a splitting set of (23). By Proposition 11, {a mathematical formula}S+∖(SD+∪SMix+) is an answer set of the program constructed from (23) by
+      </paragraph>
+      <list>
+       <list-item label="•">
+        eliminating facts {a mathematical formula}SD+∪SMix+,
+       </list-item>
+       <list-item label="•">
+        replacing atom a by ⊤ if {a mathematical formula}a∈SD+∪SMix+,
+       </list-item>
+       <list-item label="•">
+        replacing atom a by ⊥ if {a mathematical formula}a∈SD+∪SMix+.
+       </list-item>
+      </list>
+      <paragraph>
+       It is easy to see that the transformation described in Observation 1 applied to such program and to {a mathematical formula}Π(Q) without the constraints introduced in step 5 of {a mathematical formula}Π(Q) construction results in the same program. It is easy to see that these constraints are satisfied by {a mathematical formula}S+∖(SD+∪SMix+). By the Theorem on Constraints [24] it follows that {a mathematical formula}S+∖(SD+∪SMix+) is an answer set of {a mathematical formula}Π(Q). Consequently, it is an answer set of {a mathematical formula}Π(Q).Right-to-left: Assume that there is a query Q based on Π such that Q is satisfiable w.r.t. Π and {a mathematical formula}Π(Q) has an answer set. We show that Π also has an answer set.From the fact that Q is satisfiable it follows that there is an interpretation I for Q w.r.t. Π. By the definition of the interpretation, there is a substitution γ such that Qγ is I itself.By the safety condition on weakly-simple programs, any variable X that occurs in some rule in Π also occurs in some mixed atom in this rule. Let us define a substitution {a mathematical formula}γ′ as follows: it extends the substitution γ by {a mathematical formula}X/vX for each variable X such that in every rule that X occurs in, it occurs only once; {a mathematical formula}vX is an arbitrary constant of the same sort as X (recall that sorts are non-empty). By {a mathematical formula}γ′ construction, every variable in {a mathematical formula}At(Π)Mix also occurs in {a mathematical formula}γ′. Let M be the ground set of mixed atoms {a mathematical formula}At(Π)Mixγ′ (i.e., for each atom {a mathematical formula}m∈At(Π)Mixγ′, {a mathematical formula}mγ′∈M). From the fact that Π is a super-safe program it follows that M is a functional set over Σ.By the definition of an answer set of an AC program, to demonstrate that Π has an answer set, it is sufficient to show that{a mathematical formula} has the answer set. It is obvious that {a mathematical formula}M∪M˜ is a splitting set of (24). By Proposition 11, (24) has an answer set iff a program constructed from (24) by dropping facts M, dropping the rules that contain mixed atoms in {a mathematical formula}M˜, and removing atoms from M from the remaining rules. We denote this ground program by {a mathematical formula}[Π,M].By Proposition 12, {a mathematical formula}[Π,M] has an answer set iff there is a model of{a mathematical formula} Indeed, {a mathematical formula}D(Π),R(Π) form the set of all predicate symbols of a program. By Proposition 13, (25) is equivalent to{a mathematical formula} That can be equivalently rewritten as{a mathematical formula}Consider a complete and consistent set Y of ground regular literals such that {a mathematical formula}Y+ is an answer set of {a mathematical formula}Π(Q). (By our assumption Y exists.) By the condition 5 of {a mathematical formula}Π(Q) construction it follows that {a mathematical formula}IR⊆Y. By the Theorem on Constraints [24] it follows that {a mathematical formula}Y+ is also an answer set of the program {a mathematical formula}Π(Q)′ constructed from {a mathematical formula}Π(Q) by dropping the constraints in {a mathematical formula}Π(Q) derived from the condition 5. We now note that the transformation described in Observation 1 applied to {a mathematical formula}Π(Q)′ results in a program identical to {a mathematical formula}[Π,M]R. We derive that {a mathematical formula}Y+ is an answer set of {a mathematical formula}[Π,M]R.From the fact that I is a query an interpretation, it follows that there is an input answer set A of {a mathematical formula}ΠD w.r.t. {a mathematical formula}D(Π) such that (i) {a mathematical formula}QR+⊆A, {a mathematical formula}QR−∩A=∅ (note that {a mathematical formula}QR=IR), and (ii) {a mathematical formula}ID+⊆A, {a mathematical formula}ID−∩A=∅. Furthermore, by Proposition 11, the input answer set definition and the fact that {a mathematical formula}IR⊆Y, it follows that there is a complete and consistent set Z of ground non-constraint literals over Σ such that {a mathematical formula}Y⊆Z, {a mathematical formula}ID⊆Z, and {a mathematical formula}Z+ is an input answer set of {a mathematical formula}ΠD w.r.t. {a mathematical formula}D(Π). By Proposition 6, Z is a model of{a mathematical formula}From the fact that {a mathematical formula}Y+ is an answer set of {a mathematical formula}[Π,M]R and Proposition 12, it follows that Y is a model of{a mathematical formula} Since {a mathematical formula}Y⊆Z, Z is a model of (28) also.From (27) and (28) we derive that Z is a model of (26). Consequently Π has an answer set.  □
+      </paragraph>
+     </paragraph>
+     <paragraph>
+      We now establish the relation between answer sets of {a mathematical formula}Πξ and {a mathematical formula}Π(Q). For a set M of atoms over Σ, by {a mathematical formula}Mξ we denote a set of atoms over {a mathematical formula}Σξ by replacing each constraint and defined literal A occurring in M with a corresponding name {a mathematical formula}Aξ. For instance, {a mathematical formula}{T≠1,acceptTime(T)}ξ is{a mathematical formula}
+     </paragraph>
+     <paragraph label="Lemma 2">
+      For a weakly-simple AC program Π, a query Q based on Π, and a set X of atoms over{a mathematical formula}At(Π)Rso that{a mathematical formula}QR+⊆X, X is an answer set of{a mathematical formula}Π(Q)iff{a mathematical formula}X∪(QD,C+)ξis an answer set of{a mathematical formula}Πξ.
+     </paragraph>
+     <paragraph label="Proof">
+      By {a mathematical formula}Π(Q)′ we denote a program constructed from {a mathematical formula}Π(Q) by dropping the constraints in {a mathematical formula}Π(Q) derived from the condition 5. It is easy to see that set {a mathematical formula}(QD,C+)ξ∪(QD,C−)ξ is a splitting set of {a mathematical formula}Πξ. The bottom part of {a mathematical formula}Πξ (relevant to this splitting set) consists of choice rules for each atom occurring in {a mathematical formula}(QD,C)ξ. It follows that {a mathematical formula}(QD,C+)ξ is an answer set of the bottom. Let U denote {a mathematical formula}(QD,C+)ξ∪(QD,C−)ξ. Note that {a mathematical formula}eU(Πξ∖bU(Πξ),(QD,C+)ξ) coincides with {a mathematical formula}Π(Q)′.Left-to-right: Let X be an answer set of {a mathematical formula}Π(Q). By the Theorem on Constraints [24] it follows that X is also an answer set of the program {a mathematical formula}Π(Q)′. By Proposition 11, {a mathematical formula}X∪(QD,C+)ξ is an answer set of {a mathematical formula}Πξ.Right-to-left: Let {a mathematical formula}X∪(QD,C+)ξ be an answer set of {a mathematical formula}Πξ. By Proposition 11, it follows that X is an answer set of {a mathematical formula}Π(Q)′. From the fact that {a mathematical formula}QR+⊆X the Theorem on Constraints [24] it follows that X is also an answer set for {a mathematical formula}Π(Q).  □
+     </paragraph>
+     <paragraph label="Proposition 7">
+      For any weakly-simple AC program Π,
+     </paragraph>
+     <list>
+      <list-item label="(a)">
+       graph{a mathematical formula}ACΠis finite and acyclic,
+      </list-item>
+      <list-item label="(b)">
+       for any terminal state M of{a mathematical formula}ACΠother than ⊥,{a mathematical formula}(Mξ−)R+is a set of all regular atoms in some answer set of Π,
+      </list-item>
+      <list-item label="(c)">
+       state ⊥ is reachable from ∅ in{a mathematical formula}ACΠif and only if Π has no answer sets.
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      Part (a) is proved as in the proof of Proposition 1 in [19].(b) Let M be a terminal state. Recall that {a mathematical formula}smΠξ is a subgraph of {a mathematical formula}ACΠ. From Proposition 5, it follows that {a mathematical formula}M+ is an answer set of {a mathematical formula}Πξ. It is obvious that {a mathematical formula}query(M) forms a query based on Π, and {a mathematical formula}query(M)R+⊆(Mξ−)R+. By Lemma 2, it follows that {a mathematical formula}(Mξ−)R+ is an answer set of {a mathematical formula}Π(query(M)). Furthermore, since Query Propagate is not applicable we conclude that{a mathematical formula} and therefore it is different from {a mathematical formula}{⊥}. Consequently, {a mathematical formula}query(M) is a satisfiable query. By Lemma 1, {a mathematical formula}(Mξ−)R+ is a set of all regular atoms in some answer set of Π.(c) Left-to-right: Since ⊥ is reachable from ∅, there is an inconsistent state M without decision literals such that there exists a path from ∅ to M and M has the form:Case 1. M is of the form {a mathematical formula}l1…ln⊥…. From Lemma 5 in [19], it follows that any answer set of {a mathematical formula}Πξ satisfies {a mathematical formula}l1…ln. On the other hand, ⊥ appears in M due to the application of the transition rule Query Propagate so that {a mathematical formula}Cons(ΠD,query(l1…ln))={⊥}. In other words there exists no satisfying extension of {a mathematical formula}query(l1…ln) w.r.t. {a mathematical formula}ΠD. From Lemma 2, Lemma 1, it follows that Π has no answer sets.Case 2. M is of the form {a mathematical formula}l1…ln where each {a mathematical formula}li is an atom. From Lemma 5 in [19], it follows that any answer set of {a mathematical formula}Πξ satisfies {a mathematical formula}l1…ln. Since {a mathematical formula}l1…ln is inconsistent we conclude that {a mathematical formula}Πξ has no answer sets. From Lemma 2, Lemma 1, it follows that Π has no answer sets.Right-to-left: From (a) it follows that there is a path from ∅ to some terminal state. By (b), this state cannot be different from ⊥, because Π has no answer sets.  □
+     </paragraph>
+     <paragraph label="Proposition 14">
+      (See[32, Proposition 5].) Let Π be a regular program. For every Π-safe[32]set F of clauses, a set X of atoms is an answer set of Π if and only if{a mathematical formula}X=M+∩At(Π), for some model M of{a mathematical formula}[F,Π].
+     </paragraph>
+     <paragraph label="Proposition 15">
+      (See[32, Proposition 7].) For any{a mathematical formula}SM(ASP)theory{a mathematical formula}[F,Π],
+     </paragraph>
+     <list>
+      <list-item label="(a)">
+       graph{a mathematical formula}sm(asp)F,Πis finite and acyclic,
+      </list-item>
+      <list-item label="(b)">
+       for any terminal state M of{a mathematical formula}sm(asp)F,Πother than ⊥, M is a model of{a mathematical formula}[F,Π],
+      </list-item>
+      <list-item label="(c)">
+       state ⊥ is reachable from ∅ in{a mathematical formula}sm(asp)F,Πif and only if{a mathematical formula}[F,Π]has no models.
+      </list-item>
+     </list>
+     <paragraph label="Proposition 8">
+      For any weakly-simple AC program Π and a Π-safe set F of clauses,
+     </paragraph>
+     <list>
+      <list-item label="(a)">
+       graph{a mathematical formula}conF,Πis finite and acyclic,
+      </list-item>
+      <list-item label="(b)">
+       for any terminal state M of{a mathematical formula}conF,Πother than ⊥,{a mathematical formula}(Mξ−)R+∩At(Π)is a set of all regular atoms in some answer set of Π,
+      </list-item>
+      <list-item label="(c)">
+       state ⊥ is reachable from ∅ in{a mathematical formula}conF,Πif and only if Π has no answer sets.
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      The proof of this proposition follows the lines of the proof of Proposition 7 relying on Proposition 14, Proposition 15.  □
+     </paragraph>
+     <paragraph label="Proposition 9">
+      For a friendly AC program Π, the graphs{a mathematical formula}ACΠ−and{a mathematical formula}conComp(Πξ),Π−are equal.
+     </paragraph>
+     <paragraph label="Proof">
+      The proof of this proposition immediately follows Proposition 8 in [32] and the fact that graphs{a mathematical formula} differ from{a mathematical formula} graphs, respectively, by the same transition rule Query Propagate.  □
+     </paragraph>
+     <paragraph>
+      Proof of Proposition 10 follows the lines of the proof of Proposition 7, Proposition 14, and Proposition 9 in [32].
+     </paragraph>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

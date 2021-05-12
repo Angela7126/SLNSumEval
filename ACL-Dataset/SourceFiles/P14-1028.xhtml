@@ -1,0 +1,1038 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Max-Margin Tensor Neural Network for Chinese Word Segmentation</title>
+<!--Generated on Tue Jun 10 17:25:42 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Max-Margin Tensor Neural Network for Chinese Word Segmentation</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Wenzhe Pei         Tao Ge         Baobao Chang
+<br class="ltx_break"/>Key Laboratory of Computational Linguistics, Ministry of Education 
+<br class="ltx_break"/>School of Electronics Engineering and Computer Science, Peking University 
+<br class="ltx_break"/>Beijing, P.R.China, 100871 
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">peiwenzhe,getao,chbb</span>}<span class="ltx_text ltx_font_typewriter">@pku.edu.cn</span>
+
+</span><span class="ltx_author_notes"><span>  Corresponding author</span></span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Recently, neural network models for natural language processing tasks have been increasingly focused on for their ability to alleviate the burden of manual feature engineering. In this paper, we propose a novel neural network model for Chinese word segmentation called Max-Margin Tensor Neural Network (<span class="ltx_text ltx_font_bold">MMTNN</span>). By exploiting tag embeddings and tensor-based transformation, <span class="ltx_text ltx_font_bold">MMTNN</span> has the ability to model complicated interactions between tags and context characters. Furthermore, a new tensor factorization approach is proposed to speed up the model and avoid overfitting. Experiments on the benchmark dataset show that our model achieves better performances than previous neural network models and that our model can achieve a competitive performance with minimal feature engineering. Despite Chinese word segmentation being a
+specific case, <span class="ltx_text ltx_font_bold">MMTNN</span> can be easily generalized and applied to other sequence labeling tasks.</p>
+</div><span class="ltx_ERROR undefined">{CJK*}</span>
+<div id="p1" class="ltx_para">
+<p class="ltx_p">UTF8gbsn</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Unlike English and other western languages, Chinese do not delimit words by white-space. Therefore, word segmentation is a preliminary and important pre-process for Chinese language processing. Most previous systems address this problem by treating this task as a sequence labeling problem where each character is assigned a tag indicating its position in the word. These systems are effective because researchers can incorporate a large body of handcrafted features into the models. However, the ability of these models is restricted by the design of features and the number of features could be so large that the result models are too large for practical use and prone to overfit on training corpus.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Recently, neural network models have been increasingly focused on for their ability to minimize the effort in feature engineering. Collobert et al. <cite class="ltx_cite">[<a href="#bib.bib4" title="Natural language processing (almost) from scratch" class="ltx_ref">6</a>]</cite> developed the SENNA system that approaches or surpasses the state-of-the-art systems on a variety of sequence labeling tasks for English. Zheng et al. <cite class="ltx_cite">[<a href="#bib.bib22" title="Deep learning for Chinese word segmentation and POS tagging" class="ltx_ref">35</a>]</cite> applied the architecture of Collobert et al. <cite class="ltx_cite">[<a href="#bib.bib4" title="Natural language processing (almost) from scratch" class="ltx_ref">6</a>]</cite> to Chinese word segmentation and POS tagging and proposed a perceptron-style algorithm to speed up the training process with negligible loss in performance.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">Workable as previous neural network models seem, a limitation of them to be pointed out is that the tag-tag interaction, tag-character interaction and character-character interaction are not well modeled. In conventional feature-based linear (log-linear) models, these interactions are explicitly modeled as features. Take phrase “æç¯®ç(play basketball)” as an example, assuming we are labeling character <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p3.m1" class="ltx_Math" alttext="C_{0}" display="inline"><msub><mi>C</mi><mn>0</mn></msub></math>=“ç¯®”, possible features could be:</p>
+<table id="S1.Ex1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.Ex1.m1" class="ltx_Math" alttext="f_{1}=\begin{cases}1&amp;\text{$C_{-1}$=``打&quot; and $C_{1}$=``球&quot; and $y_{0}$=``B&quot;%&#10;}\\&#10;0&amp;\text{else}\end{cases}" display="block"><mrow><msub><mi>f</mi><mn>1</mn></msub><mo>=</mo><mrow><mo>{</mo><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mn>1</mn></mtd><mtd columnalign="left"><mrow><msub><mi>C</mi><mrow><mo>-</mo><mn>1</mn></mrow></msub><mtext>=“æ” and </mtext><msub><mi>C</mi><mn>1</mn></msub><mtext>=“ç” and </mtext><msub><mi>y</mi><mn>0</mn></msub><mtext>=“B”</mtext></mrow></mtd></mtr><mtr><mtd columnalign="left"><mn>0</mn></mtd><mtd columnalign="left"><mtext>else</mtext></mtd></mtr></mtable></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<table id="S1.Ex2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.Ex2.m1" class="ltx_Math" alttext="f_{2}=\begin{cases}1&amp;\text{$C_{0}$=``篮&quot; and $y_{0}$=``B&quot; and $y_{-1}$=``S&quot;}%&#10;\\&#10;0&amp;\text{else}\end{cases}" display="block"><mrow><msub><mi>f</mi><mn>2</mn></msub><mo>=</mo><mrow><mo>{</mo><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mn>1</mn></mtd><mtd columnalign="left"><mrow><msub><mi>C</mi><mn>0</mn></msub><mtext>=“ç¯®” and </mtext><msub><mi>y</mi><mn>0</mn></msub><mtext>=“B” and </mtext><msub><mi>y</mi><mrow><mo>-</mo><mn>1</mn></mrow></msub><mtext>=“S”</mtext></mrow></mtd></mtr><mtr><mtd columnalign="left"><mn>0</mn></mtd><mtd columnalign="left"><mtext>else</mtext></mtd></mtr></mtable></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">To capture more interactions, researchers have designed a large number of features based on linguistic intuition and statistical information. In previous neural network models, however, hardly can such interactional effects be fully captured relying only on the simple transition score and the single non-linear transformation (See section 2). In order to address this problem, we propose a new model called Max-Margin Tensor Neural Network (<span class="ltx_text ltx_font_bold">MMTNN</span>) that explicitly models the interactions between tags and context characters by exploiting tag embeddings and tensor-based transformation. Moreover, we propose a tensor factorization approach that effectively improves the model efficiency and prevents from overfitting. We evaluate the performance of Chinese word segmentation on the PKU and MSRA benchmark datasets in the second International Chinese Word Segmentation Bakeoff <cite class="ltx_cite">[<a href="#bib.bib25" title="The second international chinese word segmentation bakeoff" class="ltx_ref">9</a>]</cite> which are commonly used for evaluation of Chinese word segmentation. Experiment results show that our model outperforms other neural network models.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">Although we focus on the question that how far we can go without using feature engineering in this paper, the study of deep learning for NLP tasks is still a new area in which it is currently challenging to surpass the state-of-the-art without additional features. Following Mansur et al. <cite class="ltx_cite">[<a href="#bib.bib7" title="Feature-based neural language model and chinese word segmentation" class="ltx_ref">15</a>]</cite>, we wonder how well our model can perform with minimal feature engineering. Therefore, we integrate additional simple character bigram features into our model and the result shows that our model can achieve a competitive performance that other systems hardly achieve unless they use more complex task-specific features.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">The main contributions of our work are as follows:</p>
+<ul id="I1" class="ltx_itemize">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p">We propose a Max-Margin Tensor Neural Network for Chinese word segmentation without feature engineering. The test results on the benchmark dataset show that our model outperforms previous neural network models.</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p">We propose a new tensor factorization approach that models each tensor slice as the product of two low-rank matrices. Not only does this approach improve the efficiency of our model but also it avoids the risk of overfitting.</p>
+</div></li>
+<li id="I1.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i3.p1" class="ltx_para">
+<p class="ltx_p">Compared with previous works that use a large number of handcrafted features, our model can achieve a competitive performance with minimal feature engineering.</p>
+</div></li>
+<li id="I1.i4" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i4.p1" class="ltx_para">
+<p class="ltx_p">Despite Chinese word segmentation being a specific case, our approach can be easily generalized to other sequence labeling tasks.</p>
+</div></li>
+</ul>
+<p class="ltx_p">The remaining part of this paper is organized as follows. Section 2 describes the details of conventional neural network architecture. Section 3 describes the details of our model. Experiment results are reported in Section 4. Section 5 reviews the related work. The conclusions are given in Section 6.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Conventional Neural Network</h2>
+
+<div id="S2.F1" class="ltx_figure"><img src="P14-1028/image004.png" id="S2.F1.g1" class="ltx_graphics ltx_centering" width="453" height="382" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Conventional Neural Network</div>
+</div>
+<div id="S2.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.1 </span>Lookup Table</h3>
+
+<div id="S2.SS1.p1" class="ltx_para">
+<p class="ltx_p">The idea of distributed representation for symbolic data is one of the most important reasons why the neural network works. It was proposed by Hinton <cite class="ltx_cite">[<a href="#bib.bib6" title="Learning distributed representations of concepts" class="ltx_ref">11</a>]</cite> and has been a research hot spot for more than twenty years <cite class="ltx_cite">[<a href="#bib.bib1" title="A neural probabilistic language model" class="ltx_ref">1</a>, <a href="#bib.bib4" title="Natural language processing (almost) from scratch" class="ltx_ref">6</a>, <a href="#bib.bib11" title="Large, pruned or continuous space language models on a gpu for statistical machine translation" class="ltx_ref">21</a>, <a href="#bib.bib8" title="Efficient estimation of word representations in vector space" class="ltx_ref">16</a>]</cite>. Formally, in the Chinese word segmentation task, we have a character dictionary <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m1" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math> of size <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m2" class="ltx_Math" alttext="|D|" display="inline"><mrow><mo fence="true">|</mo><mi>D</mi><mo fence="true">|</mo></mrow></math>. Unless otherwise specified, the character dictionary is extracted from the training set and unknown characters are mapped to a special symbol that is not used elsewhere. Each character <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m3" class="ltx_Math" alttext="c\in D" display="inline"><mrow><mi>c</mi><mo>∈</mo><mi>D</mi></mrow></math> is represented as a real-valued vector (character embedding) <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m4" class="ltx_Math" alttext="Embed(c)\in\mathbb{R}^{d}" display="inline"><mrow><mrow><mi>E</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mrow><mo>(</mo><mi>c</mi><mo>)</mo></mrow></mrow><mo>∈</mo><msup><mi>ℝ</mi><mi>d</mi></msup></mrow></math> where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m5" class="ltx_Math" alttext="d" display="inline"><mi>d</mi></math> is the dimensionality of the vector space. The character embeddings are then stacked into a embedding matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m6" class="ltx_Math" alttext="M\in\mathbb{R}^{d\times|D|}" display="inline"><mrow><mi>M</mi><mo>∈</mo><msup><mi>ℝ</mi><mrow><mi>d</mi><mo>×</mo><mrow><mo fence="true">|</mo><mi>D</mi><mo fence="true">|</mo></mrow></mrow></msup></mrow></math>. For a character <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m7" class="ltx_Math" alttext="c\in D" display="inline"><mrow><mi>c</mi><mo>∈</mo><mi>D</mi></mrow></math> that has an associated index <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m8" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>, the corresponding character embedding <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m9" class="ltx_Math" alttext="Embed(c)\in\mathbb{R}^{d}" display="inline"><mrow><mrow><mi>E</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mrow><mo>(</mo><mi>c</mi><mo>)</mo></mrow></mrow><mo>∈</mo><msup><mi>ℝ</mi><mi>d</mi></msup></mrow></math> is retrieved by the Lookup Table layer as shown in Figure 1:</p>
+<table id="S2.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E1.m1" class="ltx_Math" alttext="Embed(c)=Me_{k}" display="block"><mrow><mrow><mi>E</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mrow><mo>(</mo><mi>c</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mi>M</mi><mo>⁢</mo><msub><mi>e</mi><mi>k</mi></msub></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+<p class="ltx_p">Here <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m10" class="ltx_Math" alttext="e_{k}\in\mathbb{R}^{|D|}" display="inline"><mrow><msub><mi>e</mi><mi>k</mi></msub><mo>∈</mo><msup><mi>ℝ</mi><mrow><mo fence="true">|</mo><mi>D</mi><mo fence="true">|</mo></mrow></msup></mrow></math> is a binary vector which is zero in all positions except at <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m11" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>-th index. The Lookup Table layer can be seen as a simple projection layer where the character embedding for each context character is achieved by table lookup operation according to their indices. The embedding matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m12" class="ltx_Math" alttext="M" display="inline"><mi>M</mi></math> is initialized with small random numbers and trained by back-propagation. We will analyze in more detail about the effect of character embeddings in Section 4.</p>
+</div>
+</div>
+<div id="S2.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.2 </span>Tag Scoring</h3>
+
+<div id="S2.SS2.p1" class="ltx_para">
+<p class="ltx_p">The most common tagging approach is the window approach. The window approach assumes that the tag of a character largely depends on its neighboring characters. Given an input sentence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m1" class="ltx_Math" alttext="c_{[1:n]}" display="inline"><msub><mi>c</mi><mrow><mo>[</mo><mn>1</mn><mo>:</mo><mi>n</mi><mo>]</mo></mrow></msub></math>, a window of size <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m2" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> slides over the sentence from character <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m3" class="ltx_Math" alttext="c_{1}" display="inline"><msub><mi>c</mi><mn>1</mn></msub></math> to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m4" class="ltx_Math" alttext="c_{n}" display="inline"><msub><mi>c</mi><mi>n</mi></msub></math>. We set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m5" class="ltx_Math" alttext="w=5" display="inline"><mrow><mi>w</mi><mo>=</mo><mn>5</mn></mrow></math> in all experiments. As shown in Figure 1, at position <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m6" class="ltx_Math" alttext="c_{i},1\leq i\leq n" display="inline"><mrow><mrow><msub><mi>c</mi><mi>i</mi></msub><mo>,</mo><mn>1</mn></mrow><mo>≤</mo><mi>i</mi><mo>≤</mo><mi>n</mi></mrow></math>, the context characters are fed into the Lookup Table layer. The characters exceeding the sentence boundaries are mapped to one of two special symbols, namely “start” and “end” symbols. The character embeddings extracted by the Lookup Table layer are then concatenated into a single vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m7" class="ltx_Math" alttext="a\in\mathbb{R}^{H_{1}}" display="inline"><mrow><mi>a</mi><mo>∈</mo><msup><mi>ℝ</mi><msub><mi>H</mi><mn>1</mn></msub></msup></mrow></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m8" class="ltx_Math" alttext="H_{1}=w\cdot d" display="inline"><mrow><msub><mi>H</mi><mn>1</mn></msub><mo>=</mo><mrow><mi>w</mi><mo>⋅</mo><mi>d</mi></mrow></mrow></math> is the size of Layer 1. Then <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m9" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math> is fed into the next layer which performs linear transformation followed by an element-wise activation function <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m10" class="ltx_Math" alttext="g" display="inline"><mi>g</mi></math> such as <em class="ltx_emph">tanh</em>, which is used in our experiments:</p>
+<table id="S2.E2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E2.m1" class="ltx_Math" alttext="h=g(W_{1}a+b_{1})" display="block"><mrow><mi>h</mi><mo>=</mo><mrow><mi>g</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><msub><mi>W</mi><mn>1</mn></msub><mo>⁢</mo><mi>a</mi></mrow><mo>+</mo><msub><mi>b</mi><mn>1</mn></msub></mrow><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m11" class="ltx_Math" alttext="W_{1}\in\mathbb{R}^{H_{2}\times H_{1}}" display="inline"><mrow><msub><mi>W</mi><mn>1</mn></msub><mo>∈</mo><msup><mi>ℝ</mi><mrow><msub><mi>H</mi><mn>2</mn></msub><mo>×</mo><msub><mi>H</mi><mn>1</mn></msub></mrow></msup></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m12" class="ltx_Math" alttext="b_{1}\in\mathbb{R}^{H_{2}\times 1}" display="inline"><mrow><msub><mi>b</mi><mn>1</mn></msub><mo>∈</mo><msup><mi>ℝ</mi><mrow><msub><mi>H</mi><mn>2</mn></msub><mo>×</mo><mn>1</mn></mrow></msup></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m13" class="ltx_Math" alttext="h\in\mathbb{R}^{H_{2}}" display="inline"><mrow><mi>h</mi><mo>∈</mo><msup><mi>ℝ</mi><msub><mi>H</mi><mn>2</mn></msub></msup></mrow></math>. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m14" class="ltx_Math" alttext="H_{2}" display="inline"><msub><mi>H</mi><mn>2</mn></msub></math> is a hyper-parameter which is the number of hidden units in Layer 2. Given a set of tags <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m15" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math> of size <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m16" class="ltx_Math" alttext="|T|" display="inline"><mrow><mo fence="true">|</mo><mi>T</mi><mo fence="true">|</mo></mrow></math>, a similar linear transformation is performed except that no non-linear function is followed:</p>
+<table id="S2.E3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E3.m1" class="ltx_Math" alttext="f(\emph{{t}}|c_{[i-2:i+2]})=W_{2}h+b_{2}" display="block"><mrow><mi>f</mi><mrow><mo>(</mo><mtext><em xmlns="http://www.w3.org/1999/xhtml" class="ltx_emph ltx_font_bold">t</em></mtext><mo>|</mo><msub><mi>c</mi><mrow><mo>[</mo><mi>i</mi><mo>-</mo><mn>2</mn><mo>:</mo><mi>i</mi><mo>+</mo><mn>2</mn><mo>]</mo></mrow></msub><mo>)</mo></mrow><mo>=</mo><msub><mi>W</mi><mn>2</mn></msub><mi>h</mi><mo>+</mo><msub><mi>b</mi><mn>2</mn></msub></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m17" class="ltx_Math" alttext="W_{2}\in\mathbb{R}^{|T|\times H_{2}}" display="inline"><mrow><msub><mi>W</mi><mn>2</mn></msub><mo>∈</mo><msup><mi>ℝ</mi><mrow><mrow><mo fence="true">|</mo><mi>T</mi><mo fence="true">|</mo></mrow><mo>×</mo><msub><mi>H</mi><mn>2</mn></msub></mrow></msup></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m18" class="ltx_Math" alttext="b_{2}\in\mathbb{R}^{|T|\times 1}" display="inline"><mrow><msub><mi>b</mi><mn>2</mn></msub><mo>∈</mo><msup><mi>ℝ</mi><mrow><mrow><mo fence="true">|</mo><mi>T</mi><mo fence="true">|</mo></mrow><mo>×</mo><mn>1</mn></mrow></msup></mrow></math>.
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m19" class="ltx_Math" alttext="f(\emph{{t}}|c_{[i-2:i+2]})\in\mathbb{R}^{|T|}" display="inline"><mrow><mi>f</mi><mrow><mo>(</mo><mtext><em xmlns="http://www.w3.org/1999/xhtml" class="ltx_emph ltx_font_bold">t</em></mtext><mo>|</mo><msub><mi>c</mi><mrow><mo>[</mo><mi>i</mi><mo>-</mo><mn>2</mn><mo>:</mo><mi>i</mi><mo>+</mo><mn>2</mn><mo>]</mo></mrow></msub><mo>)</mo></mrow><mo>∈</mo><msup><mi>ℝ</mi><mrow><mo fence="true">|</mo><mi>T</mi><mo fence="true">|</mo></mrow></msup></mrow></math> is the score vector for each possible tag. In Chinese word segmentation, the most prevalent tag set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m20" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math> is BMES tag set, which
+uses 4 tags to carry word boundary information. It uses B, M, E and S to denote the Beginning, the Middle, the End of a word and a Single character forming a word respectively. We use this tag set in our method.</p>
+</div>
+</div>
+<div id="S2.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.3 </span>Model Training and Inference</h3>
+
+<div id="S2.SS3.p1" class="ltx_para">
+<p class="ltx_p">Despite sharing commonalities mentioned above, previous work models the segmentation task differently and therefore uses different training and inference procedure. Mansur et al. <cite class="ltx_cite">[<a href="#bib.bib7" title="Feature-based neural language model and chinese word segmentation" class="ltx_ref">15</a>]</cite> modeled Chinese word segmentation as a series of classification task at each position of the sentence in which the tag score is transformed into probability using softmax function:</p>
+<table id="S2.Ex3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex3.m1" class="ltx_Math" alttext="p(t_{i}|c_{[i-2:i+2]})=\frac{exp(f(t_{i}|c_{[i-2:i+2]}))}{\sum_{t^{\prime}}exp%&#10;(f(t^{\prime}|c_{[i-2:i+2]}))}" display="block"><mrow><mi>p</mi><mrow><mo>(</mo><msub><mi>t</mi><mi>i</mi></msub><mo>|</mo><msub><mi>c</mi><mrow><mo>[</mo><mi>i</mi><mo>-</mo><mn>2</mn><mo>:</mo><mi>i</mi><mo>+</mo><mn>2</mn><mo>]</mo></mrow></msub><mo>)</mo></mrow><mo>=</mo><mfrac><mrow><mi>e</mi><mi>x</mi><mi>p</mi><mrow><mo>(</mo><mi>f</mi><mrow><mo>(</mo><msub><mi>t</mi><mi>i</mi></msub><mo>|</mo><msub><mi>c</mi><mrow><mo>[</mo><mi>i</mi><mo>-</mo><mn>2</mn><mo>:</mo><mi>i</mi><mo>+</mo><mn>2</mn><mo>]</mo></mrow></msub><mo>)</mo></mrow><mo>)</mo></mrow></mrow><mrow><msub><mo largeop="true" symmetric="true">∑</mo><msup><mi>t</mi><mo>′</mo></msup></msub><mi>e</mi><mi>x</mi><mi>p</mi><mrow><mo>(</mo><mi>f</mi><mrow><mo>(</mo><msup><mi>t</mi><mo>′</mo></msup><mo>|</mo><msub><mi>c</mi><mrow><mo>[</mo><mi>i</mi><mo>-</mo><mn>2</mn><mo>:</mo><mi>i</mi><mo>+</mo><mn>2</mn><mo>]</mo></mrow></msub><mo>)</mo></mrow><mo>)</mo></mrow></mrow></mfrac></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">The model is then trained in MLE-style which maximizes the log-likelihood of the tagged data. Obviously, it is a local model which cannot capture the dependency between tags and does not support to infer the tag sequence globally.</p>
+</div>
+<div id="S2.SS3.p2" class="ltx_para">
+<p class="ltx_p">To model the tag dependency, previous neural network models <cite class="ltx_cite">[<a href="#bib.bib4" title="Natural language processing (almost) from scratch" class="ltx_ref">6</a>, <a href="#bib.bib22" title="Deep learning for Chinese word segmentation and POS tagging" class="ltx_ref">35</a>]</cite> introduce a transition score <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p2.m1" class="ltx_Math" alttext="A_{ij}" display="inline"><msub><mi>A</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub></math> for jumping from tag <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p2.m2" class="ltx_Math" alttext="i\in T" display="inline"><mrow><mi>i</mi><mo>∈</mo><mi>T</mi></mrow></math> to tag <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p2.m3" class="ltx_Math" alttext="j\in T" display="inline"><mrow><mi>j</mi><mo>∈</mo><mi>T</mi></mrow></math>. For a input sentence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p2.m4" class="ltx_Math" alttext="c_{[1:n]}" display="inline"><msub><mi>c</mi><mrow><mo>[</mo><mn>1</mn><mo>:</mo><mi>n</mi><mo>]</mo></mrow></msub></math> with a tag sequence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p2.m5" class="ltx_Math" alttext="t_{[1:n]}" display="inline"><msub><mi>t</mi><mrow><mo>[</mo><mn>1</mn><mo>:</mo><mi>n</mi><mo>]</mo></mrow></msub></math>, a sentence-level score is then given by the sum of transition and network scores:</p>
+<table id="S2.E4" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E4.m1" class="ltx_Math" alttext="s(c_{[1:n]},t_{[1:n]},\theta)=\sum_{i=1}^{n}(A_{t_{i-1}t_{i}}+f_{\theta}(t_{i}%&#10;|c_{[i-2:i+2]}))" display="block"><mrow><mi>s</mi><mrow><mo>(</mo><msub><mi>c</mi><mrow><mo>[</mo><mn>1</mn><mo>:</mo><mi>n</mi><mo>]</mo></mrow></msub><mo>,</mo><msub><mi>t</mi><mrow><mo>[</mo><mn>1</mn><mo>:</mo><mi>n</mi><mo>]</mo></mrow></msub><mo>,</mo><mi>θ</mi><mo>)</mo></mrow><mo>=</mo><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover><mrow><mo>(</mo><msub><mi>A</mi><mrow><msub><mi>t</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>⁢</mo><msub><mi>t</mi><mi>i</mi></msub></mrow></msub><mo>+</mo><msub><mi>f</mi><mi>θ</mi></msub><mrow><mo>(</mo><msub><mi>t</mi><mi>i</mi></msub><mo>|</mo><msub><mi>c</mi><mrow><mo>[</mo><mi>i</mi><mo>-</mo><mn>2</mn><mo>:</mo><mi>i</mi><mo>+</mo><mn>2</mn><mo>]</mo></mrow></msub><mo>)</mo></mrow><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(4)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p2.m6" class="ltx_Math" alttext="f_{\theta}(t_{i}|c_{[i-2:i+2]})" display="inline"><mrow><msub><mi>f</mi><mi>θ</mi></msub><mrow><mo>(</mo><msub><mi>t</mi><mi>i</mi></msub><mo>|</mo><msub><mi>c</mi><mrow><mo>[</mo><mi>i</mi><mo>-</mo><mn>2</mn><mo>:</mo><mi>i</mi><mo>+</mo><mn>2</mn><mo>]</mo></mrow></msub><mo>)</mo></mrow></mrow></math> indicates the score output for tag <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p2.m7" class="ltx_Math" alttext="t_{i}" display="inline"><msub><mi>t</mi><mi>i</mi></msub></math> at the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p2.m8" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math>-th character by the network with parameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p2.m9" class="ltx_Math" alttext="\theta=(M,A,W_{1},b_{1},W_{2},b_{2})" display="inline"><mrow><mi>θ</mi><mo>=</mo><mrow><mo>(</mo><mrow><mi>M</mi><mo>,</mo><mi>A</mi><mo>,</mo><msub><mi>W</mi><mn>1</mn></msub><mo>,</mo><msub><mi>b</mi><mn>1</mn></msub><mo>,</mo><msub><mi>W</mi><mn>2</mn></msub><mo>,</mo><msub><mi>b</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></math>. Given the sentence-level score, Zheng et al. <cite class="ltx_cite">[<a href="#bib.bib22" title="Deep learning for Chinese word segmentation and POS tagging" class="ltx_ref">35</a>]</cite> proposed a perceptron-style training algorithm inspired by the work of Collins <cite class="ltx_cite">[<a href="#bib.bib29" title="Discriminative training methods for hidden markov models: theory and experiments with perceptron algorithms" class="ltx_ref">5</a>]</cite>. Compared with Mansur et al. <cite class="ltx_cite">[<a href="#bib.bib7" title="Feature-based neural language model and chinese word segmentation" class="ltx_ref">15</a>]</cite>, their model is a global one where the training and inference is performed at sentence-level.</p>
+</div>
+<div id="S2.SS3.p3" class="ltx_para">
+<p class="ltx_p">Workable as these methods seem, one of the limitations of them is that the tag-tag interaction and the neural network are modeled seperately. The simple tag-tag transition neglects the impact of context characters and thus limits the ability to capture flexible interactions between tags and context characters. Moreover, the simple non-linear transformation in equation (2) is also poor to model the complex interactional effects in Chinese word segmentation.</p>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Max-Margin Tensor Neural Network</h2>
+
+<div id="S3.F2" class="ltx_figure"><img src="P14-1028/image001.png" id="S3.F2.g1" class="ltx_graphics ltx_centering" width="282" height="213" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>Max-Margin Tensor Neural Network</div>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Tag Embedding</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">To better model the tag-tag interaction given the context characters, distributed representation for tags instead of traditional discrete symbolic representation is used in our model. Similar to character embeddings, given a fixed-sized tag set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m1" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math>, the tag embeddings for tags are stored in a tag embedding matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m2" class="ltx_Math" alttext="L\in\mathbb{R}^{d\times|T|}" display="inline"><mrow><mi>L</mi><mo>∈</mo><msup><mi>ℝ</mi><mrow><mi>d</mi><mo>×</mo><mrow><mo fence="true">|</mo><mi>T</mi><mo fence="true">|</mo></mrow></mrow></msup></mrow></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m3" class="ltx_Math" alttext="d" display="inline"><mi>d</mi></math> is the dimensionality of the vector space (same with character embeddings). Then the tag embedding <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m4" class="ltx_Math" alttext="Embed(t)\in\mathbb{R}^{d}" display="inline"><mrow><mrow><mi>E</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></mrow><mo>∈</mo><msup><mi>ℝ</mi><mi>d</mi></msup></mrow></math> for tag <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m5" class="ltx_Math" alttext="t\in T" display="inline"><mrow><mi>t</mi><mo>∈</mo><mi>T</mi></mrow></math> with index <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m6" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> can be retrieved by the lookup operation:</p>
+<table id="S3.E5" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E5.m1" class="ltx_Math" alttext="Embed(t)=Le_{k}" display="block"><mrow><mrow><mi>E</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mi>L</mi><mo>⁢</mo><msub><mi>e</mi><mi>k</mi></msub></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(5)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m7" class="ltx_Math" alttext="e_{k}\in\mathbb{R}^{|T|\times 1}" display="inline"><mrow><msub><mi>e</mi><mi>k</mi></msub><mo>∈</mo><msup><mi>ℝ</mi><mrow><mrow><mo fence="true">|</mo><mi>T</mi><mo fence="true">|</mo></mrow><mo>×</mo><mn>1</mn></mrow></msup></mrow></math> is a binary vector which is zero in all positions except at <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m8" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>-th index. The tag embeddings start from a random initialization and can be automatically trained by back-propagation.
+Figure 2 shows the new Lookup Table layer with tag embeddings. Assuming we are at the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m9" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math>-th character of a sentence, besides the character embeddings, the tag embeddings of the previous tags are also considered<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>We also tried the architecture in which the tag embedding of current tag is also considered, but this did not bring much improvement and runs slower</span></span></span>. For a fast tag inference, only the previous tag <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m10" class="ltx_Math" alttext="t_{i-1}" display="inline"><msub><mi>t</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub></math> is used in our model even though a longer history of tags can be considered. The concatenation operation in Layer 1 then concatenates the character embeddings and tag embedding together into a long vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m11" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math>. In this way, the tag representation can be directly incorporated in the neural network so that the tag-tag interaction and tag-character interaction can be explicitly modeled in deeper layers (See Section 3.2). Moreover, the transition score in equation (4) is not necessary in our model, because, by incorporating tag embedding into the neural network, the effect of tag-tag interaction and tag-character interaction are covered uniformly in one same model. Now equation (4) can be rewritten as follows:</p>
+<table id="S3.E6" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E6.m1" class="ltx_Math" alttext="s(c_{[1:n]},t_{[1:n]},\theta)=\sum_{i=1}^{n}f_{\theta}(t_{i}|c_{[i-2:i+2]},t_{%&#10;i-1})" display="block"><mrow><mi>s</mi><mrow><mo>(</mo><msub><mi>c</mi><mrow><mo>[</mo><mn>1</mn><mo>:</mo><mi>n</mi><mo>]</mo></mrow></msub><mo>,</mo><msub><mi>t</mi><mrow><mo>[</mo><mn>1</mn><mo>:</mo><mi>n</mi><mo>]</mo></mrow></msub><mo>,</mo><mi>θ</mi><mo>)</mo></mrow><mo>=</mo><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover><msub><mi>f</mi><mi>θ</mi></msub><mrow><mo>(</mo><msub><mi>t</mi><mi>i</mi></msub><mo>|</mo><msub><mi>c</mi><mrow><mo>[</mo><mi>i</mi><mo>-</mo><mn>2</mn><mo>:</mo><mi>i</mi><mo>+</mo><mn>2</mn><mo>]</mo></mrow></msub><mo>,</mo><msub><mi>t</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(6)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m12" class="ltx_Math" alttext="f_{\theta}(t_{i}|c_{[i-2:i+2]},t_{i-1})" display="inline"><mrow><msub><mi>f</mi><mi>θ</mi></msub><mrow><mo>(</mo><msub><mi>t</mi><mi>i</mi></msub><mo>|</mo><msub><mi>c</mi><mrow><mo>[</mo><mi>i</mi><mo>-</mo><mn>2</mn><mo>:</mo><mi>i</mi><mo>+</mo><mn>2</mn><mo>]</mo></mrow></msub><mo>,</mo><msub><mi>t</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>)</mo></mrow></mrow></math> is the score output for tag <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m13" class="ltx_Math" alttext="t_{i}" display="inline"><msub><mi>t</mi><mi>i</mi></msub></math> at the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m14" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math>-th character by the network with parameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m15" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math>. Like Collobert et al. <cite class="ltx_cite">[<a href="#bib.bib4" title="Natural language processing (almost) from scratch" class="ltx_ref">6</a>]</cite> and Zheng et al. <cite class="ltx_cite">[<a href="#bib.bib22" title="Deep learning for Chinese word segmentation and POS tagging" class="ltx_ref">35</a>]</cite>, our model is also trained at sentence-level and carries out inference globally.</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Tensor Neural Network</h3>
+
+<div id="S3.F3" class="ltx_figure"><img src="P14-1028/image003.png" id="S3.F3.g1" class="ltx_graphics ltx_centering" width="228" height="178" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 3: </span>The tensor-based transformation in Layer 2. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F3.m5" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math> is the input from Layer 1. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F3.m6" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math> is the tensor parameter. Each dashed box represents one of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F3.m7" class="ltx_Math" alttext="H_{2}" display="inline"><msub><mi>H</mi><mn>2</mn></msub></math>-many tensor slices, which defines the bilinear form on vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F3.m8" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math>.</div>
+</div>
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">A tensor is a geometric object that describes relations between vectors, scalars, and other tensors. It can be represented as a multi-dimensional array of numerical values. An advantage of the tensor is that it can explicitly model multiple interactions in data. As a result, tensor-based model have been widely used in a variety of tasks <cite class="ltx_cite">[<a href="#bib.bib28" title="Restricted boltzmann machines for collaborative filtering" class="ltx_ref">20</a>, <a href="#bib.bib30" title="Factored 3-way restricted boltzmann machines for modeling natural images" class="ltx_ref">12</a>, <a href="#bib.bib13" title="Recursive deep models for semantic compositionality over a sentiment treebank" class="ltx_ref">23</a>]</cite>.</p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p">In Chinese word segmentation, a proper modeling of the tag-tag interaction, tag-character interaction and character-character interaction is very important. In linear models, these kinds of interactions are usually modeled as features. In conventional neural network models, however, the input embeddings only implicitly interact through the non-linear function which can hardly model the complexity of the interactions. Given the advantage of tensors, we apply a tensor-based transformation to the input vector. Formally, we use a 3-way tensor <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m1" class="ltx_Math" alttext="V^{[1:H_{2}]}\in\mathbb{R}^{H_{2}\times H_{1}\times H_{1}}" display="inline"><mrow><msup><mi>V</mi><mrow><mo>[</mo><mn>1</mn><mo>:</mo><msub><mi>H</mi><mn>2</mn></msub><mo>]</mo></mrow></msup><mo>∈</mo><msup><mi>ℝ</mi><mrow><msub><mi>H</mi><mn>2</mn></msub><mo>×</mo><msub><mi>H</mi><mn>1</mn></msub><mo>×</mo><msub><mi>H</mi><mn>1</mn></msub></mrow></msup></mrow></math> to directly model the interactions, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m2" class="ltx_Math" alttext="H_{2}" display="inline"><msub><mi>H</mi><mn>2</mn></msub></math> is the size of Layer 2 and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m3" class="ltx_Math" alttext="H_{1}=(w+1)\cdot d" display="inline"><mrow><msub><mi>H</mi><mn>1</mn></msub><mo>=</mo><mrow><mrow><mo>(</mo><mrow><mi>w</mi><mo>+</mo><mn>1</mn></mrow><mo>)</mo></mrow><mo>⋅</mo><mi>d</mi></mrow></mrow></math> is the size of concatenated vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m4" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math> in Layer 1 as shown in Figure 2. Figure 3 gives an example of the tensor-based transformation<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>The bias term is omitted in Figure 3 for simplicity</span></span></span>. The output of a tensor product is a vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m5" class="ltx_Math" alttext="z\in\mathbb{R}^{H_{2}}" display="inline"><mrow><mi>z</mi><mo>∈</mo><msup><mi>ℝ</mi><msub><mi>H</mi><mn>2</mn></msub></msup></mrow></math> where each dimension <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m6" class="ltx_Math" alttext="z_{i}" display="inline"><msub><mi>z</mi><mi>i</mi></msub></math> is the result of the bilinear form defined by each tensor slice <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m7" class="ltx_Math" alttext="V^{[i]}\in\mathbb{R}^{H_{1}\times H_{1}}" display="inline"><mrow><msup><mi>V</mi><mrow><mo>[</mo><mi>i</mi><mo>]</mo></mrow></msup><mo>∈</mo><msup><mi>ℝ</mi><mrow><msub><mi>H</mi><mn>1</mn></msub><mo>×</mo><msub><mi>H</mi><mn>1</mn></msub></mrow></msup></mrow></math>:</p>
+<table id="S3.E7" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E7.m1" class="ltx_Math" alttext="z=a^{T}V^{[1:H_{2}]}a;z_{i}=a^{T}V^{[i]}a=\sum_{j,k}V^{[i]}_{jk}a_{j}a_{k}" display="block"><mrow><mrow><mi>z</mi><mo>=</mo><mrow><msup><mi>a</mi><mi>T</mi></msup><mo>⁢</mo><msup><mi>V</mi><mrow><mo>[</mo><mn>1</mn><mo>:</mo><msub><mi>H</mi><mn>2</mn></msub><mo>]</mo></mrow></msup><mo>⁢</mo><mi>a</mi></mrow></mrow><mo>;</mo><mrow><msub><mi>z</mi><mi>i</mi></msub><mo>=</mo><mrow><msup><mi>a</mi><mi>T</mi></msup><mo>⁢</mo><msup><mi>V</mi><mrow><mo>[</mo><mi>i</mi><mo>]</mo></mrow></msup><mo>⁢</mo><mi>a</mi></mrow><mo>=</mo><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>j</mi><mo>,</mo><mi>k</mi></mrow></munder><mrow><msubsup><mi>V</mi><mrow><mi>j</mi><mo>⁢</mo><mi>k</mi></mrow><mrow><mo>[</mo><mi>i</mi><mo>]</mo></mrow></msubsup><mo>⁢</mo><msub><mi>a</mi><mi>j</mi></msub><mo>⁢</mo><msub><mi>a</mi><mi>k</mi></msub></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(7)</span></td></tr>
+</table>
+<p class="ltx_p">Since vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m8" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math> is the concatenation of character embeddings and the tag embedding, equation (7) can be written in the following form:</p>
+<table id="S3.Ex4" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex4.m1" class="ltx_Math" alttext="z_{i}=\sum_{p,q}\sum_{j,k}V_{(p,q,j,k)}^{[i]}E_{j}^{[p]}E_{k}^{[q]}" display="block"><mrow><msub><mi>z</mi><mi>i</mi></msub><mo>=</mo><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>p</mi><mo>,</mo><mi>q</mi></mrow></munder><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>j</mi><mo>,</mo><mi>k</mi></mrow></munder><mrow><msubsup><mi>V</mi><mrow><mo>(</mo><mrow><mi>p</mi><mo>,</mo><mi>q</mi><mo>,</mo><mi>j</mi><mo>,</mo><mi>k</mi></mrow><mo>)</mo></mrow><mrow><mo>[</mo><mi>i</mi><mo>]</mo></mrow></msubsup><mo>⁢</mo><msubsup><mi>E</mi><mi>j</mi><mrow><mo>[</mo><mi>p</mi><mo>]</mo></mrow></msubsup><mo>⁢</mo><msubsup><mi>E</mi><mi>k</mi><mrow><mo>[</mo><mi>q</mi><mo>]</mo></mrow></msubsup></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m9" class="ltx_Math" alttext="E^{[p]}_{j}" display="inline"><msubsup><mi>E</mi><mi>j</mi><mrow><mo>[</mo><mi>p</mi><mo>]</mo></mrow></msubsup></math> is the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m10" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math>-th element of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m11" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math>-th embedding in Lookup Table layer and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m12" class="ltx_Math" alttext="V_{(p,q,j,k)}^{[i]}" display="inline"><msubsup><mi>V</mi><mrow><mo>(</mo><mrow><mi>p</mi><mo>,</mo><mi>q</mi><mo>,</mo><mi>j</mi><mo>,</mo><mi>k</mi></mrow><mo>)</mo></mrow><mrow><mo>[</mo><mi>i</mi><mo>]</mo></mrow></msubsup></math> is the corresponding coefficient for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m13" class="ltx_Math" alttext="E_{j}^{[p]}" display="inline"><msubsup><mi>E</mi><mi>j</mi><mrow><mo>[</mo><mi>p</mi><mo>]</mo></mrow></msubsup></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m14" class="ltx_Math" alttext="E_{k}^{[q]}" display="inline"><msubsup><mi>E</mi><mi>k</mi><mrow><mo>[</mo><mi>q</mi><mo>]</mo></mrow></msubsup></math> in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m15" class="ltx_Math" alttext="V^{[i]}" display="inline"><msup><mi>V</mi><mrow><mo>[</mo><mi>i</mi><mo>]</mo></mrow></msup></math>.
+As we can see, in each tensor slice <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m16" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math>, the embeddings are explicitly related in a bilinear form which captures the interactions between characters and tags. The multiplicative operations between tag embeddings and character embeddings can somehow be seen as “feature combination”, which are hand-designed in feature-based models. Our model learns the information automatically and encodes them in tensor parameters and embeddings. Intuitively, we can interpret each slice of the tensor as capturing a specific type of tag-character interaction and character-character interaction.</p>
+</div>
+<div id="S3.SS2.p3" class="ltx_para">
+<p class="ltx_p">Combining the tensor product with linear transformation, the tensor-based transformation in Layer 2 is defined as:</p>
+<table id="S3.E8" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E8.m1" class="ltx_Math" alttext="h=g(a^{T}V^{[1:H_{2}]}a+W_{1}a+b_{1})" display="block"><mrow><mi>h</mi><mo>=</mo><mrow><mi>g</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><msup><mi>a</mi><mi>T</mi></msup><mo>⁢</mo><msup><mi>V</mi><mrow><mo>[</mo><mn>1</mn><mo>:</mo><msub><mi>H</mi><mn>2</mn></msub><mo>]</mo></mrow></msup><mo>⁢</mo><mi>a</mi></mrow><mo>+</mo><mrow><msub><mi>W</mi><mn>1</mn></msub><mo>⁢</mo><mi>a</mi></mrow><mo>+</mo><msub><mi>b</mi><mn>1</mn></msub></mrow><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(8)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m1" class="ltx_Math" alttext="W_{1}\in\mathbb{R}^{H_{2}\times H_{1}}" display="inline"><mrow><msub><mi>W</mi><mn>1</mn></msub><mo>∈</mo><msup><mi>ℝ</mi><mrow><msub><mi>H</mi><mn>2</mn></msub><mo>×</mo><msub><mi>H</mi><mn>1</mn></msub></mrow></msup></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m2" class="ltx_Math" alttext="b_{1}\in\mathbb{R}^{H_{2}\times 1}" display="inline"><mrow><msub><mi>b</mi><mn>1</mn></msub><mo>∈</mo><msup><mi>ℝ</mi><mrow><msub><mi>H</mi><mn>2</mn></msub><mo>×</mo><mn>1</mn></mrow></msup></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m3" class="ltx_Math" alttext="h\in\mathbb{R}^{H_{2}}" display="inline"><mrow><mi>h</mi><mo>∈</mo><msup><mi>ℝ</mi><msub><mi>H</mi><mn>2</mn></msub></msup></mrow></math>. In fact, equation (2) used in previous work is a special case of equation (8) when <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m4" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math> is set to 0.</p>
+</div>
+</div>
+<div id="S3.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.3 </span>Tensor Factorization</h3>
+
+<div id="S3.F4" class="ltx_figure"><img src="P14-1028/image002.png" id="S3.F4.g1" class="ltx_graphics ltx_centering" width="222" height="178" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 4: </span>Tensor product with tensor factorization</div>
+</div>
+<div id="S3.SS3.p1" class="ltx_para">
+<p class="ltx_p">Despite tensor-based transformation being effective for capturing the interactions, introducing tensor-based transformation into neural network models to solve sequence labeling task is time prohibitive since the tensor product operation drastically slows down the model. Without considering matrix optimization algorithms, the complexity of the non-linear transformation in equation (2) is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m1" class="ltx_Math" alttext="O(H_{1}H_{2})" display="inline"><mrow><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>H</mi><mn>1</mn></msub><mo>⁢</mo><msub><mi>H</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></math> while the tensor operation complexity in equation (8) is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m2" class="ltx_Math" alttext="O(H_{1}^{2}H_{2})" display="inline"><mrow><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msubsup><mi>H</mi><mn>1</mn><mn>2</mn></msubsup><mo>⁢</mo><msub><mi>H</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></math>. The tensor-based transformation is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m3" class="ltx_Math" alttext="H_{1}" display="inline"><msub><mi>H</mi><mn>1</mn></msub></math> times slower. Moreover, the additional tensor could bring millions of parameters to the model which makes the model suffer from the risk of overfitting. To remedy this, we propose a tensor factorization approach that factorizes each tensor slice as the product of two low-rank matrices. Formally, each tensor slice <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m4" class="ltx_Math" alttext="V^{[i]}\in\mathbb{R}^{H_{1}\times H_{1}}" display="inline"><mrow><msup><mi>V</mi><mrow><mo>[</mo><mi>i</mi><mo>]</mo></mrow></msup><mo>∈</mo><msup><mi>ℝ</mi><mrow><msub><mi>H</mi><mn>1</mn></msub><mo>×</mo><msub><mi>H</mi><mn>1</mn></msub></mrow></msup></mrow></math> is factorized into two low rank matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m5" class="ltx_Math" alttext="P^{[i]}\in\mathbb{R}^{H_{1}\times r}" display="inline"><mrow><msup><mi>P</mi><mrow><mo>[</mo><mi>i</mi><mo>]</mo></mrow></msup><mo>∈</mo><msup><mi>ℝ</mi><mrow><msub><mi>H</mi><mn>1</mn></msub><mo>×</mo><mi>r</mi></mrow></msup></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m6" class="ltx_Math" alttext="Q^{[i]}\in\mathbb{R}^{r\times H_{1}}" display="inline"><mrow><msup><mi>Q</mi><mrow><mo>[</mo><mi>i</mi><mo>]</mo></mrow></msup><mo>∈</mo><msup><mi>ℝ</mi><mrow><mi>r</mi><mo>×</mo><msub><mi>H</mi><mn>1</mn></msub></mrow></msup></mrow></math>:</p>
+<table id="S3.E9" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E9.m1" class="ltx_Math" alttext="V^{[i]}=P^{[i]}Q^{[i]},1\leq i\leq H_{2}" display="block"><mrow><mrow><msup><mi>V</mi><mrow><mo>[</mo><mi>i</mi><mo>]</mo></mrow></msup><mo>=</mo><mrow><msup><mi>P</mi><mrow><mo>[</mo><mi>i</mi><mo>]</mo></mrow></msup><mo>⁢</mo><msup><mi>Q</mi><mrow><mo>[</mo><mi>i</mi><mo>]</mo></mrow></msup></mrow></mrow><mo>,</mo><mrow><mn>1</mn><mo>≤</mo><mi>i</mi><mo>≤</mo><msub><mi>H</mi><mn>2</mn></msub></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(9)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m7" class="ltx_Math" alttext="r\ll H_{1}" display="inline"><mrow><mi>r</mi><mo>≪</mo><msub><mi>H</mi><mn>1</mn></msub></mrow></math> is the number of factors. Substituting equation (9) into equation (8), we get the factorized tensor function:</p>
+<table id="S3.E10" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E10.m1" class="ltx_Math" alttext="h=g(a^{T}P^{[1:H_{2}]}Q^{[1:H_{2}]}a+W_{1}a+b_{1})" display="block"><mrow><mi>h</mi><mo>=</mo><mrow><mi>g</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><msup><mi>a</mi><mi>T</mi></msup><mo>⁢</mo><msup><mi>P</mi><mrow><mo>[</mo><mn>1</mn><mo>:</mo><msub><mi>H</mi><mn>2</mn></msub><mo>]</mo></mrow></msup><mo>⁢</mo><msup><mi>Q</mi><mrow><mo>[</mo><mn>1</mn><mo>:</mo><msub><mi>H</mi><mn>2</mn></msub><mo>]</mo></mrow></msup><mo>⁢</mo><mi>a</mi></mrow><mo>+</mo><mrow><msub><mi>W</mi><mn>1</mn></msub><mo>⁢</mo><mi>a</mi></mrow><mo>+</mo><msub><mi>b</mi><mn>1</mn></msub></mrow><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(10)</span></td></tr>
+</table>
+<p class="ltx_p">Figure 4 illustrates the operation in each slice of the factorized tensor. First, vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m8" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math> is projected into two <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m9" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math>-dimension vectors <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m10" class="ltx_Math" alttext="f_{1}" display="inline"><msub><mi>f</mi><mn>1</mn></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m11" class="ltx_Math" alttext="f_{2}" display="inline"><msub><mi>f</mi><mn>2</mn></msub></math>. Then the output <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m12" class="ltx_Math" alttext="z_{i}" display="inline"><msub><mi>z</mi><mi>i</mi></msub></math> for each tensor slice <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m13" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math> is the dot-product of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m14" class="ltx_Math" alttext="f_{1}" display="inline"><msub><mi>f</mi><mn>1</mn></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m15" class="ltx_Math" alttext="f_{2}" display="inline"><msub><mi>f</mi><mn>2</mn></msub></math>. The complexity of the tensor operation is now <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m16" class="ltx_Math" alttext="O(rH_{1}H_{2})" display="inline"><mrow><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>r</mi><mo>⁢</mo><msub><mi>H</mi><mn>1</mn></msub><mo>⁢</mo><msub><mi>H</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></math>. As long as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m17" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math> is small enough, the factorized tensor operation would be much faster than the un-factorized one and the number of free parameters would also be much smaller, which prevent the model from overfitting.</p>
+</div>
+</div>
+<div id="S3.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.4 </span>Max-Margin Training</h3>
+
+<div id="S3.SS4.p1" class="ltx_para">
+<p class="ltx_p">We use the Max-Margin criterion to train our model. Intuitively, the Max-Margin criterion provides an alternative to probabilistic, likelihood-based estimation methods by concentrating directly on the robustness of the decision boundary of a model <cite class="ltx_cite">[<a href="#bib.bib15" title="Learning structured prediction models: a large margin approach" class="ltx_ref">27</a>]</cite>.
+We use <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m1" class="ltx_Math" alttext="Y(x_{i})" display="inline"><mrow><mi>Y</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math> to denote the set of all possible tag sequences for a given sentence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m2" class="ltx_Math" alttext="x_{i}" display="inline"><msub><mi>x</mi><mi>i</mi></msub></math> and the correct tag sequence for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m3" class="ltx_Math" alttext="x_{i}" display="inline"><msub><mi>x</mi><mi>i</mi></msub></math> is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m4" class="ltx_Math" alttext="y_{i}" display="inline"><msub><mi>y</mi><mi>i</mi></msub></math>. The parameters of our model are <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m5" class="ltx_Math" alttext="\theta=\{W_{1},b_{1},W_{2},b_{2},M,L,P^{[1:H_{2}]},Q^{[1:H_{2}]}\}" display="inline"><mrow><mi>θ</mi><mo>=</mo><mrow><mo>{</mo><mrow><msub><mi>W</mi><mn>1</mn></msub><mo>,</mo><msub><mi>b</mi><mn>1</mn></msub><mo>,</mo><msub><mi>W</mi><mn>2</mn></msub><mo>,</mo><msub><mi>b</mi><mn>2</mn></msub><mo>,</mo><mi>M</mi><mo>,</mo><mi>L</mi><mo>,</mo><msup><mi>P</mi><mrow><mo>[</mo><mn>1</mn><mo>:</mo><msub><mi>H</mi><mn>2</mn></msub><mo>]</mo></mrow></msup><mo>,</mo><msup><mi>Q</mi><mrow><mo>[</mo><mn>1</mn><mo>:</mo><msub><mi>H</mi><mn>2</mn></msub><mo>]</mo></mrow></msup></mrow><mo>}</mo></mrow></mrow></math>. We first define a structured margin loss <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m6" class="ltx_Math" alttext="\bigtriangleup(y_{i},\hat{y})" display="inline"><mrow><mo>△</mo><mrow><mo>(</mo><mrow><msub><mi>y</mi><mi>i</mi></msub><mo>,</mo><mover accent="true"><mi>y</mi><mo stretchy="false">^</mo></mover></mrow><mo>)</mo></mrow></mrow></math> for predicting a tag sequence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m7" class="ltx_Math" alttext="\hat{y}" display="inline"><mover accent="true"><mi>y</mi><mo stretchy="false">^</mo></mover></math> for a given correct tag sequence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m8" class="ltx_Math" alttext="y_{i}" display="inline"><msub><mi>y</mi><mi>i</mi></msub></math>:</p>
+<table id="S3.E11" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E11.m1" class="ltx_Math" alttext="\bigtriangleup(y_{i},\hat{y})=\sum_{j}^{n}\kappa\textbf{1}\{y_{i,j}\neq\hat{y}%&#10;_{j}\}" display="block"><mrow><mo>△</mo><mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>,</mo><mover accent="true"><mi>y</mi><mo stretchy="false">^</mo></mover><mo>)</mo></mrow><mo>=</mo><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>j</mi><mi>n</mi></munderover><mi>κ</mi><mtext>𝟏</mtext><mrow><mo>{</mo><msub><mi>y</mi><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow></msub><mo>≠</mo><msub><mover accent="true"><mi>y</mi><mo stretchy="false">^</mo></mover><mi>j</mi></msub><mo>}</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(11)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m9" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> is the length of sentence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m10" class="ltx_Math" alttext="x_{i}" display="inline"><msub><mi>x</mi><mi>i</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m11" class="ltx_Math" alttext="\kappa" display="inline"><mi>κ</mi></math> is a discount parameter. The loss is proportional to the number of characters with an incorrect tag in the proposed tag sequence, which increases the more incorrect the proposed tag sequence is. For a given training instance <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m12" class="ltx_Math" alttext="(x_{i},y_{i})" display="inline"><mrow><mo>(</mo><mrow><msub><mi>x</mi><mi>i</mi></msub><mo>,</mo><msub><mi>y</mi><mi>i</mi></msub></mrow><mo>)</mo></mrow></math>, we search for the tag sequence with the highest score:</p>
+<table id="S3.E12" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E12.m1" class="ltx_Math" alttext="y^{*}=\operatorname*{arg\,max}_{\hat{y}\in Y(x)}s(x_{i},\hat{y},\theta)" display="block"><mrow><msup><mi>y</mi><mo>*</mo></msup><mo>=</mo><mrow><mrow><msub><mrow><mpadded width="+1.7pt"><mi>arg</mi></mpadded><mo>⁢</mo><mi>max</mi></mrow><mrow><mover accent="true"><mi>y</mi><mo stretchy="false">^</mo></mover><mo>∈</mo><mrow><mi>Y</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow></msub><mo>⁡</mo><mi>s</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>x</mi><mi>i</mi></msub><mo>,</mo><mover accent="true"><mi>y</mi><mo stretchy="false">^</mo></mover><mo>,</mo><mi>θ</mi></mrow><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(12)</span></td></tr>
+</table>
+<p class="ltx_p">where the tag sequence is found and scored by the Tensor Neural Network via the function <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m13" class="ltx_Math" alttext="s" display="inline"><mi>s</mi></math> in equation (6). The object of Max-Margin training is that the highest scoring tag sequence is the correct one: <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m14" class="ltx_Math" alttext="y^{*}=y_{i}" display="inline"><mrow><msup><mi>y</mi><mo>*</mo></msup><mo>=</mo><msub><mi>y</mi><mi>i</mi></msub></mrow></math> and its score will be larger up to a margin to other possible tag sequences <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m15" class="ltx_Math" alttext="\hat{y}\in Y(x_{i})" display="inline"><mrow><mover accent="true"><mi>y</mi><mo stretchy="false">^</mo></mover><mo>∈</mo><mrow><mi>Y</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></mrow></math>:</p>
+<table id="S3.Ex5" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex5.m1" class="ltx_Math" alttext="s(x,y_{i},\theta)\geq s(x,\hat{y},\theta)+\bigtriangleup(y_{i},\hat{y})" display="block"><mrow><mi>s</mi><mrow><mo>(</mo><mi>x</mi><mo>,</mo><msub><mi>y</mi><mi>i</mi></msub><mo>,</mo><mi>θ</mi><mo>)</mo></mrow><mo>≥</mo><mi>s</mi><mrow><mo>(</mo><mi>x</mi><mo>,</mo><mover accent="true"><mi>y</mi><mo stretchy="false">^</mo></mover><mo>,</mo><mi>θ</mi><mo>)</mo></mrow><mo>+</mo><mo>△</mo><mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>,</mo><mover accent="true"><mi>y</mi><mo stretchy="false">^</mo></mover><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">This leads to the regularized objective function for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m16" class="ltx_Math" alttext="m" display="inline"><mi>m</mi></math> training examples:</p>
+<table id="Sx1.EGx1" class="ltx_equationgroup ltx_eqn_eqnarray">
+
+<tr id="S3.Ex6" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex6.m1" class="ltx_Math" alttext="\displaystyle J(\theta)" display="inline"><mrow><mi>J</mi><mo>⁢</mo><mrow><mo>(</mo><mi>θ</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex6.m2" class="ltx_Math" alttext="\displaystyle=" display="inline"><mo>=</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex6.m3" class="ltx_Math" alttext="\displaystyle\frac{1}{m}\sum_{i=1}^{m}l_{i}(\theta)+\frac{\lambda}{2}||\theta|%&#10;|^{2}" display="inline"><mrow><mrow><mstyle displaystyle="true"><mfrac><mn>1</mn><mi>m</mi></mfrac></mstyle><mo>⁢</mo><mrow><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>m</mi></munderover></mstyle><mrow><msub><mi>l</mi><mi>i</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>θ</mi><mo>)</mo></mrow></mrow></mrow></mrow><mo>+</mo><mrow><mstyle displaystyle="true"><mfrac><mi>λ</mi><mn>2</mn></mfrac></mstyle><mo>⁢</mo><msup><mrow><mo fence="true">||</mo><mi>θ</mi><mo fence="true">||</mo></mrow><mn>2</mn></msup></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S3.E13" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex7.m1" class="ltx_Math" alttext="\displaystyle l_{i}(\theta)" display="inline"><mrow><msub><mi>l</mi><mi>i</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>θ</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex7.m2" class="ltx_Math" alttext="\displaystyle=" display="inline"><mo>=</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex7.m3" class="ltx_Math" alttext="\displaystyle\max_{\hat{y}\in Y(x_{i})}(s(x_{i},\hat{y},\theta)+\bigtriangleup%&#10;(y_{i},\hat{y}))" display="inline"><mrow><munder><mo movablelimits="false">max</mo><mrow><mover accent="true"><mi>y</mi><mo stretchy="false">^</mo></mover><mo>∈</mo><mrow><mi>Y</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></mrow></munder><mrow><mo>(</mo><mi>s</mi><mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>,</mo><mover accent="true"><mi>y</mi><mo stretchy="false">^</mo></mover><mo>,</mo><mi>θ</mi><mo>)</mo></mrow><mo>+</mo><mo>△</mo><mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>,</mo><mover accent="true"><mi>y</mi><mo stretchy="false">^</mo></mover><mo>)</mo></mrow><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="2" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(13)</span></td></tr>
+<tr class="ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_center"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E13.m3" class="ltx_Math" alttext="\displaystyle-s(x_{i},y_{i},\theta))" display="inline"><mrow><mo>-</mo><mi>s</mi><mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>,</mo><msub><mi>y</mi><mi>i</mi></msub><mo>,</mo><mi>θ</mi><mo>)</mo></mrow><mo>)</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">By minimizing this object, the score of the correct tag sequence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m17" class="ltx_Math" alttext="y_{i}" display="inline"><msub><mi>y</mi><mi>i</mi></msub></math> is increased and score of the highest scoring incorrect tag sequence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p1.m18" class="ltx_Math" alttext="\hat{y}" display="inline"><mover accent="true"><mi>y</mi><mo stretchy="false">^</mo></mover></math> is decreased.</p>
+</div>
+<div id="S3.SS4.p2" class="ltx_para">
+<p class="ltx_p">The objective function is not differentiable due to the hinge loss. We use a generalization of gradient descent called subgradient method <cite class="ltx_cite">[<a href="#bib.bib10" title="(Online) subgradient methods for structured prediction" class="ltx_ref">19</a>]</cite> which computes a gradient-like direction. The subgradient of equation (13) is:</p>
+<table id="S3.Ex8" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex8.m1" class="ltx_Math" alttext="\frac{\partial J}{\partial\theta}=\frac{1}{m}\sum_{i}(\frac{\partial s(x_{i},%&#10;\hat{y}_{max},\theta)}{\partial\theta}-\frac{\partial s(x_{i},y_{i},\theta)}{%&#10;\partial\theta})+\lambda\theta" display="block"><mrow><mfrac><mrow><mo>∂</mo><mo>⁡</mo><mi>J</mi></mrow><mrow><mo>∂</mo><mo>⁡</mo><mi>θ</mi></mrow></mfrac><mo>=</mo><mrow><mrow><mfrac><mn>1</mn><mi>m</mi></mfrac><mo>⁢</mo><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>i</mi></munder><mrow><mo>(</mo><mrow><mfrac><mrow><mrow><mo>∂</mo><mo>⁡</mo><mi>s</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>x</mi><mi>i</mi></msub><mo>,</mo><msub><mover accent="true"><mi>y</mi><mo stretchy="false">^</mo></mover><mrow><mi>m</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>x</mi></mrow></msub><mo>,</mo><mi>θ</mi></mrow><mo>)</mo></mrow></mrow><mrow><mo>∂</mo><mo>⁡</mo><mi>θ</mi></mrow></mfrac><mo>-</mo><mfrac><mrow><mrow><mo>∂</mo><mo>⁡</mo><mi>s</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>x</mi><mi>i</mi></msub><mo>,</mo><msub><mi>y</mi><mi>i</mi></msub><mo>,</mo><mi>θ</mi></mrow><mo>)</mo></mrow></mrow><mrow><mo>∂</mo><mo>⁡</mo><mi>θ</mi></mrow></mfrac></mrow><mo>)</mo></mrow></mrow></mrow><mo>+</mo><mrow><mi>λ</mi><mo>⁢</mo><mi>θ</mi></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m1" class="ltx_Math" alttext="\hat{y}_{max}" display="inline"><msub><mover accent="true"><mi>y</mi><mo stretchy="false">^</mo></mover><mrow><mi>m</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>x</mi></mrow></msub></math> is the tag sequence with the highest score in equation (13). Following Socher et al. <cite class="ltx_cite">[<a href="#bib.bib12" title="Parsing with compositional vector grammars" class="ltx_ref">22</a>]</cite>, we use the diagonal variant of AdaGrad <cite class="ltx_cite">[<a href="#bib.bib5" title="Adaptive subgradient methods for online learning and stochastic optimization" class="ltx_ref">8</a>]</cite> with minibatchs to minimize the objective. The parameter update for the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m2" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math>-th parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m3" class="ltx_Math" alttext="\theta_{t,i}" display="inline"><msub><mi>θ</mi><mrow><mi>t</mi><mo>,</mo><mi>i</mi></mrow></msub></math> at time step <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m4" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math> is as follows:</p>
+<table id="S3.E14" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E14.m1" class="ltx_Math" alttext="\theta_{t,i}=\theta_{t-1,i}-\frac{\alpha}{\sqrt{\sum_{\tau=1}^{t}g_{\tau,i}^{2%&#10;}}}g_{t,i}" display="block"><mrow><msub><mi>θ</mi><mrow><mi>t</mi><mo>,</mo><mi>i</mi></mrow></msub><mo>=</mo><mrow><msub><mi>θ</mi><mrow><mrow><mi>t</mi><mo>-</mo><mn>1</mn></mrow><mo>,</mo><mi>i</mi></mrow></msub><mo>-</mo><mrow><mfrac><mi>α</mi><msqrt><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>τ</mi><mo>=</mo><mn>1</mn></mrow><mi>t</mi></msubsup><msubsup><mi>g</mi><mrow><mi>τ</mi><mo>,</mo><mi>i</mi></mrow><mn>2</mn></msubsup></mrow></msqrt></mfrac><mo>⁢</mo><msub><mi>g</mi><mrow><mi>t</mi><mo>,</mo><mi>i</mi></mrow></msub></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(14)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m5" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> is the initial learning rate and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m6" class="ltx_Math" alttext="g_{\tau}\in\mathbb{R}^{|\theta_{i}|}" display="inline"><mrow><msub><mi>g</mi><mi>τ</mi></msub><mo>∈</mo><msup><mi>ℝ</mi><mrow><mo fence="true">|</mo><msub><mi>θ</mi><mi>i</mi></msub><mo fence="true">|</mo></mrow></msup></mrow></math> is the subgradient at time step <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m7" class="ltx_Math" alttext="\tau" display="inline"><mi>τ</mi></math> for parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m8" class="ltx_Math" alttext="\theta_{i}" display="inline"><msub><mi>θ</mi><mi>i</mi></msub></math>.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Experiment</h2>
+
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Data and Model Selection</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">We use the PKU and MSRA data provided by the second International Chinese Word Segmentation Bakeoff <cite class="ltx_cite">[<a href="#bib.bib25" title="The second international chinese word segmentation bakeoff" class="ltx_ref">9</a>]</cite> to test our model. They are commonly used by previous state-of-the-art models and neural network models. Details of the data are listed in Table 1. For evaluation, we use the standard bake-off scoring program to calculate precision, recall, F1-score and out-of-vocabulary (OOV) word recall.</p>
+</div>
+<div id="S4.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">PKU</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">MSRA</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Identical words</th>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m1" class="ltx_Math" alttext="5.5\times 10^{4}" display="inline"><mrow><mn>5.5</mn><mo>×</mo><msup><mn>10</mn><mn>4</mn></msup></mrow></math></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m2" class="ltx_Math" alttext="8.8\times 10^{4}" display="inline"><mrow><mn>8.8</mn><mo>×</mo><msup><mn>10</mn><mn>4</mn></msup></mrow></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Total words</th>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m3" class="ltx_Math" alttext="1.1\times 10^{6}" display="inline"><mrow><mn>1.1</mn><mo>×</mo><msup><mn>10</mn><mn>6</mn></msup></mrow></math></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m4" class="ltx_Math" alttext="2.4\times 10^{6}" display="inline"><mrow><mn>2.4</mn><mo>×</mo><msup><mn>10</mn><mn>6</mn></msup></mrow></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Identical characters</th>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m5" class="ltx_Math" alttext="5\times 10^{3}" display="inline"><mrow><mn>5</mn><mo>×</mo><msup><mn>10</mn><mn>3</mn></msup></mrow></math></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m6" class="ltx_Math" alttext="5\times 10^{3}" display="inline"><mrow><mn>5</mn><mo>×</mo><msup><mn>10</mn><mn>3</mn></msup></mrow></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r ltx_border_t">Total characters</th>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m7" class="ltx_Math" alttext="1.8\times 10^{6}" display="inline"><mrow><mn>1.8</mn><mo>×</mo><msup><mn>10</mn><mn>6</mn></msup></mrow></math></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m8" class="ltx_Math" alttext="4.1\times 10^{6}" display="inline"><mrow><mn>4.1</mn><mo>×</mo><msup><mn>10</mn><mn>6</mn></msup></mrow></math></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 1: </span>Details of the PKU and MSRA datasets</div>
+</div>
+<div id="S4.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Window size</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m1" class="ltx_Math" alttext="w=5" display="inline"><mrow><mi>w</mi><mo>=</mo><mn>5</mn></mrow></math></td>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Character(tag) embedding size</td>
+<td class="ltx_td ltx_align_left ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m2" class="ltx_Math" alttext="d=25" display="inline"><mrow><mi>d</mi><mo>=</mo><mn>25</mn></mrow></math></td>
+<td class="ltx_td"/>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Hidden unit number</td>
+<td class="ltx_td ltx_align_left ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m3" class="ltx_Math" alttext="H_{2}=50" display="inline"><mrow><msub><mi>H</mi><mn>2</mn></msub><mo>=</mo><mn>50</mn></mrow></math></td>
+<td class="ltx_td"/>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Number of factors</td>
+<td class="ltx_td ltx_align_left ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m4" class="ltx_Math" alttext="r=10" display="inline"><mrow><mi>r</mi><mo>=</mo><mn>10</mn></mrow></math></td>
+<td class="ltx_td"/>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Initial learning rate</td>
+<td class="ltx_td ltx_align_left ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m5" class="ltx_Math" alttext="\alpha=0.2" display="inline"><mrow><mi>α</mi><mo>=</mo><mn>0.2</mn></mrow></math></td>
+<td class="ltx_td"/>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Margin loss discount</td>
+<td class="ltx_td ltx_align_left ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m6" class="ltx_Math" alttext="\kappa=0.2" display="inline"><mrow><mi>κ</mi><mo>=</mo><mn>0.2</mn></mrow></math></td>
+<td class="ltx_td"/>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r">Regularization</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m7" class="ltx_Math" alttext="\lambda=10^{-4}" display="inline"><mrow><mi>λ</mi><mo>=</mo><msup><mn>10</mn><mrow><mo>-</mo><mn>4</mn></mrow></msup></mrow></math></td>
+<td class="ltx_td ltx_border_b"/>
+<td class="ltx_td ltx_border_b"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 2: </span>Hyperparameters of our model</div>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">For model selection, we use the first <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m1" class="ltx_Math" alttext="90\%" display="inline"><mrow><mn>90</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> sentences in the training data for training and the rest <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m2" class="ltx_Math" alttext="10\%" display="inline"><mrow><mn>10</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> sentences as development data. The minibatch size is set to 20. Generally, the number of hidden units has a limited impact on the performance as long as it is large enough. We found that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m3" class="ltx_Math" alttext="50" display="inline"><mn>50</mn></math> is a good trade-off between speed and model performance. The dimensionality of character (tag) embedding is set to 25 which achieved the best performance and faster than 50- or 100-dimensional ones. We also validated on the number of factors for tensor factorization. The performance is not boosted and the training time increases drastically when the number of factors is larger than 10. We hypothesize that larger factor size results in too many parameters to train and hence perform worse. The final hyperparameters of our model are set as in Table 2.</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Experiment Results</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">We first perform a close test<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>No other material or knowledge except the training data is allowed</span></span></span> on the PKU dataset to show the effect of different model configurations. We also compare our model with the CRF model <cite class="ltx_cite">[<a href="#bib.bib32" title="Conditional random fields: probabilistic models for segmenting and labeling sequence data" class="ltx_ref">13</a>]</cite>, which is a widely used log-linear model for Chinese word segmentation. The input feature to the CRF model is simply the context characters (unigram feature) without any additional feature engineering. We use an open source toolkit <em class="ltx_emph">CRF++</em><span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup><a href="http://crfpp.googlecode.com/svn/trunk/doc/index.html?source=navbar" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://crfpp.googlecode.com/svn/trunk/doc/index.html?source=navbar</span></a></span></span></span> to train the CRF model. All the neural networks are trained using the Max-Margin approach described in Section 3.4. Table 3 summarizes the test results.
+As we can see, by using Tag embedding, the F-score is improved by +0.6% and OOV recall is improved by +1.0%, which shows that tag embeddings succeed in modeling the tag-tag interaction and tag-character interaction. Model performance is further boosted after using tensor-based transformation. The F-score is improved by +0.6% while OOV recall is improved by +3.2%, which denotes that tensor-based transformation captures more interactional information than simple non-linear transformation.</p>
+</div>
+<div id="S4.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">P</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">R</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">F</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">OOV</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">CRF</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">87.8</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">85.7</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">86.7</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">57.1</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">NN</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">92.4</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">92.2</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">92.3</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">60.0</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">NN+Tag Embed</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">93.0</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">92.7</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">92.9</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">61.0</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r ltx_border_t">MMTNN</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">93.7</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">93.4</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">93.5</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">64.2</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 3: </span>Test results with different configurations. NN stands for the conventional neural network. NN+Tag Embed stands for the neural network with tag embeddings.</div>
+</div>
+<div id="S4.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">ä¸ (one)</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">æ (Li)</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">ã (period)</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">äº (two)</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">èµµ (Zhao)</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">ï¼ (comma)</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">ä¸ (three)</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">è (Jiang)</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">ï¼ (colon)</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">å (four)</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">å­ (Kong)</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">ï¼ (question mark)</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">äº (five)</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">å¯ (Feng)</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">â (quotation mark)</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r ltx_border_t">å­ (six)</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_t">å´ (Wu)</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_t">ã (Chinese comma)</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 4: </span>Examples of character embeddings</div>
+</div>
+<div id="S4.T5" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Models</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t" colspan="4"><span class="ltx_text ltx_font_bold">PKU</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="4"><span class="ltx_text ltx_font_bold">MSRA</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">P</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">R</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">F</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">OOV</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">P</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_bold">R</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_bold">F</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">OOV</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><cite class="ltx_cite">[<a href="#bib.bib7" title="Feature-based neural language model and chinese word segmentation" class="ltx_ref">15</a>]</cite></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">87.1</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">87.9</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">87.5</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">48.9</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">92.3</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">92.2</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">92.2</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">53.7</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><cite class="ltx_cite">[<a href="#bib.bib22" title="Deep learning for Chinese word segmentation and POS tagging" class="ltx_ref">35</a>]</cite></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">92.8</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">92.0</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">92.4</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">63.3</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">92.9</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">93.6</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">93.3</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">55.7</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">MMTNN</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">93.7</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">93.4</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">93.5</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">64.2</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">94.6</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">94.2</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">94.4</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">61.4</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><cite class="ltx_cite">[<a href="#bib.bib7" title="Feature-based neural language model and chinese word segmentation" class="ltx_ref">15</a>]</cite> + Pre-training</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">91.2</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">92.7</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">92.0</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">68.8</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">93.1</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">93.1</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">93.1</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">59.7</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><cite class="ltx_cite">[<a href="#bib.bib22" title="Deep learning for Chinese word segmentation and POS tagging" class="ltx_ref">35</a>]</cite> + Pre-training</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">93.5</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">92.2</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">92.8</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">69.0</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">94.2</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">93.7</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">93.9</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">64.1</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">MMTNN + Pre-training</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">94.4</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">93.6</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">94.0</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">69.0</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">95.2</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">94.6</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">94.9</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">64.8</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 5: </span>Comparison with previous neural network models</div>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">Another important result in Table 3 is that our neural network models perform much better than CRF-based model when only unigram features are used. Compared with CRF, there are two differences in neural network models. First, the discrete feature vector is replaced with dense character embeddings. Second, the non-linear transformation is used to discover higher level representation. In fact, CRF can be regarded as a special neural network without non-linear function <cite class="ltx_cite">[<a href="#bib.bib18" title="Effect of non-linear deep architecture in sequence labeling" class="ltx_ref">30</a>]</cite>. Wang and Manning <cite class="ltx_cite">[<a href="#bib.bib18" title="Effect of non-linear deep architecture in sequence labeling" class="ltx_ref">30</a>]</cite> conduct an empirical study on the effect of non-linearity and the results suggest that non-linear models are highly effective only when distributed representation is used. To explain why distributed representation captures more information than discrete features, we show in Table 4 the effect of character embeddings which are obtained from the lookup table of MMTNN after training. The first row lists three characters we are interested in. In each column, we list the top 5 characters that are nearest (measured by Euclidean distance) to the corresponding character in the first row according to their embeddings. As we can see, characters in the first column are all Chinese number characters and characters in the second column and the third column are all Chinese family names and Chinese punctuations respectively. Therefore, compared with discrete feature representations, distributed representation can capture the syntactic and semantic similarity between characters. As a result, the model can still perform well even if some words do not appear in the training cases.</p>
+</div>
+<div id="S4.SS2.p3" class="ltx_para">
+<p class="ltx_p">We further compare our model with previous neural network models on both PKU and MSRA datasets. Since Zheng et al. <cite class="ltx_cite">[<a href="#bib.bib22" title="Deep learning for Chinese word segmentation and POS tagging" class="ltx_ref">35</a>]</cite> did not report the results on the these datasets, we re-implemented their model and tested it on the test data. The results are listed in the first three rows of Table 5, which shows that our model achieved higher F-score than the previous neural network models.</p>
+</div>
+</div>
+<div id="S4.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.3 </span>Unsupervised Pre-training</h3>
+
+<div id="S4.SS3.p1" class="ltx_para">
+<p class="ltx_p">Previous work found that the performance can be improved by pre-training the character embeddings on large unlabeled data and using the obtained embeddings to initialize the character lookup table instead of random initialization <cite class="ltx_cite">[<a href="#bib.bib7" title="Feature-based neural language model and chinese word segmentation" class="ltx_ref">15</a>, <a href="#bib.bib22" title="Deep learning for Chinese word segmentation and POS tagging" class="ltx_ref">35</a>]</cite>. Mikolov et al. <cite class="ltx_cite">[<a href="#bib.bib9" title="Linguistic regularities in continuous space word representations" class="ltx_ref">17</a>]</cite> show that pre-trained embeddings can capture interesting semantic and syntactic information such as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p1.m1" class="ltx_Math" alttext="king-man+woman\approx queen" display="inline"><mrow><mrow><mrow><mi>k</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>g</mi></mrow><mo>-</mo><mrow><mi>m</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi></mrow><mo>+</mo><mrow><mi>w</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi></mrow></mrow><mo>≈</mo><mrow><mi>q</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi></mrow></mrow></math> on English data. There are several ways to learn the embeddings on unlabeled data. Mansur et al. <cite class="ltx_cite">[<a href="#bib.bib7" title="Feature-based neural language model and chinese word segmentation" class="ltx_ref">15</a>]</cite> used the model proposed by Bengio et al. <cite class="ltx_cite">[<a href="#bib.bib1" title="A neural probabilistic language model" class="ltx_ref">1</a>]</cite> which learns the embeddings based on neural language model. Zheng et al. <cite class="ltx_cite">[<a href="#bib.bib22" title="Deep learning for Chinese word segmentation and POS tagging" class="ltx_ref">35</a>]</cite> followed the model proposed by Collobert et al. <cite class="ltx_cite">[<a href="#bib.bib23" title="A unified architecture for natural language processing: deep neural networks with multitask learning" class="ltx_ref">7</a>]</cite>. They constructed a neural network that outputs high scores for windows that occur in the corpus and low scores for windows where one character is replaced by a random one. Mikolov et al. <cite class="ltx_cite">[<a href="#bib.bib8" title="Efficient estimation of word representations in vector space" class="ltx_ref">16</a>]</cite> proposed a faster skip-gram model <em class="ltx_emph">word2vec</em><span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup><a href="https://code.google.com/p/word2vec/â" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">https://code.google.com/p/word2vec/â</span></a></span></span></span> which tries to maximize classification of a word based on another word in the same sentence. In this paper, we use <em class="ltx_emph">word2vec</em> because preliminary experiments did not show differences between performances of these models but <em class="ltx_emph">word2vec</em> is much faster to train. We pre-train the embeddings on the Chinese Giga-word corpus <cite class="ltx_cite">[<a href="#bib.bib27" title="Chinese gigaword" class="ltx_ref">10</a>]</cite>. As shown in Table 5 (last three rows), both the F-score and OOV recall of our model boost by using pre-training. Our model still outperforms other models after pre-training.</p>
+</div>
+</div>
+<div id="S4.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.4 </span>Minimal Feature Engineering</h3>
+
+<div id="S4.T6" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Model</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">PKU</span></th>
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">MSRA</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Best05<cite class="ltx_cite">[<a href="#bib.bib2" title="Unigram language model for chinese word segmentation" class="ltx_ref">3</a>]</cite></th>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">95.0</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">96.0</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Best05<cite class="ltx_cite">[<a href="#bib.bib36" title="A conditional random field word segmenter for sighan bakeoff 2005" class="ltx_ref">28</a>]</cite></th>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">95.0</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">96.4</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><cite class="ltx_cite">[<a href="#bib.bib20" title="Subword-based tagging by conditional random fields for chinese word segmentation" class="ltx_ref">33</a>]</cite></th>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">95.1</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">97.1</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><cite class="ltx_cite">[<a href="#bib.bib21" title="Chinese segmentation with a word-based perceptron algorithm" class="ltx_ref">34</a>]</cite></th>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">94.5</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">97.2</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><cite class="ltx_cite">[<a href="#bib.bib14" title="A discriminative latent variable chinese segmenter with hybrid word/character information" class="ltx_ref">26</a>]</cite></th>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">95.2</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">97.3</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><cite class="ltx_cite">[<a href="#bib.bib33" title="Fast online training with frequency-adaptive learning rates for chinese word segmentation and new word detection" class="ltx_ref">25</a>]</cite></th>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">95.4</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">97.4</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><cite class="ltx_cite">[<a href="#bib.bib17" title="Exploring representations from unlabeled data with co-training for Chinese word segmentation" class="ltx_ref">32</a>]</cite></th>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">96.1</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">97.4</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">MMTNN</span></th>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">94.0</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">94.9</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">MMTNN + bigram</span></th>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_t">95.2</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_t">97.2</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 6: </span>Comparison with state-of-the-art systems</div>
+</div>
+<div id="S4.SS4.p1" class="ltx_para">
+<p class="ltx_p">Although we focus on the question that how far we can go without using feature engineering in this paper, the study of deep learning for NLP tasks is still a new area in which it is currently challenging to surpass the state-of-the-art without additional features. To incorporate features into the neural network, Mansur et al. <cite class="ltx_cite">[<a href="#bib.bib7" title="Feature-based neural language model and chinese word segmentation" class="ltx_ref">15</a>]</cite> proposed the feature-based neural network where each context feature is represented as feature embeddings. The idea of feature embeddings is similar to that of character embeddings described in section 2.1. Formally, we assume the extracted features form a feature dictionary <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p1.m1" class="ltx_Math" alttext="D_{f}" display="inline"><msub><mi>D</mi><mi>f</mi></msub></math>. Then each feature <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p1.m2" class="ltx_Math" alttext="f\in D_{f}" display="inline"><mrow><mi>f</mi><mo>∈</mo><msub><mi>D</mi><mi>f</mi></msub></mrow></math> is represented by a <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p1.m3" class="ltx_Math" alttext="d" display="inline"><mi>d</mi></math>-dimensional vector which is called feature embedding. Following their idea, we try to find out how well our model can perform with minimal feature engineering.</p>
+</div>
+<div id="S4.SS4.p2" class="ltx_para">
+<p class="ltx_p">A very common feature in Chinese word segmentation is the character bigram feature. Formally, at the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p2.m1" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math>-th character of a sentence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p2.m2" class="ltx_Math" alttext="c_{[1:n]}" display="inline"><msub><mi>c</mi><mrow><mo>[</mo><mn>1</mn><mo>:</mo><mi>n</mi><mo>]</mo></mrow></msub></math>, the bigram features are <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p2.m3" class="ltx_Math" alttext="c_{k}c_{k+1}(i-3&lt;k&lt;i+2)" display="inline"><mrow><msub><mi>c</mi><mi>k</mi></msub><msub><mi>c</mi><mrow><mi>k</mi><mo>+</mo><mn>1</mn></mrow></msub><mrow><mo>(</mo><mi>i</mi><mo>-</mo><mn>3</mn><mo>&lt;</mo><mi>k</mi><mo>&lt;</mo><mi>i</mi><mo>+</mo><mn>2</mn><mo>)</mo></mrow></mrow></math>. In our model, the bigram features are extracted in the window context and then the corresponding bigram embeddings are concatenated with character embeddings in Layer 1 and fed into Layer 2. In Mansur et al. <cite class="ltx_cite">[<a href="#bib.bib7" title="Feature-based neural language model and chinese word segmentation" class="ltx_ref">15</a>]</cite>, the bigram embeddings are pre-trained on unlabeled data with character embeddings, which significantly improves the model performance. Given the long time for pre-training bigram embeddings, we only pre-train the character embeddings and the bigram embeddings are initialized as the average of character embeddings of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p2.m4" class="ltx_Math" alttext="c_{k}" display="inline"><msub><mi>c</mi><mi>k</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p2.m5" class="ltx_Math" alttext="c_{k+1}" display="inline"><msub><mi>c</mi><mrow><mi>k</mi><mo>+</mo><mn>1</mn></mrow></msub></math>. Further improvement could be obtained if the bigram embeddings are also pre-trained. Table 6 lists the segmentation performances of our model as well as previous state-of-the-art systems.
+When bigram features are added, the F-score of our model improves from 94.0% to 95.2% on PKU dataset and from 94.9% to 97.2% on MSRA dataset. It is a competitive result given that our model only use simple bigram features while other models use more complex features. For example, Sun et al. <cite class="ltx_cite">[<a href="#bib.bib33" title="Fast online training with frequency-adaptive learning rates for chinese word segmentation and new word detection" class="ltx_ref">25</a>]</cite> uses additional word-based features. Zhang et al. <cite class="ltx_cite">[<a href="#bib.bib17" title="Exploring representations from unlabeled data with co-training for Chinese word segmentation" class="ltx_ref">32</a>]</cite> uses eight types of features such as Mutual Information and Accessor Variety and they extract dynamic statistical features from both an in-domain corpus and an out-of-domain corpus using co-training. Since feature engineering is not the main focus of this paper, we did not experiment with more features.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Related Work</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">Chinese word segmentation has been studied with considerable efforts in the NLP community. The most popular approach treats word segmentation as a sequence labeling problem which was first proposed in Xue <cite class="ltx_cite">[<a href="#bib.bib19" title="Chinese word segmentation as character tagging" class="ltx_ref">31</a>]</cite>. Most previous systems address this task by using linear statistical models with carefully designed features such as bigram features, punctuation information <cite class="ltx_cite">[<a href="#bib.bib35" title="Punctuation as implicit annotations for chinese word segmentation" class="ltx_ref">14</a>]</cite> and statistical information <cite class="ltx_cite">[<a href="#bib.bib34" title="Enhancing chinese word segmentation using unlabeled data" class="ltx_ref">24</a>]</cite>. Recently, researchers have tended to explore new approaches for word segmentation which circumvent the feature engineering by automatically learning features with neural network models <cite class="ltx_cite">[<a href="#bib.bib7" title="Feature-based neural language model and chinese word segmentation" class="ltx_ref">15</a>, <a href="#bib.bib22" title="Deep learning for Chinese word segmentation and POS tagging" class="ltx_ref">35</a>]</cite>. Our study is consistent with this line of research, however, our model explicitly models the interactions between tags and context characters and accordingly captures more semantic information.</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">Tensor-based transformation was also used in other neural network models for its ability to capture multiple interactions in data. For example, Socher et al. <cite class="ltx_cite">[<a href="#bib.bib13" title="Recursive deep models for semantic compositionality over a sentiment treebank" class="ltx_ref">23</a>]</cite> exploited tensor-based function in the task of Sentiment Analysis to capture more semantic information from constituents. However, given the small size of their tensor matrix, they do not have the problem of high time cost and overfitting problem as we faced in modeling a sequence labeling task like Chinese word segmentation. That’s why we propose to decrease computational cost and avoid overfitting with tensor factorization.</p>
+</div>
+<div id="S5.p3" class="ltx_para">
+<p class="ltx_p">Various tensor factorization (decomposition) methods have been proposed recently for tensor-based dimension reduction <cite class="ltx_cite">[<a href="#bib.bib3" title="Approximate pcfg parsing using tensor decomposition" class="ltx_ref">4</a>, <a href="#bib.bib16" title="A tensor-based factorization model of semantic compositionality" class="ltx_ref">29</a>, <a href="#bib.bib26" title="Multi-relational latent semantic analysis" class="ltx_ref">2</a>]</cite>. For example, Chang et al. <cite class="ltx_cite">[<a href="#bib.bib26" title="Multi-relational latent semantic analysis" class="ltx_ref">2</a>]</cite> proposed the Multi-Relational Latent Semantic Analysis. Similar to LSA, a low rank approximation of the tensor is derived using a tensor decomposition approch. Similar ideas were also used for collaborative filtering <cite class="ltx_cite">[<a href="#bib.bib28" title="Restricted boltzmann machines for collaborative filtering" class="ltx_ref">20</a>]</cite> and object recognition <cite class="ltx_cite">[<a href="#bib.bib31" title="Factored 3-way restricted boltzmann machines for modeling natural images" class="ltx_ref">18</a>]</cite>. Our tensor factorization is related to these work but uses a different tensor factorization approach. By introducing tensor factorization into the neural network model for sequence labeling tasks, the model training and inference are speeded up and overfitting is prevented.</p>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Conclusion</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">In this paper, we propose a new model called Max-Margin Tensor Neural Network that explicitly models the interactions between tags and context characters. Moreover, we propose a tensor factorization approach that effectively improves the model efficiency and avoids the risk of overfitting. Experiments on the benchmark datasets show that our model achieve better results than previous neural network models and that our model can achieve a competitive result with minimal feature engineering. In the future, we plan to further extend our model and apply it to other structure prediction problems.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">This work is supported by National Natural Science Foundation of China under Grant No. 61273318 and National Key Basic Research Program of China 2014CB340504.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Bengio, R. Ducharme, P. Vincent and C. Jauvin</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A neural probabilistic language model</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">3</span>, <span class="ltx_text ltx_bib_pages"> pp. 1137–1155</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p1" title="2.1 Lookup Table ‣ 2 Conventional Neural Network ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>,
+<a href="#S4.SS3.p1" title="4.3 Unsupervised Pre-training ‣ 4 Experiment ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+<li id="bib.bib26" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Chang, W. Yih and C. Meek</span><span class="ltx_text ltx_bib_year">(2013-10)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Multi-relational latent semantic analysis</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Seattle, Washington, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 1602–1612</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/D13-1167" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p3" title="5 Related Work ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Chen, Y. Zhou, A. Zhang and G. Sun</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Unigram language model for chinese word segmentation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 138–141</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.T6" title="Table 6 ‣ 4.4 Minimal Feature Engineering ‣ 4 Experiment ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. B. Cohen, G. Satta and M. Collins</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Approximate pcfg parsing using tensor decomposition</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 487–496</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p3" title="5 Related Work ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib29" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Collins</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Discriminative training methods for hidden markov models: theory and experiments with perceptron algorithms</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1–8</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS3.p2" title="2.3 Model Training and Inference ‣ 2 Conventional Neural Network ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Collobert, J. Weston, L. Bottou, M. Karlen, K. Kavukcuoglu and P. Kuksa</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Natural language processing (almost) from scratch</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">The Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">12</span>, <span class="ltx_text ltx_bib_pages"> pp. 2493–2537</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS1.p1" title="2.1 Lookup Table ‣ 2 Conventional Neural Network ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>,
+<a href="#S2.SS3.p2" title="2.3 Model Training and Inference ‣ 2 Conventional Neural Network ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>,
+<a href="#S3.SS1.p1" title="3.1 Tag Embedding ‣ 3 Max-Margin Tensor Neural Network ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib23" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Collobert and J. Weston</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A unified architecture for natural language processing: deep neural networks with multitask learning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 160–167</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS3.p1" title="4.3 Unsupervised Pre-training ‣ 4 Experiment ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Duchi, E. Hazan and Y. Singer</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Adaptive subgradient methods for online learning and stochastic optimization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">The Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">999999</span>, <span class="ltx_text ltx_bib_pages"> pp. 2121–2159</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS4.p2" title="3.4 Max-Margin Training ‣ 3 Max-Margin Tensor Neural Network ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.4</span></a>.
+</span></li>
+<li id="bib.bib25" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Emerson</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The second international chinese word segmentation bakeoff</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">133</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.SS1.p1" title="4.1 Data and Model Selection ‣ 4 Experiment ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib27" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Graff and K. Chen</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Chinese gigaword</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">LDC Catalog No.: LDC2003T09, ISBN</span> <span class="ltx_text ltx_bib_volume">1</span>, <span class="ltx_text ltx_bib_pages"> pp. 58563–230</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS3.p1" title="4.3 Unsupervised Pre-training ‣ 4 Experiment ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. E. Hinton</span><span class="ltx_text ltx_bib_year">(1986)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning distributed representations of concepts</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1–12</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p1" title="2.1 Lookup Table ‣ 2 Conventional Neural Network ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib30" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Krizhevsky and G. E. Hinton</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Factored 3-way restricted boltzmann machines for modeling natural images</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 621–628</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p1" title="3.2 Tensor Neural Network ‣ 3 Max-Margin Tensor Neural Network ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib32" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Lafferty, A. McCallum and F. C. Pereira</span><span class="ltx_text ltx_bib_year">(2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Conditional random fields: probabilistic models for segmenting and labeling sequence data</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p1" title="4.2 Experiment Results ‣ 4 Experiment ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib35" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Z. Li and M. Sun</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Punctuation as implicit annotations for chinese word segmentation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">35</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 505–512</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p1" title="5 Related Work ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Mansur, W. Pei and B. Chang</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Feature-based neural language model and chinese word segmentation</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS3.p1" title="2.3 Model Training and Inference ‣ 2 Conventional Neural Network ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>,
+<a href="#S2.SS3.p2" title="2.3 Model Training and Inference ‣ 2 Conventional Neural Network ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>,
+<a href="#S4.SS3.p1" title="4.3 Unsupervised Pre-training ‣ 4 Experiment ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>,
+<a href="#S4.SS4.p1" title="4.4 Minimal Feature Engineering ‣ 4 Experiment ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.4</span></a>,
+<a href="#S4.SS4.p2" title="4.4 Minimal Feature Engineering ‣ 4 Experiment ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.4</span></a>,
+<a href="#S4.T5" title="Table 5 ‣ 4.2 Experiment Results ‣ 4 Experiment ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>,
+<a href="#S5.p1" title="5 Related Work ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Mikolov, K. Chen, G. Corrado and J. Dean</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Efficient estimation of word representations in vector space</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">arXiv preprint arXiv:1301.3781</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p1" title="2.1 Lookup Table ‣ 2 Conventional Neural Network ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>,
+<a href="#S4.SS3.p1" title="4.3 Unsupervised Pre-training ‣ 4 Experiment ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Mikolov, W. Yih and G. Zweig</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Linguistic regularities in continuous space word representations</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 746–751</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS3.p1" title="4.3 Unsupervised Pre-training ‣ 4 Experiment ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+<li id="bib.bib31" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Ranzato, A. Krizhevsky and G. E. Hinton</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Factored 3-way restricted boltzmann machines for modeling natural images</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p3" title="5 Related Work ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. D. Ratliff, J. A. Bagnell and M. A. Zinkevich</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">(Online) subgradient methods for structured prediction</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS4.p2" title="3.4 Max-Margin Training ‣ 3 Max-Margin Tensor Neural Network ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.4</span></a>.
+</span></li>
+<li id="bib.bib28" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Salakhutdinov, A. Mnih and G. Hinton</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Restricted boltzmann machines for collaborative filtering</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 791–798</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p1" title="3.2 Tensor Neural Network ‣ 3 Max-Margin Tensor Neural Network ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>,
+<a href="#S5.p3" title="5 Related Work ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Schwenk, A. Rousseau and M. Attik</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Large, pruned or continuous space language models on a gpu for statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 11–19</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p1" title="2.1 Lookup Table ‣ 2 Conventional Neural Network ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Socher, J. Bauer, C. D. Manning and A. Y. Ng</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Parsing with compositional vector grammars</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS4.p2" title="3.4 Max-Margin Training ‣ 3 Max-Margin Tensor Neural Network ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.4</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Socher, A. Perelygin, J. Y. Wu, J. Chuang, C. D. Manning, A. Y. Ng and C. Potts</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Recursive deep models for semantic compositionality over a sentiment treebank</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p1" title="3.2 Tensor Neural Network ‣ 3 Max-Margin Tensor Neural Network ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>,
+<a href="#S5.p2" title="5 Related Work ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib34" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">W. Sun and J. Xu</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Enhancing chinese word segmentation using unlabeled data</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 970–979</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p1" title="5 Related Work ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib33" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">X. Sun, H. Wang and W. Li</span><span class="ltx_text ltx_bib_year">(2012-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Fast online training with frequency-adaptive learning rates for chinese word segmentation and new word detection</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Jeju Island, Korea</span>, <span class="ltx_text ltx_bib_pages"> pp. 253–262</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P12-1027" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS4.p2" title="4.4 Minimal Feature Engineering ‣ 4 Experiment ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.4</span></a>,
+<a href="#S4.T6" title="Table 6 ‣ 4.4 Minimal Feature Engineering ‣ 4 Experiment ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib14" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">X. Sun, Y. Zhang, T. Matsuzaki, Y. Tsuruoka and J. Tsujii</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A discriminative latent variable chinese segmenter with hybrid word/character information</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 56–64</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.T6" title="Table 6 ‣ 4.4 Minimal Feature Engineering ‣ 4 Experiment ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib15" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Taskar, V. Chatalbashev, D. Koller and C. Guestrin</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning structured prediction models: a large margin approach</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 896–903</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS4.p1" title="3.4 Max-Margin Training ‣ 3 Max-Margin Tensor Neural Network ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.4</span></a>.
+</span></li>
+<li id="bib.bib36" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[28]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Tseng, P. Chang, G. Andrew, D. Jurafsky and C. Manning</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A conditional random field word segmenter for sighan bakeoff 2005</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">171</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.T6" title="Table 6 ‣ 4.4 Minimal Feature Engineering ‣ 4 Experiment ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib16" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[29]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Van de Cruys, T. Poibeau and A. Korhonen</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A tensor-based factorization model of semantic compositionality</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1142–1151</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p3" title="5 Related Work ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[30]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Wang and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Effect of non-linear deep architecture in sequence labeling</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p2" title="4.2 Experiment Results ‣ 4 Experiment ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib19" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[31]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Xue</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Chinese word segmentation as character tagging</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics and Chinese Language Processing</span> <span class="ltx_text ltx_bib_volume">8</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 29–48</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p1" title="5 Related Work ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib17" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[32]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Zhang, H. Wang, X. Sun and M. Mansur</span><span class="ltx_text ltx_bib_year">(2013-10)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Exploring representations from unlabeled data with co-training for Chinese word segmentation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Seattle, Washington, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 311–321</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/D13-1031" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS4.p2" title="4.4 Minimal Feature Engineering ‣ 4 Experiment ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.4</span></a>,
+<a href="#S4.T6" title="Table 6 ‣ 4.4 Minimal Feature Engineering ‣ 4 Experiment ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[33]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Zhang, G. Kikui and E. Sumita</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Subword-based tagging by conditional random fields for chinese word segmentation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 193–196</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.T6" title="Table 6 ‣ 4.4 Minimal Feature Engineering ‣ 4 Experiment ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib21" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[34]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Zhang and S. Clark</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Chinese segmentation with a word-based perceptron algorithm</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">45</span>, <span class="ltx_text ltx_bib_pages"> pp. 840</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.T6" title="Table 6 ‣ 4.4 Minimal Feature Engineering ‣ 4 Experiment ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib22" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[35]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">X. Zheng, H. Chen and T. Xu</span><span class="ltx_text ltx_bib_year">(2013-10)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Deep learning for Chinese word segmentation and POS tagging</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Seattle, Washington, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 647–657</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/D13-1061" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS3.p2" title="2.3 Model Training and Inference ‣ 2 Conventional Neural Network ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>,
+<a href="#S3.SS1.p1" title="3.1 Tag Embedding ‣ 3 Max-Margin Tensor Neural Network ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>,
+<a href="#S4.SS2.p3" title="4.2 Experiment Results ‣ 4 Experiment ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>,
+<a href="#S4.SS3.p1" title="4.3 Unsupervised Pre-training ‣ 4 Experiment ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>,
+<a href="#S4.T5" title="Table 5 ‣ 4.2 Experiment Results ‣ 4 Experiment ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>,
+<a href="#S5.p1" title="5 Related Work ‣ Max-Margin Tensor Neural Network for Chinese Word Segmentation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 17:25:42 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

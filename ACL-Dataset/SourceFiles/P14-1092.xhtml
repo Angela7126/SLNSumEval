@@ -1,0 +1,1072 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Discourse Complements Lexical Semanticsfor Non-factoid Answer Reranking</title>
+<!--Generated on Tue Jun 10 18:24:52 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Discourse Complements Lexical Semantics
+<br class="ltx_break"/>for Non-factoid Answer Reranking</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Peter Jansen and Mihai Surdeanu 
+<br class="ltx_break"/>University of Arizona 
+<br class="ltx_break"/>Tucson, AZ, USA 
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">pajansen,msurdeanu</span>} 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">@email.arizona.edu</span> 
+<br class="ltx_break"/>
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Peter Clark 
+<br class="ltx_break"/>Allen Institute for Artificial Intelligence 
+<br class="ltx_break"/>Seattle, WA, USA 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">peterc@allenai.org</span> 
+<br class="ltx_break"/>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">We propose a robust answer reranking model for non-factoid questions that integrates lexical semantics with discourse information, driven by two representations of discourse: a shallow representation centered around discourse markers, and a deep one based on Rhetorical Structure Theory.
+We evaluate the proposed model on two corpora from different genres and domains: one from Yahoo! Answers and one from the biology domain, and two types of non-factoid questions: manner and reason. We experimentally demonstrate that the discourse structure of non-factoid answers provides information that is complementary to lexical semantic similarity between question and answer, improving performance up to 24% (relative) over a state-of-the-art model that exploits lexical semantic similarity alone. We further demonstrate excellent domain transfer of discourse information, suggesting these discourse features have general utility to non-factoid question answering.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Driven by several international evaluations and workshops such as the Text
+REtrieval Conference (TREC)<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup><a href="http://trec.nist.gov" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://trec.nist.gov</span></a></span></span></span> and the Cross Language Evaluation Forum (CLEF),<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup><a href="http://www.clef-initiative.eu" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://www.clef-initiative.eu</span></a></span></span></span> the task of question answering (QA) has received considerable attention. However, most of this effort has focused on factoid questions rather than more complex non-factoid (NF) questions, such as manner, reason, or causation questions. Moreover, the vast majority of QA models explore only
+local linguistic structures, such as syntactic dependencies or semantic role frames, which are generally restricted to individual sentences. This is problematic for NF QA, where questions are answered
+not by atomic facts, but
+by larger cross-sentence conceptual structures that convey the desired answers. Thus, to answer NF questions, one needs a model of what these answer structures look like.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Driven by this observation, our main hypothesis is that the discourse structure of NF answers provides complementary information to state-of-the-art QA models that measure the similarity (either lexical and/or semantic) between question and answer.
+We propose a novel answer reranking (AR) model that combines lexical semantics (LS) with discourse information, driven by two representations of discourse: a shallow representation centered around discourse markers and surface text information, and a deep one based on the Rhetorical Structure Theory (RST) discourse framework <cite class="ltx_cite">[<a href="#bib.bib32" title="Rhetorical structure theory: toward a functional theory of text organization" class="ltx_ref">7</a>]</cite>.
+To the best of our knowledge, this work is the first to systematically explore within- and cross-sentence structured discourse features for NF AR. The contributions of this work are:</p>
+<ol id="I1" class="ltx_enumerate">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">1.</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p">We demonstrate that modeling discourse is greatly beneficial for NF AR for two types of NF questions, manner (<span class="ltx_text ltx_font_italic">“how”</span>) and reason (<span class="ltx_text ltx_font_italic">“why”</span>), across two large datasets from different genres and domains – one from the community question-answering (CQA) site of Yahoo! Answers<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup><a href="http://answers.yahoo.com" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://answers.yahoo.com</span></a></span></span></span>, and one from a biology textbook.
+Our results show statistically significant improvements of up to 24% on top of state-of-the-art LS models <cite class="ltx_cite">[<a href="#bib.bib67" title="Question answering using enhanced lexical semantic models" class="ltx_ref">22</a>]</cite>.</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">2.</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p">We demonstrate that both shallow and deep discourse representations are useful, and, in general, their combination performs best.</p>
+</div></li>
+<li id="I1.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">3.</span> 
+<div id="I1.i3.p1" class="ltx_para">
+<p class="ltx_p">We show that discourse-based QA models using inter-sentence features considerably outperform single-sentence models when answers span multiple sentences.</p>
+</div></li>
+<li id="I1.i4" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">4.</span> 
+<div id="I1.i4.p1" class="ltx_para">
+<p class="ltx_p">We demonstrate good domain transfer performance between these corpora, suggesting that answer discourse structures are largely independent of domain, and thus broadly applicable to NF QA.</p>
+</div></li>
+</ol>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related Work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">The body of work on factoid QA is too broad to be discussed here (see, e.g., the TREC workshops for an overview). However, in the context of LS, Yih et al. <cite class="ltx_cite">[<a href="#bib.bib67" title="Question answering using enhanced lexical semantic models" class="ltx_ref">22</a>]</cite> recently addressed the problem of answer sentence selection and demonstrated that LS models, including recurrent neural network language models (RNNLM), have a higher contribution to overall performance than exploiting syntactic analysis. We extend this work by showing that discourse models coupled with LS achieve the best performance for NF AR.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">The related work on NF QA is considerably more scarce, but several trends are clear. First, most NF QA approaches tend to use multiple similarity models (information retrieval or alignment) as features in discriminative rerankers <cite class="ltx_cite">[<a href="#bib.bib30" title="Statistical machine translation for query expansion in answer retrieval" class="ltx_ref">16</a>, <a href="#bib.bib18" title="Corpus-based question answering for why-questions" class="ltx_ref">5</a>, <a href="#bib.bib47" title="What is not in the bag of words for why-qa?" class="ltx_ref">19</a>, <a href="#bib.bib48" title="Learning to rank answers to non-factoid questions from web collections" class="ltx_ref">17</a>]</cite>.
+Second, and more relevant to this work, all these approaches focus either on bag-of-word representations or linguistic structures that are restricted to single sentences (e.g., syntactic dependencies, semantic roles, or standalone discourse cue phrases).</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">Answering <span class="ltx_text ltx_font_italic">how</span> questions using a single discourse marker, <span class="ltx_text ltx_font_italic">by</span>, was previously explored by Prager et al. <cite class="ltx_cite">[<a href="#bib.bib60" title="Question-answering by predictive annotation" class="ltx_ref">14</a>]</cite>, who searched for <span class="ltx_text ltx_font_italic">by</span> followed by a present participle (e.g. <span class="ltx_text ltx_font_italic">by *ing</span>) to elevate answer candidates in a ranking framework. Verberne et al. <cite class="ltx_cite">[<a href="#bib.bib61" title="Learning to rank for why-question answering" class="ltx_ref">20</a>]</cite> extracted 47 cue phrases such as <span class="ltx_text ltx_font_italic">because</span> from a small collection of web documents, and used the cosine similarity between an answer candidate and a bag of words containing these cue phrases as a single feature in their reranking model for non-factoid <span class="ltx_text ltx_font_italic">why</span> QA. Extending this, Oh et al. <cite class="ltx_cite">[<a href="#bib.bib66" title="Why-question answering using intra- and inter-sentential causal relations" class="ltx_ref">12</a>]</cite> built a classifier to identify causal relations using a small set of cue phrases (e.g., <span class="ltx_text ltx_font_italic">because</span> and <span class="ltx_text ltx_font_italic">is caused by</span>). This classifier was then used to extract instances of causal relations in answer candidates, which were turned into features in a reranking model for Japanense <span class="ltx_text ltx_font_italic">why</span> QA.</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p">In terms of discourse parsing, Verberne et al. <cite class="ltx_cite">[<a href="#bib.bib62" title="Discourse-based answering of why-questions" class="ltx_ref">18</a>]</cite> conducted an initial evaluation of the utility of RST structures to <span class="ltx_text ltx_font_italic">why</span> QA by evaluating performance on a small sample of seven WSJ articles drawn from the RST Treebank <cite class="ltx_cite">[<a href="#bib.bib63" title="Building a Discourse-Tagged Corpus in the Framework of Rhetorical Structure Theory" class="ltx_ref">1</a>]</cite>. They later concluded that while discourse parsing appears to be useful for QA, automated discourse parsing tools are required before this approach can be tested at scale <cite class="ltx_cite">[<a href="#bib.bib47" title="What is not in the bag of words for why-qa?" class="ltx_ref">19</a>]</cite>.
+Inspired by this previous work and recent work in discourse parsing <cite class="ltx_cite">[<a href="#bib.bib53" title="Text-level discourse parsing with rich linguistic features" class="ltx_ref">3</a>]</cite>, our work is the first to systematically explore structured discourse features driven by several discourse representations, combine discourse with lexical semantic models, and evaluate these representations on thousands of questions using both in-domain and cross-domain experiments.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Approach</h2>
+
+<div id="S3.F1" class="ltx_figure"><img src="P14-1092/image001.png" id="S3.F1.g1" class="ltx_graphics ltx_centering" width="266" height="199" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span><span class="ltx_text ltx_font_small">Architecture of the reranking framework for QA.</span></div>
+</div>
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">The proposed answer reranking component is embedded in the QA framework illustrated in Figure <a href="#S3.F1" title="Figure 1 ‣ 3 Approach ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+This framework functions in two distinct scenarios, which use the same AR model, but differ in the way candidate answers are retrieved:</p>
+<p class="ltx_p ltx_align_left"><span class="ltx_text ltx_font_bold">CQA:</span></p>
+<p class="ltx_p">In this scenario, the task is defined as reranking all the user-posted answers for a particular question to boost the community-selected best answer to the top position. This is a commonly used setup in the CQA community <cite class="ltx_cite">[<a href="#bib.bib68" title="Ranking community answers by modeling question-answer relationships via analogical reasoning" class="ltx_ref">21</a>]</cite>.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>Although most of these works use shallow textual features and focus mostly on meta data, e.g., number of votes for a particular answer. Here we use no meta data and rely solely on linguistic features.</span></span></span> Thus, for a given question, all its answers are fetched from the answer collection, and an initial ranking is constructed based on the cosine similarity between theirs and the question’s lemma vector representations, with lemmas weighted using <span class="ltx_text ltx_font_italic">tf.idf</span> (Ch. 6, <cite class="ltx_cite">[<a href="#bib.bib56" title="Introduction to information retrieval" class="ltx_ref">8</a>]</cite>).</p>
+<p class="ltx_p ltx_align_left"><span class="ltx_text ltx_font_bold">Traditional QA:</span></p>
+<p class="ltx_p">In this scenario answers are dynamically constructed from larger documents <cite class="ltx_cite">[<a href="#bib.bib69" title="High-performance, open-domain question answering from large text collections" class="ltx_ref">13</a>]</cite>.
+We use this setup to answer questions from a biology textbook, where each section is indexed as a standalone document, and
+each paragraph in a given document is considered as a candidate answer.
+We implemented the document indexing and retrieval stage using Lucene<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup><a href="http://lucene.apache.org" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://lucene.apache.org</span></a></span></span></span>. The candidate answers are scored using a linear interpolation of two cosine similarity scores: one between the entire parent document and question (to model global context), and a second between the answer candidate and question (for local context).<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">6</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">6</sup>We empirically observed that this combination of scores performs better than using solely the cosine similarity between the answer and question.</span></span></span> Because the number of answer candidates is typically large (e.g., equal to the number of paragraphs in the textbook), we return the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m1" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math> top candidates with the highest scores.</p>
+</div>
+<div id="S3.F2" class="ltx_figure"><img src="P14-1092/image002.png" id="S3.F2.g1" class="ltx_graphics ltx_centering" width="567" height="138" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 2: </span><span class="ltx_text ltx_font_bold ltx_font_small">Top:<span class="ltx_text ltx_font_medium"> Example feature generation for the discourse marker model, for one question (Q) and one answer candidate (AC).
+Answer candidates are searched for discourse markers (<span class="ltx_text ltx_font_italic">italic</span>) and question word matches (</span>bold<span class="ltx_text ltx_font_medium">), which are used to generate features both within-sentence (SR0), and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.m2" class="ltx_Math" alttext="\pm" display="inline"><mo mathsize="normal" mathvariant="normal" stretchy="false">±</mo></math>1 sentence (SR1).
+The actual DMM exhaustively generates features for all markers and all sentence ranges. Here we show just a few for brevity.
+</span>Bottom:<span class="ltx_text ltx_font_medium"> Example feature generation for the discourse parser model using the output of an actual discourse parser. The DPM creates one feature for each individual discourse relation.
+</span></span></div>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">These answer candidates are then passed to the answer reranking component, the focus of this work.
+AR analyzes the candidates using more expensive techniques to extract discourse and LS features (detailed in §<a href="#S4" title="4 Models and Features ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>), and these features are then used in concert with a learning framework to rerank the candidates and elevate correct answers to higher positions.
+For the learning framework, we used SVM<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m1" class="ltx_Math" alttext="{}^{rank}" display="inline"><msup><mi/><mrow><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>k</mi></mrow></msup></math>, a variant of Support Vector Machines for structured output adapted to ranking problems.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">7</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">7</sup> <a href="http://www.cs.cornell.edu/people/tj/svm_light/svm_rank.html" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://www.cs.cornell.edu/people/tj/svm_light/svm_rank.html</span></a></span></span></span>
+In addition to these features, each reranker also includes a single feature containing the score of each candidate, as computed by the above candidate retrieval (CR) component.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">8</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">8</sup>Including these scores as features in the reranker model is a common strategy that ensures that the reranker takes advantage of the analysis already performed by the CR model.</span></span></span></p>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Models and Features</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">We propose two separate discourse representation schemes – one shallow, centered around discourse markers, and one deep, based on RST.</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Discourse Marker Model</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">The discourse marker model (DMM) extracts cross-sentence discourse structures centered around a discourse marker.
+This extraction process is illustrated in the top part of Figure <a href="#S3.F2" title="Figure 2 ‣ 3 Approach ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+These structures are represented using three components: (1) A <span class="ltx_text ltx_font_bold">discourse marker</span> from Daniel Marcu’s list (see Appendix B in Marcu <cite class="ltx_cite">[<a href="#bib.bib59" title="The rhetorical parsing, summarization, and generation of natural language texts" class="ltx_ref">9</a>]</cite>), that serves as a divisive boundary between sentences. Examples of these markers include <span class="ltx_text ltx_font_italic">and, in, that, for, if, as, not, by,</span> and <span class="ltx_text ltx_font_italic">but</span>; (2) <span class="ltx_text ltx_font_bold">two marker arguments</span>, i.e., text segments before and after the marker, labeled to indicate if they are related to the question text or not; and (3) <span class="ltx_text ltx_font_bold">a sentence range</span> around the marker, which defines the length of these segments (e.g., <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m1" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math>2 sentences).
+For example, a marker feature may take the form of:
+<span class="ltx_text ltx_font_typewriter ltx_font_small">QSEG BY OTHER SR2</span>,
+which means that the the marker <span class="ltx_text ltx_font_italic">by</span> has been detected in an answer candidate. Further, the text preceeding <span class="ltx_text ltx_font_italic">by</span> matches text from the question (and is therefore labeled <span class="ltx_text ltx_font_typewriter ltx_font_small">QSEG</span>), while the text after <span class="ltx_text ltx_font_italic">by</span> differs considerably from the question text, and is labeled <span class="ltx_text ltx_font_typewriter ltx_font_small">OTHER</span>. In this particular example, the scope of this similarity matching occurs over a span of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m2" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math>2 sentences around the marker.</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">Note that our marker arguments are akin to EDUs in RST, but, in this shallow representation, they are simply constructed around discourse markers and bound by an arbitrary sentence range.</p>
+</div>
+<div id="S4.SS1.p3" class="ltx_para">
+<p class="ltx_p ltx_align_left"><span class="ltx_text ltx_font_bold">Argument Labels:</span></p>
+</div>
+<div id="S4.SS1.p4" class="ltx_para">
+<p class="ltx_p">We label marker arguments based on their similarity to question content.
+If text before or after a marker out to a given sentence range matches the entire text of the question (with a cosine similarity score larger than a threshold), that argument takes on the label <span class="ltx_text ltx_font_typewriter ltx_font_small">QSEG</span>, or <span class="ltx_text ltx_font_typewriter ltx_font_small">OTHER</span> otherwise.
+In this way the features are only partially lexicalized with the discourse markers. Argument labels indicate only if lemmas from the question were found in a discourse structure present in an answer candidate, and do not speak to the specific lemmas that were found. We show in §<a href="#S5" title="5 Experiments ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> that these lightly lexicalized features perform well in domain and transfer between domains. We explore other argument labeling strategies in §<a href="#S5.SS7" title="5.7 Integrating Discourse and LS ‣ 5 Experiments ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.7</span></a>.</p>
+</div>
+<div id="S4.SS1.p5" class="ltx_para">
+<p class="ltx_p ltx_align_left"><span class="ltx_text ltx_font_bold">Feature Values:</span></p>
+</div>
+<div id="S4.SS1.p6" class="ltx_para">
+<p class="ltx_p">Our reranking framework uses real-valued features.
+The values of the discourse features are the mean of the similarity scores (e.g., cosine similarity using <span class="ltx_text ltx_font_italic">tf.idf</span> weighting) of the two marker arguments and the corresponding question. For example, the value of the <span class="ltx_text ltx_font_typewriter ltx_font_small">QSEG BY QSEG SR1</span> feature in Figure <a href="#S3.F2" title="Figure 2 ‣ 3 Approach ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> is the average of the cosine similarities of the question text with the answer texts before/after <span class="ltx_text ltx_font_italic">by</span> out to a distance of one sentence before/after the marker.</p>
+</div>
+<div id="S4.SS1.p7" class="ltx_para">
+<p class="ltx_p">It is important to note that these discourse features are more expressive than features based on discourse markers alone <cite class="ltx_cite">[<a href="#bib.bib18" title="Corpus-based question answering for why-questions" class="ltx_ref">5</a>, <a href="#bib.bib47" title="What is not in the bag of words for why-qa?" class="ltx_ref">19</a>]</cite>. First, the argument sequences used here capture cross-sentence discourse structures. Second, these features model the intensity of the match between the text surrounding the discourse structure and the question text using both the assigned argument labels and the feature values.</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Discourse Parser Model</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">The discourse parser model (DPM) is based on the RST discourse framework <cite class="ltx_cite">[<a href="#bib.bib32" title="Rhetorical structure theory: toward a functional theory of text organization" class="ltx_ref">7</a>]</cite>.
+In RST, the text is segmented into a sequence of non-overlapping fragments called elementary discourse units (EDUs), and binary discourse relations recursively connect neighboring units. Most relations are <span class="ltx_text ltx_font_italic">hypotactic</span>, where one of the units in the relation (the <span class="ltx_text ltx_font_italic">nucleus</span>) is considered more important than the other (the <span class="ltx_text ltx_font_italic">satellite</span>). A few relations are <span class="ltx_text ltx_font_italic">paratactic</span>, where both participants have equal importance. In the bottom part of Figure <a href="#S3.F2" title="Figure 2 ‣ 3 Approach ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>, we show hypotactic relations as directed arrows, from the nucleus to the satellite.
+In this work, we construct the RST discourse trees using the parser of Feng and Hirst <cite class="ltx_cite">[<a href="#bib.bib53" title="Text-level discourse parsing with rich linguistic features" class="ltx_ref">3</a>]</cite>.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">Relying on a proper discourse framework facilitates the modeling of the numerous implicit relations that are not driven by discourse markers (see Ch. 21 in Jurafsky and Martin <cite class="ltx_cite">[<a href="#bib.bib58" title="Speech and language processing, second edition" class="ltx_ref">6</a>]</cite>). However, this also introduces noise because discourse analysis is a complex task and discourse parsers are not perfect.
+To mitigate this, we used a simple feature generation strategy, which creates one feature for each individual discourse relation by concatenating the relation type with the labels of the discourse units participating in it.
+To this end, for every relation, we extract the entire text dominated by each of its arguments, and we generate labels for the two participants in the relation using the same strategy as the DMM (based on the similarity with the question content).
+Similar to the DMM, these features take real values obtained by averaging the cosine similarity of the arguments with the question content.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">9</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">9</sup>We investigated more complex features, e.g., by exploring depths of two and three in the discourse tree, and also models that relied on tree kernels over these trees, but none improved upon this simple representation. This suggests that, in the domains explored here, there is a degree of noise introduced by the discourse parser, and the simple features proposed here are the best strategy to avoid overfitting on it.</span></span></span> Fig. <a href="#S3.F2" title="Figure 2 ‣ 3 Approach ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> shows several such features, created around two RST <span class="ltx_text ltx_font_typewriter ltx_font_small">Elaboration</span> relations, indicating that the latter sentences expand on the information at the beginning of the answer.
+Other common relations include <span class="ltx_text ltx_font_typewriter ltx_font_small">Attribution</span>, <span class="ltx_text ltx_font_typewriter ltx_font_small">Contrast</span>, <span class="ltx_text ltx_font_typewriter ltx_font_small">Background</span>, and <span class="ltx_text ltx_font_typewriter ltx_font_small">Evaluation</span>.</p>
+</div>
+</div>
+<div id="S4.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.3 </span>Lexical Semantics Model</h3>
+
+<div id="S4.SS3.p1" class="ltx_para">
+<p class="ltx_p">Inspired by the work of Yih et al. <cite class="ltx_cite">[<a href="#bib.bib67" title="Question answering using enhanced lexical semantic models" class="ltx_ref">22</a>]</cite>, we include lexical semantics in our reranking model.
+Several of their proposed models rely on proprietary data; here we focus on LS models that rely on open-source data and frameworks.
+In particular, we use the recurrent neural network language model (RNNLM) of Mikolov et al. <cite class="ltx_cite">[<a href="#bib.bib71" title="Efficient estimation of word representations in vector space" class="ltx_ref">10</a>, <a href="#bib.bib70" title="Recurrent neural network based language model" class="ltx_ref">11</a>]</cite>.
+Like any language model, a RNNLM estimates the probability of observing a word given the preceding context, but, in this process, it learns word embeddings into a latent, conceptual space with a fixed number of dimensions.
+Consequently, related words tend to have vectors that are close to each other in this space.</p>
+</div>
+<div id="S4.SS3.p2" class="ltx_para">
+<p class="ltx_p">We derive two LS measures from these vectors, which are then are included as features in the reranker. The first is a measure of the overall LS similarity of the question and answer candidate, which is computed as the cosine similarity between the two composite vectors of the question and the answer candidate. These composite vectors are assembled by summing the vectors for individual question (or answer candidate) words, and re-normalizing this composite vector to unit length. Both this overall similarity score, as well as the average pairwise cosine similarity between each word in the question and answer candidate, serve as features.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Experiments</h2>
+
+<div id="S5.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.1 </span>Data</h3>
+
+<div id="S5.SS1.p1" class="ltx_para">
+<p class="ltx_p">To test the utility of our approach, we experimented with the two QA scenarios introduced in §<a href="#S3" title="3 Approach ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>
+using the following two datasets:</p>
+</div>
+<div id="S5.SS1.p2" class="ltx_para">
+<p class="ltx_p ltx_align_left"><span class="ltx_text ltx_font_bold">Yahoo! Answers Corpus (YA):</span></p>
+</div>
+<div id="S5.SS1.p3" class="ltx_para">
+<p class="ltx_p">Yahoo! Answers<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">10</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">10</sup><a href="http://answers.yahoo.com" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://answers.yahoo.com</span></a></span></span></span> is an open domain community-generated QA site, with questions and answers that span formal and precise to informal and ambiguous language. Due to the speed limitations of the discourse parser, we randomly drew 10,000 QA pairs from the corpus of <span class="ltx_text ltx_font_italic">how</span> questions described by Surdeanu et al. <cite class="ltx_cite">[<a href="#bib.bib48" title="Learning to rank answers to non-factoid questions from web collections" class="ltx_ref">17</a>]</cite> using their filtering criteria, with the additional criterion that answers had to contain at least four community-generated answers, one of which was voted as the top answer. The number of answers to each question ranged from 4 to over 50, with the average 9.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">11</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">11</sup>Note that our experimental setup, i.e., reranking all the answers provided for each question, is different from that of Surdeanu et al. For each question, they retrieved candidate answers from all answers voted as best for some question in the collection. The setup in this paper, commonly used in the CQA community <cite class="ltx_cite">[<a href="#bib.bib68" title="Ranking community answers by modeling question-answer relationships via analogical reasoning" class="ltx_ref">21</a>]</cite>, is more relevant here because it includes both high and low quality answers.</span></span></span></p>
+</div>
+<div id="S5.SS1.p4" class="ltx_para">
+<p class="ltx_p ltx_align_left"><span class="ltx_text ltx_font_bold">Biology Textbook Corpus (Bio):</span></p>
+</div>
+<div id="S5.SS1.p5" class="ltx_para">
+<p class="ltx_p">This corpus focuses on the domain of cellular biology, and consists of 185 <span class="ltx_text ltx_font_italic">how</span> and 193 <span class="ltx_text ltx_font_italic">why</span> questions hand-crafted by a domain expert. Each question has one or more gold answers identified in Campbell’s Biology  <cite class="ltx_cite">[<a href="#bib.bib64" title="Campbell biology" class="ltx_ref">15</a>]</cite>, a popular undergraduate text. The entire biology text (at paragraph granularity) serves as the possible set of answers. Note that while our system retrieves answers at paragraph granularity, the expert was not constrained in any way during the annotation process, so gold answers might be smaller than a paragraph or span multiple paragraphs. This complicates evaluation metrics on this dataset (see §<a href="#S5.SS3" title="5.3 Evaluation Metrics ‣ 5 Experiments ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.3</span></a>).</p>
+</div>
+<div id="S5.SS1.p6" class="ltx_para">
+<p class="ltx_p">For the YA CQA corpora, 50% of QA pairs were used for training, 25% for development, and 25% for test. Because of the small size of the Bio corpus, it was evaluated using 5-fold cross-validation, with three folds for training, one for development, and one for test.</p>
+</div>
+<div id="S5.SS1.p7" class="ltx_para">
+<p class="ltx_p">The following additional resources were used:</p>
+<p class="ltx_p ltx_align_left"><span class="ltx_text ltx_font_bold">Discourse Markers:</span></p>
+<p class="ltx_p">A set of 75 high-frequency<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">12</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">12</sup>We selected all cue phrases with more than 100 occurrences in the Brown corpus.</span></span></span> single-word discourse markers were extracted from Marcu’s <cite class="ltx_cite">[<a href="#bib.bib59" title="The rhetorical parsing, summarization, and generation of natural language texts" class="ltx_ref">9</a>]</cite> list of cue phrases, and used for feature generation in DMM. These discourse markers are extremely common in the answer corpora – for example, the YA corpus contains
+an average of 7 markers per answer.</p>
+<p class="ltx_p ltx_align_left"><span class="ltx_text ltx_font_bold">Discourse Trees:</span></p>
+<p class="ltx_p">We generated all discourse trees using the parser of Feng and Hirst <cite class="ltx_cite">[<a href="#bib.bib53" title="Text-level discourse parsing with rich linguistic features" class="ltx_ref">3</a>]</cite>. For YA, we parsed entire answers. For Bio, we parsed individual paragraphs. Note that, because these domains are considerably different from the RST Treebank, the parser fails to produce a tree on a large number of answer candidates: 6.2% for YA, and 41.1% for Bio. In these situations, we constructed artificial discourse trees using a right-attachment heuristic and a single relation label <span class="ltx_text ltx_font_typewriter ltx_font_small">X</span>.</p>
+<p class="ltx_p ltx_align_left"><span class="ltx_text ltx_font_bold">Lexical Semantics:</span></p>
+<p class="ltx_p">We trained two different RNNLMs for this work. First, for the YA experiments we trained an open-domain RNNLM using the entire Gigaword corpus of approximately 4G words.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">13</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">13</sup>LDC catalog number LDC2012T21</span></span></span> For the Bio experiments, we trained a domain specific RNNLM over a concatenation of the textbook and a subset of Wikipedia specific to biology. The latter was created by extracting: (a) pages matching a word/phrase in a glossary of biology (derived from the textbook); plus (b) pages hyperlinked from (a) that are also tagged as being in a small set of (hand-selected) biology-related categories. The combined dataset contains 7.7M words. For all RNNLMs we used 200-dimensional vectors.</p>
+</div>
+</div>
+<div id="S5.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.2 </span>Hyper Parameter Tuning</h3>
+
+<div id="S5.SS2.p1" class="ltx_para">
+<p class="ltx_p">The following hyper parameters were tuned using grid search to maximize P@1 on each development partition:
+(a) the segment matching thresholds that determine the minimum cosine similarity between an answer segment and a question for the segment to be labeled <span class="ltx_text ltx_font_typewriter ltx_font_small">QSEG</span>; and (b) SVM<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m1" class="ltx_Math" alttext="{}^{rank}" display="inline"><msup><mi/><mrow><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>k</mi></mrow></msup></math>’s regularization parameter C.
+For all experiments, the sentence range parameter (<span class="ltx_text ltx_font_typewriter ltx_font_small">SRx</span>) for DMM ranged from 0 (within sentence) to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m2" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math>3 sentences.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">14</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">14</sup>This was only limited to reduce the combinatorial expansion of feature generation, and in principle could be set much broader.</span></span></span></p>
+</div>
+<div id="S5.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td"/>
+<th class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">P@1</span></td>
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">MRR</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:2.8pt;" width="2.8pt"><span class="ltx_text ltx_font_script">#</span></th>
+<th class="ltx_td ltx_align_justify" style="width:71.1pt;" width="71.1pt"><span class="ltx_text ltx_font_script">Model/Features</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">P@1</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">Impr.</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">MRR</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">Impr.</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:2.8pt;" width="2.8pt"><span class="ltx_text ltx_font_script"></span></th>
+<th class="ltx_td ltx_align_justify ltx_border_tt" style="width:71.1pt;" width="71.1pt"><span class="ltx_text ltx_font_script">YA Corpus</span></th>
+<td class="ltx_td ltx_border_tt"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:2.8pt;" width="2.8pt"><span class="ltx_text ltx_font_script">1</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:71.1pt;" width="71.1pt"><span class="ltx_text ltx_font_script">Random Baseline</span></th>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_script">14.29</span></td>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_script">26.12</span></td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:2.8pt;" width="2.8pt"><span class="ltx_text ltx_font_script">2</span></th>
+<th class="ltx_td ltx_align_justify" style="width:71.1pt;" width="71.1pt"><span class="ltx_text ltx_font_script">CR Baseline</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">19.57</span></td>
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">43.14</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:2.8pt;" width="2.8pt"><span class="ltx_text ltx_font_script">3</span></th>
+<th class="ltx_td ltx_align_justify" style="width:71.1pt;" width="71.1pt"><span class="ltx_text ltx_font_script">CR + DMM</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">24.05</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m1" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">+23%</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">46.40</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m2" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">+8%</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:2.8pt;" width="2.8pt"><span class="ltx_text ltx_font_script">4</span></th>
+<th class="ltx_td ltx_align_justify" style="width:71.1pt;" width="71.1pt"><span class="ltx_text ltx_font_script">CR + DPM</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">24.29</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m3" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">+24%</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">46.81</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m4" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">+9%</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:2.8pt;" width="2.8pt"><span class="ltx_text ltx_font_script">5</span></th>
+<th class="ltx_td ltx_align_justify" style="width:71.1pt;" width="71.1pt"><span class="ltx_text ltx_font_script">CR + DMM + DPM</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_script">24.81<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m5" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo mathsize="normal" mathvariant="normal" stretchy="false">*</mo></msup></math></span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_script">+27%</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_script">47.10<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m6" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo mathsize="normal" mathvariant="normal" stretchy="false">*</mo></msup></math></span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_script">+9%</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:2.8pt;" width="2.8pt"><span class="ltx_text ltx_font_script">6</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:71.1pt;" width="71.1pt"><span class="ltx_text ltx_font_script">CR + LS Baseline</span></th>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_script">26.57</span></td>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_script">49.31</span></td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:2.8pt;" width="2.8pt"><span class="ltx_text ltx_font_script">7</span></th>
+<th class="ltx_td ltx_align_justify" style="width:71.1pt;" width="71.1pt"><span class="ltx_text ltx_font_script">CR + LS + DMM</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">29.29</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m7" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">+10%</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">50.99</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m8" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">+3%</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:2.8pt;" width="2.8pt"><span class="ltx_text ltx_font_script">8</span></th>
+<th class="ltx_td ltx_align_justify" style="width:71.1pt;" width="71.1pt"><span class="ltx_text ltx_font_script">CR + LS + DPM</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">28.73</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m9" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">+8%</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">50.77</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m10" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">+3%</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:2.8pt;" width="2.8pt"><span class="ltx_text ltx_font_script">9</span></th>
+<th class="ltx_td ltx_align_justify" style="width:71.1pt;" width="71.1pt"><span class="ltx_text ltx_font_script">CR + LS + DMM + DPM</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_script">30.49<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m11" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo mathsize="normal" mathvariant="normal" stretchy="false">*</mo></msup></math></span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_script">+15%</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_script">51.89<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m12" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo mathsize="normal" mathvariant="normal" stretchy="false">*</mo></msup></math></span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_script">+5%</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:2.8pt;" width="2.8pt"/>
+<th class="ltx_td ltx_align_justify" style="width:71.1pt;" width="71.1pt"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:2.8pt;" width="2.8pt"/>
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:71.1pt;" width="71.1pt"><span class="ltx_text ltx_font_script">Bio HOW</span></th>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:2.8pt;" width="2.8pt"><span class="ltx_text ltx_font_script">10</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:71.1pt;" width="71.1pt"><span class="ltx_text ltx_font_script">CR Baseline</span></th>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_script">24.12</span></td>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_script">32.90</span></td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:2.8pt;" width="2.8pt"><span class="ltx_text ltx_font_script">11</span></th>
+<th class="ltx_td ltx_align_justify" style="width:71.1pt;" width="71.1pt"><span class="ltx_text ltx_font_script">CR + DMM</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">29.88</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m13" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">+24%</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">38.88</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m14" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">+18%</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:2.8pt;" width="2.8pt"><span class="ltx_text ltx_font_script">12</span></th>
+<th class="ltx_td ltx_align_justify" style="width:71.1pt;" width="71.1pt"><span class="ltx_text ltx_font_script">CR + DPM</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">28.93</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m15" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">+20%</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">37.75</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m16" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">+15%</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:2.8pt;" width="2.8pt"><span class="ltx_text ltx_font_script">13</span></th>
+<th class="ltx_td ltx_align_justify" style="width:71.1pt;" width="71.1pt"><span class="ltx_text ltx_font_script">CR + DMM + DPM</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_script">30.43<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m17" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo mathsize="normal" mathvariant="normal" stretchy="false">*</mo></msup></math></span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_script">+26%</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_script">39.28<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m18" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo mathsize="normal" mathvariant="normal" stretchy="false">*</mo></msup></math></span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_script">+19%</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:2.8pt;" width="2.8pt"><span class="ltx_text ltx_font_script">14</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:71.1pt;" width="71.1pt"><span class="ltx_text ltx_font_script">CR + LS Baseline</span></th>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_script">25.35</span></td>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_script">33.79</span></td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:2.8pt;" width="2.8pt"><span class="ltx_text ltx_font_script">15</span></th>
+<th class="ltx_td ltx_align_justify" style="width:71.1pt;" width="71.1pt"><span class="ltx_text ltx_font_script">CR + LS + DMM</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">30.09</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m19" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">+19%</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">39.04</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m20" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">+16%</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:2.8pt;" width="2.8pt"><span class="ltx_text ltx_font_script">16</span></th>
+<th class="ltx_td ltx_align_justify" style="width:71.1pt;" width="71.1pt"><span class="ltx_text ltx_font_script">CR + LS + DPM</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">28.50</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">+12%</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">37.58</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m21" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">+11%</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:2.8pt;" width="2.8pt"><span class="ltx_text ltx_font_script">17</span></th>
+<th class="ltx_td ltx_align_justify" style="width:71.1pt;" width="71.1pt"><span class="ltx_text ltx_font_script">CR + LS + DMM + DPM</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_script">30.68<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m22" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo mathsize="normal" mathvariant="normal" stretchy="false">*</mo></msup></math></span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_script">+21%</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_script">39.44<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m23" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo mathsize="normal" mathvariant="normal" stretchy="false">*</mo></msup></math></span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_script">+17%</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:2.8pt;" width="2.8pt"/>
+<th class="ltx_td ltx_align_justify" style="width:71.1pt;" width="71.1pt"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:2.8pt;" width="2.8pt"/>
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:71.1pt;" width="71.1pt"><span class="ltx_text ltx_font_script">Bio WHY</span></th>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:2.8pt;" width="2.8pt"><span class="ltx_text ltx_font_script">18</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:71.1pt;" width="71.1pt"><span class="ltx_text ltx_font_script">CR Baseline</span></th>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_script">28.62</span></td>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_script">38.25</span></td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:2.8pt;" width="2.8pt"><span class="ltx_text ltx_font_script">19</span></th>
+<th class="ltx_td ltx_align_justify" style="width:71.1pt;" width="71.1pt"><span class="ltx_text ltx_font_script">CR + DMM</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">38.01</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m24" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">+33%</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">46.39</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m25" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">+21%</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:2.8pt;" width="2.8pt"><span class="ltx_text ltx_font_script">20</span></th>
+<th class="ltx_td ltx_align_justify" style="width:71.1pt;" width="71.1pt"><span class="ltx_text ltx_font_script">CR + DPM</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">38.62</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m26" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">+35%</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">46.85</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m27" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">+23%</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:2.8pt;" width="2.8pt"><span class="ltx_text ltx_font_script">21</span></th>
+<th class="ltx_td ltx_align_justify" style="width:71.1pt;" width="71.1pt"><span class="ltx_text ltx_font_script">CR + DMM + DPM</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_script">39.36<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m28" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo mathsize="normal" mathvariant="normal" stretchy="false">*</mo></msup></math></span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">+</span><span class="ltx_text ltx_font_bold ltx_font_script">38%</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_script">47.64<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m29" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo mathsize="normal" mathvariant="normal" stretchy="false">*</mo></msup></math></span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_script">+25%</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:2.8pt;" width="2.8pt"><span class="ltx_text ltx_font_script">22</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:71.1pt;" width="71.1pt"><span class="ltx_text ltx_font_script">CR + LS Baseline</span></th>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_script">31.73</span></td>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_script">39.89</span></td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:2.8pt;" width="2.8pt"><span class="ltx_text ltx_font_script">23</span></th>
+<th class="ltx_td ltx_align_justify" style="width:71.1pt;" width="71.1pt"><span class="ltx_text ltx_font_script">CR + LS + DMM</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">38.60</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m30" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">+22%</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">46.41</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m31" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">+16%</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:2.8pt;" width="2.8pt"><span class="ltx_text ltx_font_script">24</span></th>
+<th class="ltx_td ltx_align_justify" style="width:71.1pt;" width="71.1pt"><span class="ltx_text ltx_font_script">CR + LS + DPM</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_script">39.45<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m32" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo mathsize="normal" mathvariant="normal" stretchy="false">*</mo></msup></math></span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_script">+24%</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">47.38</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m33" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">+19%</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:2.8pt;" width="2.8pt"><span class="ltx_text ltx_font_script">25</span></th>
+<th class="ltx_td ltx_align_justify" style="width:71.1pt;" width="71.1pt"><span class="ltx_text ltx_font_script">CR + LS + DMM + DPM</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">39.32</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m34" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">+24%</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_script">47.86<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m35" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo mathsize="normal" mathvariant="normal" stretchy="false">*</mo></msup></math></span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_script">+20%</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:2.8pt;" width="2.8pt"/>
+<th class="ltx_td ltx_align_justify" style="width:71.1pt;" width="71.1pt"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 1: </span><span class="ltx_text ltx_font_footnote">
+Overall results across three datasets.
+The improvements in each section are computed relative to their respective baseline (CR or CR + LS). Bold font indicates the best score in a given column. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m38" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo mathsize="normal" stretchy="false">*</mo></msup></math> indicates that a score is significantly better (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m39" class="ltx_Math" alttext="p&lt;0.05" display="inline"><mrow><mi mathsize="normal" stretchy="false">p</mi><mo mathsize="normal" stretchy="false">&lt;</mo><mn mathsize="normal" stretchy="false">0.05</mn></mrow></math>) than the score of the corresponding baseline.
+All significance tests were implemented using one-tailed non-parametric bootstrap resampling using 10,000 iterations.</span></div>
+</div>
+</div>
+<div id="S5.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.3 </span>Evaluation Metrics</h3>
+
+<div id="S5.SS3.p1" class="ltx_para">
+<p class="ltx_p">For YA, we used the standard implementations for P@1 and mean reciprocal rank (MRR) <cite class="ltx_cite">[<a href="#bib.bib56" title="Introduction to information retrieval" class="ltx_ref">8</a>]</cite>. In the Bio corpus, because answer candidates are not guaranteed to match gold annotations exactly, these metrics do not immediately apply. We adapted them to this dataset by weighing each answer by its overlap with gold answers, where overlap is measured as the highest F1 score between the candidate and a gold answer. Thus, P@1 reduces to this F1 score for the top answer. For MRR, we used the rank of the candidate with the highest overlap score, weighed by the inverse of the rank. For example, if the best answer for a question appears at rank <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p1.m1" class="ltx_Math" alttext="2" display="inline"><mn>2</mn></math> with an F1 score of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p1.m2" class="ltx_Math" alttext="0.3" display="inline"><mn>0.3</mn></math>, the corresponding MRR score is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p1.m3" class="ltx_Math" alttext="0.3/2" display="inline"><mrow><mn>0.3</mn><mo>/</mo><mn>2</mn></mrow></math>.</p>
+</div>
+</div>
+<div id="S5.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.4 </span>Overall Results</h3>
+
+<div id="S5.SS4.p1" class="ltx_para">
+<p class="ltx_p">Table <a href="#S5.T1" title="Table 1 ‣ 5.2 Hyper Parameter Tuning ‣ 5 Experiments ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> analyzes the performance of the proposed reranking model on the three datasets and against two baselines. The first baseline sorts the candidate answers in descending order of the scores produced by the candidate retrieval (CR) module. The second baseline (CR + LS) trains a reranking model without discourse, using just the CR and LS features.
+For YA, we include an additional baseline that selects an answer randomly.
+We list multiple versions of the proposed reranking model, broken down by the features used.
+For Bio, we retrieved the top <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS4.p1.m1" class="ltx_Math" alttext="20" display="inline"><mn>20</mn></math> answer candidates in CR. At this setting, the oracle performance (i.e., the performance with perfect reranking of the 20 candidates) was 69.6% P@1 for Bio HOW, and 72.3% P@1 for Bio WHY. These relatively low oracle scores, which serve as a performance ceiling for our approach, highlight the difficulty of the task. For YA, we used all answers provided for each given question.
+For all experiments we used a linear SVM kernel.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">15</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">15</sup>
+The performance of all models can ultimately be increased by using more sophisticated learning frameworks, and considering more answer candidates in CR (for Bio). For example, SVMs with polynomial kernels of degree two showed approximately half a percent (absolute) performance gain over the linear kernel. However, this came at the expense of an experiment runtime about an order of magnitude larger. Experiments with more answer candidates in Bio showed similar trends to the results reported.</span></span></span></p>
+</div>
+<div id="S5.SS4.p2" class="ltx_para">
+<p class="ltx_p">Examining Table <a href="#S5.T1" title="Table 1 ‣ 5.2 Hyper Parameter Tuning ‣ 5 Experiments ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, several trends are clear. Both discourse models significantly increase both P@1 and MRR performance over all baselines broadly across genre, domain, and question types. More specifically, DMM and DPM show similar performance benefits when used individually, but their combination generally outperforms the individual models, illustrating the fact that the two models capture related but different discourse information.
+This is a motivating result for discourse analysis, especially considering that the discourse parser was trained on a domain different from the corpora used here.</p>
+</div>
+<div id="S5.SS4.p3" class="ltx_para">
+<p class="ltx_p">Lexical semantic features increase performance for all settings, but demonstrate far more utility to the open-domain YA corpus. This disparity is likely due to the difficulty in assembling LS training data at an appropriate level for the biology corpus, contrasted with the relative abundance of large scale open-domain lexical semantic resources. For the YA corpus, where lexical semantics showed the most benefit, simply adding LS features to the CR baseline increases baseline P@1 performance from 19.57 to 26.57, a +36% relative improvement. Most importantly, comparing lines 5 and 9 with their respective baselines (lines 2 and 6, respectively) indicates that LS is largely orthogonal to discourse. Line 5, the top-performing model with discourse but without LS outperforms the CR baseline by +5.24 absolute P@1 improvement. Similarly, line 9, the top-performing model that combines discourse with LS has a +5.69 absolute P@1 improvement over the CR + LS baseline.
+That this absolute performance increase is nearly identical indicates that LS features are complementary to and additive with the full discourse model. Indeed, an analysis of the questions improved by discourse vs. LS (line 5 vs. 6) showed that the intersection of the two sets is low (approximately a third of each set).</p>
+</div>
+<div id="S5.SS4.p4" class="ltx_para">
+<p class="ltx_p">Finally, while the discourse models perform well for HOW or <span class="ltx_text ltx_font_italic">manner</span> questions, performance on Bio WHY corpus suggests that <span class="ltx_text ltx_font_italic">reason</span> questions are particularly amenable to discourse analysis. Relative improvements on WHY questions reach +38% (without LS) and +24% (with LS), with absolute performance on these non-factoid questions jumping from 28% to nearly 40% P@1.</p>
+</div>
+<div id="S5.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_script">Q</span></th>
+<th class="ltx_td ltx_align_justify" style="width:170.7pt;" width="170.7pt"><span class="ltx_text ltx_font_script">How does myelination affect action potentials?</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_script">A</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m1" class="ltx_Math" alttext="{}_{\textrm{baseline}}" display="inline"><msub><mi/><mtext>baseline</mtext></msub></math></th>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:170.7pt;" width="170.7pt"><span class="ltx_text ltx_font_script">The major selective advantage of myelination is its space efficiency. A myelinated axon
+20 microns in diameter has a conduction speed faster than that of a squid giant axon […]. Furthermore, more than 2,000 of those myelinated axons can be packed into the space occupied by just one giant axon.</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_script">A</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m2" class="ltx_Math" alttext="{}_{\textrm{rerank}}" display="inline"><msub><mi/><mtext>rerank</mtext></msub></math></th>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:170.7pt;" width="170.7pt"><span class="ltx_text ltx_font_script">A nerve impulse travels […] to the synaptic terminals by propagation of a series action potentials along the axon. The speed of conduction increases […] with myelination. Action potentials in myelinated axons jump between the nodes of Ranvier, a process called saltatory conduction.</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"/>
+<td class="ltx_td ltx_align_justify" style="width:170.7pt;" width="170.7pt"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 2: </span><span class="ltx_text ltx_font_footnote">
+An example question from the Biology corpus where the correct answer is elevated to the top position by the discourse model.
+A<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m5" class="ltx_Math" alttext="{}_{\textrm{{\tiny baseline}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">baseline</mtext></msub></math> is the top answer proposed by the CR + LS baseline, which is incorrect, whereas A<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m6" class="ltx_Math" alttext="{}_{\textrm{{\tiny rerank}}}" display="inline"><msub><mi/><mtext mathsize="small" stretchy="false">rerank</mtext></msub></math> is the correct answer boosted to the top after reranking. […] indicates non-essential text that was removed for space.</span></div>
+</div>
+<div id="S5.SS4.p5" class="ltx_para">
+<p class="ltx_p">Table <a href="#S5.T2" title="Table 2 ‣ 5.4 Overall Results ‣ 5 Experiments ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> shows one example where discourse helps boost the correct answer to the top position. In this example, the correct answer contains multiple <span class="ltx_text ltx_font_typewriter ltx_font_small">Elaboration</span> relations that are both cross sentence (e.g., between the first two sentences) and intra-sentence (e.g., between the first part of the second sentence and the phrase “with myelination”). Model features associated with <span class="ltx_text ltx_font_typewriter ltx_font_small">Elaboration</span> relations are ranked highly by the learned model. In contrast, the answer preferred by the baseline contains mostly <span class="ltx_text ltx_font_typewriter ltx_font_small">Joint</span> relations, which “represent the lack of a rhetorical relation between the two nuclei” <cite class="ltx_cite">[<a href="#bib.bib32" title="Rhetorical structure theory: toward a functional theory of text organization" class="ltx_ref">7</a>]</cite> and have very small weights in the model.</p>
+</div>
+</div>
+<div id="S5.SS5" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.5 </span>Intra vs. Inter-sentence Features</h3>
+
+<div id="S5.SS5.p1" class="ltx_para">
+<p class="ltx_p">To tease apart the relative contribution of discourse features that occur only within a single sentence versus features that span multiple sentences, we examined the performance of the full model when using only intra-sentence features, i.e., <span class="ltx_text ltx_font_typewriter ltx_font_small">SR0</span> features for DMM, and features based on discourse relations where both EDUs appear in the same sentence for DPM, versus the full intersentence models. The results are shown in Table <a href="#S5.T3" title="Table 3 ‣ 5.5 Intra vs. Inter-sentence Features ‣ 5 Experiments ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.</p>
+</div>
+<div id="S5.SS5.p2" class="ltx_para">
+<p class="ltx_p">For the Bio corpus where answer candidates consist of entire paragraphs of a biology text, overall performance is dominated by inter-sentence discourse features. Conversely, for YA, a large proportion of performance comes from features that span only a single sentence. This is caused by the fact that YA
+answers are far shorter and of variable grammatical quality, with 39% of answer candidates consisting of only a single sentence, and 57% containing two or fewer sentences.
+All in all, this experiment emphasizes that modeling both intra- and inter-sentence discourse (where available) is beneficial for non-factoid QA.</p>
+</div>
+<div id="S5.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">Range</span></th>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">Bio HOW</span></th>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">Bio WHY</span></th>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">YA</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t" colspan="3"><em class="ltx_emph ltx_font_footnote">CR + LS + DMM + DPM</em></th>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">within-sentence</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_footnote">+0.8%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_footnote">+8.4%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_footnote">+13.1%</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">full model</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">+21.0%</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m1" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">+23.9%</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m2" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">+14.8%</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 3: </span><span class="ltx_text ltx_font_footnote"> Relative P@1 performance increase over the CR + LS baseline for a model containing only intra-sentence features, compared to the full model.
+</span></div>
+</div>
+</div>
+<div id="S5.SS6" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.6 </span>Domain Transfer</h3>
+
+<div id="S5.SS6.p1" class="ltx_para">
+<p class="ltx_p">Because these discourse models appear to capture high-level information about answer structures, we hypothesize that the models should make use of many of the same discourse features, even when training on data from different domains. Table  <a href="#S5.T4" title="Table 4 ‣ 5.6 Domain Transfer ‣ 5 Experiments ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> shows that of the highest-weighted SVM features learned when training models for HOW questions on YA and Bio, many are shared (e.g., 56.5% of the features in the top half of both DPMs are shared), suggesting that a core set of discourse features may be of utility across domains.</p>
+</div>
+<div id="S5.SS6.p2" class="ltx_para">
+<p class="ltx_p">To test the generality of these features, we performed a transfer study where the full model was trained and tuned on the open-domain YA corpus, then evaluated as is on Bio HOW. This is a somewhat radical setup, where the target corpus has both a different genre (formal text vs. CQA) and different domain (biology vs. open domain). These experiments were performed in several groups: both with and without LS features, as well as using either a single SVM or an ensemble model that linearly interpolates the predictions of two SVM classifiers (one each for DMM and DPM).<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">16</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">16</sup>The interpolation parameter was tuned on the YA development corpus. The in-domain performance of the ensemble model is similar to that of the single classifier in both YA and Bio HOW so we omit these results here for simplicity.</span></span></span>
+The results are summarized in Table  <a href="#S5.T5" title="Table 5 ‣ 5.6 Domain Transfer ‣ 5 Experiments ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.</p>
+</div>
+<div id="S5.SS6.p3" class="ltx_para">
+<p class="ltx_p">The transferred models always outperform the baselines, but only the ensemble model’s improvement is statistically significant. This confirms existing evidence that ensemble models perform better cross-domain because they overfit less <cite class="ltx_cite">[<a href="#bib.bib55" title="A few useful things to know about machine learning" class="ltx_ref">2</a>, <a href="#bib.bib57" title="The elements of statistical learning: data mining, inference, and prediction, second edition" class="ltx_ref">4</a>]</cite>.
+The ensemble model without LS (third line) has a nearly identical P@1 score as the equivalent in-domain model (line 13 in Table 1), while slightly surpassing in-domain MRR performance.
+To the best of our knowledge, this is one of the most striking demonstrations of domain transfer in answer ranking for non-factoid QA, and highlights the generality of these discourse features in identifying answer structures across domains and genres.</p>
+</div>
+<div id="S5.SS6.p4" class="ltx_para">
+<p class="ltx_p">The results of the transferred models that include LS features are slightly lower, but still approach statistical significance for P@1 and are significant for MRR.
+We hypothesize that the limited transfer observed for models with LS compared to their counterparts without LS is due to the disparity in the size and utility of the biology LS training data compared to the open-domain LS resources. The open-domain YA model learns to place more weight on LS features, which are unable to provide the same utility in the biology domain.</p>
+</div>
+<div id="S5.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">Model</span></th>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">Top 10%</span></th>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">Top 25%</span></th>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">Top 50%</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">DMM</span></th>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_footnote">20.2%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_footnote">33.2%</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_footnote">49.4%</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">DPM</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">22.2%</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">39.1%</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">56.5%</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 4: </span><span class="ltx_text ltx_font_footnote"> Percentage of top features with the highest SVM weights that are shared between Bio HOW and YA models. </span></div>
+</div>
+<div id="S5.T5" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">P@1</span></td>
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">MRR</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">Model/Features</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">P@1</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">Impr.</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">MRR</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">Impr.</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t" colspan="5"><span class="ltx_text ltx_font_script"></span><span class="ltx_text ltx_font_italic ltx_font_script">Transfer: YA <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T5.m1" class="ltx_Math" alttext="\rightarrow" display="inline"><mo mathsize="normal" mathvariant="normal" stretchy="false">→</mo></math> Bio HOW</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_script">CR Baseline</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_script">24.12</span></td>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_script">32.90</span></td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">CR + DMM + DPM</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">27.13</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_script">+13%</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">36.36</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T5.m2" class="ltx_Math" alttext="\dagger" display="inline"><mo>†</mo></math></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_script">+11%</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">(CR + DMM) </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T5.m3" class="ltx_Math" alttext="\cup" display="inline"><mo>∪</mo></math></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_script">30.10<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T5.m4" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo mathsize="normal" mathvariant="normal" stretchy="false">*</mo></msup></math></span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_script">+25%</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_script">39.62<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T5.m5" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo mathsize="normal" mathvariant="normal" stretchy="false">*</mo></msup></math></span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_script">+20%</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">(CR + DPM)</span></td>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_script">CR + LS Baseline</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_script">25.35</span></td>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_script">33.79</span></td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">CR + LS + DMM + DPM</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">25.79</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_script">+2%</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">35.58</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_script">+5%</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">(CR + LS + DMM) </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T5.m6" class="ltx_Math" alttext="\cup" display="inline"><mo>∪</mo></math></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_script">29.54<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T5.m7" class="ltx_Math" alttext="\dagger" display="inline"><mo mathsize="normal" mathvariant="normal" stretchy="false">†</mo></math></span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_script">+17%</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_script">38.68<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T5.m8" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo mathsize="normal" mathvariant="normal" stretchy="false">*</mo></msup></math></span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_script">+15%</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">(CR + LS + DPM)</span></td>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 5: </span><span class="ltx_text ltx_font_footnote"> Transfer performance from YA to Bio HOW for single classifiers and ensembles (denoted with a <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T5.m13" class="ltx_Math" alttext="\cup" display="inline"><mo mathsize="normal" stretchy="false">∪</mo></math>). <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T5.m14" class="ltx_Math" alttext="\dagger" display="inline"><mo mathsize="normal" stretchy="false">†</mo></math> indicates approaching statistical significance with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T5.m15" class="ltx_Math" alttext="p=0.07" display="inline"><mrow><mi mathsize="normal" stretchy="false">p</mi><mo mathsize="normal" stretchy="false">=</mo><mn mathsize="normal" stretchy="false">0.07</mn></mrow></math> or <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T5.m16" class="ltx_Math" alttext="0.06" display="inline"><mn mathsize="normal" stretchy="false">0.06</mn></math>.
+</span></div>
+</div>
+</div>
+<div id="S5.SS7" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.7 </span>Integrating Discourse and LS</h3>
+
+<div id="S5.SS7.p1" class="ltx_para">
+<p class="ltx_p">So far, we have treated LS and discourse as distinct features in the reranking model, However,
+given that LS features greatly improve the CR baseline, we hypothesize that a natural extension to the discourse models would be to make use of LS similarity (in addition to the traditional information retrieval similarity) to label discourse segments. For example, for the question <span class="ltx_text ltx_font_italic">”How do cells replicate?”</span>, answer discourse segments containing LS associates of <span class="ltx_text ltx_font_italic">cell</span> and <span class="ltx_text ltx_font_italic">replicate</span>, e.g., <span class="ltx_text ltx_font_italic">nucleus, membrane, genetic</span>, and <span class="ltx_text ltx_font_italic">duplicate</span>, should be considered as related to the question (i.e., be labeled <span class="ltx_text ltx_font_typewriter ltx_font_small">QSEG</span>).
+We implemented two such models, denoted DMM<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS7.p1.m1" class="ltx_Math" alttext="{}_{LS}" display="inline"><msub><mi/><mrow><mi>L</mi><mo>⁢</mo><mi>S</mi></mrow></msub></math> and DPM<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS7.p1.m2" class="ltx_Math" alttext="{}_{LS}" display="inline"><msub><mi/><mrow><mi>L</mi><mo>⁢</mo><mi>S</mi></mrow></msub></math>, by replacing the component that assigns argument labels with one that relies on LS.
+Specifically, as in §<a href="#S4.SS3" title="4.3 Lexical Semantics Model ‣ 4 Models and Features ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>, we compute the cosine similarity between the composite LS vectors of the question text and each marker argument (in DMM) or EDU (in DPM), and label the corresponding answer segment <span class="ltx_text ltx_font_typewriter ltx_font_small">QSEG</span> if this score is higher than a threshold, or <span class="ltx_text ltx_font_typewriter ltx_font_small">OTHER</span> otherwise.
+This way, the DMM and DPM features jointly capture discourse structures and semantic similarity between answer segments and question.</p>
+</div>
+<div id="S5.SS7.p2" class="ltx_para">
+<p class="ltx_p">To test this, we use the YA corpus, which has the best-performing LS model. Because we are adding two new discourse models, we now tune four segment matching thresholds, one for each of the DMM, DPM, DMM<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS7.p2.m1" class="ltx_Math" alttext="{}_{LS}" display="inline"><msub><mi/><mrow><mi>L</mi><mo>⁢</mo><mi>S</mi></mrow></msub></math>, and DPM<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS7.p2.m2" class="ltx_Math" alttext="{}_{LS}" display="inline"><msub><mi/><mrow><mi>L</mi><mo>⁢</mo><mi>S</mi></mrow></msub></math> models.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">17</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">17</sup>These hyperparameters were tuned on the development corpus, and were found to be stable over broad ranges.
+</span></span></span> The results are shown in Table  <a href="#S5.T6" title="Table 6 ‣ 5.7 Integrating Discourse and LS ‣ 5 Experiments ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+These results demonstrate that incorporating LS in the discourse models further increases performance for all configurations, nearly doubling the relative performance benefits over models that do not integrate LS and discourse (compare with lines 6–9 of Table <a href="#S5.T1" title="Table 1 ‣ 5.2 Hyper Parameter Tuning ‣ 5 Experiments ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>). For example, the last model in the table, which combines four discourse representations, improves P@1 by 24%, whereas the equivalent model without this integration (line 9 in Table <a href="#S5.T1" title="Table 1 ‣ 5.2 Hyper Parameter Tuning ‣ 5 Experiments ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>) outperforms the baseline by only 15%.</p>
+</div>
+<div id="S5.T6" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td"/>
+<th class="ltx_td"/>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">P@1</span></th>
+<th class="ltx_td"/>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">MRR</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">Model Features</span></th>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">P@1</span></th>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">Impr.</span></th>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">MRR</span></th>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">Impr.</span></th></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_script">
+CR + LS Baseline</span></td>
+<td class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_text ltx_font_script">26.57</span></td>
+<td class="ltx_td ltx_border_tt"/>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_script">49.31</span></td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">CR + LS + DMM + DMM</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T6.m1" class="ltx_Math" alttext="{}_{LS}" display="inline"><msub><mi/><mrow><mi>L</mi><mo>⁢</mo><mi>S</mi></mrow></msub></math></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">32.41</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T6.m2" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_script">+22%</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">53.55</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T6.m3" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_script">+9%</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">CR + LS + DPM + DPM</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T6.m4" class="ltx_Math" alttext="{}_{LS}" display="inline"><msub><mi/><mrow><mi>L</mi><mo>⁢</mo><mi>S</mi></mrow></msub></math></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">31.21</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T6.m5" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_script">+18%</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">52.50</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T6.m6" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_script">+7%</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">CR + LS + DMM + DPM +</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_script">32.93<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T6.m7" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo mathsize="normal" mathvariant="normal" stretchy="false">*</mo></msup></math></span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_script">+24%</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold ltx_font_script">53.91<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T6.m8" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo mathsize="normal" mathvariant="normal" stretchy="false">*</mo></msup></math></span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_script">+9%</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_script">   DMM</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T6.m9" class="ltx_Math" alttext="{}_{LS}" display="inline"><msub><mi/><mrow><mi>L</mi><mo>⁢</mo><mi>S</mi></mrow></msub></math><span class="ltx_text ltx_font_script"> + DPM</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T6.m10" class="ltx_Math" alttext="{}_{LS}" display="inline"><msub><mi/><mrow><mi>L</mi><mo>⁢</mo><mi>S</mi></mrow></msub></math></td>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 6: </span><span class="ltx_text ltx_font_footnote">
+YA results with integrated discourse and LS.</span></div>
+</div>
+</div>
+<div id="S5.SS8" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.8 </span>Error Analysis</h3>
+
+<div id="S5.SS8.p1" class="ltx_para">
+<p class="ltx_p">We performed an error analysis of the full QA model (CR + LS + DMM + DPM) across the entire Bio corpus (lines 17 and 25 from Table <a href="#S5.T1" title="Table 1 ‣ 5.2 Hyper Parameter Tuning ‣ 5 Experiments ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>).
+We chose the Bio setup for this analysis because it is more complex than the CQA one: here gold answers may have a granularity completely different from what the system choses as best answers (in our particular case, the QA system is currently limited to answers consisting of single paragraphs, whereas gold answers may be of any size).</p>
+</div>
+<div id="S5.SS8.p2" class="ltx_para">
+<p class="ltx_p">Here, 94 of the 378 Bio HOW and WHY questions have improved answer scores, while 36 have reduced performance relative to the CR baseline.
+Of these 36 questions where answer scores decreased, nearly two thirds were directly related to the paragraph granularity of the candidate answer retrieval (see §<a href="#S5.SS1" title="5.1 Data ‣ 5 Experiments ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>):</p>
+<p class="ltx_p ltx_align_left"><span class="ltx_text ltx_font_bold">Same Subsection (50%):</span></p>
+<p class="ltx_p">In these cases, the model selected an on-topic answer paragraph in the same subsection of the textbook as a gold answer. Often times this paragraph directly preceded or followed the gold answer.</p>
+</div>
+<div id="S5.SS8.p3" class="ltx_para">
+<p class="ltx_p ltx_align_left"><span class="ltx_text ltx_font_bold">Answer Window Size (14%):</span></p>
+</div>
+<div id="S5.SS8.p4" class="ltx_para">
+<p class="ltx_p">Here, both the CR and full model chose a paragraph containing a different gold answer. However, as discussed, gold answers may unevenly straddle paragraph boundaries, and the paragraph chosen by the model happened to have a somewhat lower overlap with its gold answer than the one chosen by the baseline.</p>
+</div>
+<div id="S5.SS8.p5" class="ltx_para">
+<p class="ltx_p ltx_align_left"><span class="ltx_text ltx_font_bold">Similar Topic (25%):</span></p>
+</div>
+<div id="S5.SS8.p6" class="ltx_para">
+<p class="ltx_p">The model chose a paragraph that had a similar topic to the question, but doesn’t answer the question.
+These are challenging errors, often associated with short questions (e.g. <span class="ltx_text ltx_font_italic">”How does HIV work?”</span>) that provide few keywords. In these cases, discourse features tend to dominate, and shift the focus towards answers that have many discourse structures deemed relevant.
+For example, for the above question, the model chose a paragraph containing many discourse structures positively correlated with high-quality answers, but which describes the origins of HIV instead of how the virus enters a cell.</p>
+</div>
+<div id="S5.SS8.p7" class="ltx_para">
+<p class="ltx_p ltx_align_left"><span class="ltx_text ltx_font_bold">Similar Words, Different Topic (8%):</span></p>
+</div>
+<div id="S5.SS8.p8" class="ltx_para">
+<p class="ltx_p">The model chose a paragraph that had many of the same words as the question, but is on a different topic. For example, for the question <span class="ltx_text ltx_font_italic">”How are fossil fuels formed, and why do they contain so much energy?”</span>, the model selected an answer that mentions fossil fuels in a larger discussion of human ecological footprints. Here, the matching of both keywords and discourse structures shifted the answer towards a different, incorrect topic.</p>
+</div>
+<div id="S5.SS8.p9" class="ltx_para">
+<p class="ltx_p">Finally, in one case (3%), the model identified an answer paragraph that contained a gold answer, but was missed by the domain expert annotator.</p>
+</div>
+<div id="S5.SS8.p10" class="ltx_para">
+<p class="ltx_p">In summary, this analysis suggests that, for the majority of errors, the QA system selects an answer that is both topical and adjacent to a gold answer selected by the domain expert. This suggests that most errors are minor and are driven by current limitations of our answer boundary selection mechanism, rather than the inherent limitations of the discourse model.</p>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Conclusions</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">This work focuses on two important aspects of answer reranking for non-factoid QA: similarity between question and answer content, and answer structure. While the former has been addressed with a variety of lexical-semantic models, the latter has received little attention. Here we show how to model answer structures using discourse and how to integrate the two aspects into a holistic framework. Empirically we show that modeling answer discourse structures is complementary to modeling lexical semantic similarity and that the best performance is obtained when they are tightly integrated. We evaluate the proposed approach on multiple genres and question types and obtain benefits of up to 24% relative improvement over a strong baseline that combines information retrieval and lexical semantics.
+We further demonstrate that answer discourse structures are largely independent of domain and transfer well, even between radically different datasets.</p>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p class="ltx_p">This work is open source and available at:
+<a href="http://nlp.sista.arizona.edu/releases/acl2014" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter ltx_font_footnote">http://nlp.sista.arizona.edu/releases/acl2014</span></a>.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgements</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">We thank the Allen Institute for Artificial Intelligence for funding this work. We would also like to thank the three anonymous reviewers for their helpful comments and suggestions.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib63" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Carlson, D. Marcu and M. E. Okurowski</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Building a Discourse-Tagged Corpus in the Framework of Rhetorical Structure Theory</span>.
+</span>
+<span class="ltx_bibblock">in <span class="ltx_text ltx_bib_editor">J. van Kuppevelt and R. Smith (Eds.)</span>, <span class="ltx_text ltx_bib_inbook">Current Directions in Discourse and Dialogue</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 85–112</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.isi.edu/~marcu/papers/sigdialbook2002.pdf" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Related Work ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib55" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Domingos</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A few useful things to know about machine learning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Communications of the ACM</span> <span class="ltx_text ltx_bib_volume">55</span> (<span class="ltx_text ltx_bib_number">10</span>).
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS6.p3" title="5.6 Domain Transfer ‣ 5 Experiments ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.6</span></a>.
+</span></li>
+<li id="bib.bib53" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">V. W. Feng and G. Hirst</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Text-level discourse parsing with rich linguistic features</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Related Work ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.SS2.p1" title="4.2 Discourse Parser Model ‣ 4 Models and Features ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>,
+<a href="#S5.SS1.p7" title="5.1 Data ‣ 5 Experiments ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>.
+</span></li>
+<li id="bib.bib57" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Hastie, R. Tibshirani and J. Friedman</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The elements of statistical learning: data mining, inference, and prediction, second edition</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Springer</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS6.p3" title="5.6 Domain Transfer ‣ 5 Experiments ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.6</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Higashinaka and H. Isozaki</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Corpus-based question answering for why-questions</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Hyderabad, India</span>, <span class="ltx_text ltx_bib_pages"> pp. 418–425</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.SS1.p7" title="4.1 Discourse Marker Model ‣ 4 Models and Features ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib58" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Jurafsky and J. H. Martin</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Speech and language processing, second edition</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Prentice Hall</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p2" title="4.2 Discourse Parser Model ‣ 4 Models and Features ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib32" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">W. C. Mann and S. A. Thompson</span><span class="ltx_text ltx_bib_year">(1988)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Rhetorical structure theory: toward a functional theory of text organization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Text</span> <span class="ltx_text ltx_bib_volume">8</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 243–281</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.SS2.p1" title="4.2 Discourse Parser Model ‣ 4 Models and Features ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>,
+<a href="#S5.SS4.p5" title="5.4 Overall Results ‣ 5 Experiments ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.4</span></a>.
+</span></li>
+<li id="bib.bib56" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. D. Manning, P. Raghavan and H. Schütze</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Introduction to information retrieval</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Cambridge University Press</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p1" title="3 Approach ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S5.SS3.p1" title="5.3 Evaluation Metrics ‣ 5 Experiments ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.3</span></a>.
+</span></li>
+<li id="bib.bib59" class="ltx_bibitem ltx_bib_thesis"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Marcu</span><span class="ltx_text ltx_bib_year">(1997)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The rhetorical parsing, summarization, and generation of natural language texts</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_type">Ph.D. Thesis</span>, <span class="ltx_text ltx_bib_publisher">University of Toronto</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.p1" title="4.1 Discourse Marker Model ‣ 4 Models and Features ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>,
+<a href="#S5.SS1.p7" title="5.1 Data ‣ 5 Experiments ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>.
+</span></li>
+<li id="bib.bib71" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Mikolov, K. Chen, G. Corrado and J. Dean</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Efficient estimation of word representations in vector space</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS3.p1" title="4.3 Lexical Semantics Model ‣ 4 Models and Features ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+<li id="bib.bib70" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Mikolov, M. Karafiat, L. Burget, J. Cernocky and S. Khudanpur</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Recurrent neural network based language model</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS3.p1" title="4.3 Lexical Semantics Model ‣ 4 Models and Features ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+<li id="bib.bib66" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Oh, K. Torisawa, C. Hashimoto, M. Sano, S. De Saeger and K. Ohtake</span><span class="ltx_text ltx_bib_year">(2013-08)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Why-question answering using intra- and inter-sentential causal relations</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sofia, Bulgaria</span>, <span class="ltx_text ltx_bib_pages"> pp. 1733–1743</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P13-1170" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related Work ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib69" class="ltx_bibitem ltx_bib_thesis"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Pasca</span><span class="ltx_text ltx_bib_year">(2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">High-performance, open-domain question answering from large text collections</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_type">Ph.D. Thesis</span>, <span class="ltx_text ltx_bib_publisher">Southern Methodist University</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p1" title="3 Approach ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib60" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Prager, E. Brown, A. Coden and D. Radev</span><span class="ltx_text ltx_bib_year">(2000)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Question-answering by predictive annotation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">SIGIR ’00</span>, <span class="ltx_text ltx_bib_place">New York, NY, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 184–191</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 1-58113-226-3</span>,
+<a href="http://doi.acm.org/10.1145/345508.345574" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1145/345508.345574" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related Work ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib64" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J.B. Reece, L.A. Urry, M.L. Cain, S.A. Wasserman and P.V. Minorsky</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Campbell biology</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Pearson Benjamin Cummings</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 9780321558237</span>,
+<span class="ltx_text lccn ltx_bib_external">LCCN 2010020623</span>,
+<a href="http://books.google.com/books?id=39vMSgAACAAJ" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS1.p5" title="5.1 Data ‣ 5 Experiments ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>.
+</span></li>
+<li id="bib.bib30" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Riezler, A. Vasserman, I. Tsochantaridis, V. Mittal and Y. Liu</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Statistical machine translation for query expansion in answer retrieval</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Prague, Czech Republic</span>, <span class="ltx_text ltx_bib_pages"> pp. 464–471</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib48" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Surdeanu, M. Ciaramita and H. Zaragoza</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning to rank answers to non-factoid questions from web collections</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">37</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 351–383</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S5.SS1.p3" title="5.1 Data ‣ 5 Experiments ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>.
+</span></li>
+<li id="bib.bib62" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Verberne, L. Boves, N. Oostdijk and P. Coppen</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Discourse-based answering of why-questions</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Traitement Automatique des Langues, Discours et document: traitements automatiques</span> <span class="ltx_text ltx_bib_volume">47</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 21–41</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Related Work ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib47" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Verberne, L. Boves, N. Oostdijk and P. Coppen</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">What is not in the bag of words for why-qa?</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">36</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 229–245</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.p4" title="2 Related Work ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.SS1.p7" title="4.1 Discourse Marker Model ‣ 4 Models and Features ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib61" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Verberne, H. Halteren, D. Theijssen, S. Raaijmakers and L. Boves</span><span class="ltx_text ltx_bib_year">(2011-04)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning to rank for why-question answering</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Inf. Retr.</span> <span class="ltx_text ltx_bib_volume">14</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 107–132</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text issn ltx_bib_external">ISSN 1386-4564</span>,
+<a href="http://dx.doi.org/10.1007/s10791-010-9136-6" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1007/s10791-010-9136-6" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related Work ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib68" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">X. Wang, X. Tu, D. Feng and L. Zhang</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Ranking community answers by modeling question-answer relationships via analogical reasoning</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p1" title="3 Approach ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S5.SS1.p3" title="5.1 Data ‣ 5 Experiments ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>.
+</span></li>
+<li id="bib.bib67" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">W. Yih, M. Chang, C. Meek and A. Pastusiak</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Question answering using enhanced lexical semantic models</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I1.i1.p1" title="1. ‣ 1 Introduction ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1.</span></a>,
+<a href="#S2.p1" title="2 Related Work ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.SS3.p1" title="4.3 Lexical Semantics Model ‣ 4 Models and Features ‣ Discourse Complements Lexical Semantics for Non-factoid Answer Reranking" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 18:24:52 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

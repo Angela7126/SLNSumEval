@@ -1,0 +1,666 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Affect control processes: Intelligent affective interaction using a partially observable Markov decision process.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Designers of intelligent systems have increasingly attended to theories of human emotion, in order to build software interfaces that allow users to experience naturalistic flows of communication with the computer. This endeavour requires a comprehensive mathematical representation of the relations between affective states and actions that captures, ideally, the subtle cultural rules underlying human communication and emotional experience. In this paper, we argue that Affect Control Theory (ACT), a mathematically formalized theory of the interplays between cultural representations, interactants' identities,{sup:1} and affective experience [1], is a suitable framework for developing emotionally intelligent agents. To accomplish this, we propose a probabilistic and decision theoretic generalisation of ACT, called BayesAct, which we argue is more flexible than the original statement of the theory for the purpose of modelling human–computer interaction. BayesAct is formulated as a partially observable Markov decision process or POMDP. The key contributions of this new theory are: (1) to represent sentiments as probability distributions over a continuous affective space, thereby allowing these sentiments to be dynamic and uncertain; (2) to propose a new kind of agent based on affect control theory that has the ability to learn affective identities of interactants; (3) to integrate the affective dynamics proposed by affect control theory with standard POMDP-based artificial intelligence; and (4) to introduce explicit utility functions to affect control theory that parsimoniously trade-off affective and propositional goals for a human-interactive agent. These contributions allow BayesAct to be used as an artificially intelligent agent: they provide the computerised agent with a mechanism for predicting how the affective state of an interaction will progress (based on affect control theory) and how this will modify the object of the interaction (e.g. the software application being used). The agent can then select its strategy of action in order to maximize the expected values of the outcomes based both on the application state and on its affective alignment with the human.
+     </paragraph>
+     <paragraph>
+      Affect control theory arises from the long tradition of symbolic interactionism that began almost three hundred years ago with the insights of Adam Smith [2] into the self as a mirror of the society in which it is embedded: the so-called looking-glass self [2]. These insights eventually led to the modern development of structural symbolic interactionism through Mead, Cooley, and Stryker [3], and culminating in Heise's affect control theory (ACT) [1], which this paper extends. Although ACT, and symbolic interactionism in general, are very well established theories in sociology, they have had little or no impact in artificial intelligence. This paper is the first to propose affect control theory as a fundamental substrate for intelligent agents, by elaborating a POMDP-based formulation of the underlying symbolic interactionist ideas. This new theory allows ACT to be used in goal-directed human-interactive systems, and thereby allows A.I. researchers to connect to over fifty years of sociological research on cultural sentiment sharing and emotional intelligence. The theory also contributes a generalisation of affect control theory that we expect will lead to novel developments in sociology, social psychology, and in the emerging field of computational social science [4].
+     </paragraph>
+     <paragraph>
+      The main contribution of this paper is therefore of a theoretical nature, which we demonstrate in simulation. We have also implemented the theory in a simple tutoring system and in an assistive technology that is designed to assist persons with dementia. We report the results of an empirical survey and demonstrative study with human participants in the case of the tutoring system. The assistive technology is further described in [5]. Therein, a prompting system delivers audio-visual cues to a person using a variety of different affective “styles”. The mapping from non-verbal behaviours of the user to the “style” of prompt is defined by BayesAct alone.
+     </paragraph>
+     <section label="1.1">
+      <section-title>
+       Model overview
+      </section-title>
+      <paragraph>
+       BayesAct is a partially observable Markov decision process (POMDP, see Fig. 1(a) and Section 2.2) model of an agent interacting with an environment. The environment is modelled, as usual in a POMDP, with a set of states, X. A BayesAct agent has actions, A, available to it, and these actions change the state of the environment according to a stochastic transition function. The environment model (states) are not assumed to be observable (they are latent), but the agent has access to a set of observations {a mathematical formula}Ωx, from which it can infer the state of the environment by using Bayes' rule and a stochastic observation function that relates states to observations. Finally, a utility function, R, describes the preferences of the agent on a numerical scale. The utility function can be used by a Bayesian (sequential) decision maker to optimize decisions (action choices) in the long term.
+      </paragraph>
+      <paragraph>
+       BayesAct is modelling the case where the environment contains humans (or other BayesAct agents) who are partially responsible for the state dynamics. BayesAct therefore includes a latent user model as part of its state space (shown as factor Y in Fig. 1(a)). The user model describes the identity (see footnote 1) of the agent and of the human it is interacting with, and conditions (stochastically) the dynamics of the state.
+      </paragraph>
+      <paragraph>
+       The identities are modelled as four concurrently evolving discrete-time non-linear dynamical systems over a three dimensional continuous affective space. The three dimensions are: evaluation (how good/bad something is), potency (how strong/weak), and activity (how active/passive). The space is referred to as “EPA” space, and it has been found by sociologists to capture over 80% of the variance in affective meanings ascribed by humans across cultures and languages [6], and is in some sense “fundamental” to human emotion (see Section 2.1). It has also been used by other works in affective computing (where it is referred to as “PAD” space or Pleasure–Arousal–Dominance, see Section 2.3).
+      </paragraph>
+      <paragraph>
+       BayesAct departs from other works on affective computing because it also includes the dynamics of identities in the EPA space. These dynamics are learned from datasets of human sentiments about events, measured during decades of research by sociologists in different cultures around the world, and forming part of a sociological theory called affect control theory (ACT) ([1]; see Section 2.1). As the EPA space, the dynamics are found to be culturally stable and consistent [7]. The dynamics form part of the transition function (for the identities, Y) in the POMDP (see Section 3.2). The dynamics relate an agent's stable (through time), culturally shared affective sentiments about itself and about other agents (f), to the transient sentiments (impressions) that are created by events in the world (τ). Together, fundamentals and transients are factors in the user model, ({a mathematical formula}Y={f,τ}). Since each factor has two components (one for each agent), there are four dynamical systems involved. Parts of Y may have associated observations, {a mathematical formula}Ωf, as well, allowing inference from measured evidence. When events are consistent (congruent with an agent's stable, culturally agreed upon sentiments), the impressions created are harmonious. When events are inconsistent, then impressions created are dissonant. The dissonance is referred to as deflection, computed as {a mathematical formula}(f−τ)2. In either case (harmony or dissonance), the BayesAct dynamics provide a heuristic prescription (something like a social norm, but see Section 2.3.3) in the EPA space for both agent's actions (see Section 3.4). The prescription arises from the basic principle of ACT: humans are motivated to reduce deflection and bring dissonant situations back to confirmation of sentiments.
+      </paragraph>
+      <paragraph>
+       Every action that a BayesAct agent can take (a) has an affective aspect or “meaning” ({a mathematical formula}ba in Fig. 1). For example, a tutor giving a really hard exercise to a student would be considered quite bad (mean) and powerful, whereas a really easy exercise would be considered quite nice, but rather weak (see Section 4.2.1). An assistive system that commands someone would be seen as powerful, whereas a suggestion would be seen as weaker (see Section 4.2.2). The heuristic prescription (to reduce deflection) indicates what the affective meaning ({a mathematical formula}ba) of the next action (a) to take should be, and is computed as the one that will serve to minimize the deflection (will bring τ closer to f). This heuristic is thought to be used by humans as a “fast thinking” [8] mechanism to quickly make decisions in social situations. It is also believed to lead to social orders that encode solutions to social dilemmas [9].
+      </paragraph>
+      <paragraph>
+       A BayesAct agent uses this heuristic to guide its search for an action to take in the POMDP model of the environment. It considers only those actions that will appear affectively similar to the heuristic guide. For example, consider a doctor interacting with a patient. The doctor will “feel” that the right actions to take will be professional, serious and empathetic, not friendly, jovial and carefree. He will therefore “advise” the patient rather than propose to go to a movie. In fact, he would have to work hard to even consider any action that would be jovial, friendly and merry. In contrast, a teacher would “feel” a need to be somewhat jovial and friendly, and would not consider actions that seemed too solemn. The affective heuristic essentially restricts the action space over which an agent must search.
+      </paragraph>
+      <paragraph>
+       The next section explains ACT and POMDPs in more detail and briefly discusses related work. Section 3 then gives full details of the new BayesAct model. Section 4 discusses simulation and human experiments, and Section 5 concludes. Appendix A Derivation of most likely behaviour, Appendix B Reduction to ACT behaviours, Appendix C Tabulated simulation results, Appendix D Tutoring system survey results, Appendix E COACH system simulation results give some additional results and mathematical details that complement the main development. Parts of this paper appeared in a shortened form in [10]. More details, simulations and videos can be found at bayesact.ca.
+      </paragraph>
+     </section>
+    </section>
+    <section label="2">
+     <section-title>
+      Background
+     </section-title>
+     <paragraph>
+      This section presents the background material necessary with Section 2.1 giving the sociological theory, Section 2.2 presenting POMDPs, Section 2.3 reviewing related work.
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       Affect control theory
+      </section-title>
+      <paragraph>
+       Affect control theory (ACT) is a comprehensive social psychological theory of human social interaction [1]. ACT proposes that peoples' social perceptions, actions, and emotional experiences are governed by a psychological need to minimize deflections between culturally shared fundamental sentiments about social situations and transient impressions resulting from the dynamic behaviours of interactants in those situations.
+      </paragraph>
+      <paragraph>
+       Fundamental sentiments f are representations of social objects, such as interactants' identities and behaviours or environmental settings, as vectors in a three-dimensional affective space [7], [11]. The basis vectors of the affective space are called Evaluation/valence, Potency/control, and Activity/arousal (EPA). The EPA space is hypothesised to be a universal organising principle of human socio-emotional experience, based on the discovery that these dimensions structure the semantic relations of linguistic concepts across languages and cultures [7], [6], [12], [13]. They also emerged from statistical analyses of the co-occurence of a large variety of physiological, facial, gestural, and cognitive features of emotional experience [14], relate to the universal dimensionality of personality, non-verbal behaviour, and social cognition [15], and are believed to correspond to the fundamental logic of social exchange and group coordination [15]. These three dimensions are also thought to be related directly to intrinsic reward [16], and are in correspondence with the major factors governing choice in social dilemmas [15].
+      </paragraph>
+      <paragraph>
+       EPA profiles of concepts can be measured with the semantic differential, a survey technique where respondents rate affective meanings of concepts on numerical scales with opposing adjectives at each end (e.g., {a mathematical formula}{good, nice}↔{bad, awful} for E; {a mathematical formula}{weak, little}↔{strong, big} for P; {a mathematical formula}{calm, passive}↔{exciting, active} for A). Affect control theorists have compiled databases of a few thousand words along with average EPA ratings obtained from survey participants who are knowledgeable about their culture [7]. For example, most English speakers agree that professors are about as nice as students (E), however more powerful (P) and less active (A). The corresponding EPA profiles are {a mathematical formula}[1.7,1.8,0.5] for professor and {a mathematical formula}[1.8,0.7,1.2] for student (values range by convention from −4.3 to +4.3 [7]). Shank [17] and Troyer [18] describe experiments to measure EPA fundamental sentiments related to technology and computer terms. Shank shows that people have shared cultural identity labels for technological actors, and that they share affective sentiments about these labels. He also showed that people view these technological actors as behaving socially, as was previously explored in [19].
+      </paragraph>
+      <paragraph>
+       In general, within-cultural agreement about EPA meanings of social concepts is high even across subgroups of society, and cultural-average EPA ratings from as little as a few dozen survey participants have been shown to be extremely stable over extended periods of time [7]. In some sense, a “culture” is defined by agreement on these fundamental sentiments. For example, sub-cultures have more specific shared sentiments within a smaller group, as explored in [1]. These findings may seem surprising in light of ever-present societal conflicts as evidenced for example by competing political ideologies, but research has consistently shown that the number of contested concepts is small relative to the stable and consensual semantic structures that form the basis of our everyday social interactions and shared cultural understanding [7], [20].
+      </paragraph>
+      <paragraph>
+       Social events can cause transient impressions τ of identities and behaviours that deviate from their corresponding fundamental sentiments f. ACT models this formation of impressions from events with a minimalist grammar of the form actor–behaviour–object. Extended versions of ACT's mathematical models also allow for representing environmental settings (such as a university or a funeral) and identity modifiers (such as a boring professor or a lazy student) [21], [22], [23]. In the interest of parsimony, we will limit our present discussion to the basic actor–behaviour–object scheme. Consider, for example, a professor (actor) who yells (behaviour) at a student (object). Most observers would agree that this professor appears considerably less nice (E), a bit less potent (P), and certainly more aroused (A) than the cultural average of a professor. Such transient shifts in affective meaning caused by specific events can be described with models of the form {a mathematical formula}τ=MG(f), where {a mathematical formula}G and M are functions with statistically estimated parameters from empirical impression-formation studies where survey respondents rated EPA affective meanings of concepts embedded in a few hundred sample event descriptions such as the example above [1]. Linguistic impression-formation equations exist for English, Japanese, and German [7]. In ACT, the sum of squared Euclidean distances between fundamental sentiments and transient impressions is called deflection:{a mathematical formula} where {a mathematical formula}wi are weights (usually set to 1.0).
+      </paragraph>
+      <paragraph label="Definition 1">
+       Actors work to experience transient impressions that are consistent with their fundamental sentiments.
+      </paragraph>
+      <paragraph>
+       ACT is thus a variant of psychological consistency theories, which posit in general that humans strive for balanced mental representations whose elements form a coherent Gestalt [25], [26]. In cybernetic terminology, deflection is a control signal used for aligning everyday social interactions with implicit cultural rules and expectations [1]. For example, advising a student corresponds much better to the cultural expectation of a professor's behaviour than yelling at a student. Correspondingly, the deflection for the former event as computed with the ACT equations is much lower than the deflection for the latter event. Many experimental and observational studies have shown that deflection is indeed inversely related to the likelihood of humans to engage in the corresponding social actions. For example, the deflection-minimization mechanism explains verbal behaviours of mock leaders in a computer-simulated business game [27], non-verbal displays in dyadic interactions [28], and conversational turn-taking in small-group interactions [29].
+      </paragraph>
+      <paragraph>
+       Interact is an implementation of ACT in Java that gives a user the ability to manually simulate interactions between two persons with fixed and known identities. The software also comes with multiple databases of EPA ratings for thousands of behaviours and identities, and sets of predictive equations. Interact is available along with the databases at http://www.indiana.edu/~socpsy/ACT.
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Partially observable Markov decision processes
+      </section-title>
+      <paragraph>
+       A partially observable Markov decision process (POMDP) [30] is a general purpose model of stochastic control that has been extensively studied in operations research [31], [32], and in artificial intelligence [33], [34]. A POMDP consists of a finite set {a mathematical formula}X of states; a finite set {a mathematical formula}A of actions; a stochastic transition model {a mathematical formula}Pr⁡:X×A→Δ(X), with {a mathematical formula}Pr⁡(x′|x,a) denoting the probability of moving from state x to {a mathematical formula}x′ when action a is taken, and {a mathematical formula}Δ(X) is a distribution over {a mathematical formula}X; a finite observation set {a mathematical formula}Ωx; a stochastic observation model with {a mathematical formula}Pr⁡(ωx|x) denoting the probability of making observation {a mathematical formula}ωx while the system is in state x; and a reward assigning {a mathematical formula}R(x,a,x′) to state transition x to {a mathematical formula}x′ induced by action a. The state is unobservable, but a belief state (a distribution over {a mathematical formula}X) can be computed that gives the probability of each state being the current one. A generic POMDP is shown as a Bayesian decision network in Fig. 1(a) (solid lines only).
+      </paragraph>
+      <paragraph>
+       The POMDP can be used to monitor the belief state using standard Bayesian filtering [35]. A policy can be computed that maps belief states into choices of actions, such that the expected discounted (by a factor {a mathematical formula}γd&lt;1.0) sum of rewards is (approximately) maximised. Recent work on so-called “point-based” methods had led to the development of solvers that can handle POMDPs with large state and observation spaces [36], [37], [38], [39].
+      </paragraph>
+      <paragraph>
+       In this paper, we will be dealing with factored POMDPs in which the state is represented by the cross-product of a set of variables or features. Assignment of a value to each variable thus constitutes a state. Factored models allow for conditional independence to be explicitly stated in the model. A good introduction to POMDPs and solution methods can be found in [40].
+      </paragraph>
+     </section>
+     <section label="2.3">
+      <section-title>
+       Related work
+      </section-title>
+      <paragraph>
+       Emotions play a significant role in humans' everyday activities including decision-making, behaviours, attention, and perception [41], [42], [43], [44]. This important role is fuelling the interest in computationally modelling humans' emotions in fields like affective computing [45], [46], social computing [47], social signal processing [48], and computational social science [4].
+      </paragraph>
+      <paragraph>
+       Damasio has convincingly argued, both from a functional and neurological standpoint, for emotions playing a key role in decision making and for human social action [41]. His Somatic Marker Hypothesis is contrasted against the Platonic “high-reason” view of intelligence, in which pure rationality is used to make decisions. Damasio argues that, because of the limited capacity of working memory and attention, the Platonic view will not work. Instead, learned neural markers focus attention on actions that are likely to succeed, and act as a neural bias allowing humans to work with fewer alternatives. These somatic markers are “cultural prescriptions” for behaviours that are “rational relative to the social conventions and ethics”.{sup:2} LeDoux [49] argues the same thing from an evolutionary standpoint. He theorises that the subjective feeling of emotion must take place at both unconscious and conscious levels in the brain, and that consciousness is the ability to relate stimuli to a sense of identity, among other things.
+      </paragraph>
+      <paragraph>
+       With remarkably similar conclusions coming from a more functional (economics) viewpoint, Kahneman has demonstrated that human emotional reasoning often overshadows, but is important as a guide for, cognitive deliberation [8]. Kahneman presents a two-level model of intelligence, with a fast/normative/reactive/affective mechanism being the “first on the scene”, followed by a slow/cognitive/deliberative mechanism that operates if sufficient resources are available. Akerlof and Kranton attempt to formalise fast thinking by incorporating a general notion of identity into an economic model (utility function) [50]. Earlier work on social identity theory foreshadowed this economic model by noting that simply assigning group membership increases individual cooperation [51].
+      </paragraph>
+      <paragraph>
+       The idea that unites Kahneman, LeDoux, and Damasio (and others) is the tight connection between emotion and action. These authors, from very different fields, propose emotional reasoning as a “quick and dirty”, yet absolutely necessary, guide for cognitive deliberation. The neurological underpinnings of this connection are discussed by Zhu and Thagard [52] who, following LeDoux [49], point to the amygdala as being the “hub” of the wheel of emotional processing in the brain, and discuss how emotion plays an important role in both the generation, and in the execution of action. They discuss two neural pathways from the sensory thalamus to amygdala that are used in action generation: the direct “low road”, and the more circuitous “high road” that makes a stop in the sensory cortex. While the low road enables fast, pre-programmed, reactive responses, the high-road enables a more careful evaluation of the situation. The two pathways complement each other, with the “low road” opting for more potentially life-saving false alarms than the high road, but giving critical guidance and focusing attention of the higher-level processing units on actions that are more likely to succeed. ACT gives a functional account of the quick pathway as sentiment encoding prescriptive behaviour, while BayesAct shows how this account can be extended with a slow pathway that enables exploration and planning away from the prescription.
+      </paragraph>
+      <section label="2.3.1">
+       <section-title>
+        Affective computing
+       </section-title>
+       <paragraph>
+        BayesAct also aligns with work in affective computing, which is generally concerned with four main problems: affect recognition (vision-based, acoustic-based, etc.) [53], [54], generation of affectively modulated signals such as speech and facial expressions [55], [56], the study of human emotions including affective interactions and adaptation [57], and modelling affective human–computer interaction, including embodied conversational agents [58], [59], [60], [61].
+       </paragraph>
+       <paragraph>
+        This paper does not attempt to address the first two questions concerning generation and recognition of affective signals. We assume that we can detect and generate emotional signals in the affective EPA space. There has been a large body of work in this area and many of the proposed methods can be integrated as input/output devices with our model. Our model gives the mechanism for mapping inputs to outputs based on predictions from ACT combined with probabilistic and decision theoretic reasoning. The probabilistic nature of our model makes it ideally suited to the integration of noisy sensor signals of affect, as it has been used for many other domains with equally noisy signals [62].
+       </paragraph>
+       <paragraph>
+        Our focus is primarily on the third and fourth questions of how to build intelligent interactive systems that are emotionally aware using established theories of emotional reasoning. To do this, we propose to leverage research in sociology on Affect Control Theory (ACT) [1]. BayesAct overcomes three key limitations of ACT. First, it accounts for the variation in consensus about sentiments explicitly as a probability distribution, allowing the model to reflect unique human experiences as well as overall cultural knowledge and situational factors leading to uncertainty about identities [7]. Second, it allows for multiple, changing and unstable identities [63]. Many contemporary philosophers and poststructuralist sociologists and have challenged the notion of a unified, stable, and authentic self, instead arguing that our interpretations of human experience are constantly changing [64]. In this view, the self is “shifting, fragmented, and [comprised of] multiple, often contradictory identities, belying the notion of unity or constancy”[65]. Lastly, BayesAct accounts for noise in communication.
+       </paragraph>
+       <paragraph>
+        ACT is not currently well-known in the fields of affective computing or artificial intelligence, perhaps because of its intellectual origins in sociology. Affective computing researchers have attended more to the dominant theories in psychology, and despite an obvious overlap in basic intellectual interests, there is often little cross-disciplinary knowledge integration between sociologists and psychologists. However, we think that ACT aligns well with two main families of emotion theories well-known in affective computing: dimensional theories and appraisal theories. Dimensional theories define emotion as a core element of a person's state, usually as a point in a continuous dimensional space of evaluation or valence, arousal or activity, and sometimes dominance or potency [66], [13], [67], corresponding to the EPA dimensions of affect control theory. Appraisal theories come in different variants, but generally posit that emotional states are generated from cognitive appraisals of events in the environment in relation to the goals and desires of the agent [68], [69], [70], [46]. For example, the classic decision tree in the Ortony, Clore and Collins appraisal (OCC) model [68] has cognitive appraisal decision nodes and emotions as leaves. Coping rules are usually devised in order to map from the appraised emotions to changes in agent behaviour.
+       </paragraph>
+       <paragraph>
+        Gratch and Marsella [71] are possibly the first to propose a concrete computational mechanism for coping. Building on the work of Smith and Lazarus [72], they propose a five stage process wherein beliefs, desires, plans and intentions are first formulated, and upon which appraisals frames are computed. Appraisals are then mapped to multiple emotions (using OCC), which are then aggregated (summed) using an overall emotional state, or “mood”. Coping strategies then use a set of rules to handle the emotions either inwardly, by modifying elements of the model such as probabilities and utilities, or outwardly, by modifying plans or intentions. Lisetti and Gmytrasiewicz define specific coping mechanisms that they refer to as “action tendencies”, highlighting their importance in guiding actions [73]. However, these action tendencies only exist for nine basic discrete emotion categories, and so only provide a very coarse definition of coping mechanisms. ACT and BayesAct specify one simple coping mechanism: minimizing inconsistency in continuous-valued sentiment. This, when combined with mappings describing how sentiments are appraised from events and actions, can be used to prescribe actions that maximally reduce inconsistency.
+       </paragraph>
+      </section>
+      <section label="2.3.2">
+       <section-title>
+        Appraisal and dimensional theories of emotion
+       </section-title>
+       <paragraph>
+        As discussed in [74], affect control theory is conceptually compatible with both dimensional and appraisal theories. The connections with dimensional theories are obvious since emotions in ACT are represented as vectors in a continuous dimensional space. However, our generalisation, BayesAct, releases ACT from the constraint of representing emotion as a single point in affective space, since it represents emotions as probability distributions over this space. This allows BayesAct to represent mixed states of emotions, something usually lacking from dimensional theories, but often found in appraisal theories [75].
+       </paragraph>
+       <paragraph>
+        The connection of ACT with appraisal theories comes from the assumption that emotions result from subjective interpretations of events rather than immediate physical properties of external stimuli [74]. Appraisal theorists describe a set of fixed rules or criteria for mapping specific patterns of cognitive evaluations onto specific emotional states. The logic of ACT is quite similar: emotional states result from interpretations of observed events. The difference is that ACT emphasizes the cultural embeddedness of these interpretations through the central role of language in the sense-making process. This reasoning stems from the origins of the theory in symbolic interactionism [76], a dominant paradigm in sociology. The reliance upon linguistic categories ensures that individual appraisals of situations follow culturally shared patterns. The reason why this approach is easily reconciled with appraisal theories is the fact that the EPA dimensions of affective space organize linguistic categories, as discussed above. These dimensions can be understood as very basic appraisal rules related to the goal congruence of an event (E), the agent's coping potential (P), and the urgency implied by the situation (A) [74], [77]. However, ACT works without explicitly defining rules relating specific goals and states of the environment to specific emotions. Instead, ACT treats the dynamics of emotional states and behaviours as continuous trajectories in affective space that exist independently of any cognitive evaluations of goals, etc. Deflection minimisation is the only prescribed mechanism, while the more specific goals tied to types of agents and situations are assumed to emerge from the semantic knowledge base of the model.
+       </paragraph>
+      </section>
+      <section label="2.3.3">
+       <section-title>
+        Social norms
+       </section-title>
+       <paragraph>
+        Social norms [78] have a long history in social psychology, and, more recently in normative multi-agent systems (NorMAS) [79]. Although one could see the prescriptions of ACT as being normative, we emphasise that this refers to a causal prediction of affective dynamics rather than a set of logical rules. Nevertheless, logical norms, or models of other agent intentions [80], such as those described in multi-agent system research, can be implemented in the dynamics of BayesAct at the cognitive level.
+       </paragraph>
+      </section>
+      <section label="2.3.4">
+       <section-title>
+        AI and affective interaction
+       </section-title>
+       <paragraph>
+        Recently, significant work has emerged in affective computing that uses probabilistic reasoning to build intelligent interactive systems. Pynadath and Marsella [60] use a POMDP model of psychological consistency theories to build interactive agents. Their model estimates the relative value of actions based on various application-specific appraisal dimensions and a variety of influence factors such as consistency, self interest and “bias”.
+       </paragraph>
+       <paragraph>
+        In a similar vein, an adaptive system combining fuzzy logic with reinforcement learning is described in [81]. This model also uses application-dependent appraisal rules based on the OCC model [68] to generate emotional states, and a set of ad-hoc rules to generate actions. Bayesian networks and probabilistic models have also seen recent developments [82], [83] based on appraisal theory [68]. Emotions have also been used to guide reinforcement learning. In [84] higher valence is used to push an agent to increased exploitation of current knowledge. In [85], the SOAR cognitive architecture is augmented with a reinforcement learning agent that uses emotional appraisals as intrinsic reward signals [86].
+       </paragraph>
+       <paragraph>
+        Appraisal and dimensional theories of emotions are combined in the WASABI architecture [59] through primary (core feelings or gut reactions) and secondary (appraisals/interpretations) emotions. Primary (infant-like) emotions are stimulated non-consciously, and drive a core emotional state of valence (good vs. bad). A relaxation dynamics is then hypothesised in which the valence is decreased along two dimensions with varying rates, the slower one corresponding to “mood”. A third dimension is added to this space to react to the absence of any action, corresponding to “boredom”. The resulting three dimensional space is then combined with an estimate of dominance which is consciously appraised based on the current situation. A linear combination of valence, mood and dominance creates a state in the pleasure–arousal–dominance (PAD) space of Russell and Mehrabian [67]. Finally, PAD is used to generate automatic, involuntary behaviours such as the facial expressions of a virtual character, as well as deliberate, cognitive actions such as moves in the game, and coping strategies similar to those in [71]. Although this architecture bears some similarity to BayesAct in that it combines dimensional and appraisal theories, it uses ad hoc elements and coping rules.
+       </paragraph>
+      </section>
+      <section label="2.3.5">
+       <section-title>
+        Applications
+       </section-title>
+       <paragraph>
+        Conati and Maclaren [83] use a decision theoretic model to build an affectively intelligent tutoring system, but again rely on sets of labelled emotions and rules from appraisal theories. This is typically done in order to ease interpretability and computability, and to allow for the encoding of detailed prior knowledge into an affective computing application. BayesAct does not require a statically defined client (e.g. student) or agent (e.g. tutor) identity, but allows the student and tutor to dynamically change their perceived identities during the interaction. This allows for greater flexibility on the part of the agent to adapt to specific user types “on the fly” by dynamically learning their identity, and adapting strategies based on the decision theoretic and probabilistic model. Tractable representations of intelligent tutoring systems as POMDPs have recently been explored [87], and allow the modelling of up to 100 features of the student and learning process. Other recent work on POMDP models for tutoring systems include [88], [89]. Our emotional “plug-in” would seamlessly integrate into such POMDP models, as they also use Monte-Carlo based solution methods [39]. The example we explore in Section 4.2.1 is a simplified version of these existing tutoring system models.
+       </paragraph>
+       <paragraph>
+        POMDPs have been widely used in mobile robotics [90], for intelligent tutoring systems [87], [83], [89], in spoken-dialog systems [91], and in assistive technology [92], [93]. In Section 4.2.2 we apply our affective reasoning engine to a POMDP-based system that helps a person with Alzheimer's disease to handwash [92].
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      Bayesian formulation of ACT
+     </section-title>
+     <paragraph>
+      We are modelling an interaction between an agent (the computer system) and a client (the human), and will be formulating the model from the perspective of the agent (although this is symmetric). We will use notational conventions where capital symbols ({a mathematical formula}F,T) denote variables or features, small symbols ({a mathematical formula}f,τ) denote values of these variables, and boldface symbols ({a mathematical formula}F,T,f,τ) denote sets of variables or values. We use primes to denote post-action variables, so {a mathematical formula}x′ means the value of the variable X after a single time step.
+     </paragraph>
+     <paragraph>
+      A human-interactive system can be represented at a very abstract level using a POMDP as shown in Fig. 1(a, solid lines). In this case, X represents everything the system needs to know about both the human's behaviours and the system state, and can itself be factored into multiple correlated attributes. For example, in a tutoring system, X might represent the current state of the student's knowledge, the level at which they are working, or a summary of their recent test success. The observations {a mathematical formula}Ωx are anything the system observes in the environment that gives it evidence about the state X. In a tutoring system, this might be what the student has clicked on, or if the student is looking at the screen or not. The system actions A are things the system can do to change the state (e.g. give a test, present an exercise, modify the interface, move a robot) or to modify the human's behaviours (e.g. give a prompt, give an order). Finally, the reward function is defined over state-action pairs and rewards those states and actions that are beneficial overall to the goals of the system-human interaction. In a tutoring system, this could be getting the student to pass a test, for example. Missing from this basic model are the affective elements of the interaction, which can have a significant influence on a person's behaviour. For example, a tutor who imperatively challenges a student “Do this exercise now!” will be viewed differently than one who meekly suggests “here's an exercise you might try...”. While the propositional content of the action is the same (the same exercise is given), the affective delivery will influence different students in different ways. While some may respond vigorously to the challenge, others may respond more effectively to the suggestion.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Basic formulation
+      </section-title>
+      <paragraph>
+       Bayesian affect control theory (BayesAct for short) gives us a principled way to add the emotional content to a human interactive system by making four key additions to the basic POMDP model, as shown by the dashed lines in Fig. 1(a):
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        An unobservable variable, Y, describes sentiments of the agent about identities and behaviours. The dynamics of Y is given by empirical measurements in ACT (see below).
+       </list-item>
+       <list-item label="2.">
+        Observations {a mathematical formula}Ωf give evidence about the part of the sentiments Y encoding behaviours of the client.
+       </list-item>
+       <list-item label="3.">
+        The actions of the agent are now expanded to be {a mathematical formula}B={A,Ba}. The normal state transition dynamics can still occur based only on A, but now the action space also must include an affective “how” for the delivery “what” of an action.
+       </list-item>
+       <list-item label="4.">
+        The application-specific dynamics of X now depends on sentiments, {a mathematical formula}Pr(X′|X,Y′,A), and will generally follow the original distribution {a mathematical formula}Pr(X′|X,A), but now moderated by sentiments. For example, X may move towards a goal, but less quickly when deflection is high.
+       </list-item>
+      </list>
+      <paragraph>
+       Fig. 1(b) shows a graphical model of the ACT model we are proposing. We can make the association of the state{a mathematical formula}S={F,T,X}, the observations {a mathematical formula}Ω={Ωx,Ωf}, and the action {a mathematical formula}B={A,Ba}. We denote {a mathematical formula}Y={F,T}, {a mathematical formula}S={Y,X}.
+      </paragraph>
+      <paragraph>
+       Let {a mathematical formula}F={Fij} denote the set of fundamental agent sentiments about itself where each feature {a mathematical formula}Fij,i∈{a,b,c},j∈{e,p,a} denotes the jth fundamental sentiment (evaluation, potency or activity) about the ith interaction object: actor ( agent), behaviour, or object ( client). Let {a mathematical formula}T={Tij} be similarly defined and denote the set of transient agent sentiments. Variables {a mathematical formula}Fij and {a mathematical formula}Tij are continuous valued and {a mathematical formula}F,T are each vectors in a continuous nine-dimensional space. Indices will always be in the same order: sentiment on the right and object on the left, thereby resolving the ambiguity between the two uses of the index “a”. We will use a “dot” to represent that all values are present if there is any ambiguity. For example, the behaviour component of F is written {a mathematical formula}Fb⋅ or {a mathematical formula}Fb for short. In a tutoring system, F would represent the fundamental sentiments the agent has about itself ({a mathematical formula}Fa⋅), about the student ({a mathematical formula}Fc⋅) and about the most recent (tutor or student) behaviour ({a mathematical formula}Fb⋅). T would respresent the transient impressions created by the sequence of recent events (presentations of exercise, tests, encouraging comments, etc.). T may differ significantly from F, for example if the student “swears at” the tutor, he will seem considerably more “bad” than as given by shared fundamental sentiments about students (so {a mathematical formula}τce&lt;fce).
+      </paragraph>
+      <paragraph>
+       Affect control theory encodes the identities as being for “actor” (A, the person acting) and “object” (O, the person being acted upon). In BayesAct, we encode identities as being for “agent” and “client” (regardless of who is currently acting). However, this means that we need to know who is currently acting, and the prediction equations will need to be inverted to handle turn-taking during an interaction. This poses no significant issues, but must be kept in mind if one is trying to understand the connection between the two formulations. In particular, since we are assuming a discrete time model, then the “turn” (who is currently acting) will have to be represented (at the very least) in X.{sup:3} Considering time to be event-based, however, we can still handle interruptions, but simultaneous action by both agents will need further consideration.{sup:4}
+      </paragraph>
+      <paragraph>
+       In the following, we will use symbolic indices in {a mathematical formula}{a,b,c} and {a mathematical formula}{e,p,a}, and define two simple index dictionaries, {a mathematical formula}dι and {a mathematical formula}dα, to map between the symbols and numeric indices {a mathematical formula}({0,1,2}) in matrices and vectors so that, {a mathematical formula}dι(a)=0,dι(b)=1,dι(c)=2 and {a mathematical formula}dα(e)=0,dα(p)=1,dα(a)=2. Thus, we can write an element of F as {a mathematical formula}Fbp which will be the kth element of the vector representation of F, where {a mathematical formula}k=3dι(b)+dα(p). A covariance in the space of F might be written Σ (a {a mathematical formula}9×9 matrix), and the element at position {a mathematical formula}(n,m) of this matrix would be denoted {a mathematical formula}Σij,kl where {a mathematical formula}n=3dι(i)+dα(j) and {a mathematical formula}m=3dι(k)+dα(l). We can then refer to the middle {a mathematical formula}3×3 block of Σ (the covariance of {a mathematical formula}Fb with itself) as {a mathematical formula}Σb⋅,b⋅. Although the extra indices seem burdensome, they will be useful later on as we will see. We will also require an operator that combines two nine-dimensional sentiment vectors w and z by selecting the first and last three elements (identity components) of w and the middle three (behaviour) elements of z:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The POMDP action will be denoted here as {a mathematical formula}B={A,Ba} (behaviour of the agent), but this is treated differently than other variables as the agent is assumed to have freedom to choose the value for this variable. The action is factored into two parts: A is the propositional content of the action, and includes things that the agent does to the application (change screens, present exercises, etc.), while {a mathematical formula}Ba is the emotional content of the action. Thus, {a mathematical formula}Ba gives the affective “how” for the delivery “what” of an action, A. The affective action {a mathematical formula}Ba={Bae,Bap,Baa} will also be continuous valued and three dimensional: the agent sets an EPA value for its action (not a propositional action label).{sup:5} For example, a tutoring system may “command” a student to do something ({a mathematical formula}Ba={−0.1,1.3,1.6}), or may “suggest” instead ({a mathematical formula}Ba={1.8,1.4,0.8}), which is considerably more “good” than the command. The client behaviour is implicitly represented in the fundamental sentiment variables {a mathematical formula}Fb (a three dimensional vector), and we make some observations of this behaviour, {a mathematical formula}Ωf, another three dimensional vector. The ACT databases can be used to map words in written or spoken text to EPA values that are used as {a mathematical formula}Ωf, for example.
+      </paragraph>
+      <paragraph>
+       Finally, a set of variables X represents the state of the system (e.g. the state of the computer application or interface). We do not assume that this system state is directly observable, and so also use sets of observation variables {a mathematical formula}Ωx. The state space described by X may also include affective elements. For example, a student's level of frustration could be explicitly modelled within X. In Section 4.2.2, we describe an affective prompting system that is used for a person with a cognitive disability. In this case, we explicitly represent the “awareness” of the person as a component of X, and the “propositional” actions of prompting can change the “awareness” of the person. However, as we discuss in Section 3.2, emotions can be computed in ACT from fundamental and transient sentiments, and so such explicit representation may not be necessary.
+      </paragraph>
+      <section label="3.1.1">
+       <section-title>
+        Transient dynamics
+       </section-title>
+       <paragraph>
+        The empirically derived prediction equations of ACT can be written as {a mathematical formula}τ′=M(x)G(f′,τ,x) where {a mathematical formula}G is a non-linear operator that combines τ, {a mathematical formula}f′, and x, and {a mathematical formula}M(X) is the prediction matrix (see Section 2.1 and [1]) that now depends on whose “turn” it is (encapsulated in X so that {a mathematical formula}M(X)≡M(Xw), where {a mathematical formula}Xw∈X and {a mathematical formula}xw∈{agent,client}).{sup:6} More precisely, we write the function {a mathematical formula}G for the case when it is the turn of the agent (given by {a mathematical formula}xw) as the {a mathematical formula}29×1 (column) vector (equivalent to (11.16) in [1]):{a mathematical formula} and for the case when it is the turn of the client  it is the same, but with agent and client indices swapped on τ (so {a mathematical formula}τa⋅→τc⋅ and {a mathematical formula}τc⋅→τa⋅):{a mathematical formula} The terms in these two functions are arrived at through an experimental procedure detailed in [94], and are those that have the most predictive power for the transient impressions in the empirical survey data. These two functions may also depend on other parts of X (the “settings”, see Section 12.1 of [1]). M is then a {a mathematical formula}9×29 matrix of empirically derived coefficients that, when multiplied by these vectors, yields the subsequent transient sentiments. M must be a function of x, since we will swap all “actor” rows with “object” rows when it is the client turn. Thus,{a mathematical formula} where M is from the ACT database.
+       </paragraph>
+       <paragraph>
+        In general, we can imagine {a mathematical formula}G in Equations (3) and (4) as vectors with all possible products of up to m elements from {a mathematical formula}〈τ,f′〉. These are a set of “features” derived from the previous transients and current fundamentals. M is then a {a mathematical formula}9×9m matrix of coefficients, many of which may be very small or zero. Empirical studies have narrowed these down to the set above, using {a mathematical formula}m=3. Ideally, we would like to learn the coefficients of M, and the features that are used in {a mathematical formula}G, from data during interactions.
+       </paragraph>
+       <paragraph>
+        Since {a mathematical formula}G only uses the behaviour component of {a mathematical formula}f′, we can also group terms together and write {a mathematical formula}τ′=M(x)G(f′,τ,x)=H(τ,x)fb′−C(τ,x), where {a mathematical formula}H and {a mathematical formula}C are {a mathematical formula}9×3 and {a mathematical formula}9×1 matrices of coefficients from the dynamics M and {a mathematical formula}G together. That is, {a mathematical formula}Hij,k is the sum of all the terms in row {a mathematical formula}3dι(i)+dα(j) of {a mathematical formula}MG that contain {a mathematical formula}fbk′, with {a mathematical formula}fbk′ divided out. Thus, the sum of all terms in row {a mathematical formula}3dι(i)+dα(j) of {a mathematical formula}MG that contain {a mathematical formula}fbk′ is {a mathematical formula}Hij,kfbk′. Similarly, {a mathematical formula}Cij is the sum of all terms in row {a mathematical formula}3dι(i)+dα(j) of {a mathematical formula}MG that contain no {a mathematical formula}fb′ element at all. Simply put, the matrices {a mathematical formula}H and {a mathematical formula}C are a refactoring of the operators {a mathematical formula}MG, such that a linear function of {a mathematical formula}fb′ is obtained.
+       </paragraph>
+       <paragraph>
+        We then postulate that the dynamics of {a mathematical formula}τ′ will follow this prediction exactly, so that the distribution over {a mathematical formula}τ′ is deterministic and given by:{a mathematical formula} where{a mathematical formula}
+       </paragraph>
+      </section>
+      <section label="3.1.2">
+       <section-title>
+        Deflection potential
+       </section-title>
+       <paragraph>
+        The deflection in affect control theory is a nine-dimensional weighted Euclidean distance measure between fundamental sentiments F and transient impressions T (Section 2.1). Here, we propose that this distance measure is the logarithm of a probabilistic potential{a mathematical formula} The covariance Σ is a generalisation of the “weights” (Equation (1) and [1]), as it allows for some sentiments to be more significant than others when making predictions (i.e. their deflections are more carefully controlled by the participants), but also represents correlations between sentiments in general, allowing for the deflection potential to be sensitive to different directions in EPA space. If Σ is diagonal with elements {a mathematical formula}1wi,i∈{1,…,9}, then Equation (7) gives us {a mathematical formula}log⁡φ(f′,τ′)=D+c where D is the deflection from Equation (1) and c is a constant.
+       </paragraph>
+      </section>
+      <section label="3.1.3">
+       <section-title>
+        Fundamental dynamics
+       </section-title>
+       <paragraph>
+        To predict the fundamental sentiments, we combine the deflection potential from the previous section with an “inertial” term that stabilises the fundamentals over time. This gives the probabilistic generalisation of the affect control principle (Definition 1):{a mathematical formula} where {a mathematical formula}ψ(f′,τ,x)=(f′−M(x)G(f′,τ,x))TΣ−1(f′−M(x)G(f′,τ,x)) and ξ represents the temporal “inertial” dynamics of {a mathematical formula}f′, encoding both the stability of affective identities and the dynamics of affective behaviours. ξ is such that {a mathematical formula}fb′ is equal to {a mathematical formula}ba if the agent is acting, and otherwise is unconstrained, and {a mathematical formula}fa′,fc′ are likely to be close to {a mathematical formula}fa,fc, respectively. Equation (8) can be re-written as a set of multivariate Gaussian distributions indexed by x, with means and covariances that are non-linearly dependent on {a mathematical formula}f,ba and τ. The full derivation is in Section 3.3.
+       </paragraph>
+      </section>
+      <section label="3.1.4">
+       <section-title>
+        Other factors
+       </section-title>
+       <paragraph>
+        The other factors in BayesAct are as follows:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         {a mathematical formula}R(f,τ,x) is a reward function giving the immediate reward given to the agent. We assume an additive function{a mathematical formula} where {a mathematical formula}Rx encodes the application goals (e.g. to get a student to pass a test), and{a mathematical formula} depends on the deflection. The relative weighting and precise functional form of these two reward functions require further investigation, but in the examples we show can be simply defined. The affect control principle only considers {a mathematical formula}Rs, and here we have generalised to include other goals. Other reward functions beyond additive could also be considered.
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}Pr(x′|x,f′,τ′,a) denotes how the application progresses given the previous state, the fundamental and transient sentiments, and the (propositional) action of the agent. The dependence on the sentiments is important: it indicates that the system state will progress differently depending on the affective state of the user and agent. In Section 4.2 we explore this idea further in the context of two applications by hypothesising that the system state will more readily progress towards a goal if the deflection (difference between fundamental and transient sentiments) is low.
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}Pr(ωf|f),Pr(ωx|x) observation functions for the client behaviour sentiment and system state, respectively. These functions are stochastic in general, but may be deterministic for the system state (so that X is fully observable). It will not be deterministic for the client behaviour sentiment as we have no way of directly measuring this (it can only be inferred from data).
+        </list-item>
+       </list>
+      </section>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Transition dynamics
+      </section-title>
+      <paragraph>
+       Overall, we are interested in computing the probability distribution over the sentiments and system state given the history of actions and observations. Denoting {a mathematical formula}S={F,T,X}, and {a mathematical formula}Ω={Ωf,Ωx}, and {a mathematical formula}Ωt,bt,St are the observations, agent action, and state at time t, we want to compute the agent's subjective belief, given the observations, ω, and actions, b, up to time t:{a mathematical formula} which can be written as{a mathematical formula} where {a mathematical formula}Pr(st|st−1,bt) is factored according to Fig. 1(b):{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       This gives us a recursive formula for computing the distribution over the state at time t as an expectation of the transition dynamics taken with respect to the distribution state at time {a mathematical formula}t−1. Now, we have that and {a mathematical formula}Pr(ω|s)=Pr(ωx|x′)Pr(ωf|f′) and rewriting {a mathematical formula}st≡s′ and {a mathematical formula}st−1≡s, we have:{a mathematical formula} The first four terms correspond to parameters of the model as explained in the last section, while we need to develop a method for computing the last term, which we do in the next section.
+      </paragraph>
+      <paragraph>
+       The belief state can be used to compute expected values of quantities of interest defined on the state space, such as the expected deflection{a mathematical formula} where {a mathematical formula}D(s) is the deflection of s. This gives us a way to connect more closely with emotional “labels” from appraisal theories. For example, if one wanted to compute the expected value of an emotion such as “Joy” in a situation with certain features (expectedness, events, persons, times), then the emotional content of that situation would be explicitly represented in our model as a distribution over the E–P–A space, {a mathematical formula}b(s), and the expected value of “Joy” would be {a mathematical formula}Eb(s)[Joy(s)]=∫sb(s)Joy(s), where {a mathematical formula}Joy(s) is the amount of joy produced by the fundamental and transient sentiment state s. In ACT, emotions are posited to arise from the difference between the transient and fundamental impressions of self-identity ({a mathematical formula}τa and {a mathematical formula}fa, respectively, in BayesAct). A separate set of equations with parameters obtained through empirical studies is presented in Chapter 14 of [1], and emotional states (e.g. the function {a mathematical formula}Joy(s)) can be computed directly using these equations. Emotional displays (e.g. facial expressions) can be viewed as a method for communicating an agent's current appraisal of the situation in terms of affective identities that the agent perceives, and would be part of the action space {a mathematical formula}ba. The perception of emotional displays would be simply integrated into BayesAct using observations of client identity, {a mathematical formula}Fc. We do not further expand on direct emotion measures in this paper, but note that this may give a principled method for incorporating explicit appraisal mechanisms into BayesAct, and for linking with appraisal theories [68].
+      </paragraph>
+     </section>
+     <section label="3.3">
+      <section-title>
+       Estimating behaviour sentiment probabilities
+      </section-title>
+      <paragraph>
+       Here we describe how to compute {a mathematical formula}Pr(f′|f,τ,x,ba). This is the agent's prediction of what the client will do next, and is based partly on the principle that we expect the client to do what is optimal to reduce deflection in the future, given the identities of agent and client.
+      </paragraph>
+      <paragraph>
+       We denote the probability distribution of interest as a set of parameters {a mathematical formula}Θf. Each parameter in this set, {a mathematical formula}θf, will be a probability of observing a value of {a mathematical formula}f′ given values for {a mathematical formula}f,τ,ba and x. We write {a mathematical formula}θf(f′;f,τ,x,ba)=Pr(f′|f,τ,x,ba,θf), so that the distribution over {a mathematical formula}θf given the knowledge that {a mathematical formula}τ′ and {a mathematical formula}f′ are related through {a mathematical formula}φ(f,τ) is{sup:7}:{a mathematical formula}{a mathematical formula}{a mathematical formula} where by {a mathematical formula}∫z we mean {a mathematical formula}∫z∈Z ({a mathematical formula}Z is the domain of Z) and we have left off the infinitesimals (e.g. {a mathematical formula}df′,dτ′). We have assumed even priors over f,τ, x and {a mathematical formula}ba. The expression (16) will give us a posterior update to the parameters of the distribution over {a mathematical formula}θf.
+      </paragraph>
+      <paragraph>
+       Equation (16) gives the general form for this distribution, but this can be simplified by using the determinism of some of the distributions involved, as described at the start of this section. The deterministic function for the distribution over {a mathematical formula}τ′ will select specific values for these variables, and we find that:{a mathematical formula} where{a mathematical formula} is the deflection between fundamental and transient sentiments.
+      </paragraph>
+      <paragraph>
+       Equation (17) gives us an expression for a distribution over {a mathematical formula}θf, which we can then use to estimate a distribution over {a mathematical formula}F′=f′ given the state {a mathematical formula}{f,τ,x,ba} and the known relation between fundamentals and transients, φ (ignoring the observations {a mathematical formula}Ωf and {a mathematical formula}Ωx for now):{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} The first term is a distribution over {a mathematical formula}f′ that represents our assumption of minimal deflection, while the second is the expected value of the parameter {a mathematical formula}θf given the prior. This expectation will give us the most likely value of {a mathematical formula}θf given only the system state x. We know two things about the transition dynamics ({a mathematical formula}θf) that we can encode in the prior. First, we know that the behaviour will be set equal to the agent's action if it is the agent's turn (hence the dependence on x). Second, we know that identities are not expected to change very quickly. Therefore, we have that{a mathematical formula} where {a mathematical formula}〈f,ba〉 is f for the identities and {a mathematical formula}ba for the behaviours (see Equation (2)), and {a mathematical formula}Σf(x) is the covariance matrix for the inertia of the fundamentals, including the setting of behaviour fundamentals by the agent action. {a mathematical formula}Σf is a set of parameters governing the strength of our prior beliefs that the identities of client and agent will remain constant over time.{sup:8} Thus, {a mathematical formula}Σf is a {a mathematical formula}9×9 block matrix:{a mathematical formula} where {a mathematical formula}βa2 and {a mathematical formula}βc2 are the variances of agent and client identity fundamentals (i.e. how much we expect agent and client to change their identities over time), and {a mathematical formula}βb2(x) is infinite for a client turn and is zero for an agent turn. Writing {a mathematical formula}ξ(f′,f,ba,x)≡(f′−〈f,ba〉)TΣf−1(x)(f′−〈f,ba〉), we therefore have that:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       We can now estimate the most likely value of {a mathematical formula}F′ by computing{a mathematical formula} This expression will be maximized for exactly the behaviour that minimizes the deflection as given by ψ, tempered by the inertia of changing identities given by ξ. This is the generalisation of the affect control principle (Definition 1, see also Appendix A). We can rewrite this by first rewriting the matrix {a mathematical formula}H as{a mathematical formula} where {a mathematical formula}Ha≡Ha⋅⋅ (a {a mathematical formula}3×3 matrix giving the rows of {a mathematical formula}H in which {a mathematical formula}Hij,k have {a mathematical formula}i=a) and similarly for {a mathematical formula}Hb and {a mathematical formula}Hc. We also define {a mathematical formula}I3 as the {a mathematical formula}3×3 identity matrix and {a mathematical formula}03 as the {a mathematical formula}3×3 matrix of all zeros. We can then write a matrix{a mathematical formula} Using {a mathematical formula}K, we can now write the general form for ψ starting from Equation (18) as:{a mathematical formula}{a mathematical formula}{a mathematical formula} and thus, if we ignore the inertia from previous fundamentals, ξ, we recognize Equation (28) as the expectation of a Gaussian or normal distribution with a mean of {a mathematical formula}K−1C and a covariance of {a mathematical formula}Στ≡K−1Σ(KT)−1. Taking ξ into account means that we have a product of Gaussians, itself also a Gaussian the mean and covariance of which can be simply obtained by completing the squares to find a covariance, {a mathematical formula}Σn equal to the sum in quadrature of the covariances, and a mean, {a mathematical formula}μn, that is proportional to a weighted sum of {a mathematical formula}K−1C and {a mathematical formula}〈f,ba〉, with weights given by the normalised covariances of {a mathematical formula}ΣnΣτ−1 and {a mathematical formula}ΣnΣf−1, respectively.
+      </paragraph>
+      <paragraph>
+       Putting it all together, we have that{a mathematical formula} where{a mathematical formula}{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The distribution over {a mathematical formula}f′ in Equation (29) is a Gaussian distribution, but has a mean and covariance that are dependent on {a mathematical formula}f,τ,x and {a mathematical formula}ba through the non-linear function {a mathematical formula}K. Thus, it is not simple to use this analytically as we will explore further below.
+      </paragraph>
+      <paragraph>
+       The “optimal” behaviour from [1] is obtained by holding the identities constant when optimising the behaviour (and similarly for identities: behaviours are held constant). See Appendix B for a reduction of the equations above to those in [1].
+      </paragraph>
+     </section>
+     <section label="3.4">
+      <section-title>
+       Computing policies
+      </section-title>
+      <paragraph>
+       The goal here is to compute a policy {a mathematical formula}π(b(S)):Δ(S)→A that maps distributions over S into actions, where {a mathematical formula}b(S) is the current belief state as given by Equation (12). This policy is a function from functions (distributions) over a continuous space into the mixed continuous-discrete action space. There are two components to this mapping. First, there is the propositional action as defined by the original POMDP, and second there is the affective action defined by affect control theory.
+      </paragraph>
+      <paragraph>
+       Policies for POMDPs in general can be computed using a number of methods, but recent progress in using Monte-Carlo (sampling) based methods has shown that very large POMDPs can be (approximately) solved tractably, and that this works equally well for continuous state and observation spaces [37], [38]. POMCP (Partially Observable Monte-Carlo Planning [38]) is a Monte-Carlo based method for computing policies in POMDPs with discrete action and observation spaces. The continuous observation space can be handled by discretising the set of observations obtained at each step. This can be done dynamically or using a fixed grid. The continuous action space for BayesAct can be handled by leveraging the fact the we can predict what an agent would “normally” do in any state according to the affect control principle: it is the action that minimises the deflection. Given the belief state {a mathematical formula}b(s), we have a probability distribution over the action space giving the probability of each action (see Equation (32)). This normative prediction constrains the space of actions over which the agent must plan, and drastically reduces the branching factor of the search space.
+      </paragraph>
+      <paragraph>
+       Denote the “normal” or expected affective action distribution as {a mathematical formula}π†(s)=π†(fb):{a mathematical formula} where{a mathematical formula}{a mathematical formula} and {a mathematical formula}Σf† is the same as {a mathematical formula}Σf given by Equation (24) with {a mathematical formula}βb2(x) set to infinity (instead of zero) so the behaviour sentiments are unconstrained. Equation (32) computes the expected distribution over {a mathematical formula}f′ given {a mathematical formula}b(s) and then marginalises (sums) out the identity components{sup:9} to get the distribution over {a mathematical formula}fb. A sample drawn from this distribution could then be used as an action in the POMCP method. A POMCP “rollout” would then proceed by drawing a subsequent sample from the distribution over client actions, and then repeating the sampling from Equation (32) over agent actions. This is continued to some maximum depth, at which point the reward gathered is computed as the value of the path taken. The propositional actions that update the state x are handled exhaustively as usual in POMCP by looping over them.
+      </paragraph>
+      <paragraph>
+       The integration in Equation (32) may be done analytically if {a mathematical formula}b(s) is Gaussian, but for the general case this may be challenging and not have a closed-form solution. In such cases, we can make a further approximation that {a mathematical formula}b(s)=δ(s⁎−s) where {a mathematical formula}s⁎={f⁎,τ⁎,x⁎}=Eb(s)[s]=∫ssb(s) is the expected state (or one could use {a mathematical formula}s⁎=arg⁡maxs⁡b(s) as the most likely state). We will denote the resulting action distribution as {a mathematical formula}π†⁎(fb′).
+      </paragraph>
+      <paragraph>
+       In this paper, we do not use the full POMCP solution, instead only taking a “greedy” action that looks one step into the future by drawing samples from the “normal” action distribution in Equation (32) using these to compute the expected next reward, and selecting the (sampled) action {a mathematical formula}ba†⁎ that maximizes this:{a mathematical formula} In practice we make two further simplifications: we avoid the integration over {a mathematical formula}fa and {a mathematical formula}fc in Equation (32) by drawing samples from the distribution over {a mathematical formula}f′ and selecting the {a mathematical formula}fb′ components as our sample for {a mathematical formula}ba in Equation (35), and we compute the integration in Equation (35) by sampling from the integrand and averaging. More details and results on the full POMCP approach can be found in [9].
+      </paragraph>
+     </section>
+     <section label="3.5">
+      <section-title>
+       Sampling
+      </section-title>
+      <paragraph>
+       We return now to Equation (10) and consider how we can compute the belief distribution at each point in time. The nonlinearities in the transition dynamics that arise from the dynamics of fundamental sentiments (Equation (29)) prevent the use of an extended (or simple) Kalman filter. Instead, we will find it more convenient and general to represent {a mathematical formula}b(s) using a set of N samples [95]. This will allow us to represent more complex belief distributions, including, but not limited to multi-modal distributions over identities. This can be very useful in cases where the agent believes the client to be one of a small number of identities with equal probability. In such a case, the agent can maintain multiple hypotheses, and slowly shift its belief towards the one that agrees most with the evidence accrued during an interaction. We will write the belief state as [95]:{a mathematical formula} where {a mathematical formula}si={fi,τi,xi} and {a mathematical formula}wi is the weight of the ith sample.
+      </paragraph>
+      <paragraph>
+       Then, we implement Equation (10) using a sequential Monte Carlo method sampling technique, also known as a particle filter or bootstrap filter[96], [95]. We start at time {a mathematical formula}t=0 with a set of samples and weights {a mathematical formula}{si,wi}i=1…N, which together define a belief state {a mathematical formula}b(s0) according to Equation (36). The precise method of getting the first set of samples is application dependent, but will normally be to draw the samples from a Gaussian distribution over the identities of the agent and client (with standard deviations of {a mathematical formula}βa0 and {a mathematical formula}βc0, resp.), and set all weights to 1.0. The agent then proceeds as follows:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        Consult the policy to retrieve a new action {a mathematical formula}ba←π(b(st)). If using the approximation in Equation (35), then we first compute the expected value of the state {a mathematical formula}st⁎=∑i=1Nwisi.
+       </list-item>
+       <list-item label="2.">
+        Take action {a mathematical formula}ba and receive observation ω.
+       </list-item>
+       <list-item label="3.">
+        Sample (with replacement) unweighted samples from {a mathematical formula}b(s) from the distribution defined by the current weights.
+       </list-item>
+       <list-item label="4.">
+        For each unweighted sample, {a mathematical formula}si, draw a new sample, {a mathematical formula}si′ from the posterior distribution {a mathematical formula}Pr(⋅|si,ba):
+       </list-item>
+       <list-item label="5.">
+        Compute new weights for each sample using the observation functions {a mathematical formula}wi=Pr(ω|si′).
+       </list-item>
+       <list-item label="6.">
+        If all weights are 0.0, set {a mathematical formula}fb=ω and resample.
+       </list-item>
+       <list-item label="7.">
+        The new belief state is {a mathematical formula}b(s′) according to Equation (36) with samples, where {a mathematical formula}si′={fi′,τi′,xi′} goto step 1 with {a mathematical formula}s←s′.
+       </list-item>
+      </list>
+      <paragraph>
+       An example of the sampling step 4 is shown above to be from a proposal that is exactly {a mathematical formula}Pr(f′|f,τ,x,ba,φ), but this could be from some other distribution close to this.
+      </paragraph>
+      <paragraph>
+       We can compute expected values of quantities of interest, such as the deflection, by summing over the weighted set of samples (the Monte-Carlo version of Equation (13)):{a mathematical formula} We have found that, for situations in which the client identity is not known, but is being inferred by the agent, it is necessary to add some “roughening” to the distribution over these unknown identities [96]. This is because the initial set of samples only sparsely covers the identity space (for an unknown identity), and so is very unlikely to come close to the true identity. Coupled with the underlying assumption that the identities are fixed or very slowly changing, this results in the particle filter getting “stuck” (and collapsed) at whatever initial sample was closest to the true identity (which may still be far off in the EPA space, especially when using fewer particles). Adding some zero-mean white noise (in {a mathematical formula}[−σr,σr]) helps solve this degeneracy. We add this noise to any unknown identity ( agent or client) after the unweighted samples are drawn in step 3 above. As suggested by [96], we use {a mathematical formula}σr=K×N−1/d, where K is a constant, N is the number of samples and d is the dimension of the search space (in this case 3 for the unknown identity). We use {a mathematical formula}K=1 in our experiments, and note that we are using white noise (not Gaussian noise), but that this does not make a significant difference.
+      </paragraph>
+      <paragraph>
+       This so-called “roughening” procedure is well known in the sequential Monte-Carlo literature, and in particular has been used for Bayesian parameter estimation [95] (Chapter 10). Our situation is quite similar, as the client identities can be seen as model parameters that are fixed, but unknown. Finally, it may also be possible to change the amount of roughening noise that is added, slowly reducing it according to some schedule as the client identity is learned.
+      </paragraph>
+      <paragraph>
+       It is also possible to mix exact inference over the application state, X, with sampling over the continuous affective space, leading to a Rao-Blackwellised particle filter [97].
+      </paragraph>
+     </section>
+     <section label="3.6">
+      <section-title>
+       Python implementation
+      </section-title>
+      <paragraph>
+       We have implemented BayesAct in Python as a class Agent that contains all the necessary methods.{sup:10} Applications can use BayesAct by subclassing Agent and providing three key application-dependent methods:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        sampleXvar is used to draw a sample from X
+       </list-item>
+       <list-item label="•">
+        reward produces the reward in the current state of X
+       </list-item>
+       <list-item label="•">
+        initXvar is used to initialise X at the start of a simulation or run
+       </list-item>
+      </list>
+      <paragraph>
+       Sub-classes can also implement methods for input and output mappings. For example, an input mapping function could take sentences in English and map them to EPA values based on an affective dictionary, or using sentiment analysis [98], [99]. Applications can also learn these mappings by assuming the human user will be behaving according to the affect control principle: whatever the user says can be mapped to the prediction of the theory (or close to it).
+      </paragraph>
+      <paragraph>
+       On top of the functions above for a sub-class of Agent, the following parameters need to be set when using BayesAct in general:{a mathematical formula}
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Experiments and results
+     </section-title>
+     <paragraph>
+      Our goal in this section is to demonstrate, in simulation, that BayesAct can discover the affective identities of persons it interacts with, and that BayesAct can augment practical applications with affective dynamics. To establish these claims, we do the following.
+     </paragraph>
+     <paragraph>
+      First, we verify both analytically and empirically that BayesAct can reproduce exactly the affective dynamics predicted by the Interact software [1]. The analytical derivation is done by reducing Equation (29) to the equations in [1] as shown in Appendix B. The empirical demonstration is done by running BayesAct alongside Interact{sup:11} and showing that the identical sentiments and actions are generated. We have found a very close match across a range of different agent and client identities. These analytical and empirical demonstrations show that BayesAct can be used as a model of human affective dynamics to the extent that it has been shown empirically that Interact is a close model of human affective dynamics. Second, we show how, if we loosen the constraints on the client identity being fixed, BayesAct can “discover” or learn this identity during an interaction with an Interact client. Third, we show how, if both agent and client do not know the identity of their interactant, they can both learn this identity simultaneously. Fourth, we show that a BayesActagent can adapt to a changing client identity. What this means is that an affective agent has the ability to learn the affective identity of a client that it interacts with. We demonstrate this under varying levels of environment noise. Finally, we postulate that, since the agent can learn the affective identity of its client, it can better serve the client in an appropriate and effective manner. We give two preliminary demonstrations of this in Section 4.2.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Simulations
+      </section-title>
+      <paragraph>
+       In this section, we investigate two types of simulation. The first concerns agents with nearly fixed (low variance) personal identities that try to learn the identity of another agent. The second shows what happens if one of the agents is changing identity dynamically. Full results are shown in Appendix C. To enable comparisons with Interact, we use action selection according to our generalised affect control principle only, using an average of 100 samples from Equation (32). These simulations therefore do not directly address how policy computation will affect an application. However, we can show that BayesAct can replicate Interact as far as deflection minimisation goes, and can find low-deflection solutions for many examples, without requiring identities to be known and fixed. We have also done simulations where Equation (35) is used with a reward function that sets {a mathematical formula}Rx=0 (see Equation (9)). These results do not show any significant differences, meaning that Equation (32) is sufficient for cases where {a mathematical formula}Rx=0. Videos showing dynamics of the simulations can be seen at bayesact.ca.
+      </paragraph>
+      <section label="4.1.1">
+       <section-title>
+        Static identities
+       </section-title>
+       <paragraph>
+        Here we explore the case where two agents know their own self identities (so {a mathematical formula}βa0=0.001) but do not know the identity of the other agent (so {a mathematical formula}βc0 is set to the standard deviation of all identities in the database). We run 20 trials, and in each trial a new identity is chosen for each of agent and client. These two identities are independently sampled from the distribution of identities in the ACT database and are the personal identities for each agent and client. That is, we compute the mean and covariance matrix of the 500 identities in the ACT database, and then sample identities from this distribution. Then, agent and clientBayesAct models are initialised with {a mathematical formula}Fa set to this personal identity, {a mathematical formula}Fc (identity of the other) set to the mean of the identities in the database, {a mathematical formula}[0.4,0.4,0.5]. {a mathematical formula}Fb is set to zeros, but this is not important as it plays no role in the first update. The simulation proceeds according to the procedure in Section 3.5 for 50 steps. Agents take turns acting, and actions are conveyed to the other agent with the addition of some zero-mean normally distributed “environment” noise, with standard deviation {a mathematical formula}σe. Other noise models would also be possible. Agents use Gaussian observation models with uniform covariances with diagonal terms {a mathematical formula}γ=max⁡(0.52,σe2). We perform 10 simulations per trial with {a mathematical formula}βc=0.001 for both agent and client. All agents use roughening noise {a mathematical formula}σr=N−1/3 where N is the number of samples. We use id-deflection to denote the sum of squared differences between one agent's estimate of the other agent's identity, and that other agent's estimate of its own identity.
+       </paragraph>
+       <paragraph>
+        Fig. 2 shows a plot of the mean (over 20 trials) of the average (over 10 experiments) final (at the last step) id-deflection and total deflection as a function of the environment noise, {a mathematical formula}σe, and sample numbers, N, for one of the agents (the other is symmetric). Also shown are the average of the maximum total deflections for all experiments in a trial. We see that only about 50 samples are needed to get a solution that is robust to environment noise up to {a mathematical formula}σe=2.0. This corresponds to enough noise to make a behaviour of “apprehend” be mis-communicated as “confide in”.{sup:12} Further examples of behaviours for different levels of deflection are shown in Table C.3(Appendix C). Surprisingly, deflection is not strongly affected by environment noise. One way to explain this is that, since the agent has a correct model of the environment noise ({a mathematical formula}γ=σe), it is able to effectively average the noisy measurements and still come up with a reasonably low deflection solution. The deterministic program Interact would have more trouble in these situations, as it must “believe” exactly what it gets (it has no model of environment noise).
+       </paragraph>
+       <paragraph>
+        Average deflection does not change significantly with the sample size, whereas maximum deflection decreases (although not strictly monotonically). The deflections however have relatively high variance (e.g. {a mathematical formula}6.6±2.7 for {a mathematical formula}σe=1.0 and {a mathematical formula}N=5), and so the maximum deflections would likely become a smoother function of sample size if the number of trials was increased. Table C.4 in Appendix C shows the full results with standard deviations.
+       </paragraph>
+       <paragraph>
+        Fig. 2(d) shows a sample set after 7 iterations of one experiment, clearly showing the multimodal distributions centred around the true identities (triangles) of each interactant.{sup:13} These sample sets normally converge to near the true identities after about 15 iterations or less.
+       </paragraph>
+       <paragraph>
+        Fig. 3 looks more closely at four of the trials done with {a mathematical formula}N=200 samples. The red and blue lines show the agent- and client- id-deflection (solid) and agent and client deflections (dashed), respectively, while the black line shows the deflections using Interact (which has the correct and fixed identities for both agents at all times). BayesAct allows identities to change, and starts with almost no information about the identity of the other interactant (for both agent and client). We can see that our model gets at least as low a deflection as Interact. In Fig. 3(a), the agent had {a mathematical formula}Fa=[2.7,1.5,0.9], and the client had {a mathematical formula}Fa=[−2.1,−1.3,−0.2], and {a mathematical formula}σe=0 (noise-free communication). These two identities do not align very well,{sup:14} and result in high deflection when identities are known and fixed in Interact (black line). BayesAct rapidly estimates the correct identities, and tracks the deflection of Interact. Fig. 3(b) is the same, but with {a mathematical formula}σe=1.0. We see that BayesAct is robust to this level of noise. Fig. 3(c) shows a simulation between a “tutor” ({a mathematical formula}Fa=[1.5,1.5,−0.2]) and a “student” ({a mathematical formula}Fc=[1.5,0.3,0.8]) with {a mathematical formula}σe=1.0. Here we see that Interact predicts larger deflections can occur. BayesAct also gets a larger deflection, but manages to resolve it early on in the simulation. Identities are properly learned in this case as well. Fig. 3(d) has the same identities as Fig. 3(c), but with {a mathematical formula}σe=5.0. We see that BayesAct is unable to find the true identity at this (extreme) level of noise.
+       </paragraph>
+      </section>
+      <section label="4.1.2">
+       <section-title>
+        Dynamic (changing) identities
+       </section-title>
+       <paragraph>
+        We now experiment with how BayesAct can respond to agents that change identities dynamically over the course of an interaction. We use the following setup: the client has two identities (chosen randomly for each trial) that it shifts between every 20 steps. It shifts from one to the other in a straight line in E–P–A space, at a speed of {a mathematical formula}sid. That is, it moves a distance of {a mathematical formula}sid along the vector from its current identity to the current target identity. It stops once it reaches the target (so the last step may be shorter than {a mathematical formula}sid). It waits at the target location for T steps and then starts back to the original identity. It continues doing this for 200 steps. Our goal here is to simulate an agent that is constantly switching between two identities, but is doing so at different speeds. Table C.5 and Table C.6 in Appendix C show the full results for these simulations.
+       </paragraph>
+       <paragraph>
+        We first show that BayesAct can respond to a single shift in identity after the first 20 steps (so after that, {a mathematical formula}T=∞). Fig. 4(a) shows the mean number of time steps per sequence of 200 steps in which the id-deflection of the agent's estimate of the client's identity is greater than a threshold, {a mathematical formula}dm, for {a mathematical formula}σe=0.5. The results show that BayesAct is able to maintain a low id-deflection throughout the sequence when confronted with speeds up to about 0.1. At this setting ({a mathematical formula}sid=σe=0.1), only 4 frames (out of 200) have an id-deflection greater than 1.0. Fig. 4(b) shows a specific example where the client shifts between two identities, for {a mathematical formula}sid=0.25 and {a mathematical formula}T=40. The agent's estimates of {a mathematical formula}Fe are seen to follow the client's changes, although the agent lags behind by about 30 time steps.
+       </paragraph>
+      </section>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Intelligent interactive system examples
+      </section-title>
+      <paragraph>
+       In this section, we give two examples where BayesAct is used to expand intelligent interactive systems. These examples are presented primarily to demonstrate that BayesAct can be easily integrated into a range of different intelligent systems. We first discuss an exam practice assistant that presents students with questions from the graduate record examination, and allows the student to respond affectively. The second example is a cognitive orthosis that can help a person with Alzheimer's disease to wash their hands.
+      </paragraph>
+      <section label="4.2.1">
+       <section-title>
+        Exam practice application
+       </section-title>
+       <paragraph>
+        We built a simple tutoring application in which the identities for agent and client are initially set to “tutor” ({a mathematical formula}Fa=[1.5,1.5,−0.2]) and “student” ({a mathematical formula}Fc=[1.5,0.3,0.8]), respectively, with low dynamics standard deviations of {a mathematical formula}βa=βc=0.01 and {a mathematical formula}σr=0.0 (see Section 3.3). Screenshots are shown in Fig. 5. The application asks sample questions from the Graduate Record Exam (GRE) educational testing system, and the client clicks on a multiple-choice answer. The agent provides feedback as to whether the client's answer is correct. The client then has the opportunity to “speak” by clicking on a labelled button (e.g., “awwww come on that was too hard!”). The statement maps to a value for {a mathematical formula}Fb determined in an empirical survey described below (in this case {a mathematical formula}[−1.4,−0.8,−0.5]). BayesAct then computes an appropriate agent action, i.e. a vector in EPA space, which maps to the closest of a set of statements elicited in the same survey (e.g., “Sorry, I may have been too demanding on you.”).
+       </paragraph>
+       <paragraph>
+        The tutor has three discrete elements of state {a mathematical formula}X={Xd,Xs,Xt} where {a mathematical formula}Xd is the difficulty level, {a mathematical formula}Xs is the skill level of the student and {a mathematical formula}Xt is the turn. {a mathematical formula}Xd and {a mathematical formula}Xs have 3 integer “levels” ({a mathematical formula}{0,1,2}) where lower values indicate easier difficulty/lower skill. This is a simplified version of the models explored by Brunskill [88], and Theocharous [89]. We use this simpler version in order to focus our attention specifically on the affective reasoning components. The tutor's model of the student's progress is {a mathematical formula}P(Xs′=xs|xs,f,τ′)=0.9 with the remaining probability mass distributed evenly over skill levels that differ by 1 from {a mathematical formula}xs. The dynamics for all values where {a mathematical formula}Xs′≤xs are then multiplied by {a mathematical formula}(f′−τ′)2/2 and renormalised. As deflection grows, the student is less likely to increase in skill level and more likely to decrease. Thus, skill level changes inversely proportionally to deflection. The tutor gets observations of whether the student succeeded/failed ({a mathematical formula}Ωx=1/0), and has an observation function {a mathematical formula}P(Ωx|Xd,Xs) that favours success if {a mathematical formula}Xd (the difficulty level) matches {a mathematical formula}Xs (the skill level). The reward is the sum of the negative deflection as in Equation (9) and {a mathematical formula}Rx(x)=−(xs−2)2. It uses the approximate policy given (Section 3.4) by Equation (35) for its affective response, and a simple heuristic policy for its propositional response where it gives an exercise at the same difficulty level as the mean (rounded) skill level of the student {a mathematical formula}90% of the time, and an exercise one difficulty level higher {a mathematical formula}10% of the time. Further optimisations of this policy as described in Section 3.4 would take into account how the student would learn in the longer term.
+       </paragraph>
+       <paragraph>
+        We thus require a specification of the POMDP, and two mappings, one from the combination of client statement button labels and difficulty levels to ACT behaviours (of client), and the other from ACT behaviours (of agent) to difficulty level changes and statements to the student. We conducted an empirical online survey of 37 participants (22 female) to establish these mappings. Full survey results are shown in Appendix D. Table 1 shows a few examples of the statements, along with the best behaviour label and the EPA values from the ACT database. The relationships between the statements and behaviour labels are very clear in most cases.
+       </paragraph>
+       <paragraph>
+        We conducted a pilot experiment with 20 participants (7 female) who were mostly undergraduate students of engineering or related disciplines (avg. age: 25.8). We compared the experiences of 10 users interacting with the BayesAct tutor with those of 10 users interacting with a control tutor whose affective actions were selected randomly from the same set as the BayesAct tutor. The control tutor is identical to the BayesAct tutor (it uses the same POMDP for estimating student skill level, deflection, etc.), except that it uses a policy for the affective component of its action ({a mathematical formula}Ba) that is a random choice, rather than according to Equation (35).{sup:15} The control tutor uses the same heuristic policy for the propositional action (selection of difficulty level) as the BayesAct tutor.
+       </paragraph>
+       <paragraph>
+        Participants completed a short survey after using the system for an average of 20 minutes. Questions were rated on a scale from 1 (= not true) to 5 (= true). Results are displayed in Table 2. Users seemed to experience the flow of communication with the BayesAct tutor as more simple, flexible, and natural than with the random control tutor. The mean deflection for BayesAct was {a mathematical formula}2.9±2.1 while for random it was {a mathematical formula}4.5±2.2. We have to treat these results from a small sample with caution, but this pilot study identified many areas for improvement, and the results in Table 2 are encouraging.
+       </paragraph>
+      </section>
+      <section label="4.2.2">
+       <section-title>
+        Cognitive assistant
+       </section-title>
+       <paragraph>
+        Persons with dementia (PwD, e.g. Alzheimer's disease) have difficulty completing activities of daily living, such as handwashing, preparing food and dressing. The short-term memory impairment that is a hallmark of Alzheimer's disease leaves sufferers unable to recall what step to do next, or what important objects look like, for example. In previous work, we have developed a POMDP-based agent called the COACH that can assist PwD by monitoring the person and providing audio-visual cues when the person gets “stuck” [93]. The COACH is effective at monitoring and making decisions about when/what to prompt [92]. However, the audio-visual prompts are pre-recorded messages that are delivered with the same emotion each time.
+       </paragraph>
+       <paragraph>
+        An important next step will be to endow the COACH with the ability to reason about the affective identity of the PwD, and about the affective content of the prompts and responses. Here we show how BayesAct can be used to provide this level of affective reasoning. Importantly, BayesAct can learn the affective identity of the client (PwD) during the interaction. Studies of identity in Alzheimer's disease have found that identity changes dramatically over the course of the disease [100], and that PwD have more vague or abstract notions of their self-identity [101]. In this section, we describe our handwashing assistant model, and then show in simulation how BayesAct may be able to provide tailored prompting that fits each individual better.
+       </paragraph>
+       <paragraph>
+        We use a model of the handwashing system with 8 plansteps corresponding to the different steps of handwashing, describing the state of the water (on/off), and hands (dirty/soapy/clean and wet/dry). An eight-valued variable PS describes the current planstep. There are probabilistic transitions between plansteps described in a probabilistic plan-graph (e.g. a PwD sometimes uses soap first, but sometimes turns on the tap first). We also use a binary variable AW describing if the PwD is aware or not. In [92], we also had a variable describing how responsive a person is to a prompt. Here, we replace that with the current deflection in the interaction. Thus, {a mathematical formula}X={PS,AW} and the dynamics of the PS are
+       </paragraph>
+       <list>
+        <list-item label="•">
+         If the PwD is aware, then if there was no prompt from the agent, she will advance stochastically to the next planstep (according to the plan-graph) with a probability that is dependent on the current deflection, D. That is {a mathematical formula}Pr(PS′|PS=s,AW=yes,D=d)=f(d) where f is a function specified manually. If she does not advance, she loses awareness.
+        </list-item>
+        <list-item label="•">
+         If the PwD is aware and is prompted and deflection is high, then a prompt will likely confuse the PwD (cause her awareness to become “no” if it was “yes”). Again, this happens stochastically according to a manually specified distribution {a mathematical formula}fp(d).
+        </list-item>
+        <list-item label="•">
+         If the PwD is not aware, she will not do anything (or do something else) with high probability, unless a prompt was given and the deflection is low, in which case she will follow the prompt and will gain awareness.
+        </list-item>
+       </list>
+       <paragraph>
+        We have done preliminary simulations with this model by using an agent identity of “assistant” ({a mathematical formula}EPA=[1.5,0.51,0.45]), and an initial client identity of “patient” ({a mathematical formula}EPA=[0.90,−0.69,−1.05]). The client knows the identity of the agent, but the agent must learn the identity of the client. Agent and client both know their own identities. We compare two types of policies: one where the affective actions are computed with BayesAct, and the other where the affective actions are fixed. In both cases, we used a simple heuristic for the propositional actions where the client is prompted if the agent's belief about the client's awareness (AW) falls below 0.4.
+       </paragraph>
+       <paragraph>
+        We have found that a fixed affective policy may work well for some affective identities, but not for others, whereas the actions suggested by BayesAct work well across the different identities that the client may have. For example, if the client really does have the affective identity of a “patient”, then always issuing the prompts with an {a mathematical formula}EPA=[0.15,0.32,0.06] (the affective rating of the behaviour “prompt” in the ACT database) and otherwise simply “minding” the client ({a mathematical formula}EPA=[0.86,0.17,−0.16]) leads to the client completing the task in an equal number of steps as BayesAct, and always completing the task within 50 steps. However, if the client has an affective identity that is more “good” ({a mathematical formula}EPA=[1.67,0.01,−1.03], corresponding to “elder”) or more powerful ({a mathematical formula}EPA=[0.48,2.16,0.94], corresponding to “boss”), then this particular fixed policy does significantly worse. Example simulations and more complete results are shown in Appendix E.
+       </paragraph>
+       <paragraph>
+        The full development of the BayesAct emotional add-on to the existing COACH system will require substantial future work and empirical testing, as will fully developing an affectively intelligent tutoring system like the one described in the previous section. However, in light of the preliminary results reported here, we believe that BayesAct provides a useful theoretical foundation for such endeavours.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Conclusions and future work
+     </section-title>
+     <paragraph>
+      This paper has presented a probabilistic and decision theoretic formulation of affect control theory called BayesAct, and has shown its use for human interactive systems. The paper's main contributions are the theoretical model development, and a demonstration that a computational agent can use BayesAct to integrate reasoning about emotions with application decisions in a parsimonious and well-grounded way.
+     </paragraph>
+     <paragraph>
+      Overall, our model uses the underlying principle of deflection minimisation from affect control theory to provide a general-purpose affective monitoring, analysis and intervention theory. The key contributions of this paper are
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       A formulation of affect control theory as a probabilistic and decision theoretic model that generalises the original presentation in the social psychological literature in the following ways:
+      </list-item>
+      <list-item label="2.">
+       A set of simulations that demonstrate some of the capabilities of this generalised model of ACT under varying environmental noise.
+      </list-item>
+      <list-item label="3.">
+       A formulation of a general-purpose model for intelligent interaction that augments the model proposed by BayesAct in the following ways:
+      </list-item>
+      <list-item label="4.">
+       Demonstrative examples of building two simple intelligent interactive systems (a tutor and an assistive agent for person's with a cognitive disability) that use the proposed model to better align itself with a user.
+      </list-item>
+     </list>
+     <paragraph>
+      Our current work is investigating methods for learning affective dictionaries automatically from text [99], and on implementing hierarchical models of identity [103]. In future, the measurement of EPA behaviours and the translation of EPA actions requires further study. We also plan to investigate usages of the model for collaborative agents in more complex domains, for competitive, manipulative or therapeutic agents, conversational agents, social networks, and for social simulations where we have more than two agents acting. Emotions have been shown to be important for decision making in general [41], [73], and we believe that BayesAct can play a significant role in this regard. We also plan to investigate methods for automatically learning the parameters of the prediction equations, and the identity labels. This would allow longer-term learning and adaptation for agents. Finally, we plan to investigate how to handle more complex time structures in BayesAct, including interruptions.
+     </paragraph>
+     <paragraph>
+      A BayesAct agent uses the affect control principle to make predictions about the behaviours of the agents it interacts with. This principle states that humans will act to minimise the deflection between their culturally shared fundamental (learned and slowly changing) affective sentiments and the transient sentiments created by specific events and situations. In situations where both agents follow this principle, and know each other's affective identities, the agents do not have to compute long-term predictions: they can simply assume the predictions of the affect control principle are correct and act accordingly. A breakdown occurs if these predictions no longer hold.
+     </paragraph>
+     <paragraph>
+      There are three types of breakdown. The first is simple environmental noise. However, we have seen that, alone, this does not have a significant effect. Agents essentially “ignore” other agents in the presence of environmental noise, if they can assume the other agents are following the affect control principle. In combination with the other two breakdown types, it can have a much more significant effect. The second type of breakdown can occur if one agent does not know the identity of the other agent. We have investigated this situation in detail in this paper in simulation, and found that BayesAct agents can learn the affective identities of other BayesAct agents under significant environmental noise. Finally, the third type of breakdown is when one agent is deliberately trying to manipulate the other. In such cases, both agents must do more complex policy computation, as the predictive power of the affect control principle no longer holds. Computing these policies for such manipulative agents is a significant area for future work [9].
+     </paragraph>
+     <paragraph>
+      For example BayesAct agents are free to use X to model other agents at any level of detail (including as full POMDPs [104]). Such more complex modelling will allow agents to reason about how other agents are reasoning (cognitively) about them, etc. Nevertheless, even such cognitively capable agents will need to follow the norms of the society they are trying to manipulate, otherwise other agents will be unlikely to respond predictably.
+     </paragraph>
+     <paragraph>
+      In this regard, it is interesting to note that the default (normative) policy specified by Equation (32) may correspond roughly with what behavioural economists have called fast or “System 1” thinking [8]. The Monte-Carlo method for forward search can be set up to explore only actions that are nearby to this default action for each state, providing the agent with a quick-and-dirty method for quickly finding reasonable policies that will be socially acceptable or normative. In a resource limited agent, this type of fast thinking may be just enough to “get by”. Given enough time or sufficient cognitive resources, and agent may then resort to slow (“System 2”) thinking, and explore (in simulation) actions that are further away from the default. This slow thinking can lead an agent to discover slightly non-normative actions that lead to higher self reward, without giving away the fact (so remaining close enough to the normative default). The opens the door for building effective manipulative agents [9].
+     </paragraph>
+     <paragraph>
+      In a similar vein, the theory of social commitments [105] argues that human relationships combine relational (affective) and transactional (rational) components. Lawler argues that modern society, becoming more and more influenced by economics and individualism, is moving towards an ecology of transactional ties, creating shallow, brittle and more dangerous (for the species) social structures [105]. His analysis carefully explores the space between these two views, and gives guidelines and arguments for how group processes can be built to take advantage of both. BayesAct also combines relational and transactional ideas, by arguing that the core driving force behind human behaviour is relational and based on shared affective sentiments about identities and behaviours. However, cognitive transactional processes come into play when relations break down. Transactional relationships are set up to handle the breakdowns, but are rapidly integrated into relational processes if they are required to maintain the social order.
+     </paragraph>
+     <paragraph>
+      These considerations of breakdown lead to a tantalizing avenue for future research. One way to handle breakdowns would be to increase the size of the (non-affective) state vector (denoted X in this paper). Additional values of X would be needed in order to better predict when the breakdowns occur and what the effects are. For example, an agent could learn what situations caused another agent to change identities, or could learn what types of identities are present in certain situations (called “settings” in ACT [1]). Such an increase of X is a creation of new “meaning” in an agent [106], [107]. These new meanings would need to be validated with other agents, a process of negotiation attempting to get back to the easy state of “flow” where less reasoning is required [108]. A learning paradigm that is fundamentally based on affective reasoning would therefore arise. Such a paradigm has been discussed as fundamental in the phenomenological view of intelligence [107], [106].
+     </paragraph>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     <section-title>
+      Derivation of most likely behaviour
+     </section-title>
+     <paragraph>
+      We know from Equations (10) and (12) that the belief distribution over the state at time t (denoted {a mathematical formula}s′) is given by{a mathematical formula} and further, from Equation (22) that{a mathematical formula} Let us first assume that the prior over {a mathematical formula}θf is uninformative, and so only the first expectation remains. Then, if we compare two values for {a mathematical formula}s′, say {a mathematical formula}s1′ and {a mathematical formula}s2′, and we imagine that we have deterministic dynamics for the application state X and the transients T, then we find{a mathematical formula}{a mathematical formula} where the inequality between (A.3) and (A.4) is due to the expectation of a convex function being always larger than the function of the expectation (Jensen's inequality). From (A.4), we have that the probability of {a mathematical formula}f1′ will be greater than the probability of {a mathematical formula}f2′ if and only if:{a mathematical formula} that is, the deflection caused by {a mathematical formula}f1′ is less than the deflection caused by {a mathematical formula}f2′. This demonstrates that our probability measure over {a mathematical formula}f′ will assign higher likelihoods to behaviours with lower deflection, as expected, and so if we wish find the most likely {a mathematical formula}f′ value, we have only to find the value that gives the smallest deflection by, e.g., taking derivatives and setting equal to zero. The probabilistic formulation in Equation (A.5), however, takes this one step further, and shows that the probability of {a mathematical formula}f′ will assign higher weights to behaviours that minimize deflection, but in expectation of the state progression if it is not fully deterministic.
+     </paragraph>
+     <paragraph>
+      If the prior over {a mathematical formula}θf is such that we expect identities to stay constant over time, as in Equation (25), we can derive a similar expression to (A.5), except it now includes the deflections of the fundamentals over identities:{a mathematical formula} We see that this is now significantly different than (A.5), as the relative weights of ξ ({a mathematical formula}βa and {a mathematical formula}βc) and ψ (α) will play a large role in determining which fundamental sentiments are most likely. If {a mathematical formula}βa≫α or {a mathematical formula}βc≫α, then the agents beliefs about identities will change more readily to accommodate observed deflections. If the opposite is true, then deflections will be ignored to accommodate constant identities.
+     </paragraph>
+    </section>
+    <section label="Appendix B">
+     <section-title>
+      Reduction to ACT behaviours
+     </section-title>
+     <paragraph>
+      In this section, we show that the most likely predictions from our model match those from [1] if we use the same approximations. We begin from the probability distribution of fundamentals from Equation (25), but we assume deterministic state transitions, ignore the fundamental inertia ξ, and use the formula for ψ as given by Equation (28), we get{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Now we saw in Section 3.3 that this was simply a Gaussian with a mean of {a mathematical formula}K−1C, and so gives us the expected (most likely or “optimal” the terms of [1]) behaviours and identities simultaneously. We can find these expected fundamentals by taking the total derivative and setting to zero{a mathematical formula} which means that {a mathematical formula}f′=K−1C (the mean of the Gaussian), as expected. ACT, however, estimates the derivatives of each of the identities and behaviours separately assuming the others are held fixed. This is the same as taking partial derivatives of (B.1) with respect to {a mathematical formula}fb only while holding the others fixed:{a mathematical formula} Now, we recall that (writing {a mathematical formula}I≡I3 and {a mathematical formula}0≡03):{a mathematical formula} So that{a mathematical formula} and if Σ is a diagonal identity matrix, we can write{a mathematical formula} To simplify, we let {a mathematical formula}a=−Ha,b=1−Hb,c=−Hc, and {a mathematical formula}z=Ha2+(1−Hb)2+Hc2 we get{a mathematical formula} we also have that{a mathematical formula} where we have used {a mathematical formula}ya,yb,yc to denote the difference between the actor identity, behaviour and object identity and their respective true means as given by the total derivative. Therefore, we have from Equation (B.2):{a mathematical formula}{a mathematical formula} and therefore that the “optimal” behaviour, {a mathematical formula}fb⁎ is{a mathematical formula} partially expanding out this is{a mathematical formula} Now we note that, the terms from [1] can be written as follows{a mathematical formula} and{a mathematical formula} so that{a mathematical formula} and that{a mathematical formula} so that {a mathematical formula}fb⁎ is now{a mathematical formula} collecting terms and comparing to Equation (B.4), this give us exactly Equation (12.21) from [1]:{a mathematical formula} Similar equations for actor and object identities can be obtained in the same way by computing with partial derivatives keeping all other quantities fixed, and the result is equations (13.11) and (13.18) from [1].
+     </paragraph>
+    </section>
+    <section label="Appendix C">
+     <section-title>
+      Tabulated simulation results
+     </section-title>
+     <paragraph>
+      Table C.3 shows examples of behaviours for different levels of deflection. Each row shows the two behaviour labels and their actual id-deflection. The first column shows the maximum id-deflection searched for.
+     </paragraph>
+     <paragraph>
+      We explore three conditions in our simulations. In the first two, the agent does not know the identity of the client, and the client either knows or doesn't know the identity of the agent (denoted agent id known and agent id hidden, resp.). In the third case, agent and client know each other's identities (denoted both known). We run 20 trials, and in each trial a new identity is chosen for each of agent and client. These two identities are independently sampled from the distribution of identities in the ACT database and are the personal identities for each agent and client. Then, agent and client BayesAct models are initialised with {a mathematical formula}Fa set to this personal identity, {a mathematical formula}Fc (identity of the other) set to either the true identity (if known) or else to the mean of the identities in the database, {a mathematical formula}[0.4,0.4,0.5]. {a mathematical formula}Fb is set to zeros, but this is not important as it plays no role in the first update. Table C.4 shows the mean (over 20 trials) of the average (over 10 experiments) final (at the last step) id-deflection for agent and client for varying numbers of samples and environment noises. Table C.4 also shows the total deflection (Equation (1)) and the maximum deflection across all experiments and time steps, for each agent. Note that the deflections are independent of the environment noise for the case where both identities are known. This is because, in this case, the actions of both agents follow exactly the dynamics as given by ACT, even with a small number of samples. When the environment noise rises, the agents both effectively ignore the observations, and more of the probability mass comes from the dynamics of the affect control principle and the identity inertia.
+     </paragraph>
+     <paragraph>
+      The simulation proceeds according to the procedure in Section 3.5 for 50 steps. Agents take turns acting, and actions are conveyed to the other agent with the addition of some zero-mean normally distributed “environment” noise, with standard deviation {a mathematical formula}σe. Agents use Gaussian observation models with uniform covariances with diagonal terms {a mathematical formula}γ=max⁡(0.52,σe2). We perform 10 simulations per trial with {a mathematical formula}βc=0.001 for both agent and client. If the client knows the agent identity, it uses no roughening noise ({a mathematical formula}σr=0.0), otherwise all agents use {a mathematical formula}σr=N−1/3 where N is the number of samples. We use id-deflection to denote the sum of squared differences between one agent's estimate of the other agent's identity, and that other agent's estimate of its own identity.
+     </paragraph>
+     <paragraph>
+      There are fewer effects to be analysed in the both known case as each agent knows exactly the identity of the other agent, and both agents follow the affect control principle and the dynamics of affect control theory. Therefore, they hardly need observations of the other agent, as these only serve to confirm accurate predictions. This is exactly what the affect control principle predicts: agents that share cultural affective sentiments and follow the affect control principle do not need to make any effort, as they maintain a harmonious balance. The agent id known case shows some of the same effects as the agent id hidden case, but for only one of the agents.
+     </paragraph>
+     <paragraph>
+      Table C.5 shows the results for the experiments with client shifting its identity after 10 steps and then staying at the new identity until 100 steps. We see that BayesAct is able to successfully recover: the id-deflection and deflection are both the same at the end of the 100 steps, regardless of {a mathematical formula}sid.
+     </paragraph>
+     <paragraph>
+      Table C.6 shows the mean number of time steps per sequence of 200 steps in which the id-deflection of the agent's estimate of the client's identity is greater than a threshold, {a mathematical formula}dm. The results are shown for a variety of environment noises, {a mathematical formula}σe, and identity shifting speeds, {a mathematical formula}sid. The results show that BayesAct is able to maintain a low id-deflection throughout the sequence when confronted with speeds up to about 0.5 and environment noises less than {a mathematical formula}σe=0.5. At this setting ({a mathematical formula}sid=σe=0.5), only 12 frames (out of 200) have an id-deflection greater than 1.0.
+     </paragraph>
+    </section>
+    <section label="Appendix D">
+     <section-title>
+      Tutoring system survey results
+     </section-title>
+     <paragraph>
+      Participants in the survey were {a mathematical formula}N=37 (22 female) students (avg. age: 30.6 years). We presented them with four blocks of statements and behaviour labels, two blocks referring to agent and client behaviours conditional on a correct/incorrect answer of the client. In total, the survey contained 31 possible agent statements and 26 possible client statements plus an equal number of possibly corresponding behaviour labels. Participants were supposed to match each statement to one of the available behaviour labels. We also asked participants to rate the affective meaning of each statement directly using the semantic differential [7]. For 14 agent statements and for 13 client statements, a clear majority of participants agreed on one specific mapping. For 13 agent statements and 5 client statements, mappings were split between two dominant options. In these cases, we compared the direct EPA ratings of the statements with EPA ratings of the two behaviour labels in question to settle the ambiguity. Standard deviations of the EPA scores were generally of the same magnitude or smaller than those reported by Heise [7] for general concepts, indicating high agreement.
+     </paragraph>
+     <paragraph>
+      We discarded 4 agent statements and 8 client statements, because participants' response patterns indicated a lack of consensus and/or unsolvable ambiguities in the mappings.{sup:16} We discarded a further 3 agent and 2 client statements because they were illogical for the tutoring application. As a result, we thus had a list of 24 agent statements and 16 client statements with corresponding mappings to behaviour labels from the ACT database and average EPA ratings from the survey. We implemented these behaviours as the possible actions in the BayesAct tutoring system, using the survey EPA ratings as the inputs/output ({a mathematical formula}fb and {a mathematical formula}ba).
+     </paragraph>
+     <paragraph>
+      Table D.7, Table D.8, Table D.9, Table D.10 show the results of the survey designed to map specific expressions (e.g., “Aww, come on, that was too hard for me!”) to corresponding behaviour labels (e.g., “whine to”). As described above, this was necessary to “translate” the ongoing communication between the agent and the client into the grammatical format required for Bayesian affect control theory (i.e., Agent–Behaviour–Client). We had two versions of each matching survey. The first table (labelled client correct) refer to the communication which occurred whenever the client solved a task correctly, while the expressions in the second versions of all the tables (labelled client incorrect) were used for cases in which the client did not manage to solve a task correctly.
+     </paragraph>
+     <paragraph>
+      Tables D.7 shows how often the survey respondents associated the agent expressions with any of the available options for behaviour labels. The second column displays the label we picked in the end, based on the frequencies of choice and the consensus among respondents about the appropriate label. The boldface number shows the maximum across each row. Table D.8 displays average direct evaluation–potency–activity (EPA) of the expressions, without involvement of a behaviour label. As explained above, we used these ratings to cross-check the convergence of connotative meanings of the labels and expressions, as well as to resolve some ambiguities. Also shown are the EPA values from the ACT database corresponding to the most likely behaviour labels in Table D.7 (if not excluded). Analogously, Table D.9, Table D.10 display the expression-label match and EPA ratings, respectively, for the communication options that were given to the users of the software, i.e. these labels/expressions correspond to the client behaviours.
+     </paragraph>
+     <paragraph>
+      We discarded a few expressions initially in the survey, where responses were so distributed that no consensus was recognizable about the meaning of these expressions. These cases are coloured {an inline-figure} and are labelled “excluded” in the second columns of Table D.7, Table D.9. We also discarded a few of the expressions prior to running the tutoring trials, because they were illogical given the actual application. These are coloured {an inline-figure} in the tables.
+     </paragraph>
+    </section>
+    <section label="Appendix E">
+     <section-title>
+      COACH system simulation results
+     </section-title>
+     <paragraph>
+      We investigated the COACH system in simulation using an agent with an affective identity of “assistant”, and a client with an affective identity of “elder” ({a mathematical formula}EPA=[1.67,0.01,−1.03]). The client knows the identity of the agent, but the agent must learn the identity of the client. Agent and client both know their own identities. We compare two types of policies: one where the affective actions are computed with BayesAct, and the other where the affective actions are fixed. We used a simple heuristic for the propositional actions where the client is prompted if the agent's belief about the client's awareness (AW) falls below 0.4.
+     </paragraph>
+     <paragraph>
+      Table E.11 shows an example simulation between the agent and a client (PwD) who holds the affective identity of “elder”. This identity is more powerful and more good than that of “patient” (the default). Thus, the BayesAct agent must learn this identity (shown as {a mathematical formula}fc in Table E.11) during the interaction if it wants to minimize deflection. We see in this case that the client starts with {a mathematical formula}AW=“yes” (1) and does the first two steps, but then stops and is prompted by the agent to rinse his hands. This is the only prompt necessary, the deflection stays low, the agent gets a reasonable estimate of the client identity ({a mathematical formula}EPA=[2.8,−0.13,−1.36], a distance of 1.0). We show example utterances in the table that are “made up” based on our extensive experience working with PwD interacting with a handwashing assistant.
+     </paragraph>
+     <paragraph>
+      Table E.12 shows the same client (“elder”) but this time the agent always uses the same affective actions: if prompting, it “commands” the user ({a mathematical formula}EPA=[−0.09,1.29,1.59]) and when not prompting it “minds” the user ({a mathematical formula}EPA=[0.86,0.17,−0.16]). Here we see that the agent prompts cause significant deflection, and this causes the PwD to lose awareness (to become confused) and not make any progress. The handwashing takes much longer, and the resulting interaction is likely much less satisfying.
+     </paragraph>
+     <paragraph>
+      We have also run random simulations like the ones shown in Table E.11, Table E.12. For each set of simulations, we select a true affective identity for the client, and we either use BayesAct to select affective actions for the agent, or we use a fixed pair (one for the prompt, one for non-prompt actions). We run 10 sets of 10 simulated trials, stopping in each trial after 50 iterations or when the client finishes the task, whichever comes first. In Table E.13 we show the means and the standard error of the means (of each set of 10 simulations) of the number of interactions, and of the last planstep reached. We can see that, for client identities of “elder” and “patient”, the fixed policy of “confer with” ({a mathematical formula}EPA=[1.87,0.87,−0.35]) does equally well as BayesAct. The fixed policy of “prompt” ({a mathematical formula}EPA=[0.15,0.32,0.06]) also does equally well for “patient”, but does more poorly (takes more iterations) for “elder”. We see the fixed policy of “command” does badly for both, but less so for “patient” than “elder”.
+     </paragraph>
+     <paragraph>
+      We then look at more extreme identities. If the client has the identity of a “convalescent” ({a mathematical formula}EPA=[0.3,0.09,−0.03]), then we see the same effect as with “elder”. However, if the client has a much more powerful identity (“boss” {a mathematical formula}EPA=[0.48,2.16,0.94], as they might believe if they used to be such an identity), then we see that all prompting methods work more slowly (the “boss” does not need prompting!!), and both fixed policies of “confer with” or “prompt” works less well than BayesAct. This is an indication that a “one-size fits all” policy may not work very well, whereas BayesAct provides a flexible and adaptive affective prompting strategy for PwD. Our future work is to integrate this with our current prototypes, and run trials with PwD.
+     </paragraph>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

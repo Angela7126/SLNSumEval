@@ -1,0 +1,997 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Does the Phonology of L1 Show Up in L2 Texts?</title>
+<!--Generated on Wed Jun 11 18:39:50 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Does the Phonology of L1 Show Up in L2 Texts?</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Garrett Nicolai 
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Grzegorz Kondrak
+<br class="ltx_break"/>Department of Computing Science 
+<br class="ltx_break"/>University of Alberta 
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">nicolai,gkondrak</span>}<span class="ltx_text ltx_font_typewriter">@ualberta.ca</span>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">The relative frequencies of character bigrams
+appear to contain much information for predicting
+the first language (L1) of the writer of a text in another language (L2).
+<cite class="ltx_cite">Tsur and Rappoport (<a href="#bib.bib43" title="Using Classifier Features for Studying the Effect of Native Language on the Choice of Written Second Language Words" class="ltx_ref">2007</a>)</cite> interpret this fact
+as evidence that
+word choice is dictated by the phonology of L1.
+In order to test their hypothesis,
+we design an algorithm to identify the most discriminative words
+and the corresponding character bigrams,
+and perform two experiments to quantify
+their impact on the L1 identification task.
+The results strongly suggest an alternative explanation
+of the effectiveness of character bigrams
+in identifying the native language of a writer.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">The task of Native Language Identification (NLI)
+is to determine the first language
+of the writer of a text in another language.
+In a ground-breaking paper,
+<cite class="ltx_cite">Koppel<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib58" title="Determining an author’s native language by mining a text for errors" class="ltx_ref">2005</a>)</cite>
+propose a set of features for this task:
+function words, character <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p1.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-grams,
+rare part-of-speech bigrams, and various types of errors.
+They report 80% accuracy
+in classifying a set of English texts into five L1 languages
+using a multi-class linear SVM.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">The First Shared Task on Native Language Identification
+<cite class="ltx_cite">[<a href="#bib.bib39" title="A Report on the First Native Language Identification Shared Task" class="ltx_ref">24</a>]</cite>
+attracted submissions from 29 teams.
+The accuracy on a set of English texts
+representing eleven L1 languages
+ranged from 31% to 83%.
+Many types of features were employed, including
+word length,
+sentence length,
+paragraph length,
+document length,
+sentence complexity,
+punctuation and capitalization,
+cognates,
+dependency parses,
+topic models,
+word suffixes,
+collocations,
+function word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-grams,
+skip-grams,
+word networks,
+Tree Substitution Grammars,
+string kernels,
+cohesion,
+and passive constructions
+<cite class="ltx_cite">[<a href="#bib.bib17" title="Experimental results on the native language identification shared task" class="ltx_ref">1</a>, <a href="#bib.bib4" title="Recognizing English learners. native language from their writings" class="ltx_ref">17</a>, <a href="#bib.bib7" title="Using other learner corpora in the 2013 NLI shared task" class="ltx_ref">3</a>, <a href="#bib.bib6" title="Linguistic profiling based on general–purpose features and native language identification" class="ltx_ref">5</a>, <a href="#bib.bib3" title="VTEX system description for the NLI 2013 shared task" class="ltx_ref">7</a>, <a href="#bib.bib20" title="Feature space selection and combination for native language identification" class="ltx_ref">9</a>, <a href="#bib.bib14" title="Discriminating non-native English with 350 words" class="ltx_ref">11</a>, <a href="#bib.bib5" title="Feature engineering in the NLI shared task 2013: charles University submission report" class="ltx_ref">12</a>, <a href="#bib.bib8" title="Combining shallow and linguistically motivated features in native language identification" class="ltx_ref">4</a>, <a href="#bib.bib13" title="Using n-gram and word network features for native language identification" class="ltx_ref">16</a>, <a href="#bib.bib9" title="Native language identification using large scale lexical features" class="ltx_ref">18</a>, <a href="#bib.bib24" title="NLI shared task 2013: MQ submission" class="ltx_ref">19</a>, <a href="#bib.bib10" title="NAIST at the NLI 2013 shared task" class="ltx_ref">20</a>, <a href="#bib.bib36" title="Cognate and misspelling features for natural language identification" class="ltx_ref">21</a>, <a href="#bib.bib11" title="The story of the characters, the DNA and the native language" class="ltx_ref">22</a>, <a href="#bib.bib16" title="Exploring syntactic representations for native language identification" class="ltx_ref">23</a>, <a href="#bib.bib15" title="Identifying the L1 of non-native writers: the CMU-Haifa system" class="ltx_ref">26</a>]</cite>.
+In particular,
+word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m2" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-gram features appear to be particularly effective,
+as they were used by the most competitive teams,
+including the one that achieved the highest overall
+accuracy <cite class="ltx_cite">[<a href="#bib.bib34" title="Maximizing classification accuracy in native language identification" class="ltx_ref">13</a>]</cite>.
+Furthermore,
+the most discriminative
+word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m3" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-grams often contained the name
+of the native language, or countries where it is commonly spoken
+<cite class="ltx_cite">[<a href="#bib.bib2" title="Improving native language identification with TF-IDF weighting" class="ltx_ref">8</a>, <a href="#bib.bib24" title="NLI shared task 2013: MQ submission" class="ltx_ref">19</a>, <a href="#bib.bib36" title="Cognate and misspelling features for natural language identification" class="ltx_ref">21</a>]</cite>.
+We refer to such words as <span class="ltx_text ltx_font_italic">toponymic terms</span>.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">There is no doubt that the toponymic terms are useful for
+increasing the NLI accuracy;
+however,
+from the
+psycho-linguistic perspective,
+we are more interested in what characteristics of L1
+show up in L2 texts.
+Clearly, L1 affects the L2 writing in general,
+and the choice of words in particular,
+but what is the role played by the phonology?
+<cite class="ltx_cite">Tsur and Rappoport (<a href="#bib.bib43" title="Using Classifier Features for Studying the Effect of Native Language on the Choice of Written Second Language Words" class="ltx_ref">2007</a>)</cite> observe that
+limiting the set of features to
+the relative frequency of the
+200 most frequent character bigrams
+yields a respectable 66% accuracy on a 5-language classification task.
+The authors propose the following hypothesis to explain this finding:
+“<span class="ltx_text ltx_font_italic">the choice of words</span> [emphasis added]
+people make when writing in a second language
+is strongly influenced
+by the phonology of their native language”.
+As the orthography of alphabetic languages is at least partially representative
+of the underlying phonology,
+character bigrams may capture these phonological preferences.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">In this paper, we provide evidence against the above hypothesis.
+We design an algorithm to identify the most discriminative
+words and the character bigrams that are indicative of such words,
+and perform two experiments to quantify their impact on the NLI task.
+The results of the first experiment demonstrate that
+the removal of a relatively small set of discriminative words from
+the training data
+significantly impairs the accuracy of a bigram-based classifier.
+The results of the second experiment reveal that
+the most indicative bigrams are quite similar across different language sets.
+We conclude that
+character bigrams are effective in determining L1 of the author
+because they reflect
+differences in L2 word usage
+that are unrelated to the phonology of L1.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Method</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Tsur and Rappoport (<a href="#bib.bib43" title="Using Classifier Features for Studying the Effect of Native Language on the Choice of Written Second Language Words" class="ltx_ref">2007</a>)</cite> report that character bigrams
+are more effective for the NLI task than either unigrams or trigrams.
+We are interested in identifying the
+character bigrams that
+are indicative of the most discriminative words
+in order to quantify their impact on the bigram-based classifier.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">We follow both <cite class="ltx_cite">Koppel<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib58" title="Determining an author’s native language by mining a text for errors" class="ltx_ref">2005</a>)</cite> and <cite class="ltx_cite">Tsur and Rappoport (<a href="#bib.bib43" title="Using Classifier Features for Studying the Effect of Native Language on the Choice of Written Second Language Words" class="ltx_ref">2007</a>)</cite>
+in using a multi-class SVM classifier for the NLI task.
+The classifier computes a weight for each feature coupled with each L1 language
+by attempting to maximize the overall accuracy on the training set.
+For example,
+if we train the classifier using
+words as features,
+with values representing their frequency relative to
+the length of the document,
+the features corresponding to the word <em class="ltx_emph">China</em>
+might receive the following weights:</p>
+</div>
+<div id="S2.tab1" class="ltx_table">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_t">Arabic</th>
+<th class="ltx_td ltx_align_center ltx_border_t">Chinese</th>
+<th class="ltx_td ltx_align_center ltx_border_t">Hindi</th>
+<th class="ltx_td ltx_align_center ltx_border_t">Japanese</th>
+<th class="ltx_td ltx_align_center ltx_border_t">Telugu</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_t">-770</th>
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_t">1720</th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_t">-276</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_t">-254</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_t">-180</td></tr>
+</tbody>
+</table>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">These weights indicate that the word
+provides strong positive evidence for Chinese as L1,
+as opposed to the other four languages.</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p">We propose to quantify the importance of each word
+by converting its SVM feature weights into a single score
+using the following formula:</p>
+<table id="S2.Ex1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex1.m1" class="ltx_Math" alttext="WordScore_{i}=\sqrt{\sum_{j=1}^{N}{w_{ij}}^{2}}" display="block"><mrow><mrow><mi>W</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mi>S</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><msub><mi>e</mi><mi>i</mi></msub></mrow><mo>=</mo><msqrt><mrow><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mi>N</mi></munderover><mmultiscripts><mi>w</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow><none/><none/><mn>2</mn></mmultiscripts></mrow></msqrt></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p4.m1" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math> is the number of languages,
+and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p4.m2" class="ltx_Math" alttext="w_{ij}" display="inline"><msub><mi>w</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub></math> is the feature weight of word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p4.m3" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math> in language <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p4.m4" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math>.
+The formula assigns higher scores to words
+with weights of high magnitude, either positive or negative.
+We use the Euclidean norm rather than the sum of raw weights
+because we are interested in the discriminative power of the words.</p>
+</div>
+<div id="S2.p5" class="ltx_para">
+<p class="ltx_p">We normalize the word scores by dividing them
+by the score of the 200th word.
+Consequently, only the top 200 words have scores greater than or equal to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m1" class="ltx_Math" alttext="1.0" display="inline"><mn>1.0</mn></math>.
+For our previous example,
+the 200<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m2" class="ltx_Math" alttext="{}^{th}" display="inline"><msup><mi/><mrow><mi>t</mi><mo>⁢</mo><mi>h</mi></mrow></msup></math> word
+has a word score of 1493,
+while <em class="ltx_emph">China</em> has a word score of 1930,
+which is normalized to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m3" class="ltx_Math" alttext="1930/1493=1.29" display="inline"><mrow><mrow><mn>1930</mn><mo>/</mo><mn>1493</mn></mrow><mo>=</mo><mn>1.29</mn></mrow></math>.
+On the other hand,
+the 1000<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p5.m4" class="ltx_Math" alttext="{}^{th}" display="inline"><msup><mi/><mrow><mi>t</mi><mo>⁢</mo><mi>h</mi></mrow></msup></math> word
+gets a normalized score of 0.43.</p>
+</div><span class="ltx_ERROR undefined">{algorithm}</span>
+<div id="S2.p6" class="ltx_para">
+<p class="ltx_p">[t]
+<span class="ltx_text ltx_caption">Computing the scores of words and bigrams in the data.</span>
+
+<span class="ltx_ERROR undefined">{algorithmic}</span>[1]
+<span class="ltx_ERROR undefined">\STATE</span>create list of words in training data
+<span class="ltx_ERROR undefined">\STATE</span>train SVM using words as features
+<span class="ltx_ERROR undefined">\FORALL</span>words i
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p6.m1" class="ltx_Math" alttext="WordScore_{i}=\sqrt{\sum_{j=1}^{N}{{w_{ij}}^{2}}}" display="inline"><mrow><mrow><mi>W</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mi>S</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><msub><mi>e</mi><mi>i</mi></msub></mrow><mo>=</mo><msqrt><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mi>N</mi></msubsup><mmultiscripts><mi>w</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow><none/><none/><mn>2</mn></mmultiscripts></mrow></msqrt></mrow></math>
+<span class="ltx_ERROR undefined">\ENDFOR</span><span class="ltx_ERROR undefined">\STATE</span>sort words by WordScore
+<span class="ltx_ERROR undefined">\STATE</span>NormValue = WordScore<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p6.m2" class="ltx_Math" alttext="{}_{200}" display="inline"><msub><mi/><mn>200</mn></msub></math>
+<span class="ltx_ERROR undefined">\STATE</span>create list of 200 most frequent bigrams
+<span class="ltx_ERROR undefined">\FOR</span>bigrams k = 1 to 200
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p6.m3" class="ltx_Math" alttext="BigramScore_{k}=\prod_{k\in i}\frac{WordScore_{i}}{NormValue}" display="inline"><mrow><mrow><mi>B</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>S</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><msub><mi>e</mi><mi>k</mi></msub></mrow><mo>=</mo><mrow><msub><mo largeop="true" symmetric="true">∏</mo><mrow><mi>k</mi><mo>∈</mo><mi>i</mi></mrow></msub><mfrac><mrow><mi>W</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mi>S</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><msub><mi>e</mi><mi>i</mi></msub></mrow><mrow><mi>N</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>V</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>e</mi></mrow></mfrac></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\ENDFOR</span><span class="ltx_ERROR undefined">\STATE</span>sort character bigrams by BigramScore</p>
+</div>
+<div id="S2.p7" class="ltx_para">
+<p class="ltx_p">In order to identify the bigrams
+that are indicative of the most discriminative words,
+we promote those that appear in the high-scoring words,
+and downgrade those that appear in the low-scoring words.
+Some bigrams that appear often in the high-scoring words may be very common.
+For example, the bigram <span class="ltx_text ltx_font_typewriter">an</span>
+occurs in words like <span class="ltx_text ltx_font_italic">Japan</span>, <span class="ltx_text ltx_font_italic">German</span>, and <span class="ltx_text ltx_font_italic">Italian</span>,
+but also by itself as a determiner, as an adjectival suffix, and as
+part of the conjunction <span class="ltx_text ltx_font_italic">and</span>.
+Therefore,
+we calculate the importance score for each character bigram
+by multiplying the scores of each word in which the bigram occurs.</p>
+</div>
+<div id="S2.p8" class="ltx_para">
+<p class="ltx_p">Algorithm <a href="#S2.tab1" title="2 Method ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> summarizes our method of
+identifying the discriminative words and indicative character bigrams.
+In line 2, we train an SVM on the words encountered in the training data.
+In lines 3 and 4, we assign the Euclidean norm of the weight vector of
+each word
+as its score.
+Starting in line 7, we determine
+which character bigrams are representative of high scoring words.
+In line 10, we calculate the bigram scores.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Experiments</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">In this section, we describe two experiments
+aimed at quantifying the importance of
+the discriminative words and the indicative character bigrams
+that are identified by Algorithm <a href="#S2.tab1" title="2 Method ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Data</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">We use two different NLI corpora.
+We follow the setup of <cite class="ltx_cite">Tsur and Rappoport (<a href="#bib.bib43" title="Using Classifier Features for Studying the Effect of Native Language on the Choice of Written Second Language Words" class="ltx_ref">2007</a>)</cite>
+by extracting
+two sets,
+denoted I1 and I2 (Table <a href="#S3.T1" title="Table 1 ‣ 3.1 Data ‣ 3 Experiments ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>),
+from the International Corpus of Learner English (ICLE),
+Version 2 <cite class="ltx_cite">[<a href="#bib.bib21" title="INTERNATIONAL CORPUS OF LEARNER ENGLISH: VERSION 2." class="ltx_ref">10</a>]</cite>.
+Each set consists of 238 documents per language,
+randomly selected from the ICLE corpus.
+Each of the documents corresponds to a different author,
+and contains between 500 and 1000 words.
+We follow the methodology of the paper in
+performing 10-fold cross-validation on
+the sets of languages used by the authors.</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">For the development of the method
+described in Section <a href="#S2" title="2 Method ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+we used a different corpus, namely
+the TOEFL Non-Native English Corpus <cite class="ltx_cite">[<a href="#bib.bib25" title="TOEFL11: A Corpus of Non-Native English" class="ltx_ref">2</a>]</cite>.
+It consists of essays written by native speakers of eleven languages,
+divided into three English proficiency levels.
+In order to maintain consistency with the ICLE sets,
+we extracted three sets of five languages apiece
+(Table <a href="#S3.T1" title="Table 1 ‣ 3.1 Data ‣ 3 Experiments ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>),
+with each set including both related and unrelated languages:
+European languages that use Latin script (T1),
+non-European languages that use non-Latin scripts (T2),
+and a mixture of both types
+(T3).
+Each sub-corpus was divided into a training set of 80<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m1" class="ltx_Math" alttext="\%" display="inline"><mi mathvariant="normal">%</mi></math>, and development and
+test sets of 10<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m2" class="ltx_Math" alttext="\%" display="inline"><mi mathvariant="normal">%</mi></math> each.
+The training sets are composed of approximately
+700 documents per language,
+with an average length of 350 words per document.
+There are over 5000 word types per language,
+and over 1000 character bigrams in total.
+The test sets include approximately 90 documents per language.
+We report results on the test sets,
+after training on both the training and development sets.</p>
+</div>
+<div id="S3.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t" colspan="2">ICLE:</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">I1</th>
+<td class="ltx_td ltx_align_left">Bulgarian Czech French Russian Spanish</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">I2</th>
+<td class="ltx_td ltx_align_left">Czech Dutch Italian Russian Spanish</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t" colspan="2">TOEFL:</th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">T1</th>
+<td class="ltx_td ltx_align_left">French German Italian Spanish Turkish</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">T2</th>
+<td class="ltx_td ltx_align_left">Arabic Chinese Hindi Japanese Telugu</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b">T3</th>
+<td class="ltx_td ltx_align_left ltx_border_b">French German Japanese Korean Telugu</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span>The L1 language sets.</div>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Setup</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">We replicate the experiments of <cite class="ltx_cite">Tsur and Rappoport (<a href="#bib.bib43" title="Using Classifier Features for Studying the Effect of Native Language on the Choice of Written Second Language Words" class="ltx_ref">2007</a>)</cite> by
+limiting the features to
+the 200 most frequent character bigrams.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>Our development
+experiments suggest that using the full set of bigrams
+results in a higher accuracy of a bigram-based classifier.
+However, we limit the set of features to the 200 most frequent bigrams
+for the sake of consistency with previous work.</span></span></span>
+The feature values are set to
+the frequency of the character bigrams
+normalized by the length of the document.
+We use these feature vectors as input to
+the SVM-Multiclass classifier <cite class="ltx_cite">[<a href="#bib.bib55" title="Making large-scale support vector machine learning practical" class="ltx_ref">14</a>]</cite>.
+The results are shown in the <span class="ltx_text ltx_font_italic">Baseline</span> column of Table <a href="#S3.T2" title="Table 2 ‣ 3.2 Setup ‣ 3 Experiments ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.</p>
+</div>
+<div id="S3.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_t">Set</td>
+<td class="ltx_td ltx_align_center ltx_border_t">Baseline</td>
+<td class="ltx_td ltx_align_center ltx_border_t">Random</td>
+<td class="ltx_td ltx_align_center ltx_border_t">Discriminative</td>
+<td class="ltx_td ltx_align_center ltx_border_t">Random</td>
+<td class="ltx_td ltx_align_center ltx_border_t">Indicative</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_center">Words</td>
+<td class="ltx_td ltx_align_center">Words</td>
+<td class="ltx_td ltx_align_center">Bigrams</td>
+<td class="ltx_td ltx_align_center">Bigrams</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_t">I1</td>
+<td class="ltx_td ltx_align_center ltx_border_t">67.5</td>
+<td class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m1" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math>0.2</td>
+<td class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m2" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math>3.6</td>
+<td class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m3" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math>1.0</td>
+<td class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m4" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math>2.2</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">I2</td>
+<td class="ltx_td ltx_align_center">66.9</td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m5" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math>2.5</td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m6" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math>5.5</td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m7" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math>0.7</td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m8" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math>2.8</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_t">T1</td>
+<td class="ltx_td ltx_align_center ltx_border_t">60.7</td>
+<td class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m9" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math>3.3</td>
+<td class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m10" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math>7.7</td>
+<td class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m11" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math>2.5</td>
+<td class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m12" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math>3.9</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">T2</td>
+<td class="ltx_td ltx_align_center">60.6</td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m13" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math>0.5</td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m14" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math>3.8</td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m15" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math>1.1</td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m16" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math>5.9</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b">T3</td>
+<td class="ltx_td ltx_align_center ltx_border_b">62.2</td>
+<td class="ltx_td ltx_align_center ltx_border_b"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m17" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math>0.3</td>
+<td class="ltx_td ltx_align_center ltx_border_b"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m18" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math>0.0</td>
+<td class="ltx_td ltx_align_center ltx_border_b"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m19" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math>0.5</td>
+<td class="ltx_td ltx_align_center ltx_border_b"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m20" class="ltx_Math" alttext="-" display="inline"><mo>-</mo></math>4.1</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 2: </span>The impact of
+subsets of word types
+and bigram features
+on the accuracy of a bigram-based NLI classifier.</div>
+</div>
+</div>
+<div id="S3.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.3 </span>Discriminative Words</h3>
+
+<div id="S3.SS3.p1" class="ltx_para">
+<p class="ltx_p">The objective of the first experiment
+is to quantify the influence of the most discriminative words
+on the accuracy of the bigram-based classifier.
+Using Algorithm <a href="#S2.tab1" title="2 Method ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+we identify the 100 most discriminative words,
+and remove them from the training data.
+The bigram counts are then recalculated,
+and the new 200 most frequent bigrams are used as features for the
+character-level SVM.
+Note that
+the number of the features in the classifier remains unchanged.</p>
+</div>
+<div id="S3.SS3.p2" class="ltx_para">
+<p class="ltx_p">The results are shown in the <span class="ltx_text ltx_font_italic">Discriminative Words</span> column of Table <a href="#S3.T2" title="Table 2 ‣ 3.2 Setup ‣ 3 Experiments ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+We see a statistically significant drop in the accuracy of the classifier
+with respect to the baseline
+in all sets except T3.
+The words that are identified as the most discriminative include
+function words, punctuation,
+very common content words,
+and the toponymic terms.
+The 10 highest scoring words from T1 are:
+<span class="ltx_text ltx_font_italic">indeed, often, statement, :</span> (colon),
+<span class="ltx_text ltx_font_italic">question, instance, …</span> (ellipsis),
+<span class="ltx_text ltx_font_italic">opinion, conclude</span>, and <span class="ltx_text ltx_font_italic">however</span>.
+In addition,
+<span class="ltx_text ltx_font_italic">France</span>,
+<span class="ltx_text ltx_font_italic">Turkey</span>,
+<span class="ltx_text ltx_font_italic">Italian</span>,
+<span class="ltx_text ltx_font_italic">Germany</span>,
+and <span class="ltx_text ltx_font_italic">Italy</span>
+are all found among the top 70 words.</p>
+</div>
+<div id="S3.SS3.p3" class="ltx_para">
+<p class="ltx_p">For comparison,
+we attempt to quantify the effect of removing
+the same number of randomly-selected words
+from the training data.
+Specifically,
+we discard all tokens that correspond to
+100 word types that have the same or slightly higher frequency as
+the discriminative words.
+The results are shown in the <span class="ltx_text ltx_font_italic">Random Words</span> column of Table <a href="#S3.T2" title="Table 2 ‣ 3.2 Setup ‣ 3 Experiments ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+The decrease is much smaller for I1, I2, and T1,
+while the accuracy actually increases
+for T2 and T3.
+This illustrates the impact that the most discriminative words have on the
+bigram-based classifier
+beyond simple reduction in the amount of the training data.</p>
+</div>
+</div>
+<div id="S3.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.4 </span>Indicative Bigrams</h3>
+
+<div id="S3.SS4.p1" class="ltx_para">
+<p class="ltx_p">Using Algorithm <a href="#S2.tab1" title="2 Method ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+we identify the top 20 character bigrams,
+and replace them with randomly selected bigrams.
+The results of this experiment are reported in
+the <span class="ltx_text ltx_font_italic">Indicative Bigrams</span> column of Table <a href="#S3.T2" title="Table 2 ‣ 3.2 Setup ‣ 3 Experiments ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+It is to be expected that the replacement of any 20 of the top bigrams with
+20 less useful bigrams
+will result in some drop in accuracy, regardless of which bigrams are
+chosen for replacement.
+For comparison,
+the <span class="ltx_text ltx_font_italic">Random Bigrams</span> column of
+Table <a href="#S3.T2" title="Table 2 ‣ 3.2 Setup ‣ 3 Experiments ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> shows the mean accuracy over 100 trials
+obtained when 20 bigrams randomly selected from the set of 200 bigrams
+are replaced with random bigrams from outside of the set.</p>
+</div>
+<div id="S3.SS4.p2" class="ltx_para">
+<p class="ltx_p">The results indicate that our algorithm
+indeed identifies 20 bigrams that are on average more important
+than the other 180 bigrams.
+What is really striking is that
+the sets of 20 indicative character bigrams
+overlap substantially across different sets.
+Table <a href="#S3.T3" title="Table 3 ‣ 3.4 Indicative Bigrams ‣ 3 Experiments ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> shows
+17 bigrams that are common across the three TOEFL corpora,
+ordered by their score,
+together with some of the highly scored words in which they occur.
+Four of the bigrams consist of punctuation marks and a
+space.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>It appears that only the relatively low frequency of
+most of the punctuation bigrams prevents them from dominating the sets of
+the indicative bigrams. When using all bigrams instead of the
+top 200, the majority of the indicative bigrams contain punctuation.</span></span></span>
+The remaining bigrams indicate
+function words,
+toponymic terms like <span class="ltx_text ltx_font_italic">Germany</span>,
+and frequent content words like <span class="ltx_text ltx_font_italic">take</span> and <span class="ltx_text ltx_font_italic">new</span>.</p>
+</div>
+<div id="S3.SS4.p3" class="ltx_para">
+<p class="ltx_p">The situation is similar in the ICLE sets,
+where likewise 17 out of 20 bigrams are common.
+The inter-fold overlap is even greater, with
+19 out of 20 bigrams appearing in each of the 10 folds.
+In particular,
+the bigrams <span class="ltx_text ltx_font_typewriter">fr</span> and <span class="ltx_text ltx_font_typewriter">bu</span> can be traced to
+both the function words <em class="ltx_emph">from</em> and <em class="ltx_emph">but</em>,
+and the presence of French and Bulgarian in I1.
+However,
+the fact that the two bigrams are also on the list for the I2 set,
+which does not include these languages,
+suggests that their importance is mostly due to the function words.</p>
+</div>
+<div id="S3.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_t">Bigram</th>
+<th class="ltx_td ltx_align_left ltx_border_t">Words</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_t">_,</th>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">,_</th>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">_.</th>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">._</th>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">u_</th>
+<td class="ltx_td ltx_align_left">you Telugu</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">f_</th>
+<td class="ltx_td ltx_align_left">of</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">ny</th>
+<td class="ltx_td ltx_align_left">any many Germany</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">yo</th>
+<td class="ltx_td ltx_align_left">you your</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">w_</th>
+<td class="ltx_td ltx_align_left">now how</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">i_</th>
+<td class="ltx_td ltx_align_left">I</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">_y</th>
+<td class="ltx_td ltx_align_left">you your</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">ew</th>
+<td class="ltx_td ltx_align_left">new knew</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">kn</th>
+<td class="ltx_td ltx_align_left">know knew</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">ey</th>
+<td class="ltx_td ltx_align_left">they Turkey</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">wh</th>
+<td class="ltx_td ltx_align_left">what why where <span class="ltx_text ltx_font_italic">etc.</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">of</th>
+<td class="ltx_td ltx_align_left">of</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b">ak</th>
+<td class="ltx_td ltx_align_left ltx_border_b">make take</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 3: </span>The most indicative character bigrams in the TOEFL corpus
+(sorted by score).</div>
+</div>
+</div>
+<div id="S3.SS5" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.5 </span>Discussion</h3>
+
+<div id="S3.SS5.p1" class="ltx_para">
+<p class="ltx_p">In the first experiment,
+we showed that
+the removal of the 100 most discriminative words
+from the training data
+results in a significant drop in the accuracy of the classifier
+<span class="ltx_text ltx_font_italic">that is based exclusively on character bigrams</span>.
+If the hypothesis of <cite class="ltx_cite">Tsur and Rappoport (<a href="#bib.bib43" title="Using Classifier Features for Studying the Effect of Native Language on the Choice of Written Second Language Words" class="ltx_ref">2007</a>)</cite> was true,
+this should not be the case,
+as the phonology of L1 would influence the choice of
+words across the lexicon.</p>
+</div>
+<div id="S3.SS5.p2" class="ltx_para">
+<p class="ltx_p">In the second experiment,
+we found that the majority of the
+most indicative character bigrams
+<span class="ltx_text ltx_font_italic">are shared among different language sets</span>.
+The bigrams appear to reflect primarily high-frequency function words.
+If the hypothesis
+was true, this should not be the case,
+as the diverse L1 phonologies would
+induce different sets of bigrams.
+In fact, the highest scoring bigrams reflect punctuation patterns,
+which have little to do with word choice.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Conclusion</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">We have provided
+experimental evidence against
+the hypothesis
+that the phonology of L1 strongly affects the choice of words in L2.
+We showed that
+a small set of high-frequency function words have
+disproportionate influence on the accuracy of a bigram-based NLI classifier,
+and that
+the majority of the indicative bigrams appear to be independent of L1.
+This suggests an alternative explanation
+of the effectiveness of a bigram-based classifier
+in identifying the native language of a writer —
+that the character bigrams simply mirror
+differences in the word usage
+rather than
+the phonology of L1.</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">Our explanation concurs with
+the findings of
+<cite class="ltx_cite">Daland (<a href="#bib.bib19" title="Variation in the input: a case study of manner class frequencies" class="ltx_ref">2013</a>)</cite>
+that unigram frequency differences
+in certain types of phonological segments
+between
+child-directed and adult-directed speech
+are due to a small number
+of word types, such as <span class="ltx_text ltx_font_italic">you</span>, <span class="ltx_text ltx_font_italic">what</span>, and <span class="ltx_text ltx_font_italic">want</span>,
+rather than to any general phonological preferences.
+He argues that the relative frequency of sounds in speech
+is driven by the relative frequency of words.
+In a similar vein,
+<cite class="ltx_cite">Koppel<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib58" title="Determining an author’s native language by mining a text for errors" class="ltx_ref">2005</a>)</cite>
+see
+the usefulness of character <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-grams as
+“simply an artifact of variable usage of
+particular words, which in turn might be the result of different
+thematic preferences,”
+or as a reflection of the L1 orthography.</p>
+</div>
+<div id="S4.p3" class="ltx_para">
+<p class="ltx_p">We conclude by noting that
+our experimental results do not imply that
+the phonology of L1 has absolutely no influence on L2 writing.
+Rather, they show that the evidence
+from the Native Language Identification task
+has so far been inconclusive in this regard.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">We thank the participants and the organizers of
+the shared task on NLI at the BEA8 workshop
+for sharing their reflections on the task.
+We also thank
+an anonymous reviewer for pointing out the study of <cite class="ltx_cite">Daland (<a href="#bib.bib19" title="Variation in the input: a case study of manner class frequencies" class="ltx_ref">2013</a>)</cite>.</p>
+</div>
+<div id="Sx1.p2" class="ltx_para">
+<p class="ltx_p">This research was supported by the Natural Sciences and Engineering
+Research Council of Canada and the Alberta Innovates Technology Futures.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib17" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Abu-Jbara, R. Jha, E. Morley and D. Radev</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Experimental results on the native language identification shared task</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 82–88</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W13-1710" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib25" class="ltx_bibitem ltx_bib_report"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Blanchard, J. Tetreault, D. Higgins, A. Cahill and M. Chodorow</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">TOEFL11: A Corpus of Non-Native English</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_type">Technical report</span>
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Educational Testing Service</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p2" title="3.1 Data ‣ 3 Experiments ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Brooke and G. Hirst</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Using other learner corpora in the 2013 NLI shared task</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 188–196</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W13-1725" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Bykh, S. Vajjala, J. Krivanek and D. Meurers</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Combining shallow and linguistically motivated features in native language identification</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 197–206</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W13-1726" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Cimino, F. Dell’Orletta, G. Venturi and S. Montemagni</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Linguistic profiling based on general–purpose features and native language identification</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 207–215</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W13-1727" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib19" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Daland</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Variation in the input: a case study of manner class frequencies</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Child Language</span> <span class="ltx_text ltx_bib_volume">40</span> (<span class="ltx_text ltx_bib_number">5</span>), <span class="ltx_text ltx_bib_pages"> pp. 1091–1122</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p2" title="4 Conclusion ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>,
+<a href="#Sx1.p1" title="Acknowledgments ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_title">Acknowledgments</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">V. Daudaravicius</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">VTEX system description for the NLI 2013 shared task</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 89–95</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W13-1711" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. G. Gebre, M. Zampieri, P. Wittenburg and T. Heskes</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Improving native language identification with TF-IDF weighting</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 216–223</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W13-1728" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Goutte, S. Léger and M. Carpuat</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Feature space selection and combination for native language identification</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 96–100</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W13-1712" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib21" class="ltx_bibitem ltx_bib_misc"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Granger, E. Dagneaux, F. Meunier and M. Paquot</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">INTERNATIONAL CORPUS OF LEARNER ENGLISH: VERSION 2.</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Cambridge Univ Press</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p1" title="3.1 Data ‣ 3 Experiments ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib14" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Henderson, G. Zarrella, C. Pfeifer and J. D. Burger</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Discriminating non-native English with 350 words</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 101–110</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W13-1713" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Hladka, M. Holub and V. Kriz</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Feature engineering in the NLI shared task 2013: charles University submission report</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 232–241</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W13-1730" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib34" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Jarvis, Y. Bestgen and S. Pepper</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Maximizing classification accuracy in native language identification</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 111–118</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W13-1714" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib55" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Joachims</span><span class="ltx_text ltx_bib_year">(1999)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Making large-scale support vector machine learning practical</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 169–184</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p1" title="3.2 Setup ‣ 3 Experiments ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib58" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Koppel, J. Schler and K. Zigdon</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Determining an author’s native language by mining a text for errors</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Chicago, IL</span>, <span class="ltx_text ltx_bib_pages"> pp. 624–628</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p2" title="2 Method ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.p2" title="4 Conclusion ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Lahiri and R. Mihalcea</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Using n-gram and word network features for native language identification</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 251–259</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W13-1732" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Li</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Recognizing English learners. native language from their writings</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 119–123</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W13-1715" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Lynum</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Native language identification using large scale lexical features</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 266–269</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W13-1734" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Malmasi, S. J. Wong and M. Dras</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">NLI shared task 2013: MQ submission</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 124–133</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W13-1716" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Mizumoto, Y. Hayashibe, K. Sakaguchi, M. Komachi and Y. Matsumoto</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">NAIST at the NLI 2013 shared task</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 134–139</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W13-1717" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib36" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. Nicolai, B. Hauer, M. Salameh, L. Yao and G. Kondrak</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Cognate and misspelling features for natural language identification</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 140–145</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W13-1718" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Popescu and R. T. Ionescu</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The story of the characters, the DNA and the native language</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 270–278</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W13-1735" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib16" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Swanson</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Exploring syntactic representations for native language identification</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 146–151</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W13-1719" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib39" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Tetreault, D. Blanchard and A. Cahill</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A Report on the First Native Language Identification Shared Task</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. </span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_ref ltx_bib_external ltx_ref_self">Link</span></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib43" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">O. Tsur and A. Rappoport</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Using Classifier Features for Studying the Effect of Native Language on the Choice of Written Second Language Words</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Prague, Czech Republic</span>, <span class="ltx_text ltx_bib_pages"> pp. 9–16</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W/W07/W07-0602" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <span class="ltx_ref ltx_ref_self"><span class="ltx_text ltx_ref_title">Does the Phonology of L1 Show Up in L2 Texts?</span></span>,
+<a href="#S1.p3" title="1 Introduction ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p1" title="2 Method ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.p2" title="2 Method ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS1.p1" title="3.1 Data ‣ 3 Experiments ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>,
+<a href="#S3.SS2.p1" title="3.2 Setup ‣ 3 Experiments ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>,
+<a href="#S3.SS5.p1" title="3.5 Discussion ‣ 3 Experiments ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.5</span></a>.
+</span></li>
+<li id="bib.bib15" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Tsvetkov, N. Twitto, N. Schneider, N. Ordan, M. Faruqui, V. Chahuneau, S. Wintner and C. Dyer</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Identifying the L1 of non-native writers: the CMU-Haifa system</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 279–287</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W13-1736" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Does the Phonology of L1 Show Up in L2 Texts?" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 18:39:50 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

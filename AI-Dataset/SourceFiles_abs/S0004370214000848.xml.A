@@ -1,0 +1,642 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Depth-based short-sighted stochastic shortest path problems.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Stochastic Shortest Path Problems (SSP) [3] provide a convenient framework for modeling fully observable probabilistic planning problems. A solution to an SSP is a policy – a mapping from states to actions – that is guaranteed to reach a goal state when executed from the initial state of the given SSP. In this article, we address the question of how to improve the scalability of probabilistic planners when searching for (i) an optimal policy and (ii) a suboptimal policy given a time deadline.
+     </paragraph>
+     <paragraph>
+      One approach to computing optimal solutions to SSPs is to use value iteration and policy iteration algorithms, which are optimal [4]. Planners based on these algorithms return a closed policy, i.e., a policy that is defined at least over all the probabilistically reachable states of the given SSP. Assuming the model correctly captures the cost and uncertainty of the actions in the environment, closed policies are extremely powerful as their execution never “fails”; therefore, the planner is never reinvoked. Unfortunately, the computation of such policies is prohibitive in complexity as problems scale up. The efficiency of value-iteration-based probabilistic planners can be improved by combining asynchronous updates and heuristic search (e.g., Labeled RTDP [5]), resulting in optimal algorithms with convergence bounds. Although these techniques allow planners to compute compact policies, in the worst case, these policies are still linear in the size of the state space, which itself can be exponential in the size of the state or goals.
+     </paragraph>
+     <paragraph>
+      Different approaches have been proposed to efficiently find nonoptimal solutions to SSPs based on replanning. Replanners do not invest the computational effort to generate a closed policy, and instead compute an open policy, i.e., a policy that does not address all the probabilistically reachable states. Different methods can be employed to generate open policies, e.g., determinization [30], [31], sampling [11], [26], and finite horizon search [21], [17]. During the execution, if a state not included in the open policy is reached, the replanner is reinvoked to compute a new open policy starting from the unpredicted state.
+     </paragraph>
+     <paragraph>
+      In this work, we introduce a new model, the depth-based short-sighted Stochastic Shortest Path Problems (short-sighted SSPs), a special case of SSPs in which every state has a nonzero probability of being reached using at most t actions. We also introduce the novel algorithm Short-Sighted Probabilistic Planner (SSiPP), which solves SSPs using short-sighted SSPs to represent subproblems of the original problem. We prove that the policies computed by SSiPP can be executed for at least t time steps without replanning; therefore, by varying the parameter t of the short-sighted SSPs, SSiPP can behave as either a probabilistic planner or a replanner: for small values of t, the SSiPP returns open policies and less replanning is necessary as t increases; and for t large enough, SSiPP returns closed policies. We provide an upper bound for t in which SSiPP is guaranteed to return closed policies.
+     </paragraph>
+     <paragraph>
+      We also present two extensions of SSiPP: Labeled-SSiPP and SSiPP-FF. Labeled-SSiPP improves the performance of SSiPP when searching for the optimal solution of SSPs by not revisiting states that have already converged. SSiPP-FF combines SSiPP and determinization to improve the efficiency of SSiPP when searching for a suboptimal solution under small time constraints, e.g., the International Probabilistic Planning Competition (IPPC) [33], [7], [8] rules.
+     </paragraph>
+     <paragraph>
+      Lastly, we extensively compare SSiPP, Labeled-SSiPP, and SSiPP-FF in different domains against the state-of-the-art probabilistic planners. Our results show that in the task of finding the optimal solution for an SSP, Labeled-SSiPP represents an improvement of SSiPP, and Labeled-SSiPP outperforms the other considered planners when the optimal policy encompasses a small fraction of the state space. For the task of quickly finding a suboptimal solution to an SSP, our results indicate that SSiPP-FF successfully combines the behavior of SSiPP and FF-Replan: for problems without dead ends, SSiPP-FF performance is similar to FF-Replan performance (the best planner for problems without dead ends); and for problems with dead ends, SSiPP-FF performs better than FF-Replan and similarly to SSiPP. Moreover, the solutions obtained by SSiPP-FF in problems without dead ends have better quality, i.e., lower average cost, than the solutions obtained by FF-Replan.
+     </paragraph>
+     <paragraph>
+      This article is organized as follows: Section 2 reviews the basic background on SSPs and the related work. Section 3 defines formally our novel model, the depth-based short-sighted SSPs, as well as its properties. Section 4 presents our main algorithms, namely SSiPP, Labeled-SSiPP, and SSiPP-FF, and their theoretical guarantees. Section 5 empirically evaluates SSiPP (and its extensions) against the state-of-the-art planners in two settings: search for the optimal solution (Section 5.2) and search for a solution using the IPPC rules (Section 5.3). Section 6 concludes the article.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Background and related work
+     </section-title>
+     <paragraph>
+      This section introduces the basic concepts and notation used in this article (Section 2.1) and reviews the related work in probabilistic planning (Section 2.2).
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       Stochastic shortest path problem
+      </section-title>
+      <paragraph>
+       A Stochastic Shortest Path Problem (SSP) [3] is a tuple {a mathematical formula}S=〈S,s0,G,A,P,C〉, in which
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}S is the finite set of states;
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}s0∈S is the initial state;
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}G⊆S is the nonempty set of goal states;
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}A is the finite set of actions;
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}P(s′|s,a) represents the probability that {a mathematical formula}s′∈S is reached after applying action {a mathematical formula}a∈A in state {a mathematical formula}s∈S; and
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}C(s,a,s′)∈(0,+∞) is the immediate cost incurred when state {a mathematical formula}s′ is reached after applying action a in state s. This function is required to be defined for all {a mathematical formula}s,a, and {a mathematical formula}s′ in which {a mathematical formula}P(s′|s,a)&gt;0.
+       </list-item>
+      </list>
+      <paragraph>
+       In SSPs, an agent executes actions {a mathematical formula}a∈A in discrete time steps at a state {a mathematical formula}s∈S. The chosen action a changes state s to state {a mathematical formula}s′ with probability {a mathematical formula}P(s′|s,a) and the cost {a mathematical formula}C(s,a,s′) is incurred. If a goal state {a mathematical formula}sG∈G is reached, the problem finishes, i.e., no more actions need to be executed. The sequence of states {a mathematical formula}T=〈s0,s1,s2,…〉 visited by the agent is called a trajectory, and the state {a mathematical formula}si is the state of the environment at time step i. Thus, for every trajectory {a mathematical formula}T, there exists at least one sequence of actions {a mathematical formula}〈a0,a1,a2,…〉 such that {a mathematical formula}ai is executed in state {a mathematical formula}si and {a mathematical formula}P(T|〈a0,a1,a2,…〉)=∏i∈{0,1,…}P(si+1|si,ai)&gt;0.
+      </paragraph>
+      <paragraph>
+       The horizon is the maximum number of actions the agent is allowed to execute in the environment, and therefore the maximum size of {a mathematical formula}T. For SSPs, the horizon is indefinite because under certain conditions discussed later in this section, a goal state can be reached using a finite, yet unbounded, number of actions. If the horizon is set to {a mathematical formula}tmax, then the obtained model is known as a finite-horizon Markov Decision Process (MDP) [22]. Alternatively, if no goal states are given, then the horizon becomes infinite as no stop condition is given to the agent. In order to guarantee that the total accumulated cost is finite in such models, the cost incurred at time step t is discounted by {a mathematical formula}γt, for {a mathematical formula}γ∈(0,1). The obtained model, known as discounted infinite-horizon MDPs [22], and the finite-horizon MDPs are special cases of SSPs [4].
+      </paragraph>
+      <paragraph>
+       A solution to an SSP is a policy π, i.e., a mapping from states to actions. A policy defined over all the states {a mathematical formula}S is know as a complete policy because it is a complete mapping from {a mathematical formula}S to {a mathematical formula}A. Similarly, a policy π defined only for a subset of {a mathematical formula}S is known as a partial policy. Given a policy π, the set of all the states reachable when following π from {a mathematical formula}s0 is denoted as {a mathematical formula}Sπ⊆S and the set of states in which replanning is necessary as {a mathematical formula}Rπ. Formally, {a mathematical formula}Rπ={s∈S∖G|π is not defined for s}. A policy π can also be classified according to {a mathematical formula}Sπ and {a mathematical formula}Rπ. If π can be followed from {a mathematical formula}s0 without replanning, i.e., {a mathematical formula}Rπ∩Sπ=∅, then π is a closed policy. Therefore, every complete policy π is also a closed policy since {a mathematical formula}Rπ=∅. If a policy π is not closed, then {a mathematical formula}Rπ∩Sπ≠∅ and π is known as an open policy. For any open policy π, replanning has a nonzero probability of happening because every state {a mathematical formula}s∈Rπ∩Sπ has a nonzero probability of being reached when following π from {a mathematical formula}s0. Thus, every open policy π is also partial as π is not defined over the states {a mathematical formula}s∈Rπ∩Sπ.
+      </paragraph>
+      <paragraph>
+       Policies can be further classified according to their termination guarantee. If it is inevitable to reach a goal state when following the policy π from {a mathematical formula}s0, then π is a proper policy. Formally,
+      </paragraph>
+      <paragraph label="Definition 1">
+       Proper policyA policy π is proper if, for all {a mathematical formula}s∈Sπ, there exists a trajectory {a mathematical formula}T=〈s,s1,…,sk〉 generated by π such that {a mathematical formula}sk∈G and {a mathematical formula}k≤|S|.
+      </paragraph>
+      <paragraph>
+       A policy that is not proper is said to be improper. A common assumption used in the theoretical results for SSPs is as follows:
+      </paragraph>
+      <paragraph label="Assumption 1">
+       There exists at least one policy that is proper independent of the initial state {a mathematical formula}s0 of the SSP. This assumption is equivalent to Assumption 2.1 of [4] and implies that a goal state is always reachable from every state {a mathematical formula}s∈S.
+      </paragraph>
+      <paragraph>
+       By definition, every proper policy is closed, and every open policy is improper; however, not all closed policies are proper. To illustrate this relationship between closed and proper policies, consider the SSP depicted in Fig. 1: {a mathematical formula}π0={(s0,a0),(s1′,a0)} is a proper policy and {a mathematical formula}Sπ0={s0,s1′,sG}; {a mathematical formula}π1={(s0,a1),(s1,a1)} is an open policy because {a mathematical formula}π1(s2) is not defined; and {a mathematical formula}π2={(s0,a1),(s1,a0)} is a closed and improper policy as no goal state is reachable from {a mathematical formula}s0 when following {a mathematical formula}π2, and {a mathematical formula}π2 is defined for {a mathematical formula}Sπ2={s0,s1}.
+      </paragraph>
+      <paragraph label="Assumption 2">
+       Given a closed policy π, {a mathematical formula}Vπ(s) is the expected accumulated cost to reach a goal state from state {a mathematical formula}s∈Sπ. The function {a mathematical formula}Vπ, defined at least over {a mathematical formula}Sπ, is called the value function for π and is the fixed-point solution for the following system of equations:{a mathematical formula} where {a mathematical formula}E[C(s,a,s′)+Vπ(s′)|s,a]=∑s′∈SP(s′|s,a)[C(s,a,s′)+Vπ(s′)]. Another common assumption for SSPs is as follows: For every closed and improper policy π, there exists at least one state {a mathematical formula}s∈Sπ such that {a mathematical formula}Vπ(s) is infinite.
+      </paragraph>
+      <paragraph>
+       This assumption is already true in our definition of SSPs as the cost function {a mathematical formula}C(s,a,s′) is strictly positive. For instance, for the SSP depicted in Fig. 1, the trajectories generated by the closed and improper policy {a mathematical formula}π2={(s0,a1),(s1,a0)} have infinite size, and at each time step, a strictly positive immediate cost is incurred; therefore, {a mathematical formula}Vπ2(s0)=Vπ2(s1)=∞.
+      </paragraph>
+      <paragraph>
+       An optimal policy {a mathematical formula}π⁎ is any proper policy that minimizes, over all proper policies, the expected cost of reaching a goal state from {a mathematical formula}s0, i.e., {a mathematical formula}Vπ⁎(s0)≤minπs.t.πisclosed⁡Vπ(s0). For a given SSP, {a mathematical formula}π⁎ might not be unique; however, the optimal value function {a mathematical formula}V⁎, representing for each state s the minimal expected accumulated cost to reach a goal state over all policies, exists and is unique [4]. For all optimal policies {a mathematical formula}π⁎ and {a mathematical formula}s∈Sπ⁎, we have that {a mathematical formula}V⁎(s)=Vπ⁎(s); formally, {a mathematical formula}V⁎ is the fixed-point solution for the Bellman Equation(s):{a mathematical formula} Every optimal policy {a mathematical formula}π⁎ can be obtained by replacing min by argmin in (2), i.e., {a mathematical formula}π⁎ is a greedy policy of {a mathematical formula}V⁎:
+      </paragraph>
+      <paragraph label="Definition 2">
+       Greedy policyGiven a value function V, a greedy policy {a mathematical formula}πV is such that {a mathematical formula}πV(s)=argmina∈AE[C(s,a,s′)+V(s′)|s,a] for all {a mathematical formula}s∈S∖G. For the states s in which V is not defined, {a mathematical formula}V(s)=∞ is assumed.
+      </paragraph>
+      <paragraph>
+       A possible approach to computing {a mathematical formula}V⁎ is the value iteration algorithm (VI) [14]: given an initial guess {a mathematical formula}V0 for {a mathematical formula}V⁎, the sequence {a mathematical formula}〈V0,V1,…,Vk〉 is computed where {a mathematical formula}Vt+1 is obtained by performing a Bellman backup in {a mathematical formula}Vt, that is, applying the operator B in the value function {a mathematical formula}Vt for all {a mathematical formula}s∈S:{a mathematical formula} We denote by {a mathematical formula}Bk the composition of the operator B: {a mathematical formula}(BkV)(s)=(B(Bk−1V))(s) for all {a mathematical formula}s∈S; thus, {a mathematical formula}Vt=BtV0. Given a value function V, {a mathematical formula}BtV represents the optimal solution for the SSP in which the horizon is limited to t and the extra cost {a mathematical formula}V(s) is incurred when agent reaches state {a mathematical formula}s∈S∖G after applying t actions. {a mathematical formula}(BtV)(s) is known as t-look-ahead value of state s according to V.
+      </paragraph>
+      <paragraph>
+       For SSPs in which Assumption 1 holds, {a mathematical formula}Vk converges to {a mathematical formula}V⁎ as {a mathematical formula}k→∞ and {a mathematical formula}0≤V⁎(s)&lt;∞ for all {a mathematical formula}s∈S[2]. Because convergence to {a mathematical formula}V⁎ is not feasible in the general case, one solution is to find a value function {a mathematical formula}Vˆ that is at most ϵ away from {a mathematical formula}V⁎, i.e., {a mathematical formula}|Vˆ(s)−V⁎(s)|≤ϵ for all {a mathematical formula}s∈S[2], [12]. Unfortunately, the computation of this error bound for {a mathematical formula}Vˆ is too expensive to be used as stop criterion; thus, in practice, we are interested in the problem of finding an ϵ-consistent value function V:
+      </paragraph>
+      <paragraph label="Definition 3">
+       ϵ-consistentGiven an SSP {a mathematical formula}S, a value function V for {a mathematical formula}S is ϵ-consistent if{a mathematical formula} where {a mathematical formula}S′=SπV, i.e., the states reachable from {a mathematical formula}s0 when following a greedy policy {a mathematical formula}πV. The functions {a mathematical formula}R(s,V) and {a mathematical formula}R(S,V) are known as the Bellman residual w.r.t. V of the state s and the SSP {a mathematical formula}S, respectively. By (2), if V is 0-consistent, then V equals {a mathematical formula}V⁎.
+      </paragraph>
+      <paragraph>
+       Any initial guess {a mathematical formula}V0 for {a mathematical formula}V⁎ can be used in VI and if {a mathematical formula}V0 is a lower bound of {a mathematical formula}V⁎, i.e., {a mathematical formula}V0(s)≤V⁎(s) for all {a mathematical formula}s∈S, then {a mathematical formula}V0 is also known as an admissible heuristic. For any two value functions V and {a mathematical formula}V′, we write {a mathematical formula}V≤V′ if {a mathematical formula}V(s)≤V′(s) for all {a mathematical formula}s∈S; thus, {a mathematical formula}V0 is an admissible heuristic if {a mathematical formula}V0≤V⁎. Another important definition regarding value functions is monotonicity:
+      </paragraph>
+      <paragraph label="Definition 4">
+       Monotonic value functionA value function V is monotonic if {a mathematical formula}V≤BV.
+      </paragraph>
+      <paragraph>
+       The following well-known result is necessary in most of our proofs in this article.
+      </paragraph>
+      <paragraph label="Theorem 1">
+       Given an SSP{a mathematical formula}Sin whichAssumption 1holds, the operator B preserves[4, Lemma 2.1]:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        admissibility: if{a mathematical formula}V≤V⁎, then{a mathematical formula}BkV≤V⁎for{a mathematical formula}k∈N⁎; and
+       </list-item>
+       <list-item label="•">
+        monotonicity: if{a mathematical formula}V≤BV, then{a mathematical formula}V≤BkVfor{a mathematical formula}k∈N⁎.
+       </list-item>
+      </list>
+      <paragraph>
+       Another important concept for probabilistic planning is determinization, a relaxation of a given probabilistic problem into a deterministic problem {a mathematical formula}D=〈S,s0,G,A′〉. The set {a mathematical formula}A′ contains only deterministic actions represented as {a mathematical formula}a=s→s′, i.e., a deterministically transforms s into {a mathematical formula}s′. Two common determinization procedures are (i) most-likely outcome, in which {a mathematical formula}A′={s→s′|∃a∈As.t. s′=argmaxs″P(s″|s,a)} (breaking ties randomly); and (ii) all-outcomes determinization, where {a mathematical formula}A′={s→s′|∃a∈As.t. P(s′|s,a)&gt;0}.
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Related work
+      </section-title>
+      <paragraph>
+       One direct extension of Value Iteration (VI) is Topological Value Iteration (TVI) [9]. TVI preprocesses the given SSP by performing a topological analysis of {a mathematical formula}S. The result of this analysis is a set of the strongly connected components (SCCs), and TVI solves the SSP by applying VI on each SCC in reversed topological order. This decomposition can speed up the search for optimal solutions when the original SSP can be decomposed into several close-to-equal-size SCCs. In the worst case, when the SSP has just one SCC, TVI performs worse than VI due to the overhead imposed by the topological analysis.
+      </paragraph>
+      <paragraph>
+       To increase the chances that a problem will be decomposed in several close-to-equal-size SCCs, Focused Topological Value Iteration (FTVI) [10] was introduced. FTVI performs a best-first forward search in which a lower bound {a mathematical formula}V̲ for {a mathematical formula}V⁎ is iteratively improved and actions that are provably suboptimal are removed from the original SSP. Once the {a mathematical formula}R(S,V) is small, the search is stopped and the resulting SSP is solved using TVI and {a mathematical formula}V̲. Because the removed actions are always suboptimal, FTVI returns an optimal solution. In the worst case, FTVI is equivalent to TVI as there is no guarantee that any action will be removed from the original SSP.
+      </paragraph>
+      <paragraph>
+       Another extension of VI is Real Time Dynamic Programming (RTDP) [1]. RTDP extends the asynchronous version of VI by using greedy search and sampling to find the next state to perform a Bellman backup. In order to avoid being trapped in loops and to find an optimal solution, RTDP updates its lower bound {a mathematical formula}V̲(s) of {a mathematical formula}V⁎(s) on every state s visited during the search. If Assumption 1 holds for the given SSP, then RTDP always finds an optimal solution after several search iterations (possibly infinitely many); that is, RTDP is asymptotically optimal. Unlike VI, TVI, and FTVI that compute complete policies, RTDP returns a closed policy (i.e., the returned policy might be partial).
+      </paragraph>
+      <paragraph>
+       Several extensions of RTDP have been proposed, and the first one is Labeled RTDP (LRTDP) [5]. LRTDP introduces a labeling mechanism to find states that have already converged and avoids exploring these converged states again. With this technique, LRTDP provides an upper bound on the number of iterations necessary to find an ϵ-consistent solution.
+      </paragraph>
+      <paragraph>
+       The following three algorithms also extend RTDP by maintaining a lower and an upper bound {a mathematical formula}V¯ on {a mathematical formula}V⁎ and providing different methods to direct the exploration of the state space: Bounded RTDP (BRTDP) [20], Focused RTDP (FRTDP) [25] and, Value of Perfect Information RTDP (VPI-RTDP) [24]. The advantage of keeping an upper bound is that the exploration of the state space can be biased toward states s in which the uncertainty about {a mathematical formula}V⁎(s) is large, e.g., the gap between {a mathematical formula}V¯(s) and {a mathematical formula}V̲(s) is large. This improved criterion to guide the search decreases the number of Bellman backups required to find an ϵ-consistent solution; however, each iteration of the search is considerably more expensive due to the maintenance of the upper bound {a mathematical formula}V¯. Although no clear dominance exists between RTDP and its extensions, empirically it has been shown that in most problems, (i) RTDP is outperformed by all its extensions, and (ii) VPI-RTDP outperforms BRTDP and FRTDP.
+      </paragraph>
+      <paragraph>
+       The extensions of RTDP mentioned so far are concerned with improving the convergence of RTDP to an ϵ-consistent solution, and ReTrASE [18] extends RTDP to improve its scalability. ReTrASE achieves this by projecting {a mathematical formula}V̲ into a lower dimensional space. The set of basis functions used by ReTrASE is obtained by solving the all-outcomes determinization of the original problem. Due to the lower dimensional representation, ReTrASE is nonoptimal.
+      </paragraph>
+      <paragraph>
+       A different approach for finding optimal solutions is Policy Iteration (PI) [14]. PI performs search in the policy space and iteratively improves the current policy until no further improvement is possible, i.e., an optimal policy is found. Because PI was originally designed for infinite-horizon MDPs, it returns a complete policy; therefore, when applied to SSPs, PI does not take advantage of the initial state {a mathematical formula}s0 to prune its search. LAO* [12] can be seen as a version of PI that takes advantage of {a mathematical formula}s0 and computes optimal closed policies that are potentially not complete. Precisely, LAO* computes an optimal closed policy for the sequence {a mathematical formula}S0⊆S1⊆…⊆Sk⊆S, where {a mathematical formula}S0={s0} and {a mathematical formula}Si is generated by greedily expanding {a mathematical formula}Si−1. LAO* stops when {a mathematical formula}Sπ⁎⊆Si; therefore, the optimal closed policy for {a mathematical formula}Sπ⁎ is also optimal for the original problem.
+      </paragraph>
+      <paragraph>
+       Improved LAO* (ILAO*) [12] enhances LAO* performance by (i) increasing how many states are added to {a mathematical formula}Si−1 to generate {a mathematical formula}Si and (ii) performing single Bellman Backups in a depth-first postorder traversal of {a mathematical formula}Si instead of using PI or VI to compute optimal solutions to {a mathematical formula}Si. Learning Depth-First Search (LDFS) [6], when applied to SSPs, improves ILAO* by incorporating a labeling mechanism. This labeling mechanism is similar to the mechanism employed by LRTDP and it labels states already converged to avoid revisiting them during the search.
+      </paragraph>
+      <paragraph>
+       Another technique to solve probabilistic planning problems is replanning. One of the simplest, yet powerful, replanners is FF-Replan [30]. Given a state s (initially, s equals {a mathematical formula}s0), FF-Replan generates the all-outcomes determinization {a mathematical formula}D of the problem and uses the deterministic planner FF [13] to solve {a mathematical formula}D from state s. If and when the execution of the solution for {a mathematical formula}D fails in the probabilistic environment, FF is reinvoked to plan again from the failed state. FF-Replan was the winner of the first International Probabilistic Planning Competition (IPPC) [33], in which it outperformed the probabilistic planners due to their poor scalability. Despite its major success, FF-Replan is nonoptimal and oblivious to probabilities and dead ends, leading to poor performance in probabilistic interesting problems [19], e.g., the triangle tire domain.
+      </paragraph>
+      <paragraph>
+       FF-Hindsight [31] is a nonoptimal replanner that generalizes FF-Replan based on hindsight optimization. Given a state s, FF-Hindsight performs the following three steps: (i) it randomly generates a set of nonstationary deterministic problems {a mathematical formula}D starting from s; (ii) it uses FF to solve them; and (iii) it combines the cost of their solutions to estimate the true cost of reaching a goal state from s. Each deterministic problem in {a mathematical formula}D has a fixed horizon and is generated by sampling one outcome of each probabilistic action for each time step. This process reveals two major drawbacks of FF-Hindsight: (i) a bound in the horizon size of the problem is needed in order to produce the relaxed problems; and (ii) rare effects of actions might be ignored by the sampling procedure. While the first drawback is intrinsic to the algorithm, a workaround to the second one is proposed [32] by always adding the all-outcomes determinization of the problem to {a mathematical formula}D and, therefore, ensuring that every effect of an action appears at least in one deterministic problem in {a mathematical formula}D.
+      </paragraph>
+      <paragraph>
+       Based on solution refinement, two other nonoptimal replanners were proposed: Envelope Propagation (EP) [11] and Robust FF (RFF) [26]. In general terms, EP and RFF compute an initial partial policy π and iteratively expand it to avoid replanning. EP prunes the state space {a mathematical formula}S and represents the removed states by a special meta-state out and the appropriate meta-actions to represent the transitions from and to out. At each iteration, EP refines its approximation {a mathematical formula}S′ of {a mathematical formula}S by expanding and then repruning {a mathematical formula}S′. Repruning is necessary to avoid the convergence of {a mathematical formula}S′ to {a mathematical formula}S. This repruning step is the main drawback of EP because low probability states are pruned and, therefore ignored, and they can represent states that need to be avoided, e.g., high cost states and dead ends. RFF, the winner of the third IPPC [8], uses a different approach: an initial partial policy π is computed by solving the most-likely outcome determinization of the original problem using FF and then the robustness of π is iteratively improved. For RFF, robustness is defined as the probability of replanning: given {a mathematical formula}ρ∈[0,1], RFF computes π such that the probability of replanning when executing π from {a mathematical formula}s0 is at most ρ.
+      </paragraph>
+      <paragraph>
+       An orthogonal direction from all other approaches mentioned so far is applied by t-look-ahead [21], [23], Upper Confidence bound for Trees (UCT) [17], and UCT-based planner (e.g., Prost [15]): they modify the problems' horizon from indeterminate to finite and choose actions greedily according to the solution of this new relaxed problem. t-look-ahead fixes the horizon of the relaxed problem to t time steps and solves it using dynamic programming. UCT approximates t-look-ahead by solving a series of multi-armed bandits problems where each arm represents an action and a finite-horizon of t actions are considered. Sparse sampling techniques are employed to efficiently solve this new problem and avoid actions whose cost is far from the best one found so far.
+      </paragraph>
+      <paragraph>
+       In the context of motion planning, another relevant approach is Variable Level-of-detail Motion Planner [34], in which poorly predictable physical interactions are ignored (pruned) in the far future.
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      Short-sighted stochastic shortest path problems
+     </section-title>
+     <paragraph>
+      Depth-based short-sighted Stochastic Shortest Path Problems [28] are a special case of SSPs in which the original problem is transformed into a smaller one by (i) pruning the states that have zero probability of being reached using at most t actions; (ii) adding artificial goal states; and (iii) incrementing the cost of reaching artificial goals by a heuristic value to guide the search toward the goals of the original problem. In this article, we refer to depth-based short-sighted Stochastic Shortest Path Problems as short-sighted SSPs. Short-sighted SSPs are defined based on the action-distance between states (Definition 5) and are formalized in Definition 6.
+     </paragraph>
+     <paragraph label="Definition 5">
+      {a mathematical formula}δ(s,s′)The nonsymmetric distance {a mathematical formula}δ(s,s′) between two states s and {a mathematical formula}s′ is{a mathematical formula}{a mathematical formula}δ(s,s′) is equivalent to the minimum number of actions necessary to reach {a mathematical formula}s′ from s in the all-outcomes determinization.
+     </paragraph>
+     <paragraph label="Definition 6">
+      Short-sighted SSPGiven an SSP {a mathematical formula}S=〈S,s0,G,A,P,C〉, a state {a mathematical formula}s∈S, {a mathematical formula}t∈N⁎, and a heuristic H, the {a mathematical formula}(s,t)-short-sighted SSP {a mathematical formula}Ss,t=〈Ss,t,s,Gs,t,A,P,Cs,t〉 associated with {a mathematical formula}S is defined as{a mathematical formula}{a mathematical formula}{a mathematical formula} For simplicity, when the heuristic H is not clear by context nor explicit then {a mathematical formula}H(s)=0 for all {a mathematical formula}s∈S.
+     </paragraph>
+     <paragraph>
+      Fig. 2(a) shows the {a mathematical formula}(s0,2)-short-sighted SSP associated with the example in Fig. 1. The state space {a mathematical formula}Ss,t of {a mathematical formula}(s,t)-short-sighted SSPs is a subset of the original state space in which any state {a mathematical formula}s′∈Ss,t is reachable from s using at most t actions. Given a short-sighted SSP {a mathematical formula}Ss,t, we refer to the states {a mathematical formula}s′∈Gs,t∖G as artificial goals, and we denote the set of artificial goals by {a mathematical formula}Ga; thus, {a mathematical formula}Ga=Gs,t∖G. The key property of short-sighted SSPs that allows them to be used for solving SSPs is given by the definition of {a mathematical formula}Cs,t: every artificial goal state {a mathematical formula}sa∈Ga has its heuristic value {a mathematical formula}H(sa) added to the cost of reaching {a mathematical formula}sa. Therefore, the search for a solution to short-sighted SSPs is guided toward the goal states of the original SSP, even if such states are not in {a mathematical formula}Ss,t.
+     </paragraph>
+     <paragraph>
+      Since short-sighted SSPs are also SSPs, the optimal value function for {a mathematical formula}Ss,t, denoted as {a mathematical formula}VSs,t⁎, is defined by (2). Although related, the {a mathematical formula}VSs,t⁎(s) and {a mathematical formula}(BtH)(s), i.e., the t-look-ahead value of s w.r.t. H, are not the same. Before we formally prove their differences, consider the example depicted in Fig. 1 for depth {a mathematical formula}t=2, {a mathematical formula}p=0.5, and the zero-heuristic as H:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       The 2-look-ahead search from {a mathematical formula}s0 – {a mathematical formula}(B2H)(s0) – represents the minimum expected cost of executing 2 actions in a row, so only trajectories of size 2 are considered. The resulting value is {a mathematical formula}(B2H)(s0)=1.5 and is obtained by applying action {a mathematical formula}a0 in both {a mathematical formula}s0 and {a mathematical formula}s1′. The search space considered to compute {a mathematical formula}(B2H)(s0) in this example is depicted in Fig. 2(b).
+      </list-item>
+      <list-item label="•">
+       The optimal value function for {a mathematical formula}Ss0,2 on {a mathematical formula}s0 – {a mathematical formula}VSs0,2⁎(s0) – is defined as the minimum expected cost to reach a goal state in {a mathematical formula}Ss0,2 (Fig. 2(a)) from {a mathematical formula}s0. So all possible trajectories in {a mathematical formula}Ss0,2 are considered, and the maximum length of these trajectories is unbounded due to the loops generated by the policy in which action {a mathematical formula}a0 is applied in states {a mathematical formula}s0 and {a mathematical formula}s1′. In this example, {a mathematical formula}VSs0,2⁎(s0)=2 and the greedy policy w.r.t. {a mathematical formula}VSs0,2⁎ is {a mathematical formula}〈(s0,a1),(s1,a1)〉.
+      </list-item>
+     </list>
+     <paragraph>
+      Precisely, the difference between the look-ahead and short-sighted SSPs is in how the original SSP is relaxed: look-ahead changes the indefinite horizon of the original SSP to a finite horizon; and short-sighted SSPs prune the state space of the original SSP without changing the horizon.
+     </paragraph>
+     <paragraph>
+      To formally prove the relationship between {a mathematical formula}VSs,t⁎(s) and {a mathematical formula}(BtH)(s), we introduce {a mathematical formula}Bs,t, the Bellman operator B applied to the short-sighted SSP {a mathematical formula}Ss,t. To simplify our proofs, we define {a mathematical formula}(Bs,tV)(sˆ) to be equal to 0 if {a mathematical formula}sˆ∈Gs,t and{a mathematical formula} for all {a mathematical formula}sˆ∈Ss,t∖Gs,t. The only difference between the definitions of B and {a mathematical formula}Bs,t is the explicit treatment of the states {a mathematical formula}sa∈Ga in the summation by {a mathematical formula}Bs,t: {a mathematical formula}V(sa) is not considered because {a mathematical formula}sa is an artificial goal of {a mathematical formula}Ss,t. If {a mathematical formula}V(sa)=0 for all {a mathematical formula}sa∈Ga, then {a mathematical formula}BV=Bs,tV for {a mathematical formula}Ss,t. Lemma 2, Lemma 3 relate the operator B applied to an SSP {a mathematical formula}S with operator {a mathematical formula}Bs,t applied to the {a mathematical formula}(s,t)-short-sighted SSP {a mathematical formula}Ss,t associated with {a mathematical formula}S.
+     </paragraph>
+     <paragraph label="Proof">
+      Given an SSP{a mathematical formula}S=〈S,s0,G,A,P,C〉that satisfiesAssumption 1,{a mathematical formula}s∈S,{a mathematical formula}t∈N⁎and a monotonic value function V for{a mathematical formula}S, then{a mathematical formula}(Bs,tkV)(sˆ)=(BkV)(sˆ)for all{a mathematical formula}sˆ∈Ss,t∖Gas.t.{a mathematical formula}minsa∈Ga⁡δ(sˆ,sa)≥k, where B and{a mathematical formula}Bs,trepresent, respectively, the Bellman operator applied to{a mathematical formula}Sand{a mathematical formula}Ss,tusing V as heuristic.See Appendix A.  □
+     </paragraph>
+     <paragraph label="Proof">
+      Under the conditions ofLemma 2,{a mathematical formula}(Bs,tkV)(s)≤(BkV)(s)for all{a mathematical formula}k∈N⁎and{a mathematical formula}sˆ∈Ss,t, where B and{a mathematical formula}Bs,trepresent, respectively, the Bellman operator applied to{a mathematical formula}Sand{a mathematical formula}Ss,tusing V as heuristic.See Appendix A.  □
+     </paragraph>
+     <paragraph>
+      In Theorem 4, we prove that {a mathematical formula}VSs,t⁎(s) is a lower bound for {a mathematical formula}V⁎(s) at least as tight as {a mathematical formula}(BtH)(s) if H is a monotonic lower bound on {a mathematical formula}V⁎ and Assumption 1 holds for {a mathematical formula}S. Corollary 5 shows that {a mathematical formula}VSs,t⁎(s) is always a tighter lower bound than {a mathematical formula}(BtH)(s) if {a mathematical formula}S has unavoidable loops (Definition 7).
+     </paragraph>
+     <paragraph label="Proof">
+      Given an SSP{a mathematical formula}S=〈S,s0,G,A,P,C〉that satisfiesAssumption 1,{a mathematical formula}s∈S,{a mathematical formula}t∈N⁎and a monotonic lower bound H for{a mathematical formula}V⁎, then{a mathematical formula}By the definition of {a mathematical formula}Ss,t, {a mathematical formula}minsa∈Ga⁡δ(s,sa)=t, thus by Lemma 2, we have that {a mathematical formula}(BtH)(s)=(Bs,ttH)(s). Because H is monotonic and {a mathematical formula}VSs,t⁎(s)=(limk→∞⁡Bs,tkH)(s), then {a mathematical formula}(BtH)(s)≤VSs,t⁎(s). By Lemma 3, we have that {a mathematical formula}VSs,t⁎(s)≤V⁎(s).  □
+     </paragraph>
+     <paragraph label="Definition 7">
+      Unavoidable loopsAn SSP {a mathematical formula}S=〈S,s0,G,A,P,C〉 that satisfies Assumption 1 has unavoidable loops if, for every optimal policy {a mathematical formula}π⁎ of {a mathematical formula}S, the directed graph {a mathematical formula}G=(Sπ⁎,E) contains at least one cycle, where {a mathematical formula}E={(s,s′)|P(s′|s,π⁎(s))&gt;0}.
+     </paragraph>
+     <paragraph label="Proof">
+      InTheorem 4, if the{a mathematical formula}(s,t)-short-sighted SSP{a mathematical formula}Ss,thas unavoidable loops (Definition 7), then{a mathematical formula}(BtH)(s)&lt;VSs,t⁎(s).By definition, {a mathematical formula}(BtH)(s) considers only trajectories of size at most t from s. Since {a mathematical formula}VSs,t⁎(s)=limk→∞⁡(Bs,tkH)(s), then all possible trajectories on {a mathematical formula}Ss,t are considered by {a mathematical formula}VSs,t⁎. By assumption, {a mathematical formula}Ss,t has unavoidable loops, so the maximum size of a trajectory generated by {a mathematical formula}πs,t⁎ is unbounded. As every trajectory has nonzero probability and nonzero cost by definition, then {a mathematical formula}(Bs,ttH)(s)&lt;VSs,t⁎(s), and by Lemma 2, we have that {a mathematical formula}(BtH)(s)&lt;VSs,t⁎(s).  □
+     </paragraph>
+     <paragraph label="Definition 8">
+      Another important relationship between SSPs and short-sighted SSPs is through their policies. To formalize this relationship, we first define the concept of t-closed policy w.r.t. s, i.e., policies that can be executed from s independent of the probabilistic outcome of actions for at least t actions without replanning: t-closed policyA policy π for an SSP {a mathematical formula}S=〈S,s0,G,A,P,C〉 is t-closed w.r.t. a state {a mathematical formula}s∈S if, for all {a mathematical formula}s′∈Rπ∩Sπ, {a mathematical formula}δ(s,s′)≥t.
+     </paragraph>
+     <paragraph>
+      All the replanners reviewed on Section 2.2 compute 1-closed policies w.r.t. the current state, i.e., there is no guarantee that the partial policy computed by them can be executed for more than one action without replanning. Notice that when {a mathematical formula}t→∞, t-closed policies w.r.t. {a mathematical formula}s0 are equivalent to closed policies; Proposition 6 gives an upper bound on t for when a t-closed policy w.r.t. {a mathematical formula}s0 becomes a closed policy.
+     </paragraph>
+     <paragraph label="Proof">
+      Given an SSP{a mathematical formula}S=〈S,s0,G,A,P,C〉, for{a mathematical formula}t≥|S|, every t-closed policy w.r.t.{a mathematical formula}s0for{a mathematical formula}Sis also a closed policy for{a mathematical formula}S.Since π is t-closed w.r.t. {a mathematical formula}s0 for {a mathematical formula}t≥|S|, then for all {a mathematical formula}s′∈Rπ∩Sπ, {a mathematical formula}δ(s0,s′)≥|S|. By the definition of {a mathematical formula}Sπ, we have that all {a mathematical formula}s′∈Sπ is reachable from {a mathematical formula}s0 when following π. Thus, {a mathematical formula}δ(s0,s′)&lt;|S| because there exists a trajectory from {a mathematical formula}s0 to {a mathematical formula}s′ that visits each state at most once, i.e., that uses at most {a mathematical formula}|S|−1 actions. Therefore, {a mathematical formula}∄s′∈Sπ such that {a mathematical formula}δ(s0,s′)≥|S| and {a mathematical formula}Rπ∩Sπ=∅.  □
+     </paragraph>
+     <paragraph>
+      Policies for SSPs and policies for their associated {a mathematical formula}(s,t)-short-sighted SSPs are related through the concept of t-closed policies w.r.t. s as follows:
+     </paragraph>
+     <paragraph label="Proof">
+      Given an SSP{a mathematical formula}S=〈S,s0,G,A,P,C〉, a state{a mathematical formula}s∈S, and{a mathematical formula}t∈N⁎, then π is a closed policy for{a mathematical formula}Ss,tif and only if π is a t-closed policy w.r.t. s for{a mathematical formula}S.We assume that π is a closed policy for {a mathematical formula}Ss,t, i.e., {a mathematical formula}Rs,tπ∩Ss,tπ=∅. For contradiction purposes, suppose that there exists {a mathematical formula}s′∈Rπ∩Sπ such that {a mathematical formula}δ(s,s′)&lt;t. Because {a mathematical formula}δ(s,s′)&lt;t, then {a mathematical formula}s′∈Ss,t; thus, {a mathematical formula}s′∈Ss,tπ⊆Sπ and {a mathematical formula}s′∈Rs,tπ⊆Rπ. This is a contradiction because {a mathematical formula}Rs,tπ∩Ss,tπ=∅; therefore, for all {a mathematical formula}s′∈Rπ∩Sπ, {a mathematical formula}δ(s,s′)≥t, i.e., π is t-closed w.r.t. s for {a mathematical formula}S.Now, we assume that π is t-closed w.r.t. s for {a mathematical formula}S, i.e., for all {a mathematical formula}s′∈Rπ∩Sπ, {a mathematical formula}δ(s,s′)≥t. By the definition of {a mathematical formula}Ss,t, for all {a mathematical formula}s′∈Ss,t, {a mathematical formula}δ(s,s′)≤t. Thus, if {a mathematical formula}s′∈(Rπ∩Sπ)∩Ss,t, then {a mathematical formula}δ(s,s′)=t, i.e., {a mathematical formula}s′∈Gs,t∖G. Because {a mathematical formula}Rs,tπ∩Gs,t=∅ by the definition of {a mathematical formula}Rπ and {a mathematical formula}Ss,tπ=Sπ∩Ss,t, then {a mathematical formula}Rs,tπ∩Ss,tπ=∅, i.e., π is closed for {a mathematical formula}Ss,t.  □
+     </paragraph>
+    </section>
+    <section label="4">
+     <section-title>
+      Short-Sighted Probabilistic Planner
+     </section-title>
+     <paragraph>
+      The Short-Sighted Probabilistic Planner (SSiPP) [28] is an algorithm that solves SSPs based on short-sighted SSPs. SSiPP is presented in Algorithm 1 and consists of iteratively generating and solving short-sighted SSPs of the given SSP. Due to the reduced size of the short-sighted problems, SSiPP computes the optimal solution for each of them by calling the external procedure Optimal-SSP-Solver (line 7).{sup:1} Therefore, SSiPP obtains a “fail-proof” solution, i.e., a closed policy for each short-sighted SSP generated. Due to Proposition 7, each policy {a mathematical formula}πSs,t⁎ obtained in line 7 of Algorithm 1 is a t-closed policy w.r.t. the current state s for original SSP {a mathematical formula}S; therefore, {a mathematical formula}πSs,t⁎ can be simulated or directly executed in the environment (line 11) for at least t steps before replanning is needed, i.e., before another short-sighted SSP is generated and solved.
+     </paragraph>
+     <paragraph>
+      To illustrate the execution of SSiPP, consider as input the SSP {a mathematical formula}S in Fig. 1 for {a mathematical formula}t=2. The first short-sighted SSP built by the algorithm is {a mathematical formula}Ss0,2 (Fig. 2(a)), and there are only two possible 2-closed policies for {a mathematical formula}Ss0,2 that are proper: (i) {a mathematical formula}π0={(s0,a0),(s1′,a0)}; and (ii) {a mathematical formula}π1={(s0,a1),(s1,a1)}. Depending on the value of k (the length of the chain in {a mathematical formula}S) and the heuristic H used, Optimal-SSP-Solver can return either {a mathematical formula}π0 or {a mathematical formula}π1. If the former is returned, then the original SSP {a mathematical formula}S is solved, because {a mathematical formula}π0 is a closed policy for {a mathematical formula}S. Instead, if {a mathematical formula}π1 is returned, then {a mathematical formula}⌈k+12⌉ short-sighted SSPs, representing the 3-states subchains of {a mathematical formula}s0⟶a1s1⟶a1s2⟶a1…⟶a1sG, are generated and solved.
+     </paragraph>
+     <paragraph>
+      SSiPP, as shown in Algorithm 1, only samples one trajectory of the SSP being solved and is not guaranteed to obtain an optimal solution. Nonetheless, SSiPP can be used for computing the optimal solutions by iteratively improving the current lower bound {a mathematical formula}V̲ until convergence is reached. This approach is formalized by Run-SSiPP-Until-Convergence (Algorithm 2).
+     </paragraph>
+     <paragraph>
+      In the remainder of this section, we prove that SSiPP performs Bellman backups (Theorem 8); SSiPP terminates (Theorem 9); and Algorithm 2 is asymptotically optimal (Theorem 10), that is, if the same problem is solved sufficiently many times by SSiPP, then an optimal policy is found.
+     </paragraph>
+     <paragraph label="Theorem 8">
+      Given an SSP{a mathematical formula}S=〈S,s0,G,A,P,C〉such thatAssumption 1holds and a monotonic lower bound H for{a mathematical formula}V⁎, then the loop in line8of SSiPP (Algorithm 1) is equivalent to applying at least one Bellman backup on{a mathematical formula}V̲for every state{a mathematical formula}s′∈SπSs,t⁎∖Gs,t.
+     </paragraph>
+     <paragraph label="Proof">
+      Let {a mathematical formula}Sˆ denote {a mathematical formula}SπSs,t⁎∖Gs,t. After the loop in line 8 is executed, for all {a mathematical formula}s′∈Sˆ, {a mathematical formula}V̲(s′) equals {a mathematical formula}VSs,t⁎(s′) for all {a mathematical formula}s′∈Sˆ. Thus, we need to prove that {a mathematical formula}(BV̲)(s′)≤VSs,t⁎(s′)∀s′∈Sˆ since {a mathematical formula}V̲ is monotonic and admissible (Theorem 1). By the definition of short-sighted SSP (Definition 6), every state {a mathematical formula}s′∈Sˆ is such that {a mathematical formula}{s″∈S|P(s″|s′,a)&gt;0,∀a∈A}⊆Ss,t, i.e., the states reached after applying an action in a state {a mathematical formula}s′∈Sˆ belong to {a mathematical formula}Ss,t. Therefore, {a mathematical formula}(BV̲)(s′)=(Bs,tV̲)(s′)∀s′∈Sˆ, where {a mathematical formula}Bs,t is the Bellman operator B for {a mathematical formula}Ss,t. Since {a mathematical formula}V̲ is monotonic and admissible, {a mathematical formula}(Bs,tV̲)(s′)≤VSs,t⁎(s′). Therefore, {a mathematical formula}(BV̲)(s′)≤VSs,t⁎(s′)∀s′∈Sˆ.  □
+     </paragraph>
+     <paragraph label="Proof">
+      SSiPP always terminates under the conditions ofTheorem 8.Suppose SSiPP does not terminate. Then there exists a trajectory {a mathematical formula}T of infinite size that can be generated by SSiPP, so there must be an infinite loop in {a mathematical formula}T because {a mathematical formula}S is finite by definition. Since {a mathematical formula}πSs,t⁎ is proper for {a mathematical formula}Ss,t, the loop encompassed by lines 10 and 11 always terminates. Therefore the main loop (lines 5 to 11) is executed infinitely many times and {a mathematical formula}V̲(s) diverges. Because Assumption 1 holds for {a mathematical formula}S, we have that {a mathematical formula}V⁎(s)&lt;∞ for all {a mathematical formula}s∈S. This is a contradiction since SSiPP maintains {a mathematical formula}V̲, initialized as H, admissible and monotonic (Theorem 4, Theorem 8), i.e., {a mathematical formula}V̲(s)≤V⁎(s) for all {a mathematical formula}s∈S.  □
+     </paragraph>
+     <paragraph label="Theorem 10">
+      Given an SSP{a mathematical formula}S=〈S,s0,G,A,P,C〉such thatAssumption 1holds, a monotonic lower bound H for{a mathematical formula}V⁎and{a mathematical formula}t∈N⁎, then the sequence{a mathematical formula}〈V̲0,V̲1,⋯,V̲k〉, where{a mathematical formula}V̲0=Hand{a mathematical formula}V̲i=SSiPP(S,t,V̲i−1), converges to{a mathematical formula}V⁎as{a mathematical formula}k→∞for all{a mathematical formula}s∈Sπ⁎.
+     </paragraph>
+     <paragraph label="Proof">
+      Let the sequence of states {a mathematical formula}Hk=〈s0,s1,s2,…〉 be the concatenation of the trajectories {a mathematical formula}T0,⋯,Tk of states visited by SSiPP when {a mathematical formula}V̲i is computed for {a mathematical formula}i∈{0,…,k}. By Theorem 9, each {a mathematical formula}Ti has finite size, so {a mathematical formula}|Hk| is finite for {a mathematical formula}k∈N. Because Assumption 1 holds for {a mathematical formula}S, and H is admissible and monotonic, when {a mathematical formula}k→∞, we can construct an SSP {a mathematical formula}S∞=〈S∞,s0,G∞,A∞,P,C〉 such that [1, Theorem 3, p. 132]: {a mathematical formula}S∞⊆S is the nonempty set of states that appear infinitely often in {a mathematical formula}limk→∞⁡Hk; {a mathematical formula}G∞⊆G is the nonempty set of goal states that appear infinitely often in {a mathematical formula}limk→∞⁡Hk; and {a mathematical formula}A∞⊆A is the set of actions a such that {a mathematical formula}P(s′|s,a)=0 for all {a mathematical formula}s∈S∞ and {a mathematical formula}s′∈S∖S∞. Therefore, there is a finite time step T such that the sequence {a mathematical formula}H′ of states visited after time step T contains only states in {a mathematical formula}S∞. By Theorem 8, we know that at least one Bellman backup is applied to {a mathematical formula}sj for any time step j. Thus, after time step T, the sequence of Bellman backups applied by SSiPP is equivalent to asynchronous value iteration on {a mathematical formula}S∞, and {a mathematical formula}V̲k(s) converges to {a mathematical formula}V⁎(s) for all {a mathematical formula}s∈S∞ as {a mathematical formula}k→∞[4, Proposition 2.2, p. 27]. Furthermore, {a mathematical formula}Sπ⁎⊆S∞[1, Theorem 3].  □
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Improving the convergence of SSiPP
+      </section-title>
+      <paragraph>
+       SSiPP obtains the next state {a mathematical formula}s′ from the current state s by either executing or sampling one outcome of the optimal policy {a mathematical formula}πSs,t⁎ of the current short-sighted SSP (Algorithm 1 line 11). This procedure is repeated until {a mathematical formula}s′ is a goal state, either from the original SSP or an artificial goal.
+      </paragraph>
+      <paragraph>
+       Real Time Dynamic Programming (RTDP) [1] employs a similar technique: the next state {a mathematical formula}s′ is obtained by sampling an outcome of {a mathematical formula}πV(s). The advantage of this unbiased sampling procedure is that more likely states are updated more often. As noticed in [5], the convergence of a given state s depends on all its reachable successors, so unlikely successors should also be visited. As a result, for a given state s, unbiased sampling might not update unlikely successors of s frequently, thus delaying the overall convergence of V.
+      </paragraph>
+      <paragraph>
+       Labeled RTDP (LRTDP) [5] extends RTDP by tracking the states that the estimate V of {a mathematical formula}V⁎ has already converged and not visiting these states again. To find and label the converged states, the procedure CheckSolved (Algorithm 3) is introduced. Given a state s, CheckSolved searches for states {a mathematical formula}s′ reachable from s when following a greedy policy {a mathematical formula}πV such that {a mathematical formula}R(s′,V)&gt;ϵ. If no such state {a mathematical formula}s′ is found, then s and all the states in {a mathematical formula}SπV reachable from s have converged, and they are labeled as solved. Alternatively, if there exists {a mathematical formula}s′ reachable from s when following a greedy policy {a mathematical formula}πV such that {a mathematical formula}R(s′,V)&gt;ϵ, then a Bellman backup is applied on at least {a mathematical formula}V(s′). A key property of CheckSolved is that if V has not converged, then a call to CheckSolved either improves V or labels a new state as solved:
+      </paragraph>
+      <paragraph label="Theorem 11">
+       (See[5, Theorem 4].) Given an SSP{a mathematical formula}S=〈S,s0,G,A,P,C〉that satisfiesAssumption 1,{a mathematical formula}ϵ&gt;0, and a monotonic lower bound V for{a mathematical formula}V⁎, then a{a mathematical formula}CheckSolved(S,s,V,solved,ϵ)call for{a mathematical formula}s∉solvedthat returns{a mathematical formula}(solved′,V′)either: labels a state as solved (i.e.,{a mathematical formula}|solved′|&gt;|solved|) or there exists{a mathematical formula}s′∈Ssuch that{a mathematical formula}V′(s′)−V(s′)&gt;ϵ.
+      </paragraph>
+      <paragraph>
+       Using the solved labels, the sampling procedure of LRTDP can be seen as a case of rejection sampling: if the sampled successor {a mathematical formula}s′ of s is marked as solved, restart the procedure from the initial state {a mathematical formula}s0; otherwise, use {a mathematical formula}s′. This new sampling procedure gives LRTDP both a better anytime performance and a faster convergence when compared to RTDP.
+      </paragraph>
+      <paragraph>
+       Labeled-SSiPP (Algorithm 4) is an extension of Run-SSiPP-Until-Convergence (Algorithm 2) that incorporates the labeling mechanism of LRTDP and uses the CheckSolved procedure. Since the states marked as solved have already converged, there is no need to further explore and update them; therefore, the solved states are also considered as artificial goals for generated short-sighted SSPs (Algorithm 4 line 10). By adding the solved states to the goal set of the generated short-sighted SSPs, any algorithm used as Optimal-SSP-Solver (line 13) will implicitly take advantage of the labeling mechanism, i.e., the search is stopped once a solved state is reached.
+      </paragraph>
+      <paragraph>
+       The simulation of the current short-sighted SSP (Algorithm 4 line 16) for Labeled-SSiPP finishes when the state s is either (i) a goal state of the original problem, (ii) a solved state, or (iii) an artificial goal. Only in the last case, the algorithm continues to generate short-sighted SSPs. Thus, Labeled-SSiPP (as LRTDP) also employs rejection sampling: if a solved state is sampled, then the search restarts from the initial {a mathematical formula}s0.
+      </paragraph>
+      <paragraph>
+       Besides the empirical advantage of LRTDP over RTDP shown in [5], the labeling mechanism also allows to upper bound the maximum number of iterations necessary for LRTDP to converge to the ϵ-consistent solution. This same upper bound holds for Labeled-SSiPP:
+      </paragraph>
+      <paragraph label="Proof">
+       Given an SSP{a mathematical formula}S=〈S,s0,G,A,P,C〉that satisfiesAssumption 1,{a mathematical formula}ϵ&gt;0,{a mathematical formula}t∈N⁎and a monotonic lower bound H for{a mathematical formula}V⁎, then Labeled-SSiPP (Algorithm 4) finds an ϵ-consistent lower bound{a mathematical formula}V̲after at most{a mathematical formula}ϵ−1∑s∈SV⁎(s)−H(s)iterations of the loop in line5.In each iteration of the loop in line 5 of Algorithm 4, CheckSolved is called for at least one state {a mathematical formula}sˆ∉solved, since {a mathematical formula}s0∉solved. By Theorem 11, after CheckSolved is called for {a mathematical formula}sˆ, either (i) {a mathematical formula}sˆ∈solved; or (ii) there exists {a mathematical formula}s′∉solved reachable from {a mathematical formula}sˆ when following a greedy policy {a mathematical formula}πV such that {a mathematical formula}V̲(s′)−V̲old(s′)&gt;ϵ, where {a mathematical formula}V̲old denotes {a mathematical formula}V̲ before the CheckSolved call. Thus, in the worst case, each CheckSolved call improves {a mathematical formula}V̲ for exactly one state {a mathematical formula}s′∉solved. Therefore, CheckSolved is called at most {a mathematical formula}ϵ−1∑s∈SV⁎(s)−H(s) times before {a mathematical formula}s0∈solved, which is the termination condition for the loop in line 5.  □
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Combining SSiPP and FF
+      </section-title>
+      <paragraph>
+       As shown in [28], SSiPP has good performance in probabilistic interesting domains; however, SSiPP does not scale up as well as determinization-based replanners such as FF-Replan for problems without dead ends in which many nonoptimal solutions are available, such as blocks world. In this section, we show how to combine the SSiPP and determinization to improve the scalability of SSiPP in such domains while dropping SSiPP's optimality guarantee.
+      </paragraph>
+      <paragraph>
+       Algorithm 5 shows SSSiPP-FF, an extension of SSiPP, that combines t-closed policies and plans obtained through the determinization of the original SSP. The rationale behind SSiPP-FF is to generate and solve short-sighted SSPs only in regions of the SSP in which FF-Replan chooses a poor solution. These regions are found when the plan computed by FF-Replan fails, e.g., due to its low probability of success.
+      </paragraph>
+      <paragraph>
+       Formally, after reaching an artificial goal s, SSiPP-FF computes a determinization {a mathematical formula}D of the original SSP; runs FF to solve {a mathematical formula}D using s as initial state; and executes the returned plan until failure (lines 12 to 17 in Algorithm 5). Any determinization can be used by SSiPP-FF (line 13), and if the chosen determinization is stationary (e.g., all-outcomes and most-likely determinization) then the deterministic representation of {a mathematical formula}S can be precomputed and reused in every iteration to generate {a mathematical formula}D. Since SSiPP-FF does not assume any specific behavior of FF, any deterministic planner can be used for solving {a mathematical formula}D in line 14 instead of FF.
+      </paragraph>
+      <paragraph>
+       Besides taking advantage of potential nonoptimal solutions, SSiPP-FF also improves the behavior of FF-Replan by not reaching avoidable dead ends in the generated short-sighted SSPs. Formally, suppose that a short-sighted SSP {a mathematical formula}Ss,t generated in line 6 of Algorithm 5 has an avoidable dead end (i.e., there exists at least one proper policy π for {a mathematical formula}Ss,t) thus {a mathematical formula}sd∉Ss,tπ for all dead end states {a mathematical formula}sd∈Ss,t. Since an optimal policy {a mathematical formula}πSs,t⁎ is computed for {a mathematical formula}Ss,t (line 7), then {a mathematical formula}πSs,t⁎ is one of the existing proper policies by the definition of optimal policies; therefore, the avoidable dead ends are not reached by executing {a mathematical formula}πSs,t⁎. The guarantee of not reaching avoidable dead ends is not particular from SSiPP-FF; instead, this guarantee is inherited from SSiPP.
+      </paragraph>
+      <paragraph>
+       We finish this section by showing a series of problems in which SSiPP-FF avoids all dead ends while determinization approaches based on the shortest distance to the goal (e.g., FF-Replan) reach a dead end with probability exponentially large in the problem size.
+      </paragraph>
+      <paragraph label="Example 1">
+       Jumping chainFor {a mathematical formula}k∈N⁎, the k-th jumping chain problem has {a mathematical formula}3k+1 states: {a mathematical formula}S={s0,s1,⋯,s2k,r1,r2,⋯,rk}. The initial state is {a mathematical formula}s0 and the goal set is {a mathematical formula}G={s2k}. Two actions are available, {a mathematical formula}aW (walk) and {a mathematical formula}aJ (jump), and their costs are, respectively, 1 and 3, independent of the current and resulting state. The walk action is deterministic: {a mathematical formula}P(si+1|si,aW)=1 for all i, {a mathematical formula}P(si−1|ri,aW)=1 for i odd; and {a mathematical formula}P(ri|ri,aW)=1 for i even. When the jump action is applied to {a mathematical formula}si, for i even, the resulting state is {a mathematical formula}si+2 with probability 0.75 and {a mathematical formula}ri+1 with probability 0.25; if i is odd, then {a mathematical formula}aJ does not change the current state, i.e., {a mathematical formula}P(si|si,aJ)=1. For the states {a mathematical formula}ri, {a mathematical formula}aJ is such that {a mathematical formula}P(ri|ri,sJ)=1 for even i, and for odd i, {a mathematical formula}P(si+1|ri,sJ)=0.75 and {a mathematical formula}P(ri+1|ri,sJ)=0.25. For all i even, {a mathematical formula}ri is a dead end. The jumping chain problem for {a mathematical formula}k=3 is depicted in Fig. 3.In the jumping chain problems, FF-Replan using both the most-likely outcomes and all-outcomes determinization are equivalent because the low probability effect of jump, i.e., move to a state {a mathematical formula}ri, is less helpful than its most-likely effect. When in a state {a mathematical formula}ri, for i odd, FF-Replan never chooses the action walk because (i) walk results in a state further away from the goal, and (ii) jump has a nonzero probability to reach a state in which the goal is still achievable. Therefore, the solutions obtained by FF-Replan have a nonzero probability of reaching a dead end, i.e., a state {a mathematical formula}ri for i even. Formally, the probability of FF-Replan reaching the goal for the k-th jumping chain problem is {a mathematical formula}(2p−p2)k for {a mathematical formula}p=0.75.Alternatively, SSiPP-FF always reaches the goal for {a mathematical formula}t∈N⁎ and the following trivial extension of the zero-heuristic: {a mathematical formula}hd(s)=∞ if {a mathematical formula}P(s|s,a)=1 for all {a mathematical formula}a∈A and {a mathematical formula}hd(s)=0 otherwise. Formally, a dead end {a mathematical formula}ri (for i even) can only be reached when {a mathematical formula}aJ is applied in {a mathematical formula}ri−1, and to show that SSiPP-FF never reaches {a mathematical formula}ri, we need to show that (i) {a mathematical formula}πSs,t⁎ generated on line 7 never applies {a mathematical formula}aJ on {a mathematical formula}ri; and (ii) if {a mathematical formula}ri∈Gs,t, then {a mathematical formula}πSs,t⁎ does not reach {a mathematical formula}ri since the determinization part of SSiPP-FF (line 14) would apply {a mathematical formula}aJ. The former case is true since {a mathematical formula}πSs,t⁎ is an optimal policy and {a mathematical formula}hd(si−1)=0&lt;hd(ri+1)=∞; therefore, {a mathematical formula}πSs,t⁎(ri)=aW. In the latter case, if {a mathematical formula}ri∈Gs,t, then {a mathematical formula}{si,si+1}⊂Gs,t. Since {a mathematical formula}hd(ri)=hd(si)=hd(si+1)=0 and {a mathematical formula}C(si−1,aW,si)=1&lt;C(si−1,aJ,⋅)=3, then {a mathematical formula}πSs,t⁎(si−1)=aW and the value of s in line 14 of SSiPP-FF is {a mathematical formula}si+1. Therefore, SSiPP-FF using {a mathematical formula}hd always reaches the goal for {a mathematical formula}t∈N⁎. SSiPP-FF can obtain a speedup over SSiPP in the jumping chain problems if the determinization solution can be efficiently obtained.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Experiments
+     </section-title>
+     <paragraph>
+      We present two sets of experiments to compare (i) the convergence time of SSiPP (using Algorithm 2) and Labeled-SSiPP (Section 5.2); and (ii) the performance of SSiPP, Labeled-SSiPP, and SSiPP-FF in the settings of the International Probabilistic Planning Competition (IPPC) [33], [7], [8] (Section 5.3). The domains used in both experiments are described in Section 5.1.
+     </paragraph>
+     <paragraph>
+      For all experiments, SSiPP, Labeled-SSiPP, and SSiPP-FF use LRTDP [5] as Optimal-SSP-Solver to find {a mathematical formula}10−4-consistent solutions for the short-sighted SSPs.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Domains and problems
+      </section-title>
+      <paragraph>
+       We present the four domains from IPPC'08 [8], which we use in our experiments.{sup:2} The first two domains, probabilistic blocks world (Section 5.1.1) and zeno travel (Section 5.1.2), are probabilistic extensions of their deterministic counterparts. Triangle tire world (Section 5.1.3) and exploding blocks world (Section 5.1.4) are probabilistic interesting problems [19], i.e., problems in which approaches that oversimplify the probabilistic structure of the actions perform poorly.
+      </paragraph>
+      <section label="5.1.1">
+       <section-title>
+        Probabilistic blocks world
+       </section-title>
+       <paragraph>
+        The probabilistic blocks world is an extension of the well-known blocks world in which the actions pick-up and put-on-block can fail with probability 1/4. If and when these actions fail, the target block is dropped on the table. For instance, pick-up A from B results in block A being on the table with probability 1/4. The action pick-up-from-table also fails with probability 1/4, in which case nothing happens, i.e., the target block remains on the table. Lastly, the action put-down deterministically puts the block being held on the table.
+       </paragraph>
+       <paragraph>
+        This probabilistic version of blocks world also contains three new actions that allow towers of two blocks to be manipulated: pick-tower, put-tower-on-block, and put-tower-down. While action put-tower-down deterministically puts the tower still assembled on the table, the other two actions are probabilistic and fail with probability 9/10. The current state is not changed when pick-tower fails and put-tower-on-block fails by dropping the tower on the table (the dropped tower remains built).
+       </paragraph>
+       <paragraph>
+        Since every action in the probabilistic blocks world is reversible, the goal is always reachable from any state; therefore, Assumption 1 holds for all problems in this domain. The actions put-on-block, put-down, pick-tower, put-tower-on-block, and put-tower-down have cost 1. In order to explore the trade-offs between putting a block on top of other blocks versus putting a block on the table and picking up a single block versus a tower of blocks, the cost of pick-up and pick-up-from-table actions is different for each problem. Table 1 shows the total number of blocks and the cost of both pick-up and pick-up-from-table actions for the 15 problems considered. In all the considered problems, the goal statement contains all the blocks. In the remainder of this article, we refer to the probabilistic blocks worlds as blocks world.
+       </paragraph>
+      </section>
+      <section label="5.1.2">
+       <section-title>
+        Zeno travel
+       </section-title>
+       <paragraph>
+        The zeno travel domain is a logistic domain in which a given number of people need to be transported from their initial locations to their destinations using a fleet of airplanes. Moreover, the level of fuel of each airplane is also modeled, so there is a need to plan to refuel.
+       </paragraph>
+       <paragraph>
+        The available actions in this domain are boarding, debarking, refueling, flying (at regular speed), and zooming (flying at a faster speed). Each action has a random duration modeled by a geometrically distributed random variable with probability p; the expected duration of each action (i.e., the average number of time steps necessary to succeed) is {a mathematical formula}1/p. To ensure the geometric duration of the available actions, they are represented by a two-step procedure, e.g., start-boarding and finish-boarding, in which the first step is always deterministic and the second step succeeds with probability p. The value of p is 1/2, 1/4, 1/7, 1/25, and 1/15 for boarding, debarking, refueling, flying, and zooming, respectively.
+       </paragraph>
+       <paragraph>
+        The cost of all actions is 1 except for flying and zooming, which have costs 10 and 25, respectively. Although the fuel requirement for flying and zooming is the same, their expected costs differ due to their different costs and success probabilities: 250 for flying and 375 for zooming.
+       </paragraph>
+       <paragraph>
+        As in the blocks world domain, Assumption 1 holds for all problems in the zeno travel domain. Table 2 shows the number of persons, cities, and airplanes for each of the 15 problems considered. In all the considered problems, the fuel level of each airplane is discretized into 5 categories: empty, 1/4, 1/2, 3/4, and full.
+       </paragraph>
+      </section>
+      <section label="5.1.3">
+       <section-title>
+        Triangle tire world
+       </section-title>
+       <paragraph>
+        The triangle tire world [19] is a probabilistically interesting domain in which a car has to travel between locations to reach a goal location from its initial location. Every time the car moves between locations, a flat tire happens with probability 0.5. The car carries only one spare tire, which can be used at any time to fix a flat tire. Once the spare tire is used, a new one can be loaded into the car; however, only some locations have an available new tire to be loaded. The actions load-tire and change-tire are deterministic.
+       </paragraph>
+       <paragraph>
+        The roads between locations are one-way only, and the roadmap is represented as a directed graph in the shape of an equilateral triangle. Each problem in the triangle tire world is represented by a number {a mathematical formula}n∈N⁎ corresponding to the roadmap size. Fig. 4 illustrates the roadmap for the problems 1, 2, and 3 of the triangle tire world. The initial and goal locations, {a mathematical formula}l0 and {a mathematical formula}lG, respectively, are in two different vertices of the roadmap, and their configuration is such that (i) the shortest path policy from {a mathematical formula}l0 and {a mathematical formula}lG has probability {a mathematical formula}0.52n−1 of reaching the goal; and (ii) the only proper policy (and therefore the optimal policy) is the policy that takes the longest path. Assumption 1 does not hold for the triangle tire world problems: there exist states that do not have a proper policy starting from them (e.g., states in which the car is in the shortest path from {a mathematical formula}l0 to {a mathematical formula}lG). Since there exists one proper policy from {a mathematical formula}s0, then the triangle tire world problems contain avoidable dead ends.
+       </paragraph>
+       <paragraph>
+        In the IPPC'08, problems 11 to 15 are instances of a similar domain, the rectangle tire world. For our experiments, we only consider the triangle tire world, and the problem number corresponds to the parameter n of the triangle tire world problem.
+       </paragraph>
+      </section>
+      <section label="5.1.4">
+       <section-title>
+        Exploding blocks world
+       </section-title>
+       <paragraph>
+        The exploding blocks world is a probabilistic extension of the deterministic blocks world in which blocks can explode and destroy other blocks or the table. Once a block or the table is destroyed, nothing can be placed on them, and destroyed blocks cannot be moved. Therefore, it is possible to reach dead ends in the exploding blocks world. Moreover, not all problems in the exploding blocks world domain have a proper policy, i.e., these problems might have unavoidable dead ends.
+       </paragraph>
+       <paragraph>
+        All actions available in the exploding blocks world, pick-up, pick-up-from-table, put-down, and put-on-block, have the same effects as their counterparts in the deterministic blocks world. Pick-up and pick-up-from-table have the extra precondition that the block being picked up is not destroyed. Actions put-down and put-on-block have the probabilistic side effect of detonating the block being held and destroying the table or the block below with probability 2/5 and 1/10, respectively. Once a block is detonated, it can be safely moved, i.e., a denoted block cannot destroy other blocks or the table.
+       </paragraph>
+       <paragraph>
+        The IPPC'08 encoding of the exploding blocks world has a flaw in which a block can be placed on top of itself [19]. This flaw allows planners to safely discard blocks not needed in the goal because after placing a block B on top of itself, (i) no block is being held (the planner is free to pick up another block), and (ii) only B might be destroyed, thus preserving the other blocks and the table. We consider the fixed version of the IPPC'08 exploding blocks world, in which the action put-on-block has the additional precondition that the destination block is not the same as the block being held; precisely, we added the precondition (not (= ?b1 ?b2)) to put-on-block(?b1 ?b2).
+       </paragraph>
+       <paragraph>
+        Table 3 shows the total number of blocks and blocks in the goal statement for the 15 problems considered from the exploding blocks world domain. In the considered problems, all actions have cost 1.
+       </paragraph>
+      </section>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Convergence experiments
+      </section-title>
+      <paragraph>
+       In the following experiments, we compare the time necessary for LRTDP [5], Focused Topological Value Iteration (FTVI) [10], SSiPP, and Labeled-SSiPP to compute ϵ-consistent solutions. We use Algorithm 2 to obtain ϵ-consistent solutions using SSiPP. SSiPP-FF is not considered because it has no convergence guarantee. For the experiments in Section 5.2.1, we use the domains from IPPC'08 (reviewed in Section 5.1), and in Section 5.2.2, we use the racetrack domain, a common domain to compare optimal probabilistic planners.
+      </paragraph>
+      <section label="5.2.1">
+       <section-title>
+        Problems from the international probabilistic planning competition
+       </section-title>
+       <paragraph>
+        In this experiment, we compare the time to converge to an ϵ-consistent solution for the problems in the IPPC'08. Although Assumption 1 does not hold for the triangle tire world (Section 5.1.3), all problems in this domain are such that (i) they have avoidable dead ends, and (ii) these dead ends are states in which no action is available. Therefore, all the considered planners can trivially detect when a dead end {a mathematical formula}sd is reached, in which case {a mathematical formula}V(sd) is updated to infinity, and the search is restarted. For this experiment, the value assigned to {a mathematical formula}V(sd) is 10{sup:5}; this value is large enough because {a mathematical formula}V⁎(s0)&lt;12n for the triangle tire world problem of size n. Problems from the exploding blocks world domain are not considered because there is no guarantee they have a proper policy.
+       </paragraph>
+       <paragraph>
+        This experiment was conducted on a 2.4-GHz machine with 16 cores running a 64-bit version of Linux. The time and memory limit enforced for each planner was 2 hours and 5 GB, respectively. For SSiPP and Labeled-SSiPP, we considered {a mathematical formula}t∈{2,4,8,16,32}. The admissible heuristic used by all the planners is the classical planning heuristic {a mathematical formula}hmax applied to the all-outcomes determinization [27].
+       </paragraph>
+       <paragraph>
+        Table 4 presents the results of this experiment as the average and 95% confidence interval of the convergence time for 50 runs of each planner parametrization. From the 15 problems of each domain, we only present the results in which at least one planner converged to an ϵ-consistent solution. The problems 5′ to 8′ for blocks world are problems with 8 blocks obtained by removing blocks b9 and b10 from the original IPPC'08 problems 5 to 8. We generated these problems since no planner converged for problems 5 to 8 and problems 1 to 4 are too small (convergence is reached in about 1 second).
+       </paragraph>
+       <paragraph>
+        The performance difference between SSiPP and Labeled-SSiPP is not significant for small problems: blocks world 1 to 4, triangle tire world problems 1 and 2, and zeno travel problem 1 and 2. For the triangle tire world problems 3 and 4, {a mathematical formula}t=32 is large enough that an ϵ-consistent solution is found using a single short-sighted SSP, so the performance of SSiPP and Labeled-SSiPP for {a mathematical formula}t=32 is equivalent to the LRTDP performance. For the same problems, when {a mathematical formula}t&lt;32, Labeled-SSiPP converges using between {a mathematical formula}6% to {a mathematical formula}32% of the convergence time of SSiPP for the value of t.
+       </paragraph>
+       <paragraph>
+        In the triangle tire world, the best parametrization of Labeled-SSiPP is not able to outperform LRTDP (the best planner in this domain) due to the overhead of building the short-sighted SSPs. This issue is specific to the triangle tire domain, since there is only one proper policy; therefore, a planner that prunes improper policies can efficiently focus its search on the single optimal policy of the triangle tire world problems. For instance, the {a mathematical formula}(s0,16)-short-sighted SSP {a mathematical formula}Ss0,16 associated with problem 4 of the triangle tire world contains {a mathematical formula}124436 states, and {a mathematical formula}Ss0,16 is generated and solved on every iteration of line 5 of Labeled-SSiPP (Algorithm 4), even after inferring that {a mathematical formula}Ss0,16 also contains only one proper policy. This issue can be overcome by using trajectory-based short-sighted SSPs [29].
+       </paragraph>
+       <paragraph>
+        For the larger problems of the blocks world (5′ to 8′), Labeled-SSiPP obtains a major improvement over the considered planners and converged in at most 0.93, 0.80, and 0.26 of the time necessary for SSiPP, LRTDP, and FTVI to converge, respectively. Lastly, in the zeno travel domain, SSiPP and Labeled-SSiPP obtain a similar performance in the small problems (problems 1 and 2) and converge in at most 0.06 of the LRTDP convergence time. FTVI fails to converge in all the problems from the zeno travel domain, and Labeled SSiPP for {a mathematical formula}t=32 is the only planner able to converge for problem 4 of the zeno travel domain.
+       </paragraph>
+      </section>
+      <section label="5.2.2">
+       <section-title>
+        Racetrack problems
+       </section-title>
+       <paragraph>
+        The goal of a problem in the racetrack domain [1], [5] is to move a car from its initial location to one of the goal locations while minimizing the expected cost of travel. A state in the racetrack domain is the tuple {a mathematical formula}(x,y,vx,vy,b) in which
+       </paragraph>
+       <list>
+        <list-item label="•">
+         x and y are the positions of the car in the given 2-D grid (track);
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}vx and {a mathematical formula}vy are the velocities in each dimension; and
+        </list-item>
+        <list-item label="•">
+         b is a binary variable that is true if the car is broken.
+        </list-item>
+       </list>
+       <paragraph>
+        At each time step, the position {a mathematical formula}(x,y) of the car is updated by adding its current speed {a mathematical formula}(vx,vy) to the respective dimension. Acceleration actions, represented by pairs {a mathematical formula}(ax,ay)∈{−1,0,1}2 and denoting the instantaneous acceleration in each direction, are available to control the car's velocity. The acceleration actions can fail with probability 0.1, in which case the car's velocity is not changed.
+       </paragraph>
+       <paragraph>
+        If the car attempts to leave the race track, then it is placed in the last valid position before exiting the track, its velocity in both directions is set to zero, and it is marked as broken, i.e., b is set to true. The special action fix-car is used to fix the car (i.e., set b to false). The cost of fix-car is 50 while the acceleration actions have cost 1.
+       </paragraph>
+       <paragraph>
+        We consider six racetracks in this experiment: ring-small, ring-large, square-small, square-large, y-small, and y-large. The shape of each track is depicted in Fig. 5, and Table 5 presents their corresponding {a mathematical formula}|S|, ratio of relevant states ({a mathematical formula}Sπ⁎/S), largest value of t, {a mathematical formula}tmax, such that {a mathematical formula}πs0,tmax⁎ is not closed for the original SSP, and {a mathematical formula}V⁎(s0).
+       </paragraph>
+       <paragraph>
+        The admissible heuristic used by all the planners is the min–min heuristic {a mathematical formula}hmin, and {a mathematical formula}hmin(s) equals the cost of the optimal plan for reaching a goal state from s in the all-outcomes determinization. Therefore, {a mathematical formula}hmin can be computed by the following fixed-point equations:{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        This experiment was conducted on a 3.07-GHz machine with 4 cores running a 32-bit version of Linux. A time limit of 2 hours and 4 GB of memory were applied to each planner. For SSiPP and Labeled-SSiPP, we considered {a mathematical formula}t∈{4,8,16,…,1024}. FTVI is not considered in this experiment because the implementation of FTVI we had access to is not compatible with the encoding of the racetrack problems. Table 6 presents the results as the average and 95% confidence interval for 10 runs of each planner parametrization.
+       </paragraph>
+       <paragraph>
+        The performance of SSiPP, Labeled-SSiPP, and LRTDP is similar for {a mathematical formula}t&gt;tmax in all problems because LRTDP is used as Optimal-SSP-Solver, and {a mathematical formula}tmax is such that {a mathematical formula}Ss0,t contains all the states necessary to find the optimal solution. The performance improvement of Labeled-SSiPP over SSiPP is more evident for smaller values of t, and as t approaches {a mathematical formula}tmax, it decreases until both Labeled-SSiPP and SSiPP converge to the LRTDP performance.
+       </paragraph>
+       <paragraph>
+        For the square and y tracks, the best performance is obtained by Labeled-SSiPP for t, either 64 (small tracks) or 128 (large tracks), both values smaller than {a mathematical formula}tmax for their respective problems. While this improvement obtained by Labeled-SSiPP is in the intersection of the 95% confidence interval for the y tracks, it is statistically significant for the square tracks, especially for the large instance: {a mathematical formula}612.78±30.44 (Labeled-SSiPP) versus {a mathematical formula}702.42±12.82 (LRTDP). This difference in performance is because an optimal policy in the square-large track reaches only {a mathematical formula}0.75% of the state space (Table 5). Therefore, both SSiPP and Labeled-SSiPP take advantage of the short-sighted search to prune useless states earlier in the search, resulting in a better performance than LRTDP for {a mathematical formula}t∈{32,64,128,256}.
+       </paragraph>
+      </section>
+     </section>
+     <section label="5.3">
+      <section-title>
+       International probabilistic planning competition
+      </section-title>
+      <paragraph>
+       In this section, we compare the performance of the following planners to obtain (suboptimal) solutions under a 20-minute time limit:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        FF-Replan [30] (winner of IPPC'04).
+       </list-item>
+       <list-item label="•">
+        Robust-FF [26] (winner of IPPC'08).
+       </list-item>
+       <list-item label="•">
+        HMDPP [16].
+       </list-item>
+       <list-item label="•">
+        ReTrASE [18].
+       </list-item>
+       <list-item label="•">
+        SSiPP.
+       </list-item>
+       <list-item label="•">
+        Labeled-SSiPP.
+       </list-item>
+       <list-item label="•">
+        SSiPP-FF.
+       </list-item>
+      </list>
+      <paragraph>
+       For this experiment, we use the 15 problems from IPPC'08 of each domain as described in Section 5.1. We present the methodology used in this experiment in Section 5.3.1 and how to choose the value of t and heuristic for SSiPP, Labeled-SSiPP, and SSiPP-FF in Section 5.3.2. Section 5.3.3 presents the results of this experiment.
+      </paragraph>
+      <section label="5.3.1">
+       <section-title>
+        Methodology
+       </section-title>
+       <paragraph>
+        We use a methodology similar to that used for the IPPCs, in which there is a time limit for each individual problem: a planner has 20 minutes to compute a policy and simulate the computed policy 50 times from the initial state {a mathematical formula}s0. A round is each simulation from {a mathematical formula}s0 of the same problem, and rounds are simulated in a client/server approach using MDPSIM [33], an SSP (and MDP) simulator. Planners send actions to be simulated to MDPSIM, which internally simulates the received actions and returns the resulting state. Every round terminates when either (i) the goal is reached; (ii) an invalid action (e.g., not applicable in the current state) is sent to MDPSIM; (iii) 2000 actions have been submitted to MDPSIM; or (iv) the planner explicitly gives up from the round (e.g., because the planner is trapped in a dead end). A round is considered successful if the goal is reached; otherwise, it is declared to be a failed round. Notice that planners are allowed to change their policies at any time, i.e., during a round or in between rounds. Therefore, the knowledge obtained from one round (e.g., the lower bound on {a mathematical formula}V⁎(s0)) can be used to solve subsequent rounds.
+       </paragraph>
+       <paragraph>
+        A run is the sequence of rounds simulated by a planner for a given problem, and the previous IPPCs evaluate planners based on a single run per problem. Due to the stochastic nature of SSPs, the outcome of a single run depends on the random seed used in the initialization of both the planner and MDPSIM. To evaluate planners more accurately, we execute 50 runs for each problem and planner. Therefore, in this section, the performance of a planner in a given problem is estimated by 2500 rounds generated by 50 potentially different policies computed by the same planner. Our approach (50 runs of 50 rounds each) is not equivalent to the execution of one run of 2500 rounds because a planner might be guided toward bad decisions due to the outcomes of the probabilistic actions and not have enough time to revise such decisions. Alternatively, by simulating several runs, there is a small probability that this misguidance will happen in all runs.
+       </paragraph>
+       <paragraph>
+        To respect the 20-minute time limit, SSiPP, Labeled-SSiPP, and SSiPP-FF solve rounds internally for 15 minutes and then start solving rounds through MDPSIM. For SSiPP and SSiPP-FF, a round is solved internally by calling Algorithm 1, Algorithm 5, respectively, and the obtained lower bound {a mathematical formula}V̲ in round r is used as the heuristic for round {a mathematical formula}r+1. The same effect is obtained for Labeled-SSiPP by adding a 15-minute time limit in line 5 of Algorithm 4.
+       </paragraph>
+       <paragraph>
+        The IPPCs also enforce that planners should not have free parameters, i.e., the only input for each planner is the problem to be solved. Therefore, all parameters of a planner, such as the value of t and heuristic for SSiPP, must be fixed a priori or automatically derived. Because of this rule, all the non-SSiPP planners considered do not have parameters. In the IPPC'08, two different parametrizations were fixed for Robust-FF, but we consider only the RFF-PG parametrization as it obtained the best performance in IPPC'08 for the considered problems [8]. Section 5.3.2 describes the two different methods we employed to obtain the parametrizations for SSiPP, Labeled-SSiPP, and SSiPP-FF.
+       </paragraph>
+      </section>
+      <section label="5.3.2">
+       Choosing the value of t and heuristic for SSiPP-based planners
+       <paragraph>
+        To choose a fixed parametrization for SSiPP, Labeled-SSiPP, and SSiPP-FF, i.e., a value of t and a heuristic, we perform a round-robin tournament between different parametrizations of each planner. The round-robin tournament consists of comparing the performance of different parametrizations of a planner in the 15 final problems from IPPC'06 for blocks world, zeno travel, and exploding blocks world. No problem from the triangle tire world is used for training as they are deterministically generated, i.e., any triangle tire world problem of size 1 to 15 would be exactly the same as the problems in the main experiment. We refer to these 45 problems as the set of training problems {a mathematical formula}J.
+       </paragraph>
+       <paragraph>
+        Formally, given a planner X and a set of parametrizations {a mathematical formula}K={k1,…,kn} for X, we solve all problems in {a mathematical formula}J using the same methodology as described in Section 5.3.1. We denote as {a mathematical formula}c(ki,p) the number of rounds of the problem {a mathematical formula}p∈J in which X, using parametrization {a mathematical formula}ki∈K, reached the goal. The function {a mathematical formula}m(ki,kj) represents the comparison (or match) between {a mathematical formula}ki and {a mathematical formula}kj, and {a mathematical formula}m(ki,kj) equals 1 if{a mathematical formula} (i.e., if {a mathematical formula}ki outperforms {a mathematical formula}kj in most problems) and 0 otherwise. The tournament winner is the parametrization k that outperforms the majority of other parametrizations in {a mathematical formula}K:k=argmaxki∈K∑kj≠kim(ki,kj).
+       </paragraph>
+       <paragraph>
+        For SSiPP and Labeled-SSiPP, the set of considered parametrizations {a mathematical formula}K is the cross product of {a mathematical formula}T={2,3,4,…,10} and the following set {a mathematical formula}H of heuristics:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         zero-heuristic: {a mathematical formula}h0(s)=0 for all {a mathematical formula}s∈S,
+        </list-item>
+        <list-item label="•">
+         FF-heuristic: {a mathematical formula}hff(s) equals the cost of the plan returned by the deterministic planner FF [13] to reach a goal state from the current state s in the all-outcomes determinization,
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}hmax and {a mathematical formula}hadd applied to the all-outcomes determinization of the original problem [27].
+        </list-item>
+       </list>
+       <paragraph>
+        For SSiPP-FF, the determinization type is also a parameter, and its set of considered parametrizations {a mathematical formula}K equals {a mathematical formula}T×H×{most-likely outcome, all-outcomes}. The parametrization that won the round-robin tournament for each SSiPP-based planner in their respective set of considered parameters {a mathematical formula}K is {a mathematical formula}t=3 and {a mathematical formula}hadd for SSiPP; {a mathematical formula}t=6 and {a mathematical formula}hadd for Labeled-SSiPP; and {a mathematical formula}t=3, {a mathematical formula}hadd and the all-outcomes determinization for SSiPP-FF. We refer to these parametrizations as SSiPPt, Labeled-SSiPPt, and SSiPP-FFt.
+       </paragraph>
+       <paragraph>
+        We also consider an approach in which the value of t is randomly selected for SSiPP, Labeled-SSiPP, and SSiPP-FF. Formally, before calling Generate-Short-Sighted-SSP in Algorithm 1, Algorithm 4, Algorithm 5, we select t at random from {a mathematical formula}{2,3,4,…,10}. Therefore, different values of t might be used for solving a given problem. For this approach, we use {a mathematical formula}hadd as a heuristic for all the SSiPP-based planners and the all-outcomes determinization for SSiPP-FF. And to avoid generating large short-sighted SSPs, we stop Generate-Short-Sighted-SSP after 15 seconds or if {a mathematical formula}|Ss,t|&gt;105. When Generate-Short-Sighted-SSP is interrupted, the states that could not be explored are marked as artificial goals. We refer to these parametrizations as SSiPPr, Labeled-SSiPPr, and SSiPP-FFr.
+       </paragraph>
+      </section>
+      <section label="5.3.3">
+       <section-title>
+        Results
+       </section-title>
+       <paragraph>
+        The experiment in this section was conducted on a 2.4-GHz machine with 16 cores running a 64-bit version of Linux. Table 7 presents the summary of the results as the number of problems in which a given planner has the best coverage, i.e., it solved more rounds than the other planners. The detailed results are presented in Table 8, Table 9 as the coverage and 95% confidence interval obtained by each planner in each problem, and in Table 10, Table 11 as the average and 95% confidence interval for the obtained cost over the successful rounds for each problem.
+       </paragraph>
+       <paragraph>
+        SSiPP-FFt and SSiPP-FFr successfully take advantage of determinizations and improve the coverage obtained by SSiPP and Labeled-SSiPP in the domains without dead ends, i.e., blocks world and zeno travel. In particular, both parametrizations of SSiPP-FF, together with FF-Replan, are the only planners able to solve the medium and large problems of the zeno travel domain. SSiPP-FF also improves the performance of FF-Replan for problems with dead ends. In the triangle tire world, a problem designed to penalize determinization approaches, FF-Replan, SSiPP-FFt, and SSiPP-FFr solve instances up to numbers 5, 7, and 9, respectively; moreover, the coverage of SSiPP-FFr is more than the double of the coverage of FF-Replan for problems 1 to 5. In the exploding blocks world, the combination of SSiPP and determinizations is especially useful for large instances: SSiPP-FFr is the planner with the best coverage for the 5 largest problems in this domain. The solution quality of FF-Replan is also improved by SSiPP-FF. For instance, in zeno travel problems in which the SSiPP-FF obtained coverage 1, the solutions found by SSiPP-FFr and SSiPP-FFt have an average cost between 0.80 and 0.92 of the FF-Replan solution's average cost.
+       </paragraph>
+       <paragraph>
+        Labeled-SSiPP performs well on small problems, obtaining good coverage and solutions with a low average cost; however it fails to scale up to large problems. Possible reasons for not scaling up include (i) the bias for exploration over exploitation employed by Labeled-SSiPP to speed up the convergence and (ii) the overhead added by the procedure CheckSolved.
+       </paragraph>
+       <paragraph>
+        All SSiPP-based planners perform well in the exploding blocks world: SSiPPr had the best coverage in 9 of the problems; SSiPP-FFr had the best coverage in the 5 largest problems; and, for all the considered problems in the exploding blocks world, an SSiPP-based planner had the best coverage.
+       </paragraph>
+       <paragraph>
+        The performance in the triangle tire world problems is dominated by HMDPP. In this domain, the chosen parametrizations of SSiPP, Labeled-SSiPP, and SSiPP-FF do not perform as well as HMDPP or ReTrASE because their parametrizations use {a mathematical formula}hadd as a heuristic. {a mathematical formula}hadd in the triangle tire world guides the planners toward dead ends, and the SSiPP-based planners manage to avoid only the dead ends visible inside the short-sighted SSPs. As shown in [28], SSiPP performs the best in the triangle tire domain when the zero-heuristic is used. Table 12 shows the performance of SSiPP, Labeled-SSiPP, and SSiPP-FF using the parametrization {a mathematical formula}t=8 and the zero-heuristic (for SSiPP-FF, the all-outcomes determinization is used). For these parametrizations, the coverage obtained by SSiPP, Labeled-SSiPP, and SSiPP-FF is significantly improved: Labeled-SSiPP solved all rounds for problems 1 to 7, and SSiPP had the best coverage for the 3 largest problems compared to all considered planners.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Conclusion
+     </section-title>
+     <paragraph>
+      In this article, we introduced the concept of short-sighted probabilistic planning through depth-based short-sighted SSPs, a special case of SSPs in which every state has a nonzero probability of being reached using at most t actions. Short-sighted probabilistic planning is a general technique that is used directly by the Short-Sighted Probabilistic Planner (SSiPP) algorithm. We also presented how to combine short-sighted probabilistic planning with two other techniques for probabilistic planning – labeling and determinizations – resulting in two new probabilistic planners, Labeled-SSiPP and SSiPP-FF, respectively.
+     </paragraph>
+     <paragraph>
+      The goal of Labeled-SSiPP is to improve the convergence time of SSiPP to the ϵ-consistent solution. This improvement is achieved by adding the labeling mechanism used by LRTDP. Moreover, Labeled-SSiPP takes advantage of states labeled as solved to prune the generated short-sighted SSPs as an ϵ-consistent solution from these labeled states is already known. For Labeled-SSiPP, we proved an upper bound on the number of iterations necessary to converge to an ϵ-consistent solution. On the empirical side, we showed that Labeled-SSiPP, using LRTDP as an underlying SSP solver, outperforms SSiPP, LRTDP, and FTVI on problems from the International Probabilistic Planning Competition (IPPC) and in control problems with a low percentage of relevant states.
+     </paragraph>
+     <paragraph>
+      We also introduced another probabilistic planner, SSiPP-FF, which combines short-sighted probabilistic planning and determinizations to compute suboptimal solutions more efficiently. The empirical results obtained show that SSiPP-FF successfully combines the behavior of SSiPP and FF-Replan through high coverage in problems without dead ends and a significant improvement the coverage of FF-Replan in problems with dead ends. The results also show that SSiPP and SSiPP-FF consistently outperform the other planners in all the problems of the exploding blocks world, a probabilistic interesting domain.
+     </paragraph>
+     <paragraph>
+      Our empirical results also show that SSiPP and its extensions have a state-of-the-art performance when the value of t is randomly selected for each depth-based short-sighted SSP. Because depth-based short-sighted SSPs can exploit the underlying structure of the problem through the parameter t, the performance of SSiPP and its extensions can be further improved by optimizing the value of t for the domain of the problem or for the problem being solved.
+     </paragraph>
+     <paragraph>
+      In the future, we plan to explore different methods to automatically adapt the value of t for a given problem, e.g., to model the problem of finding the best t as a multi-armed bandit problem. Our ongoing research agenda also includes (i) exploring different underlying SSP solvers for SSiPP (e.g., ILAO* [12]); (ii) combining SSiPP and Robust-FF; and (iii) exploring efficient methods to prune the generated short-sighted SSPs.
+     </paragraph>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     Proof of Lemmas 2 and 3
+     <paragraph label="Proof">
+      Given an SSP{a mathematical formula}S=〈S,s0,G,A,P,C〉that satisfiesAssumption 1,{a mathematical formula}s∈S,{a mathematical formula}t∈N⁎and a monotonic value function V for{a mathematical formula}S, then{a mathematical formula}(Bs,tkV)(sˆ)=(BkV)(sˆ)for all{a mathematical formula}sˆ∈Ss,t∖Gas.t.{a mathematical formula}minsa∈Ga⁡δ(sˆ,sa)≥k, where B and{a mathematical formula}Bs,trepresent, respectively, the Bellman operator applied to{a mathematical formula}Sand{a mathematical formula}Ss,tusing V as heuristic.If {a mathematical formula}sˆ∈Ss,t∩G, then {a mathematical formula}(Bs,tkV)(sˆ)=(BkV)(sˆ)=0 for all {a mathematical formula}k∈N⁎ by the definitions of B and {a mathematical formula}Bs,t. Otherwise, {a mathematical formula}sˆ∈Ss,t∖Gs,t, therefore {a mathematical formula}1≤k≤t. We prove this case by induction on k:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       If {a mathematical formula}k=1, then by the definition of short-sighted SSPs (Definition 6), we can replace {a mathematical formula}Cs,t by C in {a mathematical formula}(Bs,tV)(sˆ) as follows:{a mathematical formula} Since {a mathematical formula}minsa∈Ga⁡δ(sˆ,sa)≥1, then {a mathematical formula}{s′∈S|P(s′|sˆ,a)&gt;0,∀a∈A}⊆Ss,t and the previous sum over {a mathematical formula}Ss,t equals the same sum over {a mathematical formula}S. Therefore {a mathematical formula}(Bs,tV)(sˆ)=(BV)(sˆ).
+      </list-item>
+      <list-item label="•">
+       Assume, as induction step, that this Lemma holds for {a mathematical formula}k∈{1,⋯,c} where {a mathematical formula}c&lt;t. For {a mathematical formula}k=c+1, since {a mathematical formula}minsa∈Ga⁡δ(sˆ,sa)≥c+1&gt;1, then {a mathematical formula}{s′∈Ga|P(s′|sˆ,a)&gt;0,∀a∈A}=∅. Thus,{a mathematical formula} Since {a mathematical formula}c+1≤t and {a mathematical formula}sˆ∈Ss,t∖Gs,t, then {a mathematical formula}{s′∈S|P(s′|sˆ,a)&gt;0,∀a∈A}⊆Ss,t and we can expand the previous sum from {a mathematical formula}s′∈Ss,t to {a mathematical formula}s′∈S, i.e.,{a mathematical formula} Therefore {a mathematical formula}(Bs,tc+1V)(sˆ)=(Bs,t(BcV))(sˆ)=(Bc+1V)(sˆ). □
+      </list-item>
+     </list>
+     <paragraph label="Lemma 3">
+      Under the conditions ofLemma 2,{a mathematical formula}(Bs,tkV)(s)≤(BkV)(s)for all{a mathematical formula}k∈N⁎and{a mathematical formula}sˆ∈Ss,t, where B and{a mathematical formula}Bs,trepresent, respectively, the Bellman operator applied to{a mathematical formula}Sand{a mathematical formula}Ss,tusing V as heuristic.
+     </paragraph>
+     <paragraph label="Proof">
+      By the definitions of B and {a mathematical formula}Bs,t, we have the following trivial cases: (i) if {a mathematical formula}sˆ∈Ss,t∩G, then {a mathematical formula}(Bs,tkV)(sˆ)=(BkV)(sˆ)=0; and (ii) if {a mathematical formula}sˆ∈Ga, then {a mathematical formula}(Bs,tkV)(sˆ)=0≤(BkV)(sˆ). Thus, for the rest of this proof, we consider that {a mathematical formula}sˆ∈Ss,t∖Gs,t.Let m denote {a mathematical formula}minsa∈Ga⁡δ(sˆ,sa). If {a mathematical formula}m≥k, then {a mathematical formula}(Bs,tkV)(s)=(BkV)(s) by Lemma 2. We prove the other case, i.e., {a mathematical formula}m&lt;k, by induction on {a mathematical formula}i=k−m:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       If {a mathematical formula}i=1, then {a mathematical formula}(Bs,tkV)(sˆ)=(Bs,t(Bs,tk−1V))(sˆ)=(Bs,t(Bs,tmV))(sˆ) thus, by Lemma 2,{a mathematical formula} where the last derivation is valid because V is monotonic by assumption. Since {a mathematical formula}sˆ∈Ss,t∖Gs,t, then {a mathematical formula}{s′∈S|P(s′|sˆ,a)&gt;0,∀a∈A}⊆Ss,t and we can expand the last sum over {a mathematical formula}S. Therefore, {a mathematical formula}(Bs,tkV)(sˆ)=(Bs,t(BmV))(sˆ)≤(BkV)(sˆ).
+      </list-item>
+      <list-item label="•">
+       Assume, as induction step, that it holds for {a mathematical formula}i∈{1,…,c}. Then, for {a mathematical formula}i=c+1, i.e., {a mathematical formula}k=m+c+1, we have that{a mathematical formula} Since V is monotonic, we have that {a mathematical formula}V(s′)≤(Bk+1V)(s′) for all {a mathematical formula}s′∈S. Also, by the induction assumption, {a mathematical formula}(Bs,tm+cV)(s′)≤(Bm+cV)(s′). Thus,{a mathematical formula} because {a mathematical formula}{s′∈S|P(s′|sˆ,a)&gt;0,∀a∈A}⊆Ss,t. Therefore {a mathematical formula}(Bs,tkV)(sˆ)≤(BkV)(sˆ). □
+      </list-item>
+     </list>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

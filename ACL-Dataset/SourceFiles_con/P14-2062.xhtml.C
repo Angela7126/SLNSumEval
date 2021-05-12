@@ -1,0 +1,350 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Experiments with crowdsourced re-annotation of a POS tagging data set.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_abstract">
+      <h6 class="ltx_title ltx_title_abstract">
+       Abstract
+      </h6>
+      <p class="ltx_p">
+       Crowdsourcing lets us collect multiple annotations for an item from several annotators. Typically, these are annotations for non-sequential classification tasks. While there has been some work on crowdsourcing named entity annotations, researchers have largely assumed that syntactic tasks such as part-of-speech (POS) tagging cannot be crowdsourced. This paper shows that workers
+       can
+       actually annotate sequential data almost as well as experts. Further, we show that the models learned from crowdsourced annotations fare as well as the models learned from expert annotations in downstream tasks.
+      </p>
+     </div>
+     <div class="ltx_para" id="p1">
+      <p class="ltx_p">
+       plus1ptminus2ptplus1ptminus2pt
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Training good predictive NLP models typically requires annotated data, but getting professional annotators to build useful data sets is often time-consuming and expensive.
+        snow2008 showed, however, that crowdsourced annotations can produce similar results to annotations made by experts. Crowdsourcing services such as Amazon’s Mechanical Turk has since been successfully used for various annotation tasks in NLP
+        []
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        However, most applications of crowdsourcing in NLP have been concerned with classification problems, such as document classification and constructing lexica
+        []
+        . A large part of NLP problems, however, are structured prediction tasks. Typically, sequence labeling tasks employ a larger set of labels than classification problems, as well as complex interactions between the annotations. Disagreement among annotators is therefore potentially higher, and the task of annotating structured data thus harder.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        Only a few recent studies have investigated crowdsourcing sequential tasks; specifically, named entity recognition
+        []
+        . Results for this are good. However, named entities typically use only few labels (LOC, ORG, and PER), and the data contains mostly non-entities, so the complexity is manageable.
+The question of whether a more linguistically involved structured task like part-of-speech (POS) tagging can be crowdsourced has remained largely unaddressed.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        In this paper, we investigate how well lay annotators can produce POS labels for Twitter data. In our setup, we present annotators with one word at a time, with a minimal surrounding context (two words to each side). Our choice of annotating Twitter data is not coincidental: with the short-lived nature of Twitter messages, models quickly lose predictive power
+        []
+        , and re-training models on new samples of more representative data becomes necessary. Expensive professional annotation may be prohibitive for keeping NLP models up-to-date with linguistic and topical changes on Twitter. We use a minimum of instructions and require few qualifications.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p5">
+       <p class="ltx_p">
+        Obviously, lay annotation is generally less reliable than professional annotation. It is therefore common to aggregate over multiple annotations for the same item to get more robust annotations. In this paper we compare two aggregation schemes, namely majority voting (MV) and MACE
+        []
+        . We also show how we can use Wiktionary, a crowdsourced lexicon, to filter crowdsourced annotations. We evaluate the annotations in several ways: (a) by testing their accuracy with respect to a gold standard, (b) by evaluating the performance of POS models trained on the annotations across several existing data sets, as well as (c) by applying our models in downstream tasks. We show that with minimal context and annotation effort, we can produce structured annotations of near-expert quality. We also show that these annotations lead to better POS tagging models than previous models learned from crowdsourced lexica
+        []
+        . Finally, we show that models learned from these annotations are competitive with models learned from expert annotations on various downstream tasks.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Our Approach
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        We crowdsource the training section of the data from
+        Gimpel:ea:11
+        with POS tags. We use Crowdflower,
+        to collect five annotations for each word, and then find the most likely label for each word among the possible annotations. See Figure
+        2
+        for an example. If the correct label is not among the annotations, we are unable to recover the correct answer. This was the case for 1497 instances in our data (cf. the token “:” in the example). We thus report on oracle score, i.e., the best label sequence that could possibly be found, which is correct except for the missing tokens. Note that while we report agreement between the crowdsourced annotations and the crowdsourced annotations, our main evaluations are based on models learned from expert vs. crowdsourced annotations and downstream applications thereof (chunking and NER). We take care in evaluating our models across different data sets to avoid biasing our evaluations to particular annotations. All the data sets used in our experiments are publicly available at
+        http://lowlands.ku.dk/results/
+        .
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Crowdsourcing Sequential Annotation
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        In order to use the annotations to train models that can be applied across various data sets, i.e., making out-of-sample evaluation possible (see Section
+        5
+        ), we follow Hovy et al.
+        Hovy:ea:14 in using the universal tag set
+        []
+        with 12 labels.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p2">
+       <p class="ltx_p">
+        Annotators were given a bold-faced word with two words on either side and asked to select the most appropriate tag from a drop down menu. For each tag, we spell out the name of the syntactic category, and provide a few example words.
+See Figure
+        3
+        for a screenshot of the interface.
+Annotators were also told that words can belong to several classes, depending on the context. No additional guidelines were given.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p3">
+       <p class="ltx_p">
+        Only trusted annotators (in Crowdflower: Bronze skills) that had answered correctly on 4 gold tokens (randomly chosen from a set of 20 gold tokens provided by the authors) were allowed to submit annotations. In total, 177 individual annotators supplied answers. We paid annotators a reward of $0.05 for 10 tokens. The full data set contains 14,619 tokens. Completion of the task took slightly less than 10 days. Contributors were very satisfied with the task (4.5 on a scale from 1 to 5). In particular, they felt instructions were clear (4.4/5), and that the pay was reasonable (4.1/5).
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Label Aggregation
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        After collecting the annotations, we need to aggregate the annotations to derive a single answer for each token. In the simplest scheme, we choose the majority label, i.e., the label picked by most annotators. In case of ties, we select the final label at random. Since this is a stochastic process, we average results over 100 runs. We refer to this as
+        Majority voting
+        (MV). Note that in MV we trust all annotators to the same degree. However, crowdsourcing attracts people with different motives, and not all of them are equally reliable—even the ones with Bronze level. Ideally, we would like to factor this into our decision process.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p2">
+       <p class="ltx_p">
+        We use MACE
+        []
+        as our second scheme to learn both the most likely answer and a competence estimate for each of the annotators. MACE treats annotator competence and the correct answer as hidden variables and estimates their parameters via EM
+        []
+        . We use MACE with default parameter settings to give us the weighted average for each annotated example.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p3">
+       <p class="ltx_p">
+        Finally, we also tried applying the joint learning scheme in Rodrigues et al.
+        Rodrigues:ea:13, but their scheme requires that entire sequences are annotated by the same annotators, which we don’t have, and it expects BIO sequences, rather than POS tags.
+       </p>
+      </div>
+      <div class="ltx_paragraph" id="S4.SS0.SSS0.P1">
+       <h3 class="ltx_title ltx_title_paragraph">
+        Dictionaries
+       </h3>
+       <div class="ltx_para" id="S4.SS0.SSS0.P1.p1">
+        <p class="ltx_p">
+         Decoding tasks profit from the use of dictionaries
+         []
+         by restricting the number of tags that need to be considered for each word, also known as
+         type constraints
+         []
+         . We follow Li et al.
+         Li:ea:12 in including Wiktionary information as type constraints into our decoding: if a word is found in Wiktionary, we disregard all annotations that are not licensed by the dictionary entry. If the word is not found in Wiktionary, or if none of its annotations is licensed by Wiktionary, we keep the original annotations. Since we aggregate annotations independently (unlike Viterbi decoding), we basically use Wiktionary as a pre-filtering step, such that MV and MACE only operate on the reduced annotations.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Experiments
+      </h2>
+      <div class="ltx_para" id="S5.p1">
+       <p class="ltx_p">
+        Each of the two aggregation schemes above produces a final label sequence
+        𝐲^
+        for our training corpus. We evaluate the resulting annotated data in three ways.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p2">
+       <p class="ltx_p">
+        1. We compare
+        𝐲^
+        to the available expert annotation on the
+        training
+        data. This tells us how similar lay annotation is to professional annotation.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p3">
+       <p class="ltx_p">
+        2. Ultimately, we want to use structured annotations for supervised training, where annotation quality influences model performance on held-out
+        test
+        data.
+To test this, we train a CRF model
+        []
+        with simple orthographic features and word clusters
+        []
+        on the annotated Twitter data described in Gimpel et al.
+        Gimpel:ea:11. Leaving out the dedicated test set to avoid in-sample bias, we evaluate our models across three data sets:
+        Ritter
+        (the 10% test split of the data in Ritter et al.
+        Ritter:ea:11 used in Derczynski et al.
+        Derczynski:ea:13), the test set from
+        Foster:ea:11, and the data set described in Hovy et al.
+        Hovy:ea:14.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p4">
+       <p class="ltx_p">
+        We will make the preprocessed data sets available to the public to facilitate comparison. In addition to a supervised model trained on expert annotations, we compare our tagging accuracy with that of a weakly supervised system
+        []
+        re-trained on 400,000 unlabeled tweets to adapt to Twitter, but using a crowdsourced lexicon, namely Wiktionary, to constrain inference. We use parameter settings from Li et al.
+        Li:ea:12, as well as their Wikipedia dump, available from their project website.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p5">
+       <p class="ltx_p">
+        3. POS tagging is often the first step for further analysis, such as chunking, parsing, etc. We test the downstream performance of the POS models from the previous step on chunking and NER. We use the models to annotate the training data portion of each task with POS tags, and use them as features in a chunking and NER model.
+For both tasks, we train a CRF model on the respective (POS-augmented) training set, and evaluate it on several held-out test sets.
+For chunking, we use the test sets from
+        Foster:ea:11 and
+        Ritter:ea:11 (with the splits from
+        Derczynski:ea:13). For NER, we use data from
+        Finin:ea:10 and again
+        Ritter:ea:11.
+For chunking, we follow
+        Sha:Pereira:03 for the set of features, including token and POS information. For NER, we use standard features, including POS tags (from the previous experiments), indicators for hyphens, digits, single quotes, upper/lowercase, 3-character prefix and suffix information, and Brown word cluster features
+        with 2,4,8,16 bitstring prefixes estimated from a large Twitter corpus
+        []
+        . We report macro-averages over all these data sets.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S6">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        6
+       </span>
+       Results
+      </h2>
+      <div class="ltx_paragraph" id="S6.SS0.SSS0.P1">
+       <h3 class="ltx_title ltx_title_paragraph">
+        Agreement with expert annotators
+       </h3>
+       <div class="ltx_para" id="S6.SS0.SSS0.P1.p1">
+        <p class="ltx_p">
+         Table
+         1
+         shows the accuracy of each aggregation compared to the gold labels.
+The crowdsourced annotations aggregated using MV agree with the expert annotations in 79.54% of the cases. If we pre-filter the data using Wiktionary, the agreement becomes 80.58%. MACE leads to higher agreement with expert annotations under both conditions (79.89 and 80.75). The small difference indicates that annotators are consistent and largely reliable, thus confirming the Bronze-level qualification we required.
+Both schemes cannot recover the correct answer for the 1497 cases where none of the crowdsourced labels matched the gold label, i.e.
+         y∉𝐙i
+         . The best possible result either of them could achieve (the
+         oracle
+         ) would be matching all but the missing labels, an agreement of 89.63%.
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS0.SSS0.P1.p2">
+        <p class="ltx_p">
+         Most of the cases where the correct label was not among the annotations belong to a small set of confusions. The most frequent was mislabeling “
+         :
+         ” and “
+         …
+         ”, both mapped to
+         X
+         . Annotators mostly decided to label these tokens as punctuation (
+         .
+         ). They also predominantly labeled
+         your
+         ,
+         my
+         and
+         this
+         as
+         PRON
+         (for the former two), and a variety of labels for the latter, when the gold label is
+         DET
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S6.SS0.SSS0.P2">
+       <h3 class="ltx_title ltx_title_paragraph">
+        Effect on POS Tagging Accuracy
+       </h3>
+       <div class="ltx_para" id="S6.SS0.SSS0.P2.p1">
+        <p class="ltx_p">
+         Usually, we don’t want to match a gold standard, but we rather want to create new annotated training data. Crowdsourcing matches our gold standard to about 80%, but the question remains how useful this data is when training models on it. After all, inter-annotator agreement among professional annotators on this task is only around 90%
+         []
+         . In order to evaluate how much each aggregation scheme influences tagging performance of the resulting model, we train separate models on each scheme’s annotations and test on the same four data sets. Table
+         2
+         shows the results. Note that the differences between the four schemes are insignificant. More importantly, however, POS tagging accuracy using crowdsourced annotations are on average
+         only 2.6% worse
+         than gold using professional annotations. On the other hand, performance is
+         much better
+         than the weakly supervised approach by Li et al.
+         Li:ea:12, which only relies on a crowdsourced POS lexicon.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S6.SS0.SSS0.P3">
+       <h3 class="ltx_title ltx_title_paragraph">
+        Downstream Performance
+       </h3>
+       <div class="ltx_para" id="S6.SS0.SSS0.P3.p1">
+        <p class="ltx_p">
+         Table
+         3
+         shows the accuracy when using the POS models trained in the previous evaluation step. Note that we present the average over the two data sets used for each task. Note also how the Wiktionary constraints lead to improvements in downstream performance. In chunking, we see that using the crowdsourced annotations leads to worse performance than using the professional annotations. For NER, however, we find that some of the POS taggers trained on aggregated data produce better NER performance than POS taggers trained on expert-annotated gold data. Since the only difference between models are the respective POS features, the results suggest that at least for some tasks, POS taggers learned from crowdsourced annotations may be
+         as good
+         as those learned from expert annotations.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S7">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        7
+       </span>
+       Related Work
+      </h2>
+      <div class="ltx_para" id="S7.p1">
+       <p class="ltx_p">
+        There is considerable work in the literature on modeling answer correctness and annotator competence as latent variables
+        []
+        .
+        Rodrigues:ea:13 recently presented a sequential model for this. They estimate annotator competence as latent variables in a CRF model using EM.
+They evaluate their approach on synthetic and NER data annotated on Mechanical Turk, showing improvements over the MV baselines and the multi-label model by
+        Dredze:ea:09. The latter do not model annotator reliability but rather model label priors by integrating them into the CRF objective, and re-estimating them during learning.
+Both require annotators to supply a full sentence, while we use minimal context, which requires less annotator commitment and makes the task more flexible. Unfortunately, we could not run those models on our data due to label incompatibility and the fact that we typically do not have complete sequences annotated by the same annotators.
+       </p>
+      </div>
+      <div class="ltx_para" id="S7.p2">
+       <p class="ltx_p">
+        Mainzer:2011 actually presents an earlier paper on crowdsourcing POS tagging. However, it differs from our approach in several ways. It uses the Penn Treebank tag set to annotate Wikipedia data (which is much more canonical than Twitter) via a Java applet. The applet automatically labels certain categories, and only presents the users with a series of multiple choice questions for the remainder. This is highly effective, as it eliminates some sources of possible disagreement. In contrast, we do not pre-label any tokens, but always present the annotators with all labels.
+       </p>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

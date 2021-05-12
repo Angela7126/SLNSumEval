@@ -1,0 +1,712 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Diffusion centrality: A paradigm to maximize spread in social networks.
+   </title>
+   <abstract>
+    We propose Diffusion Centrality (DC) in which semantic aspects of a social network are used to characterize vertices that are influential in diffusing a property p. In contrast to classical centrality measures, diffusion centrality of vertices varies with the property p, and depends on the diffusion model describing how p spreads. We show that DC applies to most known diffusion models including tipping, cascade, and homophilic models. We present a hypergraph-based algorithm (HyperDC) with many optimizations to exactly compute DC. However, HyperDC does not scale well to huge social networks (millions of vertices, tens of millions of edges). For scaling, we develop methods to coarsen a network and propose a heuristic algorithm called “Coarsened Back and Forth” (CBAF) to compute the top-k vertices (having the highest diffusion centrality). We report on experiments comparing DC with classical centrality measures in terms of runtime and the “spread” achieved by the k most central vertices (using 7 real-world social networks and 3 different diffusion models). Our experiments show that DC produces higher quality results and is comparable to several centrality measures in terms of runtime.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      An increasingly important problem in social networks (SNs) is that of assigning a “centrality” value to vertices which will reflect their importance within the SN. Well-known measures such as degree centrality[21], [46], betweenness centrality[8], [20], PageRank[9], closeness centrality[49], [5], and eigenvector centrality[7] only take the structure of the network into account—they do not differentiate between vertices that are central w.r.t. spreading one topic or meme or sentiment vs. spreading another. A vertex that is important in spreading awareness of a mobile phone program may be very unimportant in spreading information about a restaurant. Likewise, most past work assumes that there is no information about properties of the vertices/edges or edge weights, but in modern social networks, at least some self-declared properties exist and, in many cases, analysis of tweets and posts can provide further information. These omissions can cause different problems as shown in the following toy example.
+     </paragraph>
+     <paragraph label="Example 1">
+      HIVFig. 1 shows four people {a mathematical formula}a,b,c,d, where b has HIV. Solid edges denote sexual relationships, while dashed edges denote friend relationships. Both “friend” and “sexual partner” relationships can play a role in the diffusion of HIV (as friends may, unbeknownst to us, also be sexual partners). Edge weights denote the intensity of the relationships.The table below shows the centrality of {a mathematical formula}a,b,c,d w.r.t. various centrality measures. Notice that the nature of the relationships (i.e., friend and sexual partner) are not taken into account by these centrality measures, as they consider only the topological structure of the network.{a mathematical formula}The only person in this network capable of spreading HIV is b. However, b has the lowest centrality according to all five centrality measures mentioned above.
+     </paragraph>
+     <paragraph label="Example 2">
+      Consider again the same network shown in Fig. 1 and suppose the vertices denoted users on Twitter. A solid edge {a mathematical formula}(u,v) denotes the fact that u and v have both retweeted at least one of the other's tweets, while a dashed edge indicates that they are friends (i.e., u follows v and vice versa). Suppose b was the only person to have tweeted a positive opinion about a political candidate while none of the others have done so. Then, by the same reasoning as in the previous example, and given that Fig. 1 is the entire network, we can again infer that any other user (i.e., {a mathematical formula}a,c,d) who tweets positively about the same candidate was either influenced by b or was influenced by some exogenous process. b should clearly get more credit for the other user's positive tweet than anyone else, but has the lowest centrality according to classical centrality measures.
+     </paragraph>
+     <paragraph>
+      Past centrality measures do not take into account (i) the property of interest w.r.t. which a vertex's “importance” is measured, (ii) how properties (e.g., HIV in the example above) diffuse through the SN, and (iii) any semantic aspect of the network (properties of vertices and edges), solely focusing on the topological structure. Taking all of these aspects into account is crucial in determining the most central vertices. We can readily think of networks (e.g., Twitter) where person A has the highest centrality in terms of spread of support for Republicans, while person B is the central player in terms of spread of support for conserving gorillas. The network in both cases is the same (Twitter), but the most “central” person depends on the diffusive property with respect to which a vertex is considered “influential” or “central”. Taking into account diffusion models (e.g., how one person influences another) is another crucial aspect. Different ways of spreading a property (e.g., a disease) may lead to different central vertices. Furthermore, intrinsic properties of vertices (customers, patients) and the nature and strength of the relationships (edges) are important too. For instance, [45] talks about the role of nine different demographic factors in influencing online purchases across 14 product categories, showing that some demographic factors are relevant for some product types, while others are relevant for others. This paper proposes the novel notion of diffusion centrality that takes an SN, a diffusive property p, and a previously learned diffusion model Π for p, and defines centrality of vertices based on this input. We do not provide algorithms to automatically learn diffusion models—interested readers may find one such algorithm in [10].
+     </paragraph>
+     <paragraph>
+      The paper's goal is to show how diffusion centrality can be used to achieve higher spread of a diffusive property p by using diffusion models for p rather than classical centrality measures. We further show that this can be done for most diffusion models we have seen in the literature. Last but not least, our methods are shown to scale to social networks with over 2M vertices and 20M edges.
+     </paragraph>
+     <paragraph>
+      Real-world diffusion models fall into three diverse categories. In cascade models, there is some probability that a vertex will spread a diffusive property p to one of its neighbors [34], [36]—these include popular disease spread models such as the SIR model of disease spread [26]. Tipping models use other mathematical calculations such as cost-benefit analysis, often involving no probabilities, in order to decide whether a vertex will adopt a certain behavior. Tipping models were introduced by Nobel laureate Tom Schelling [50] to model segregation of neighborhoods, and by Granovetter [24]. In homophilic models, similarities between two vertices are considered in order to decide if the two vertices will adopt a similar behavior [42], [12], [3]. Homophilic models use various types of distance measures between attributes of a vertex (e.g., age, occupation, gender) and combine them via non-probabilistic measures to achieve a degree of similarity between two vertices.
+     </paragraph>
+     <paragraph>
+      Because diffusion models vary dramatically, a paradigm to express them must be capable of: (i) expressing semantic properties of vertices and connections between them, (ii) representing probabilistic inferences, and (iii) expressing inferences based on non-probabilistic, quantitative reasoning. The suite of knowledge representation paradigms offers several starting points. Bayesian nets and causal inference [47] offer an obvious place to start as they can be used to express cascade models. However, it is not clear if they can be used to express generic quantitative information, which is needed to express many other real diffusion models, such as tipping and homophilic models. In contrast, the language of Generalized Annotated (logic) Programs (GAPs) [35] has been well-studied in knowledge representation and is rich enough to capture a wide variety of different forms of reasoning. It can represent both the structure of social networks (with semantics and weight annotations) as well as these diverse types of diffusion models. Indeed, as shown in [51], many existing diffusion models from all three aforementioned categories can be expressed as GAPs, including: the Susceptible–Infectious–Removed (SIR) [2] and Susceptible–Infectious–Susceptible (SIS) [26] models of disease spread; the Big Seed marketing approach [57], which is a strategy of advertising to a large group of individuals who are likely to spread the advertisement further through network effects; models of diffusion of “favorited” pictures in Flickr [13]; tipping models like the Jackson–Yariv model [28]. We also considered richer versions of GAPs, such as hybrid knowledge bases [40], but decided they were far more expressive than needed for reasoning about diffusive processes.
+     </paragraph>
+     <paragraph>
+      The paper is organized as follows. Related work is discussed in Section 2. Section 3 introduces basic notions used in the rest of the paper. We define Diffusion Centrality (DC) in Section 4. Section 5 proposes a general “hypergraph fixed point algorithm” to efficiently compute the likelihood that an arbitrary vertex has certain properties according to the GAP diffusion model. We also define novel classes of GAPs, together with novel optimization methods to develop the HyperDC algorithm for computing DC. In Section 6, we propose the CBAF algorithm for finding the vertices with the top-k highest diffusion centralities in an approximate way. Section 7 describes extensive experiments comparing DC with classical centrality measures in terms of both runtime and the “spread” generated by central vertices.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Related work
+     </section-title>
+     <paragraph>
+      Several centrality measures have been proposed in graph theory and social network analysis: degree centrality[21], [46], betweenness centrality[8], [20], PageRank[9], closeness centrality[49], [5], and eigenvector centrality[7]. Variants of such centrality measures have been proposed in [18], [1], [25], while game-theoretic centrality measures have been proposed in [27], [52]. These centrality measures take into account only the network topology for determining vertex centrality, while DC considers additional information: the “semantics” embedded in the network, the diffusive property with respect to which a vertex is considered “influential” or “central”, and the model describing how such a property propagates.
+     </paragraph>
+     <paragraph>
+      There has been extensive work in reasoning about diffusion in social networks. One well-known problem is influence maximization, that is, the problem of identifying a subset of vertices in a social network that maximizes the spread of influence. The problem was formulated as an optimization problem in the seminal paper [33], which focuses on two propagation models: the independent cascade and the linear threshold models. Subsequently, several approaches have been proposed to efficiently solve the problem [39], [15], [29], [16], [23], [56], [37]. All the aforementioned approaches consider restricted diffusion models and no vertex/edge properties are taken into account. In contrast, our approach deals with very general diffusion models and takes social network semantic properties into account. Being able to accurately model the diffusion processes and incorporate the network semantics is fundamental for correct analysis of real-world diffusion phenomena.
+     </paragraph>
+     <paragraph>
+      Another well-studied related problem is the target set selection problem [14], [17], which assumes a deterministic tipping model and seeks to find a set of vertices of a certain size that optimizes the final number of adopters. These approaches focus on specific diffusion models and neglect networks' semantics.
+     </paragraph>
+     <paragraph>
+      The notion of diffusion centrality was first proposed in [31]. This paper extends [31] in different respects. In [31], diffusion models are expressed using simple conditional probability rules, while in this paper we use the more general language of GAPs. The algorithms introduced in this paper are more general and efficient, and exploit several new optimizations introduced in this paper. Moreover, we have addressed the new problem of finding an approximate set of top-k vertices with the highest diffusion centrality and proposed efficient algorithms to solve it.
+     </paragraph>
+     <paragraph>
+      Recently, after our paper on diffusion centrality [31], a few pieces of work have observed that no individual can be a universal influencer, and influential members of the network tend to be influential only in one or some specific domains of knowledge [4], [11], [53]. This has led to the extension of the classic independent cascade and linear threshold models to be “topic-aware” [4], [11], thus considering propagation with respect to a particular topic. Still, the diffusion models considered by these works are limited, as well as the characteristics of vertices and edges.
+     </paragraph>
+     <paragraph>
+      Recently, [48] has addressed the problem of coarsening a social network (that is, finding a more succinct representation of it by grouping vertices together) while preserving its propagation characteristics as much as possible. It works well for the independent cascade model and considers only the structure of the network for merging. The idea of coarsening a network has been extensively used in community detection techniques [32]. However, they use different metrics for coarsening, such as cut-based, flow-based, or heavy-edge matching-based conditions. Methods to compress weighted graphs into smaller ones have been proposed in [54], [55], where nodes and edges are grouped into “supernodes” and “superedges”. No semantic properties of vertices/edges or diffusion models are considered. In our CBAF algorithm, when coarsening networks, we explicitly consider a given diffusion model and merge vertices that have the same role in the process, considering the semantic aspects of the SN. Another related problem is graph sparsification, which relies on the notion of “spanners” [22], [41]. The main difference is that graph sparsification removes edges (so the nodes stay the same), while we contract the graph trying to preserve the behavior w.r.t. a given diffusion model. [43] uses probabilistic soft logic to develop graph summarization techniques for grouping similar entities (vertices) and relations (edges) by considering the semantic aspects of networks. The approach does not consider any diffusion process explicitly.
+     </paragraph>
+    </section>
+    <section label="3">
+     <section-title>
+      Preliminaries
+     </section-title>
+     <paragraph>
+      In this section, we define social networks (SNs), illustrate generalized annotated programs (GAPs) from [35], and show how diffusion models can be expressed with GAPs. We refer the reader to [35] for more details on GAPs.
+     </paragraph>
+     <paragraph>
+      We model SNs as weighted directed graphs where properties can be assigned to vertices and edges. More specifically, properties of vertices and edges are taken from two (disjoint) sets {a mathematical formula}VP and {a mathematical formula}EP, respectively. For instance, a property in {a mathematical formula}VP might be {a mathematical formula}hiv (meaning that a vertex has HIV), while properties in {a mathematical formula}EP might be {a mathematical formula}fr and {a mathematical formula}sp, representing friend and sexual relationships, respectively—e.g., if an edge is assigned property {a mathematical formula}fr, then its endpoints are friends.
+     </paragraph>
+     <paragraph>
+      A social network (SN) is a tuple {a mathematical formula}(V,E,VL,ω) where:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       V is a finite set of vertices;
+      </list-item>
+      <list-item label="2.">
+       {a mathematical formula}E⊆V×V×EP is a finite set of (labeled) edges;
+      </list-item>
+      <list-item label="3.">
+       {a mathematical formula}VL:V→2VP assigns a set of properties to each vertex;
+      </list-item>
+      <list-item label="4.">
+       {a mathematical formula}ω:E→(0,1] assigns a weight to each edge.
+      </list-item>
+     </list>
+     <paragraph>
+      Thus, an SN is a directed graph where {a mathematical formula}VL assigns a set of properties to each vertex, and there can be multiple labeled edges between a given pair of vertices, each of which is associated with a weight and a unique edge property. An SN is depicted in Fig. 1, where property {a mathematical formula}hiv is assigned to vertex b, {a mathematical formula}sp is assigned to solid edges, and {a mathematical formula}fr is assigned to dashed edges.
+     </paragraph>
+     <paragraph>
+      Below we briefly recall GAPs. We start with an example that illustrates a GAP modeling the spread of HIV in SNs like the one in Fig. 1.
+     </paragraph>
+     <paragraph label="Example 3">
+      A GAP {a mathematical formula}Πhiv for the SN of Example 1 might be:{a mathematical formula} The first rule says that the confidence that a vertex V has HIV, given that a partner {a mathematical formula}V′ has HIV with confidence X, is {a mathematical formula}0.9×X×Y, where Y is the weight of the sexual relationship between the two vertices. The other rules can be similarly read.
+     </paragraph>
+     <paragraph>
+      We will treat properties in {a mathematical formula}VP as unary predicate symbols, called vertex predicate symbols, and properties in {a mathematical formula}EP as binary predicate symbols, called edge predicate symbols. Given a vertex (resp. edge) predicate symbol p, then {a mathematical formula}p(t) (resp. {a mathematical formula}p(t1,t2)) is a vertex atom (resp. edge atom), where t, {a mathematical formula}t1, {a mathematical formula}t2 are variables or constants representing vertices. For instance, in Example 3 above, {a mathematical formula}hiv(V) and {a mathematical formula}sp(V,V′) are a vertex atom and an edge atom, respectively.
+     </paragraph>
+     <paragraph>
+      An (edge or vertex) annotated atom is of the form {a mathematical formula}A:μ, where A is an (edge or vertex) atom, and μ is an annotation term, that is, an expression built from functions, variables (distinct from those used inside atoms), and real numbers in {a mathematical formula}[0,1]. For instance, in Example 3, {a mathematical formula}hiv(V):0.9×X×Y is an annotated atom.
+     </paragraph>
+     <paragraph>
+      A GAP-rule (or simply rule) is of the form {a mathematical formula}A0:μ0←A1:μ1∧…∧An:μn where {a mathematical formula}n≥0 and every {a mathematical formula}Ai:μi is an annotated atom. {a mathematical formula}A0:μ0 is the head of the rule, while {a mathematical formula}A1:μ1∧…∧An:μn is the body of the rule. A generalized annotated program (GAP) is a finite set of rules.
+     </paragraph>
+     <paragraph>
+      We assume that {a mathematical formula}VP contains a distinguished vertex predicate symbol {a mathematical formula}vertex that represents the presence of a vertex in an SN. Every SN {a mathematical formula}S=(V,E,VL,ω) can be represented by a GAP, denoted {a mathematical formula}ΠS, as follows:{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      When we augment {a mathematical formula}ΠS with rules describing how certain properties diffuse through the social network, we get a GAP {a mathematical formula}Π⊇ΠS that captures both the structure of the SN and the diffusion principles. In this paper we consider a restricted class of GAPs: every rule with a non-empty body has a vertex annotated atom in the head ([35] allows any annotated atom in the head of a rule). Thus, edge atoms can appear only in rule bodies or rules with an empty body. This restriction results from the set of diffusion models we consider in this paper: neither edge weights nor edge labels change as the result of the diffusion. However, most of the techniques developed in this paper can be directly applied to or easily generalized for unrestricted GAPs.
+     </paragraph>
+     <paragraph>
+      An (annotated) atom (resp. rule, GAP) is ground iff it contains no variables (neither inside atoms nor in annotation terms). We use {a mathematical formula}A to denote the set of all ground atoms. Moreover, {a mathematical formula}grd(r) denotes the ground instances of a rule r, i.e. the set of all rules obtained from r by replacing every occurrence of a variable in an annotation term with a real number in {a mathematical formula}[0,1], and every occurrence of a variable inside an atom with a vertex. Given a GAP Π, we define {a mathematical formula}grd(Π)=⋃r∈Πgrd(r).
+     </paragraph>
+     <paragraph>
+      We now briefly recall the semantics of GAPs. An interpretation I is a mapping from the set of all ground atoms {a mathematical formula}A to {a mathematical formula}[0,1]. We say that I satisfies a ground annotated atom {a mathematical formula}A:μ, denoted {a mathematical formula}I⊨A:μ, iff {a mathematical formula}I(A)≥μ. [35] associates an operator {a mathematical formula}TΠ that maps interpretations to interpretations with any GAP Π. Suppose I is an interpretation. Then,{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Roughly speaking, the semantics of GAPs requires that when there are multiple ground instances of GAP-rules with the same head that “fires”, the highest annotation in any of these ground rules is assigned to the head atom. [35] shows that if we start from the interpretation that assigns 0 to every ground atom and iteratively apply {a mathematical formula}TΠ, then we reach a least fixed point, denoted {a mathematical formula}lfp(Π), which captures the ground atomic logical consequences of Π.
+     </paragraph>
+     <paragraph label="Example 4">
+      Consider the social network {a mathematical formula}S of Example 1 and the GAP {a mathematical formula}Πhiv of Example 3. Let Π be the GAP modeling both the SN and the diffusion model, i.e., {a mathematical formula}Π=ΠS∪Πhiv. Then, {a mathematical formula}TΠ reaches a least fixed point at the third iteration, as shown in Table 1. Edge atoms are not reported in the table, as their annotations and weights do not change by applying {a mathematical formula}TΠ (because edge atoms do not appear in rule heads). Specifically, 0.1 is assigned to {a mathematical formula}sp(a,b), {a mathematical formula}sp(b,a), {a mathematical formula}sp(a,c), and {a mathematical formula}sp(c,a), 0.8 is assigned to {a mathematical formula}fr(a,d) and {a mathematical formula}fr(d,a), and 0.7 is assigned to {a mathematical formula}fr(c,d) and {a mathematical formula}fr(d,c).Initially, 0 is assigned to all ground atoms (iteration 0). Next, 1 is assigned to the ground atom {a mathematical formula}hiv(b), because b has HIV in the original SN (iteration 1). From now on, rules in {a mathematical formula}Πhiv can be used to assign higher values to (vertex) ground atoms. Specifically, at iteration 2, the following rules can “fire”:{a mathematical formula} and are used to assign 0.09 to {a mathematical formula}hiv(a), 0.032 to {a mathematical formula}hiv(d), and 0.006 to {a mathematical formula}hiv(c).At the subsequent iteration (iteration 3), the following rule can fire and is used to assign a higher value to {a mathematical formula}hiv(c), namely 0.0081:{a mathematical formula}No higher values can be derived from a further application of {a mathematical formula}TΠ, and thus the least fixed point is reached, assigning 0.09 to {a mathematical formula}hiv(a), 1 to {a mathematical formula}hiv(b), 0.0081 to {a mathematical formula}hiv(c), and 0.032 to {a mathematical formula}hiv(d).
+     </paragraph>
+     <paragraph label="Example 5">
+      Suppose the SN in Fig. 1 represents Cell phone users, all edges have property {a mathematical formula}fr representing friendship relations, and vertices have properties like {a mathematical formula}male, {a mathematical formula}female, {a mathematical formula}young, {a mathematical formula}old, and {a mathematical formula}adopter, telling us if the user adopted a cell phone plan. The phone company wants to identify important users. Suppose d is male and everyone else is female; initially nobody is an {a mathematical formula}adopter. A cell phone provider may have a diffusion rule learned from past promotions:{a mathematical formula}The vertex which has the greatest influence, if given a free mobile phone plan and if the above diffusion model is used, is clearly d (because this is the only vertex that can “influence” others to adopt the plan). However, we see from the table in Example 1 that d is not the most relevant vertex w.r.t. to all centrality measures.
+     </paragraph>
+    </section>
+    <section label="4">
+     <section-title>
+      Diffusion centrality
+     </section-title>
+     <paragraph>
+      Diffusion centrality tries to measure how well a vertex v can diffuse a property p (e.g., the {a mathematical formula}hiv property). Given an SN {a mathematical formula}S=(V,E,VL,ω), a vertex predicate symbol p, and a vertex {a mathematical formula}v∈V, the insertion of {a mathematical formula}p(v) into {a mathematical formula}S, denoted {a mathematical formula}S⊕p(v), is the SN {a mathematical formula}(V,E,VL′,ω) where {a mathematical formula}VL′ is exactly like {a mathematical formula}VL except that {a mathematical formula}VL′(v)=VL(v)∪{p}. In other words, inserting {a mathematical formula}p(v) into a social network merely says that vertex v has property p and that everything else about the network stays the same. Likewise, the removal of {a mathematical formula}p(v) from {a mathematical formula}S, denoted {a mathematical formula}S⊖p(v), is the social network {a mathematical formula}(V,E,VL″,ω) which is just like {a mathematical formula}S except that {a mathematical formula}VL″(v)=VL(v)∖{p}.
+     </paragraph>
+     <paragraph label="Definition 1">
+      Diffusion centralityLet {a mathematical formula}S=(V,E,VL,ω) be an SN, Π a GAP, and p a property. The diffusion centrality (DC for short) of a vertex {a mathematical formula}v∈V w.r.t. Π, p, and {a mathematical formula}S, denoted {a mathematical formula}dcΠ,p,S(v), is defined as follows:{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Whenever Π, p, and {a mathematical formula}S are clear from the context, we denote the diffusion centrality of a vertex v simply as {a mathematical formula}dc(v).
+     </paragraph>
+     <paragraph>
+      This definition says that computing the diffusion centrality of vertex v involves two steps. First, we assume that vertex v has property p and see how much diffusion occurs. This is done by computing the least fixed point of the diffusion model and the SN {a mathematical formula}S⊕p(v) (i.e., the original SN where p is assigned to v). Notice that the overall diffusion is quantified by summing up the values that the least fixed point assigns to atoms of the form {a mathematical formula}p(v′) across all vertices {a mathematical formula}v′≠v of {a mathematical formula}S. Then, we assume that vertex v does not have property p and see how much diffusion occurs. This is done by computing the least fixed point of the diffusion model and the SN {a mathematical formula}S⊖p(v) (i.e., the original SN where p is not assigned to v). The diffusion centrality of v is the difference between the above two numbers and captures the “impact” that would occur in terms of diffusion of property p if vertex v had property p.{sup:1}
+     </paragraph>
+     <paragraph>
+      Notice that the least fixed point of Π and {a mathematical formula}S⊕p(v) (or {a mathematical formula}S⊖p(v)) takes into account the initial assignment of p to the vertices of {a mathematical formula}S. Thus, DC depends also on the initial assignment of p in {a mathematical formula}S. For instance, consider two SNs that are identical except that in the first one every vertex has property p, while in the second one no vertex has property p. In the first SN, {a mathematical formula}dc(v)=0 for every vertex v, because whether p is given to v or not has no impact, since everyone already has p. In contrast, in the second SN, {a mathematical formula}dc(v) reflects how much overall spread of p we achieve in the SN by assigning p to v.
+     </paragraph>
+     <paragraph label="Example 6">
+      Consider again the HIV SN of Example 1 and the GAP of Example 3. Recall that the only vertex with property {a mathematical formula}hiv is b. It can be easily verified that the values for the positive and negative summands of Definition 1 for all vertices are as reported in the following table.{a mathematical formula}For instance, consider vertex a. If we assume that {a mathematical formula}hiv is given to a in the original SN, then we get an overall spread of {a mathematical formula}hiv of 1.122 (positive summand of Definition 1). If we assume that {a mathematical formula}hiv is not given to a in the original SN, then we get an overall spread of {a mathematical formula}hiv of 1.0401 (negative summand of Definition 1). Then, the diffusion centrality of a is the difference of these two values. The same argument can be applied to the remaining vertices. It is worth noting that if {a mathematical formula}hiv is not assigned to b in the original SN, then no spread of {a mathematical formula}hiv occurs (the negative summand for b is 0), because nobody else has HIV in the SN.Thus, b has the highest centrality w.r.t. {a mathematical formula}hiv and {a mathematical formula}Πhiv—classical centrality measures (Example 1) do not capture this because b is not a “central” vertex from a purely topological perspective. However, b should have the highest centrality because it is the only one with HIV. Vertices c and d do not increase the confidence of any vertex to have HIV. So their diffusion centrality is zero.
+     </paragraph>
+     <paragraph label="Example 7">
+      If we return to the cell phone case (Example 5), we see that the DC of d is 1.2, while all other vertices have 0 as their DC. Furthermore, as opposed to classical centrality metrics, c and d do not have the same centrality, because their properties and the diffusion of interest make them important to a different extent.
+     </paragraph>
+     <paragraph>
+      Diffusion Centrality Problem (DCP). Given an SN {a mathematical formula}S=(V,E,VL,ω), a GAP Π, and a property p, the diffusion centrality problem consists of finding the DC (w.r.t. Π, p, and {a mathematical formula}S) of every vertex of {a mathematical formula}S.
+     </paragraph>
+     <paragraph>
+      Top-kDiffusion Centrality Problem (kDCP). Given a {a mathematical formula}0&lt;k&lt;|V|, the top-k diffusion centrality problem consists of finding a set T of k vertices of {a mathematical formula}S having the highest DC, that is, the DC of every vertex in T is greater than or equal to the DC of every vertex in {a mathematical formula}V∖T.
+     </paragraph>
+    </section>
+    <section label="5">
+     <section-title>
+      The HyperDC algorithm for exact diffusion centrality computation
+     </section-title>
+     <paragraph>
+      In this section, we present the HyperDC algorithm (Section 5.3), which solves DCP exactly using the HyperLFP algorithm (Section 5.2) to compute the least fixed point of a GAP. We start with a set of optimizations that can speed up HyperDC.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Optimization steps
+      </section-title>
+      <paragraph>
+       We first present optimizations that can be applied to arbitrary GAPs, and then identify two subclasses of GAPs for which DC can be computed even more efficiently. Before that, we introduce notation and terminology used in the following.
+      </paragraph>
+      <paragraph>
+       The dependency graph of a GAP Π is a directed graph {a mathematical formula}dep(Π) whose vertices are the predicate symbols in Π. There is an edge from a predicate symbol q to a predicate symbol p iff there is a rule in Π where p occurs in the head and q occurs in the body. We say that p depends on q if there exists a path from q to p in {a mathematical formula}dep(Π). If p depends on q and vice versa, then we say that p and q are mutually recursive. We use {a mathematical formula}MΠ,p to denote the set of all predicate symbols that are mutually recursive with p. We define {a mathematical formula}RΠ,p as the set of predicate symbols q such that (i) p depends on q, and (ii) q appears in the head of some rule of Π. Note that {a mathematical formula}MΠ,p⊆RΠ,p. Given a GAP Π and a property p, we define{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       We are now ready to introduce our first optimization.
+      </paragraph>
+      <paragraph>
+       Caching{a mathematical formula}lfp  When computing {a mathematical formula}dc(v), we note that {a mathematical formula}S, {a mathematical formula}S⊕p(v), and {a mathematical formula}S⊖p(v) differ only in whether or not vertex v has property p. One way to leverage this is to first compute and cache {a mathematical formula}lfp(Π∪ΠS) independent of v. We then only need to calculate one summation in order to compute {a mathematical formula}dc(v).
+      </paragraph>
+      <paragraph label="Proposition 1">
+       Consider a social network{a mathematical formula}S=(V,E,VL,ω), a GAP Π, and a property p. Let{a mathematical formula}ϕ=lfp(Π∪ΠS)and v be a vertex in V. Then,{a mathematical formula}
+      </paragraph>
+      <paragraph label="Proof">
+       Consider a vertex {a mathematical formula}v∈V. If v has property p, then, by definition of {a mathematical formula}S⊕p(v), we have that {a mathematical formula}ϕ=lfp(Π∪ΠS⊕p(v)) and the first equation holds. Likewise, if v does not have property p, then, by definition of {a mathematical formula}S⊖p(v), we have that {a mathematical formula}ϕ=lfp(Π∪ΠS⊖p(v)), and thus the second equation follows too. □
+      </paragraph>
+      <paragraph>
+       Network filtering  We now present an optimization, called network filtering, which consists of reducing the given SN by removing vertices (and the relative incoming and outgoing edges) that do not play any role in the diffusion process, i.e., those vertices that can never receive or transmit diffusive property p from/to other vertices in the SN via any rule in the considered diffusion model. As shown in the following, network filtering is a sound optimization technique, that is, its aim is to reduce the size of the SN (so as to make the DC computation faster) without altering the DC values. Specifically, removed vertices have zero DC in the original SN, while the DC of the remaining vertices in the reduced SN is the same as in the original one (cf. Proposition 2).
+      </paragraph>
+      <paragraph label="Example 8">
+       Consider the diffusion model {a mathematical formula}Πhiv from Example 3:{a mathematical formula} Suppose v is a vertex with no {a mathematical formula}sp relations (in a given SN). Moreover, suppose none of v's friends have {a mathematical formula}sp relations. Then, v is an “unnecessary” vertex (for the purpose of computing DC) because there is no rule {a mathematical formula}r∈Πhiv by which vertex v can receive property {a mathematical formula}hiv or transmit {a mathematical formula}hiv to other vertices. In fact, it is easy to see from the rules above that a vertex cannot transmit {a mathematical formula}hiv if it does not have {a mathematical formula}sp relations. Moreover, a vertex cannot get {a mathematical formula}hiv if it does not have {a mathematical formula}sp relations (the first and third rules cannot be applied) and its friends have no {a mathematical formula}sp relations (the second rule cannot be applied).
+      </paragraph>
+      <paragraph>
+       Thus, roughly speaking, network filtering matches diffusion rules against vertices to identify vertices that do not participate in the activation of any rule, regardless of how many properties are involved in the diffusion rules and in the SN.
+      </paragraph>
+      <paragraph label="Definition 2">
+       Rule activationGiven a GAP Π, a property p, and a rule {a mathematical formula}r∈Π, we define {a mathematical formula}relbody(r)={AA|AA is an annotated atom in the body of r and its predicate symbol is not in {a mathematical formula}RΠ,p}. Vertex v of an SN {a mathematical formula}Sactivates a rule {a mathematical formula}r∈Π iff there exists a ground rule {a mathematical formula}r′∈grd(r) such that:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        for every {a mathematical formula}AA∈relbody(r′), {a mathematical formula}ΠS⊨AA;
+       </list-item>
+       <list-item label="2.">
+        if {a mathematical formula}A:μ is the head of {a mathematical formula}r′, then {a mathematical formula}μ&gt;0; and
+       </list-item>
+       <list-item label="3.">
+        v appears in an annotated atom of the body of {a mathematical formula}r′.
+       </list-item>
+      </list>
+      <paragraph label="Definition 3">
+       Necessary and unnecessary verticesLet {a mathematical formula}S be an SN, Π be a GAP, and p a property. A vertex of {a mathematical formula}S is necessary if it activates a rule of {a mathematical formula}Πp, otherwise it is unnecessary.
+      </paragraph>
+      <paragraph>
+       Roughly speaking, a necessary vertex is one that might “trigger” some rule during the least fixed point computation, while unnecessary vertices have no chance of being involved in the least fixed point computation. Identifying necessary vertices is similar in spirt to the identification of relevant rules in probabilistic logic programs, where the aim is to find ground rules that are relevant for the given query [19]. In our case, we are interested in the values assigned to ground atoms of the form {a mathematical formula}p(v), which are in a sense the query atoms—here p is the diffusive property. However, rather than getting rid of ground rules, we get rid of vertices (i.e., constants) that are “irrelevant”. This is important in our applications where the SN may have millions of vertices and disregarding the irrelevant ones can yield significantly better performances. Of course, disregarding some vertices lead to disregarding some ground rules as well (i.e., those ground rules containing at least one irrelevant vertex). The filtering of a social network eliminates all unnecessary vertices (along with their incoming/outgoing edges).
+      </paragraph>
+      <paragraph label="Definition 4">
+       Network filteringLet {a mathematical formula}S=(V,E,VL,ω) be an SN, Π a GAP, p a property, and U the set of unnecessary vertices. The filtering of {a mathematical formula}S (w.r.t. Π and p) is the SN {a mathematical formula}S′=(V′,E′,VL′,ω′) where:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}V′=V∖U;
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}E′=E∖{〈u,v,q〉∈E|u∈U∨v∈U};
+       </list-item>
+       <list-item label="3.">
+        {a mathematical formula}VL′(v)=VL(v) for all {a mathematical formula}v∈V′;
+       </list-item>
+       <list-item label="4.">
+        {a mathematical formula}ω′(e)=ω(e) for all {a mathematical formula}e∈E′.
+       </list-item>
+      </list>
+      <paragraph>
+       The filtering {a mathematical formula}S′ of an SN {a mathematical formula}S is useful because unnecessary vertices have a DC of zero in {a mathematical formula}S, while the DC of necessary vertices can be computed on the (smaller) SN {a mathematical formula}S′ in a sound way, that is, their DC in {a mathematical formula}S′ is the same as in {a mathematical formula}S.
+      </paragraph>
+      <paragraph label="Proposition 2">
+       Let{a mathematical formula}Sbe an SN, Π be a GAP, p a property, and{a mathematical formula}S′the filtering of{a mathematical formula}S. For every vertex v of{a mathematical formula}S, if v is unnecessary, then{a mathematical formula}dcΠ,p,S(v)=0, otherwise (v is necessary){a mathematical formula}dcΠ,p,S(v)=dcΠ,p,S′(v).
+      </paragraph>
+      <paragraph label="Proof">
+       If a vertex v is unnecessary, it cannot activate any rule in Π, thus, independent of whether or not it has the diffusion property p, it does contribute to diffusing p to other vertices (see item 2 of Definition 2). It follows that{a mathematical formula} If a vertex v is necessary, all the rules it activates contain necessary vertices, and then we have that{a mathematical formula} It follows that {a mathematical formula}dcΠ,p,S(v)=dcΠ,p,S′(v). □
+      </paragraph>
+      <paragraph>
+       Subclasses of GAPs  We now introduce p-monotonic GAPs, a class of GAPs to which we can apply further optimizations (in addition to those discussed so far).
+      </paragraph>
+      <paragraph label="Definition 5">
+       p-monotonic GAPWe say that a rule {a mathematical formula}A0:μ0←A1:μ1∧…∧An:μn is monotonic iff {a mathematical formula}μ0 is a monotonic function.{sup:2} Given a GAP Π and a property p, we say that Π is p-monotonic iff, for every rule r in Π, when the head predicate symbol is in {a mathematical formula}RΠ,p then r is monotonic.
+      </paragraph>
+      <paragraph label="Example 9">
+       Consider the GAP Π of Example 3, for which {a mathematical formula}RΠ,hiv={hiv}. To see if Π is {a mathematical formula}hiv-monotonic we need to check if for every rule in Π having an annotated atom of the form {a mathematical formula}hiv(V):μ in the head, we have that μ is a monotonic function. Since this is the case, then Π is {a mathematical formula}hiv-monotonic. The following GAP{a mathematical formula} is not p-monotonic because {a mathematical formula}RΠ,p={p,q} and the annotation of the head atom of the second rule is a non-monotonic function.
+      </paragraph>
+      <paragraph>
+       Given a GAP Π and a property p, we define the p-interfered predicate set as follows:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Thus, the p-interfered predicate set contains all the predicate symbols that are mutually recursive with p if the GAP Π is p-monotonic, while, if Π is not p-monotonic, it is the set of predicate symbols q such that p depends on q and q appears in the head of some rule in Π. For instance, {a mathematical formula}IΠ,hiv={hiv} for the GAP of Example 3, while {a mathematical formula}IΠ,p={p,q} for the GAP of Example 9. Notice that when {a mathematical formula}IΠ,p=RΠ,p, then {a mathematical formula}IΠ,p is bigger as {a mathematical formula}MΠ,p⊆RΠ,p.
+      </paragraph>
+      <paragraph>
+       Recall that, given a GAP Π and a property p, then {a mathematical formula}Πp is the set of rules r in Π such that either p depends on the head predicate symbol of r or p is the head predicate symbol. We also define{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Roughly speaking, rules in {a mathematical formula}Πp are the only ones that may affect the values assigned to ground atoms of the form {a mathematical formula}p(v) in the least fixed point—so, we can ignore rules in {a mathematical formula}Π∖Πp. Moreover, {a mathematical formula}Πp can be partitioned into two sets: {a mathematical formula}Πp⁎ and {a mathematical formula}Πp∖Πp⁎. We can first evaluate {a mathematical formula}Πp⁎ over the SN, as it does not depend on the remaining rules in {a mathematical formula}Πp. Then, {a mathematical formula}Πp∖Πp⁎ can be evaluated. This somehow reminds of the stratification of logic programs, where a program is partitioned into different “strata”, which are evaluated one at a time according to an order dictated by their dependencies. In our case, we first evaluate a “base stratum” (namely {a mathematical formula}Πp⁎), and then use its result as a starting point for the evaluation of a stratum consisting of “mutually recursive” rules (namely {a mathematical formula}Πp∖Πp⁎). Thus, in our setting, we have two strata, as we are interested in just one “special” predicate p modeling the diffusive property. The following proposition states precisely how {a mathematical formula}Πp and {a mathematical formula}Πp⁎ are exploited (recall that {a mathematical formula}A denotes the set of all ground atoms).
+      </paragraph>
+      <paragraph label="Proposition 3">
+       Consider an SN{a mathematical formula}S, a property p, and a GAP Π. Let ψ be the interpretation{a mathematical formula}lfp(ΠS∪Πp⁎). Then,{a mathematical formula}lfp(Π∪ΠS)(p(v))=lfp((Πp∖Πp⁎)∪{A:ψ(A)|A∈A})(p(v))for every vertex v of{a mathematical formula}S.
+      </paragraph>
+      <paragraph>
+       While the previous proposition can be applied to arbitrary GAPs, it becomes more effective for p-monotonic ones, because {a mathematical formula}IΠ,p is smaller and thus {a mathematical formula}Πp⁎ (which is “precomputed” at an initial stage) is larger. In general, the smaller {a mathematical formula}IΠ,p is, the more effective the proposition above will be.
+      </paragraph>
+      <paragraph label="Example 10">
+       Consider the following GAP Π:{a mathematical formula} Suppose p is the diffusive property. Clearly, Π is p-monotonic (all rule heads contain monotonic functions), {a mathematical formula}Πp=Π, and {a mathematical formula}Πp⁎={r3,r4}, as all predicate symbols in the body of {a mathematical formula}r3 (resp. {a mathematical formula}r4) are not mutually recursive with p. Proposition 3 says that, for every SN {a mathematical formula}S, we can first compute the interpretation ψ defined as {a mathematical formula}lfp(ΠS∪Πp⁎). Then, starting from ψ, the GAP consisting only of {a mathematical formula}r1 and {a mathematical formula}r2 is evaluated.
+      </paragraph>
+      <paragraph>
+       Below we present another class of GAPs, called p-dwindling. As discussed in the next section, for p-dwindling GAPs our HyperLFP algorithm has a faster convergence to the least fixed point.
+      </paragraph>
+      <paragraph label="Definition 6">
+       p-dwindling GAPSuppose p is a property. A GAP Π is p-dwindling iff for every ground rule {a mathematical formula}A0:μ0←A1:μ1∧…∧An:μn in {a mathematical formula}grd(Π) s.t. q is the predicate symbol of {a mathematical formula}A0 and {a mathematical formula}q∈IΠ,p, it is the case that {a mathematical formula}μ0≤μi  for every {a mathematical formula}1≤i≤n s.t. the predicate symbol of {a mathematical formula}Ai is in {a mathematical formula}IΠ,p.
+      </paragraph>
+      <paragraph>
+       For the Flickr, Jackson–Yariv, and SIR models (see Appendix A) we consider in our experimental evaluation, we can state the following properties.
+      </paragraph>
+      <paragraph label="Proposition 4">
+       The Flickr model is p-monotonic and p-dwindling. The Jackson–Yariv model is p-monotonic but not p-dwindling. The SIR model is neither p-monotonic nor p-dwindling.
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       The HyperLFP algorithm
+      </section-title>
+      <paragraph>
+       In this section, we propose an efficient hypergraph-based algorithm, HyperLFP, to compute the least fixed point used for diffusion centrality computation.
+      </paragraph>
+      <paragraph>
+       A directed hypergraph is a pair {a mathematical formula}〈V,H〉 where V is a finite set of vertices and H is a finite set of directed hyperedges. A hyperedge is a pair {a mathematical formula}〈S,t〉 where S is a set of vertices, called source set, and t is a vertex, called target vertex. Given a hyperedge {a mathematical formula}h∈H, {a mathematical formula}S(h) denotes its source set and {a mathematical formula}t(h) denotes its target vertex.
+      </paragraph>
+      <paragraph>
+       We now define a hypergraph that captures how a property p diffuses through an SN {a mathematical formula}S according to a GAP Π. The hypergraph does not depend on which vertices have property p in the original SN, but depends only on Π and the structure of {a mathematical formula}S in terms of edges and vertex properties other than p. Therefore, given a GAP Π and an SN{a mathematical formula}S, the diffusion hypergraph has to be computed only once and can be used with different assignments of a property p to the vertices of{a mathematical formula}S. This allows us to save time in computing diffusion centrality which requires computing the least fixed point for different initial assignments of p. However, if the SN changes, the diffusion hypergraph needs to be recomputed. In addition, the hypergraph allows us to eliminate diffusion rules that are useless for computing the least fixed point.
+      </paragraph>
+      <paragraph label="Definition 7">
+       Enabled ruleConsider an SN {a mathematical formula}S, a GAP Π, and a property p. Let {a mathematical formula}φ=lfp(ΠS∪Πp⁎). A rule {a mathematical formula}r∈grd(Π−Πp⁎) is enabled iff {a mathematical formula}φ(A)≥μ  for every annotated atom {a mathematical formula}A:μ in the body of r whose predicate symbol is not in {a mathematical formula}IΠ,p.
+      </paragraph>
+      <paragraph>
+       Intuitively, enabled rules are the ground rules that can affect the diffusion of p (directly or indirectly) in the least fixed point computation.
+      </paragraph>
+      <paragraph label="Example 11">
+       Consider the GAP {a mathematical formula}Πhiv of Example 3 and the SN of Example 1 (cf. Fig. 1). In this case, we have {a mathematical formula}Πp⁎=∅, {a mathematical formula}φ=lfp(ΠS), and the following ground instance of the second rule belongs to {a mathematical formula}grd(Π−Πp⁎):{a mathematical formula} The rule above is enabled as {a mathematical formula}φ(fr(d,a))=0.8 and {a mathematical formula}φ(sp(a,c))=0.1. Notice that the atom {a mathematical formula}hiv(c) does not play any role in determining whether or not the rule is enabled because {a mathematical formula}hiv∈IΠ,hiv (recall that {a mathematical formula}IΠ,hiv={hiv}).
+      </paragraph>
+      <paragraph label="Definition 8">
+       Diffusion hypergraphConsider an SN {a mathematical formula}S=(V,E,VL,ω), a GAP Π, and a property p. The hyperedge associated with a ground rule {a mathematical formula}r∈grd(Π) whose head annotated atom is of the form {a mathematical formula}p′(v):μ is defined as {a mathematical formula}〈{p″(vi)|p″(vi):μi is in the body of r and p″∈IΠ,p},p′(v)〉 and is denoted by {a mathematical formula}hedge(r). The diffusion hypergraph{a mathematical formula}H(S,Π,p) is a triple {a mathematical formula}〈N,H,W〉 such that:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}〈N,H〉 is a directed hypergraph with {a mathematical formula}N={q(v)|q∈IΠ,p and {a mathematical formula}v∈V}, and {a mathematical formula}H={hedge(r)|r is an enabled ground rule ofΠ whose head predicate symbol is in IΠ,p},
+       </list-item>
+       <list-item label="2.">
+        W is a function such that for each {a mathematical formula}h∈H and matrix {a mathematical formula}M[1...|IΠ,p|][1..|V|] of real values in {a mathematical formula}[0,1], {a mathematical formula}W(h,M) is the head annotation of the ground rule r satisfying the following two properties: (i){a mathematical formula}hedge(r)=h, and (ii) for every atom {a mathematical formula}q(v) appearing in S(h), {a mathematical formula}M[q][v] is equal to the annotation of {a mathematical formula}q(v) in r.
+       </list-item>
+      </list>
+      <paragraph label="Example 12">
+       Fig. 2 shows the diffusion hypergraph for the GAP {a mathematical formula}Πhiv of Example 3 and the social network of Example 1. Since {a mathematical formula}IΠ,hiv={hiv} and {a mathematical formula}V={a,b,c,d}, the nodes of the diffusion hypergraph are {a mathematical formula}N={hiv(a),hiv(b),hiv(c), {a mathematical formula}hiv(d)}. The hyperedges are derived from enabled ground rules. Consider for instance the enabled ground rule r from Example 11. This rule corresponds to the hyperedge {a mathematical formula}hedge(r)=〈{hiv(c)},hiv(d)〉 because {a mathematical formula}{hiv(c)} is the set of atoms in the body of r s.t. the predicate symbols belongs to {a mathematical formula}IΠ,hiv and {a mathematical formula}hiv(d) is the atom in the head of the rule. The hyperedge labels represent the function W, i.e. the label on a hyperedge is the function in the annotation of the head atom of the corresponding rule. For instance, for the rule r from Example 11, the label on the hyperedge {a mathematical formula}hedge(r) is {a mathematical formula}0.4×(0.8×0.1)×hiv(c) (where 0.4 is a constant in the function and the values 0.8 and 0.1 are precomputed) and represents how we have to update the value for {a mathematical formula}hiv(d) once that the value of {a mathematical formula}hiv(c) has changed.
+      </paragraph>
+      <paragraph>
+       The rough idea of the HyperLFP algorithm (Algorithm 1) is that hyperedges that propagate a value greater than zero are kept in a max-heap and those propagating higher values are visited first; the max-heap is updated as propagation unfolds.
+      </paragraph>
+      <paragraph>
+       For all {a mathematical formula}q∈IΠ,p and {a mathematical formula}v∈V, {a mathematical formula}M[q][v] is the initial value of the ground atom {a mathematical formula}q(v), {a mathematical formula}U[q][v] keeps track of the hyperedges having {a mathematical formula}q(v) in their source set, and {a mathematical formula}M′[q][v] is the current assignment to {a mathematical formula}q(v). Specifically, {a mathematical formula}M′[q][v] is initially set to M and then iteratively updated by the algorithm. C keeps track of the highest values propagated by hyperedges that were added to Heap. At each iteration of the while loop on lines 5–18, a pair {a mathematical formula}〈h,w〉 with maximum w is retrieved from Heap. If {a mathematical formula}M′[q][v] is less than w, it is set to w, otherwise another hyperedge is retrieved from Heap. If w is assigned to {a mathematical formula}M′[q][v], then hyperedges that can be affected by this are inspected (for each loop on lines 10–18). Only the hyperedges having {a mathematical formula}t(h) in the source set are inspected. For each of them, if no hyperedge added to Heap propagated a higher value (line 13), then if Π is p-monotonic the hyperedge is added to Heap (along with the value it propagates), otherwise it is added to {a mathematical formula}Heap′. The reason for this is that when Π is p-monotonic we can retrieve hyperedges in descending order of their weights even if their values were derived from different iterations of {a mathematical formula}TΠ. However, if Π is not p-monotonic, the iterations of {a mathematical formula}TΠ must be executed one after the other without mixing the values derived at each of them. So, when Π is not p-monotonic, hyperedges are retrieved in descending order of their weight for each iteration of {a mathematical formula}TΠ. When Heap is empty, {a mathematical formula}Heap′ is assigned to Heap. {a mathematical formula}M′ is returned if both heaps are empty.
+      </paragraph>
+      <paragraph>
+       If a GAP Π is p-dwindling and p-monotonic, then HyperLFP ensures that when a value w is assigned to a ground atom {a mathematical formula}q(v), w is the final value for {a mathematical formula}q(v) in the least fixed point; hence the hyperedge that propagated w as well as any other hyperedge having {a mathematical formula}q(v) as a target atom no longer needs to be considered in order to see if a new higher value can be assigned to {a mathematical formula}q(v).
+      </paragraph>
+      <paragraph label="Proposition 5">
+       The worst-case time complexity of Algorithm HyperLFP is{a mathematical formula}O(|N|+1α⋅|H|⋅(log⁡|H|+Umax⋅(Smax+log⁡|H|))), where{a mathematical formula}Umax=maxv∈V,q∈IΠ,p⁡{|{h|h∈H∧q(v)∈S(h)}|},{a mathematical formula}Smax=maxh∈H⁡{|S(h)|}, and α is the minimum value obtained at line 9 for{a mathematical formula}(w−M′[q][v]).
+      </paragraph>
+     </section>
+     <section label="5.3">
+      <section-title>
+       The HyperDC algorithm
+      </section-title>
+      <paragraph>
+       The HyperDC algorithm (Algorithm 2) initializes {a mathematical formula}Min, U, and {a mathematical formula}Heapin by calling Algorithm 3 (line 1), and then uses them to compute {a mathematical formula}lfp(Π∪ΠS) (lines 2–4). After that, the diffusion centrality of each vertex is computed (lines 6–45). Specifically, the value of atom {a mathematical formula}p(v) is incorporated into {a mathematical formula}Min, and Heap is updated accordingly (lines 7–16). Then, the least fixed point is computed using the updated {a mathematical formula}Min and Heap (lines 17–18). Finally, the diffusion centrality of vertex v is computed and the value of {a mathematical formula}p(v) in {a mathematical formula}Min is restored (lines 19–25). In this last step, Proposition 1 is leveraged. In fact, if {a mathematical formula}p∈VL(v′), the positive summand of the definition of DC has already been computed in lines 2–4 and what is being computed is the negative summand. In this case, the positive summand is equal to {a mathematical formula}sump−F[p][v] and the negative summand is equal to {a mathematical formula}sump′, so the diffusion centrality of vertex v is {a mathematical formula}(sump−F[p][v])−sump′. If {a mathematical formula}p∉VL(v′), the negative summand has been computed already in lines 2–4. In this case, the diffusion centrality of vertex v is {a mathematical formula}sump′−(sump−F[p][v]).
+      </paragraph>
+      <paragraph label="Proposition 6">
+       The worst-case time complexity of Algorithm HyperDC is{a mathematical formula}O(|V|⋅(|N|+1α⋅|H|⋅(log⁡|H|+Umax⋅(Smax+log⁡|H|)))), where{a mathematical formula}Umax=maxv∈V⁡{|{h|h∈H∧v∈S(h)}|},{a mathematical formula}Smax=maxh∈H⁡{|S(h)|}, and α is defined as inProposition 5.
+      </paragraph>
+      <paragraph>
+       A brief note is in order about how the techniques in this section yield better scalability. Compared to our past work [31], HyperDC is approximately 100 times faster (this is the average speedup obtained in our experimental evaluation). In particular, the U and {a mathematical formula}Heapinit structures used in HyperDC are built just once. This yields a speedup of approximately 5×. In addition, the filtering based on Proposition 3 yields a further speedup of 20×, leading to a total speedup of 100×.
+      </paragraph>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      CBAF algorithm for approximating kDCP
+     </section-title>
+     <paragraph>
+      The goal of this section is to develop our Coarsened Back and Forth (CBAF) algorithm to approximately compute the top-k diffusion centrality vertices in huge social networks where it is not feasible to compute DC for all vertices. The basic idea is to coarsen the original social network {a mathematical formula}S into a smaller network {a mathematical formula}S′ which tries to preserve the “diffusive behavior” of {a mathematical formula}S. The top-k vertices are then computed over {a mathematical formula}S′ and the solution is mapped back to a subgraph of {a mathematical formula}S on which we again compute the top-k vertices. Given a social network {a mathematical formula}S, a GAP Π, and a property p, CBAF performs the following steps: (1) Compute the filtering {a mathematical formula}S′ of {a mathematical formula}S; (2) Coarsen {a mathematical formula}S′ by merging its vertices so as to obtain a new social network {a mathematical formula}SC and a mapping from the vertices of {a mathematical formula}S′ to the vertices of {a mathematical formula}SC; (3) Compute a set {a mathematical formula}TC of top-k vertices of {a mathematical formula}SC; (4) Use {a mathematical formula}TC to compute an approximate set of top-k vertices of {a mathematical formula}S. The first step has already been described in Section 5.1, while the other steps will be detailed in the rest of this section.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       Social network coarsening
+      </section-title>
+      <paragraph>
+       This section proposes a new semantical coarsening technique that reduces network size by merging together vertices that are similar, while trying to preserve the structural and semantic properties of the network w.r.t. a property p. The coarsening process involves the following issues: (i) how to select “similar” vertices to be merged together, (ii) how to assign properties to a merged vertex and to its edges after merging, and (iii) how to compute edge weights between merged vertices. These issues are addressed in the following.
+      </paragraph>
+      <paragraph>
+       Vertex similarity. CBAF can work with any function to determine whether two vertices are similar. Throughout this paper, we assume that given any vertex v, there is a set {a mathematical formula}SIM(v)⊆V of vertices that are similar to it. Function SIM can obviously be defined in many ways. We provide one such way that takes the diffusion model for p into account (as well as the social network structure).
+      </paragraph>
+      <paragraph>
+       Consider an SN {a mathematical formula}S, a GAP Π, and a property p. Given two vertices u and v of {a mathematical formula}S, we write {a mathematical formula}u∼v iff u and v activate the same set of rules of Π (cf. Definition 2 for the notion of “activation”). Using this equivalence relation, we define {a mathematical formula}SIMΠ(v)={u∈V|u∼v}. Obviously, many other definitions are also possible, but this is the one used in our experiments.
+      </paragraph>
+      <paragraph>
+       Vertex merging. We now define how to merge similar vertices. When a set of vertices is merged into a new vertex v, we have to specify vertex properties of v, as well as associated edge properties/weights.
+      </paragraph>
+      <paragraph label="Definition 9">
+       Vertex properties mergingLet {a mathematical formula}S be an SN and {a mathematical formula}{v1,…,vn} be a subset of the vertices of {a mathematical formula}S (to be merged). For each {a mathematical formula}p∈VP, let {a mathematical formula}gp:{0,1}n→{0,1} be any associative and commutative function. Then, we define:{a mathematical formula} where {a mathematical formula}ϑ(vi,p)=1 if {a mathematical formula}p∈VL(vi), otherwise {a mathematical formula}ϑ(vi,p)=0.
+      </paragraph>
+      <paragraph>
+       The above definition assumes the existence of a function {a mathematical formula}gp that takes the values (0 or 1) of the p-property of the vertices being merged and combines them into a single 0 or 1 value denoting whether the merged vertex has property p or not.
+      </paragraph>
+      <paragraph>
+       Some examples for the function {a mathematical formula}gp can be computing the property intersection or union (i.e., taking the minimum or maximum value across the {a mathematical formula}xi's). We can also use a “majority” function where the new vertex has the property p if the majority of the vertices being merged have the property p.
+      </paragraph>
+      <paragraph>
+       We now address the problem of assigning edges to the new merged vertex. Let {a mathematical formula}S=(V,E,VL,ω) be an SN and {a mathematical formula}V′={v1,…,vn} be a subset of V to be merged into a new vertex {a mathematical formula}v′. For each edge {a mathematical formula}(v,u,ep)∈E such that either {a mathematical formula}v∈V′ and {a mathematical formula}u∈V∖V′ or {a mathematical formula}u∈V′ and {a mathematical formula}v∈V∖V′, the new vertex {a mathematical formula}v′ will have the outgoing edge {a mathematical formula}(v′,u,ep) if {a mathematical formula}v∈V′, or the incoming edge {a mathematical formula}(v,v′,ep) if {a mathematical formula}u∈V′.
+      </paragraph>
+      <paragraph>
+       Edge weighting. We now define how to assign a weight to an arbitrary set of edges (having the same label) in {a mathematical formula}S=(V,E,VL,ω).
+      </paragraph>
+      <paragraph label="Definition 10">
+       Edge weightingLet {a mathematical formula}S=(V,E,VL,ω) be an SN and {a mathematical formula}ep∈EP. Moreover, let {a mathematical formula}{e1,…,em}⊆(V×V×{ep}) be an arbitrary set of edges between vertices in V labeled with ep, and {a mathematical formula}gep:(0,1]m→(0,1] be any associative and commutative function. Then, we define{a mathematical formula} where {a mathematical formula}ω⁎(e)=ω(e) if {a mathematical formula}e∈E, otherwise {a mathematical formula}ω⁎(e)=0.
+      </paragraph>
+      <paragraph>
+       Given two sets of vertices {a mathematical formula}V′ and {a mathematical formula}V″ and an edge property {a mathematical formula}ep∈EP, we define the set {a mathematical formula}possEdges(V′,V″,ep) as the set of all possible edges having property ep that can exist from vertices in {a mathematical formula}V′ to vertices in {a mathematical formula}V″, i.e. {a mathematical formula}possEdges(V′,V″,ep)={(v′,v″,ep)|v′∈V′∧v″∈V″}. Finally, if {a mathematical formula}v′ is a new vertex obtained by merging a set {a mathematical formula}V′ of vertices and {a mathematical formula}e′=(v,v′,ep) is a new incoming edge, then its weight is computed as {a mathematical formula}weight(possEdges({v},V′,ep)), while, if {a mathematical formula}e″=(v′,v,ep) is a new outgoing edge, then its weight is computed as {a mathematical formula}weight(possEdges(V′,{v},ep)).
+      </paragraph>
+      <paragraph>
+       Social network coarsening. We are now ready to give the definition of social network coarsening.
+      </paragraph>
+      <paragraph label="Definition 11">
+       Social network coarseningLet {a mathematical formula}S=(V,E,VL,ω) be an SN and θ be a real number in {a mathematical formula}(0,1] called the contraction factor. A coarsening of {a mathematical formula}S is an SN {a mathematical formula}S′=(V′,E′,VL′,ω′) together with an onto mapping {a mathematical formula}π:V→V′ s.t.:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}|V′|≤θ⋅|V|;
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}E′={〈π(v1),π(v2),ep〉|〈v1,v2,ep〉∈E∧π(v1)≠π(v2)};
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}VL′(v′)=mergeVP({v∈V|π(v)=v′},VL), for {a mathematical formula}v′∈V′;
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}ω′(e′)=weight(possEdges(π−1(v1),π−1(v2),ep)), for {a mathematical formula}e′=〈v1,v2,ep〉∈E′.
+       </list-item>
+      </list>
+      <paragraph>
+       Coarsening an SN {a mathematical formula}S yields a new SN {a mathematical formula}S′ together with a mapping π from the vertices of {a mathematical formula}S to the vertices of {a mathematical formula}S′ such that (i) the number of vertices of {a mathematical formula}S′ is smaller than that of {a mathematical formula}S by a factor θ; (ii) if there was an edge between two vertices u and v in {a mathematical formula}S, and u has been merged into a new vertex {a mathematical formula}u′ in {a mathematical formula}S′ while v has been merged into a new vertex {a mathematical formula}v′≠u′ in {a mathematical formula}S′, then there is an edge between {a mathematical formula}u′ and {a mathematical formula}v′ in {a mathematical formula}S′; (iii) the vertex properties of each merged vertex of {a mathematical formula}S′ are assigned using function mergeVP; and (iv) the weights of the edges of {a mathematical formula}S′ are assigned by function {a mathematical formula}weight. In the following, given {a mathematical formula}v′∈V′, we denote by {a mathematical formula}π−1(v′) the set {a mathematical formula}{v∈V|π(v)=v′}.
+      </paragraph>
+      <paragraph>
+       Algorithm 4 is a general algorithm for coarsening a social network. It starts by initializing the mapping function π as the identity function. In each iteration, a vertex v in the current SN is randomly selected, and the set of vertices to be merged with it is computed by the function getMergingSet. This function computes the set {a mathematical formula}U′ of all v's neighbors that are similar to v according to the similarity function SIM received as input, and returns a subset M of {a mathematical formula}U′ whose size is a percentage ρ of {a mathematical formula}|U′|. If the set of vertices M is not empty, vertex v is merged with M, otherwise a new vertex v is randomly selected. If v is merged with M, the new vertex properties of v are computed using the mergeVP function, the mapping π is updated, and the set of edges is updated by the function UpdateEdges. This function first computes the new set of edges so that if there was an edge between a vertex in {a mathematical formula}M∪{v} and another vertex u, now there is an edge between v and u, while the new edge weight is computed by using the function {a mathematical formula}weight received in input. The algorithm's iterations stop when either the number {a mathematical formula}|V′| of vertices in the current SN is less than or equal to {a mathematical formula}θ⋅|V′|, where θ is the contraction factor establishing the desired size of the coarsened network, or it is not possible to merge any other vertex. Algorithm 4 can be used with our similarity function {a mathematical formula}SIMΠ.
+      </paragraph>
+     </section>
+     <section label="6.2">
+      <section-title>
+       Adapting the DC definition to the coarsened network
+      </section-title>
+      <paragraph>
+       We now adapt diffusion centrality to the case of coarsened networks. This intermediate step will later be used in the computation of diffusion centrality for vertices of the original network. When a set of vertices M in the original network {a mathematical formula}S is merged into a single vertex {a mathematical formula}v′ in the coarsened one, {a mathematical formula}v′ represents the network {a mathematical formula}Sv′ consisting of all vertices in M and all edges among them from the original network. Thus, even if two vertices {a mathematical formula}v′ and {a mathematical formula}v″ have the same diffusion centrality on the coarsened network, the actual diffusion of the property of interest in the original network among the vertices belonging to {a mathematical formula}Sv′ and {a mathematical formula}Sv″ may be different and depends on the properties of the two subnetworks {a mathematical formula}Sv′ and {a mathematical formula}Sv″ (number of vertices, edges, etc.). To take this into account, we assign a weight to each vertex {a mathematical formula}v′ in the coarsened network representing the importance of {a mathematical formula}v′ w.r.t. to the original network.
+      </paragraph>
+      <paragraph label="Definition 12">
+       Diffusion centrality on a coarsened networkLet {a mathematical formula}S be a social network, {a mathematical formula}SC=(VC,EC,VLC,ωC) be a coarsening of {a mathematical formula}S with vertex mapping π, and mvw be a function assigning a weight to each vertex in {a mathematical formula}VC. Then, the diffusion centrality of a vertex v in the coarsened SN is defined as{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Function mvw, which we call merged vertex weight function, can be defined in several ways. Below we provide three alternative definitions. Consider an SN {a mathematical formula}S=(V,E,VL,ω), and let {a mathematical formula}SC and π be a coarsening of {a mathematical formula}S. Given a vertex v of {a mathematical formula}SC,
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}mvw0(v)=1. In this case, the original definition of DC is used.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}mvw1(v)=|Vv|×|Ev||Vv|2−|Vv|=|Ev||Vv|−1, where {a mathematical formula}Vv=π−1(v) and {a mathematical formula}Ev={〈v1,v2,ep〉|v1,v2∈Vv∧〈v1,v2,ep〉∈E}. Thus, the weight of v is given by the number of vertices in the original SN that were merged into v multiplied by the density of {a mathematical formula}Sv. The idea is that if {a mathematical formula}Sv has high density and many vertices, the weight of v should be high.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}mvw2(v)=ln⁡(mvw1(v))+1. Here, we consider the fact that the diffusion of the property p can rapidly decrease according to the distance of vertices in {a mathematical formula}Vv from the diffusion source vertex v.
+       </list-item>
+      </list>
+     </section>
+     <section label="6.3">
+      <section-title>
+       CBAF: approximately solving the kDCP problem
+      </section-title>
+      <paragraph>
+       In this section, we show how to approximately compute the top-k diffusion centrality vertices in a social network. First, we introduce some definitions.
+      </paragraph>
+      <paragraph label="Definition 13">
+       Induced social networkGiven an SN {a mathematical formula}S=(V,E,VL,ω), the SN induced from {a mathematical formula}S by a set of vertices {a mathematical formula}VI⊆V is {a mathematical formula}SI=(VI,EI,VLI,ωI), where {a mathematical formula}EI={〈v1,v2,ep〉|〈v1,v2,ep〉∈E∧v1,v2∈VI}, {a mathematical formula}VLI(v)=VL(v) for all {a mathematical formula}v∈VI, and {a mathematical formula}ωI(e)=ω(e) for all {a mathematical formula}e∈EI.
+      </paragraph>
+      <paragraph>
+       Given an SN {a mathematical formula}S=(V,E,VL,ω), a set of vertices {a mathematical formula}T⊆V, and a positive integer d, we denote by {a mathematical formula}nbrs(T,d,S) the set of the neighbors of the vertices in T at a distance no greater than d. If {a mathematical formula}d=0, then {a mathematical formula}nbrs(T,d,S)=∅.
+      </paragraph>
+      <paragraph>
+       We are now ready to present our CBAF algorithm shown in Algorithm 5. CBAF takes as input a social network {a mathematical formula}S, a GAP Π, a property p, an integer k, and a set of options {a mathematical formula}opts as described in Table 2. It returns an (approximate) set of top-k diffusion centrality vertices over {a mathematical formula}S. The first step of the algorithm filters out the original SN {a mathematical formula}S by removing all unnecessary vertices, obtaining the network {a mathematical formula}S′ (line 1). Then {a mathematical formula}S′ is coarsened into a smaller social network {a mathematical formula}SC (line 2), and the exact set {a mathematical formula}TC of top-k vertices over {a mathematical formula}SC is computed (line 3) by running HyperDC to find the diffusion centrality of all vertices in {a mathematical formula}S′ and choosing the top-k. At this point the set {a mathematical formula}TC is extended with its neighbors in {a mathematical formula}SC at a distance no greater than {a mathematical formula}dC, in order to limit the bias of the vertices in {a mathematical formula}TC in the following computation (line 4). Next, the above set of vertices is mapped back to the vertices of the original SN {a mathematical formula}S and is extended with its neighbors on {a mathematical formula}S at a distance no greater than {a mathematical formula}dI obtaining the set of vertices {a mathematical formula}VI (line 5)—with a slight abuse of notation, we use {a mathematical formula}π−1(TC) to denote {a mathematical formula}∪v∈TCπ−1(v). After that, the social network {a mathematical formula}SI induced from the vertices in {a mathematical formula}VI on {a mathematical formula}S is computed (line 6), and the algorithm returns the approximate set of top-k vertices over {a mathematical formula}S as the exact set of top-k diffusion centrality vertices computed over {a mathematical formula}SI (line 7). Note that CBAF first evaluates diffusion centrality of all vertices in the coarsened network {a mathematical formula}SC (which is typically small) and then diffusion centrality of all vertices in a subgraph of the original network corresponding to the neighborhood of vertices associated with the solution found in line 3 of the CBAF algorithm. This is typically a small fraction of the vertices in the original social network {a mathematical formula}S.
+      </paragraph>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      Experimental evaluation
+     </section-title>
+     <paragraph>
+      This section contains a detailed report on our experiments.
+     </paragraph>
+     <paragraph>
+      1) Exact Computation with HyperDC. We compared the runtime and spread generated by diffusion centrality against classical centrality measures (Section 7.2), using networks with up to around 265K vertices and 440K edges.
+     </paragraph>
+     <paragraph>
+      2) Approximate Computation with CBAF. We tested scalability, runtime, and spread of CBAF with networks of up to 2M vertices and 20M edges (Section 7.3).
+     </paragraph>
+     <paragraph>
+      3) Comparing spread of memes by high DC vertices against low DC vertices. In order to test whether diffusion centrality captured real spread, we ran a test with MemeTracker data where we knew who had initiated a meme. We tested the hypothesis that vertices with high centrality would be more influential than those with low centrality according to diffusion centrality as well as classical centrality measures. Kolmogorov–Smirnov tests validate both findings: (i) high DC vertices diffuse memes better than low DC vertices, and (ii) diffusion centrality does a better job explaining real meme diffusion than classical centrality measures.
+     </paragraph>
+     <paragraph>
+      We implemented HyperLFP (Algorithm 1), HyperDC (Algorithm 2), and CBAF (Algorithm 5) in Java. To compute degree, eigenvector, PageRank, closeness, and betweenness centrality we used the Java Universal Network/Graph Framework (JUNG).{sup:3} All experiments were run on an Intel Xeon @ 2.40 GHz, 24 GB RAM.
+     </paragraph>
+     <section label="7.1">
+      <section-title>
+       Experimental setup
+      </section-title>
+      <paragraph>
+       Social networks. Our experiments used several real-world social networks summarized in Table 3. The networks are taken from the Stanford Large Network Dataset Collection[38]. We also considered an additional online game dataset called STEAM [6], which contains friendship relations (represented as directed edges) between players (vertices). Each player has several vertex properties and we selected country, group(s), games played, and total time played per game. We extracted 10 subnetworks from the whole STEAM dataset by choosing different games and selecting, for each game, all players who played and all edges between the players. The features of the extracted networks are reported in Table 4.
+      </paragraph>
+      <paragraph>
+       Diffusion models. We ran experiments with a conditional probability model (hereafter referred to as the “Flickr model” [13]), the Jackson–Yariv tipping model [28], and the SIR model of disease spread [2]. We generalized these diffusion models by adding an additional condition {a mathematical formula}q(u):μ in rule bodies. When all vertices have the property q, then we have the original diffusion models. The q-condition determines when the diffusion process can happen. More specifically, for the Flickr model, only vertices satisfying property q can spread the diffusive property, while for the Jackson–Yariv and SIR models, only vertices satisfying property q can get the diffusive property. In the Flickr model, q is used to represent the “willingness” of a person to share her/his information (and thus influence other people). In the Jackson–Yariv and SIR models, q is used to represent a precondition for a vertex to adopt a behavior or get a disease. Thus, property q is useful when expressing the fact that only some vertices with some characteristics (modeled by q) can infect or be infected by the diffusive property. Note that edges originating from nodes that do not have property q can still play a role in the diffusion depending on the diffusion model. In our experiments, we compared DC with other classical centrality measures by varying the percentage of vertices in the network with property q. The diffusion models are reported in Appendix A.
+      </paragraph>
+     </section>
+     <section label="7.2">
+      <section-title>
+       Diffusion centrality vs. classical centrality measures
+      </section-title>
+      <paragraph>
+       As described earlier, the Flickr, Jackson–Yariv, and SIR models assume that some set of vertices in the network have property p and that only vertices satisfying some property q can spread (in the case of the Flickr model) or receive (in the case of Jackson–Yariv and SIR models) p. For STEAM data, we were able to use known properties of the vertices for q but we were not able to do this for the other datasets.
+      </paragraph>
+      <paragraph>
+       Before getting into the details of our experimental evaluation, we summarize the high level conclusion of these comparative experiments (experiments on scalability using the CBAF algorithm are in the next subsection): (i) the runtime of HyperDC is better than betweenness and closeness centrality and comparable with the others, and (ii) the spread achieved by diffusion centrality is almost always better than those achieved by classical centrality measures.
+      </paragraph>
+      <section label="7.2.1">
+       <section-title>
+        STEAM data
+       </section-title>
+       <paragraph>
+        We used all but the last two (very large) STEAM data sets (Table 4) for the comparative analysis as some classical centrality measures could not finish the computation even on the first seven STEAM data sets. Consistent with the data, we set the percentage {a mathematical formula}δp of vertices that initially have property p to 0% and varied the percentage {a mathematical formula}δq of vertices having property q by using real properties of vertices in the STEAM data. In the STEAM data, q was taken to be the playing time of users in the game and was assigned as follows: we sorted the players in descending order according to playing time and assigned q to the first {a mathematical formula}δq users. We varied {a mathematical formula}δq∈{1%,2%,3%,4%,5%,10%,15%,20%, {a mathematical formula}25%, {a mathematical formula}30%}. The last two STEAM subnetworks, which are substantially larger, were used for the evaluation of the CBAF algorithm (cf. Section 7.3).
+       </paragraph>
+       <paragraph>
+        Runtime. We compared the time to compute DC w.r.t. the three diffusion models against the time to compute classical centrality measures. Fig. 3 shows how the runtimes vary w.r.t. {a mathematical formula}δq for two representative STEAM games.
+       </paragraph>
+       <paragraph>
+        Of the 7 STEAM games we tested in this experiment, closeness centrality computation finished only in the smallest case (GAME8690). HyperDC is much faster than betweenness and closeness centrality for all the STEAM networks and for all values of {a mathematical formula}δq. Even when {a mathematical formula}δq=30%, the runtime of HyperDC is still low.
+       </paragraph>
+       <paragraph>
+        HyperDC is faster than PageRank over networks GAME8690 and GAME50510 (the two smallest STEAM networks) for the Flickr and Jackson–Yariv models, and also faster than degree over network GAME50510 when {a mathematical formula}δq is low.{sup:4} However, when the number of vertices increases (i.e., for the STEAM datasets other than GAME8690 and GAME50510), HyperDC becomes slower than PageRank and degree for all three diffusion models. For instance, in GAME1500, a crossover occurs when {a mathematical formula}δq=3% for the SIR model but not for the Jackson–Yariv model. There are two main reasons for that: (i) the size of {a mathematical formula}IΠ,p is larger for the SIR model (recall that the smaller {a mathematical formula}IΠ,p is, the more effective the optimization of Proposition 3 will be), and (ii) the SIR model is neither p-monotonic nor p-dwindling (and thus optimizations are less effective, cf. Section 5.1).
+       </paragraph>
+       <paragraph>
+        Runtime of HyperDC tends to be linear. We note from Proposition 6 that in the worst case, the complexity of HyperDC is nonlinear. In order to assess actual runtime characteristics of HyperDC, we ran an experiment on the STEAM data when the number of vertices increases and as {a mathematical formula}δq varies. We used the networks from GAME 50510, 6850, 11450, and 17300 which all have a similar average degree (in the 3–4 range). Fig. 4 shows the number of vertices in the network on the x-axis and the average runtime per vertex on the y-axis. Different curves show varying values of {a mathematical formula}δq in the range 5–30%. We see that irrespective of the diffusion model used and the value of {a mathematical formula}δq, HyperDC runs in linear time in practice.
+       </paragraph>
+       <paragraph>
+        Higher values of {a mathematical formula}δq lead to higher running times, because when more vertices have property q, diffusion unfolds more and thus HyperDC takes more time to converge to the least fixed point. In several real scenarios, information spreading is limited to individuals who are within close proximity (e.g., see [13]).
+       </paragraph>
+       <paragraph>
+        Spread. We now compare the diffusion of property p when we choose the top-k central vertices according to DC vs. using classical centrality measures on the STEAM data. In each case, the top-k vertices are called seeds. We vary k from 10 to 100 in steps of 10. The spread w.r.t. a given set of seeds is the expected number of vertices with property p (after diffusion) assuming the seeds have property p minus the expected number of vertices with property p (after diffusion) in the original social network. This difference is normalized. By the expected number of vertices with property p for an SN {a mathematical formula}S after diffusion of Π we mean {a mathematical formula}∑v∈Vlfp(Π∪ΠS)(p(v)), where V is the set of vertices of {a mathematical formula}S. Our spread experiments are presented in two ways. In the first, we show how spread varies by averaging over the number of seeds for fixed {a mathematical formula}δq values. In the second, we do the opposite.
+       </paragraph>
+       <paragraph>
+        Spread experiments averaged over varying k values for specific{a mathematical formula}δqvalues. We varied {a mathematical formula}δq over the set {a mathematical formula}{1%,2%,3%,4%,5%,10%,15%,20%,25%,30%}. For each selection of {a mathematical formula}δq, we considered every value of k from the set {a mathematical formula}{10,20,…,100}. Then for a fixed {a mathematical formula}δq,k,Diffusion–Model triple, we computed the ratio of the spread using DC to the best spread achieved by any of the classical centrality measures. Table 5 reports the average of these ratios. Thus, any ratio greater than 1 shows that DC achieves a higher spread than all of the classical centrality measures.
+       </paragraph>
+       <paragraph>
+        For the Flickr and Jackson–Yariv models, DC always achieved a better spread than all classical centrality measures. For the SIR model, on average, DC achieves better spreads than classical centrality measures as long as {a mathematical formula}δq≤15% — at 20%, they are even, and at 25–30%, classical centrality measures achieve a better spread.
+       </paragraph>
+       <paragraph>
+        Not surprisingly, this spread ratio decreases as {a mathematical formula}δq increases because when {a mathematical formula}δq is large, more vertices get infected regardless of how the seeds were chosen and thus the difference between DC and other centrality measures decreases.
+       </paragraph>
+       <paragraph>
+        Interestingly, spread ratios for the Flickr model are very large compared to those for the Jackson–Yariv and SIR models. This is because the expected number of vertices which have property p after diffusion is much higher in the case of the Flickr model than in the other two cases.
+       </paragraph>
+       <paragraph>
+        Spread experiments averaged over varying{a mathematical formula}δqvalues for specific k values. Here we selected values of k as before and averaged over different possible values of {a mathematical formula}δq drawn from the set {a mathematical formula}{1%,2%,3%,4%,5%,10%,15%,20%,25%,30%}. Table 6 summarizes the results. As in the previous case, a ratio exceeding 1 implies that DC outperforms all classical centrality measures. On average, for all values of k and for all three diffusion models, DC achieves a better spread than all the classical centrality measures, with only a few exceptions in the SIR model.
+       </paragraph>
+       <paragraph>
+        Interestingly, the spread ratio for GAME8690 is consistently the lowest according to each of three diffusion models and in each setting of both Table 5, Table 6. This game has just 4083 vertices (so it is very small and dense). Our choice of q is based on the amount of playing time of a player and there is strong correlation between that and the number of friends. As a consequence, having multiple seeds does not greatly increase diffusion of property p because of overlaps between the vertices that may be influenced by the seeds.
+       </paragraph>
+      </section>
+      <section label="7.2.2">
+       <section-title>
+        Non-game social network data
+       </section-title>
+       <paragraph>
+        In this section, we perform experiments similar to those reported above on the networks in Table 3. For these networks, the data did not have associated vertex properties. We looked at two cases.
+       </paragraph>
+       <paragraph>
+        Case 1. We randomly selected {a mathematical formula}δp=0.1% of the vertices to have a synthetic property p (in 5 runs). In each run, we varied {a mathematical formula}δq∈{1%,2%,3%,4%,5%, {a mathematical formula}10%,15%, {a mathematical formula}20%,25%,30%} and selected {a mathematical formula}δq% of the vertices to have a synthetic property q.
+       </paragraph>
+       <paragraph>
+        Case 2. We randomly selected {a mathematical formula}δq=3% of the vertices and varied {a mathematical formula}δp∈{0.1%,0.2%, {a mathematical formula}0.3%,0.4%,0.5%}, associating synthetic properties p and q with vertices as above.
+       </paragraph>
+       <paragraph>
+        Recall that, as mentioned before, vertices that do not have the q-property can still play a role in spreading p depending on the diffusion model.{sup:5}
+       </paragraph>
+       <paragraph>
+        Runtime. Case 1.Fig. 5 shows how runtime varies w.r.t. {a mathematical formula}δq for Case 1 above. The networks are sorted from left to right according to the number of vertices, with directed networks in the first row and undirected networks in the second row. As in the case of our experiments with the STEAM data, closeness and betweenness centrality are time consuming compared to the other algorithms (including HyperDC).
+       </paragraph>
+       <paragraph>
+        HyperDC with the Flickr model is faster than PageRank in the majority of cases considered, and sometimes faster than eigenvector centrality. HyperDC with the SIR model is faster than PageRank for directed networks when {a mathematical formula}δq≤4%. As in the case of the STEAM data described earlier, this is because the network filtering step can eliminate many vertices. For the Flickr and SIR models, the runtimes increase slightly as {a mathematical formula}δq increases because of the higher diffusion that takes place.
+       </paragraph>
+       <paragraph>
+        However, as in the case of the STEAM data, HyperDC with the Jackson–Yariv model often takes the most time. By increasing the percentage of vertices having property q, computing diffusion centrality for the Jackson–Yariv model becomes slower than for the other diffusion models, because the diffusion process is determined by the sum of neighbors' diffusion probability and now we have that 0.1% of the vertices initially have the property p. Thus, every time that a vertex's probability is updated, all of its neighbors who have q are updated in the next step.
+       </paragraph>
+       <paragraph>
+        Case 2.Fig. 6 shows how runtime varies as {a mathematical formula}δp varies. The runtime for closeness and betweenness centrality are very high (worse by 1 to 3 orders of magnitude) and hence we do not report runtimes for them.
+       </paragraph>
+       <paragraph>
+        HyperDC's runtime for the Flickr and SIR models do not vary much with {a mathematical formula}δp. HyperDC with the Flickr model is faster than PageRank in almost all networks and settings. Compared to degree centrality, HyperDC with Flickr exhibits competitive runtimes, being faster in about half the settings considered and comparable or slightly worse in the others. HyperDC with the SIR model is faster than PageRank in all data sets except the Douban data set.
+       </paragraph>
+       <paragraph>
+        As in the case of the STEAM data, HyperDC with the Jackson–Yariv is the worst performer w.r.t. runtime (excluding betweenness and closeness centrality which we eliminated earlier due to their high running times) because the computation of diffusion centrality for the Jackson–Yariv model becomes slower when many vertices have the diffusion property p.
+       </paragraph>
+       <paragraph>
+        Spread. In both Cases 1 and 2, on average, experimental results showed that the ratio of spread generated by HyperDC to the spread generated by the best classical measure exceeds 1. As in the case of the STEAM data, the best ratios are for the Flickr model.
+       </paragraph>
+      </section>
+     </section>
+     <section label="7.3">
+      <section-title>
+       CBAF algorithm: performance experiments
+      </section-title>
+      <paragraph>
+       In this section, we describe experiments we performed to compare CBAF with HyperDC in terms of both runtime and spread. Simply put, these experiments show that CBAF almost always achieves the same spread as HyperDC with a runtime that is always lower (with the correct choice of settings) than HyperDC—moreover, sometimes it takes less than half the runtime of HyperDC.
+      </paragraph>
+      <paragraph>
+       Input options for CBAF. There are a number of input options for CBAF that influence its performance (cf. Table 2). In order to find the best possible input options, we ran extensive experiments in which we considered the 972 different candidate option sets determined by the candidate values reported in Table 7. Each option set was tested 5 times (because of the random component of the algorithm) over the GAME17300 network. Candidate option sets were compared on the basis of their running time and the quality of their results, measured in terms of spread, recall, Kendall and Spearman's rank correlation coefficients. The three option sets that achieved a good balance between runtime and spread are reported in Table 7—these were the options we used in our experiments with CBAF. Specifically, {a mathematical formula}dC=1 and {a mathematical formula}dI=0 showed better running times than the other values with little difference in terms of quality; {a mathematical formula}weight=min was disregarded as its computing time was slightly better than max and average, while the quality was much worse; running times for {a mathematical formula}mergeVP=union and {a mathematical formula}mvw=mvw2 were worse than the other values while the qualities were similar; {a mathematical formula}ρ=100% showed slightly higher running times, but much better quality than the other values. In all experiments, we used the vertex similarity function {a mathematical formula}SIMΠ defined earlier. The contraction factor θ was chosen from the set {a mathematical formula}{0.2,0.3,0.4}.
+      </paragraph>
+      <paragraph>
+       CBAF evaluation measures. We used two measures to evaluate CBAF. The time ratio (denoted {a mathematical formula}ratiotime) is simply the ratio of time taken by CBAF vs. HyperDC. The spread ratio (denoted {a mathematical formula}ratiospread) is the ratio of spread according to CBAF (assuming the top-k vertices have property p) vs. that according to HyperDC.
+      </paragraph>
+      <paragraph>
+       We compared HyperDC and CBAF over the two largest STEAM networks (GAME420 with 1.3M vertices and 12.43M edges, and GAME220 with 2.03M vertices and 20.59M edges) and the 2 largest non-game networks (Email-Eu and Douban), together with the Flickr, Jackson–Yariv, and SIR models, using the three best option sets of Table 7. In all the experiments we set {a mathematical formula}δp=0 and {a mathematical formula}δq=5%. For the Email-Eu and Douban networks, we set {a mathematical formula}k=100 and {a mathematical formula}θ∈{0.4,0.3,0.2}. For the two STEAM networks, we ran the experiments with {a mathematical formula}θ=0.4, and {a mathematical formula}k∈{130,650,1300} for GAME420 and {a mathematical formula}k∈{200,1000,2000} for GAME220.
+      </paragraph>
+      <paragraph>
+       Runtime. Option {a mathematical formula}OP3 is the one that consistently yielded the fastest runtimes for CBAF and its results are reported in Table 8 (we present the results only for the network GAME220, which is the largest one, because the results for GAME420 are quite similar to the ones for GAME220). The time ratios are always less than one in all networks and for all diffusion models with the exception of the Jackson–Yariv model in the huge network GAME220 with {a mathematical formula}k=2000. In particular, on the Douban network with the SIR model the time ratio is less than 50%, while delivering an almost perfect spread ratio of 0.99. On the Email-Eu network using the Jackson–Yariv model, it runs in just over 50% of the time taken by HyperDC. On the huge GAME220 network using the Flickr model it runs in under {a mathematical formula}60% of the time taken by HyperDC. CBAF does not work well for the Jackson–Yariv model in the two huge networks because of the high average degree of these networks.
+      </paragraph>
+      <paragraph>
+       Spread. In all cases, all three options yield approximately the same spread. In the huge networks and the Douban network, the spread ratio is always close to one. On the Email-Eu network, the spreads range from 0.8–0.9 for the Jackson–Yariv and SIR models. However, for the Flickr model, the spread is lower, mostly in the 0.6–0.7 range. The reason for this is that the Email-Eu network has a very low average degree which leads to merged vertices (in the coarsened networks) representing only small sets of vertices of the original network so that the induced network is small and not representative enough to compute approximate top-k vertices well.
+      </paragraph>
+      <paragraph>
+       The performance of CBAF w.r.t. runtime and spread depends on the input options. In general, we have observed that the more aggressive is the coarsening step, the faster is the algorithm, but the quality (spread) gets worse. In the step computing the induced SN, if we add more neighbors the quality gets better, but running times become higher.
+      </paragraph>
+     </section>
+     <section label="7.4">
+      <section-title>
+       Testing the quality of DC in MemeTracker data
+      </section-title>
+      <paragraph>
+       We also tested the quality of diffusion centrality in the real context of memes diffusion through the Web. We used the MemeTracker data{sup:6} consisting of a set of 172M news articles and blog posts from 1M online sources collected from September 1 2008 till August 31 2009. For each article/post the dataset contains timestamp, phrases contained in the document and hyper-links. In addition, phrases have been clustered together and this information is available in the data, too. We considered all phrases in the same cluster as the same meme. We built a network from the raw phrase data where vertices are online websites and edges are hyperlinks. More specifically, we selected as vertices the top 10,000 sites w.r.t. number of hyperlinks, and inserted a direct edge {a mathematical formula}(u,v) between two sites u and v if there is a webpage on site u having a hyperlink to a webpage on site v.
+      </paragraph>
+      <paragraph>
+       Our aim was to show that diffusion centrality correlates well with the spread generated by vertices: vertices with high diffusion centrality spread more than vertices with low diffusion centrality. To show that, we restricted our attention to source vertices, i.e. online websites that firstly showed a meme m, and for each of them we computed the actual spread (number of websites infected by m). We assumed that a site u infected a site v with meme m if there is an edge from u to v, m appeared on u at time t1 and on v at time t2, and {a mathematical formula}t1&lt;t2. When many webpages belonging to the same website u are infected by the same meme m, we consider the smaller webpage timestamp as timestamp for the infection of u. Moreover, our analysis focused only on the top 5000 most spread memes.
+      </paragraph>
+      <paragraph>
+       We assumed that the memes diffusion through the websites is described by a (cascade) diffusion model for which we estimated the parameters by using the actual spread of memes (the identification of the actual model for memes diffusion is out of the scope of this paper).
+      </paragraph>
+      <paragraph>
+       By using the MemeTracker data and the above diffusion model, we performed a set of experiments as follows. We do not use a k-fold cross validation since we have temporal data, but we considered a time window {a mathematical formula}(t1,t2) to determine training/testing data that we moved in steps of one day, whose size (in days) assumed values in the set {a mathematical formula}{30,60,90}. For each time window, we considered the data whose timestamp is in the first 80% of the days as a training set to estimate the parameter of the diffusion model, and the last part as a test set. For each meme m in the test set we computed the tuple {a mathematical formula}(m,v,c,s), where v is the source of m, c is its centrality value (we computed diffusion centrality, PageRank, degree, betweenness and closeness centrality), and s is the actual spread of m.
+      </paragraph>
+      <paragraph>
+       Fig. 7 (left) shows the distribution of centrality values for DC, PageRank, closeness, betweenness, and degree centrality as well as the distribution of the actual spread over all the memes in the dataset and by considering a sliding time window of size 30 days. The plot in Fig. 7 (right) shows the value of the distance (measured by using the Kolmogorov–Smirnov statistic) between the actual spread distribution and the distribution of PageRank, closeness, diffusion, betweenness, and degree centrality. The figure shows that the distribution of DC values is the closest to the one of the actual spread and its distance is the smallest. This result intuitively suggests that an initiator with a high value of diffusion centrality is more likely to reach a high value of spread than one with a low value of diffusion centrality, while this does not hold for the other centrality measures.
+      </paragraph>
+     </section>
+     <section label="7.5">
+      <section-title>
+       Summary of experiments
+      </section-title>
+      <paragraph>
+       In this section, we conducted three experiments. The first compares HyperDC with classical centrality measures. The experiment shows that: The runtime of HyperDC is better than betweenness and closeness centralities and comparable with other centrality measures. The spread achieved by diffusion centrality is almost always better than those achieved by classical centrality measures.
+      </paragraph>
+      <paragraph>
+       The second experiment compares HyperDC with CBAF. We show that CBAF almost always achieves the same spread as HyperDC with a runtime that is always lower (with the correct choice of settings) than HyperDC.
+      </paragraph>
+      <paragraph>
+       Recall that in our experimental setup, we considered an initial distribution of a property q, which models a characteristic that a vertex should have to infect or be infected by the diffusive property. As also discussed before, running times increase as the percentage {a mathematical formula}δq of vertices having property q increases. This is because diffusion unfolds more with more vertices having property q, which means that the time to compute DC increases. Nevertheless, HyperDC showed good performances with values of {a mathematical formula}δq up to {a mathematical formula}30%. Lower percentages of vertices having property q essentially mean that propagation unfolds less, and thus the fixpoint of HyperDC is reached sooner. However, it is worth mentioning that this is the case in several real scenarios. For instance, [13] analyzed propagation in the Flickr social network and found out that even the more popular photos have substantially limited popularity outside the immediate network neighborhood of the uploader.
+      </paragraph>
+      <paragraph>
+       The runtime of DC is expected to be higher with more complex diffusion models. A structural analysis of the corresponding GAPs can provide insights on what to expect from the diffusion model in terms of running time to evaluate it. In this regard, the subclasses of GAPs and the optimizations introduced in Section 5 are useful tools. For instance, if a GAP is p-monotonic and/or p-dwindling, we can lower running times, as we can apply further optimizations and because the HyperLFP converges more quickly. Another useful parameter to analyze is the size of {a mathematical formula}IΠ,p, which roughly speaking consists of the predicate symbols “interfering” with p; we can expect better performances when {a mathematical formula}IΠ,p is small. These analyses are useful in practice to “tune” the diffusion model and find a good balance between accurateness of the model and time to evaluate it. For instance, one might want to simplify the considered diffusion model to make it p-monotonic, sacrificing its accurateness in describing the diffusion process, but obtaining a more efficient evaluation.
+      </paragraph>
+      <paragraph>
+       To strengthen our claims about the advantage of DC in predicting the spread initiated by given vertices, we used the MemeTracker data where diffusion occurred naturally without our intervention. The parameters of the diffusion model were estimated from the data (making sure to separate learning and testing data). The results of this experiment showed that there is a correlation between the DC values and the actual diffusion of memes: high diffusion centrality vertices diffuse memes better than low diffusion centrality vertices. It also showed that diffusion centrality is a better predictor of real meme diffusion than classical centrality measures.
+      </paragraph>
+     </section>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     <section-title>
+      Diffusion models
+     </section-title>
+     <paragraph>
+      Below we provide details on the diffusion models used in the experimental evaluation. The Flickr model consists of the following rule (see [51]):{a mathematical formula} saying that if vertex {a mathematical formula}v′ has properties q and p then it can diffuse property p to its neighbor v. The value {a mathematical formula}dpF is a constant representing the probability that the vertex v will receive property p. This model falls into the category of cascade models.
+     </paragraph>
+     <paragraph>
+      The Jackson–Yariv model is a diffusion model stating that a vertex will receive (adopt) a property p according to the cumulative effect of its neighbors and the ratio of the benefit to the cost of the vertex for adopting p. Suppose that {a mathematical formula}vi is an agent having a default behavior that can be changed in the new behavior p, and that {a mathematical formula}vi has specific cost {a mathematical formula}ci and benefit {a mathematical formula}bi for adopting the behavior p. Then, the Jackson–Yariv model can be expressed by the rule (see [51]):{a mathematical formula} where (1){a mathematical formula}r(∑jEj) is a function describing how the number of neighbors of {a mathematical formula}vi affects the benefits to {a mathematical formula}vi for adopting behavior p, (2){a mathematical formula}∑jwj∑jEj is the fraction of the neighbors of {a mathematical formula}vi having property p, and (3){a mathematical formula}dpJY is a constant representing the probability that the vertex v will adopt the property p. In our experiments we set {a mathematical formula}r(∑jEj) to be a logarithmic function normalized by the logarithm of the maximum in-degree {a mathematical formula}dmaxin of the network, and having values within the interval {a mathematical formula}[0.1,2], i.e., {a mathematical formula}r(∑jEj)=1.9×ln⁡(∑jEj)ln⁡(dmaxin)+0.1. When the annotation μ of an atom {a mathematical formula}p(v), with {a mathematical formula}v∈V, becomes greater than 1, then we set {a mathematical formula}μ=1. Moreover, observe that the vertex {a mathematical formula}vi can adopt property p only if it also has property q. For the STEAM data, we set {a mathematical formula}bici=1 for all vertices, while for the Non-Game networks we randomly assigned {a mathematical formula}bici to the vertices according to a normal distribution with {a mathematical formula}0.5≤bici≤1.5.
+     </paragraph>
+     <paragraph>
+      The SIR model is a classic disease model which labels each vertex with susceptible if it has not had the disease but can receive it from one of its neighbors, infectious if it has caught the disease and t units of time have not expired, and recovered when the vertex can no longer catch or transmit the disease. The diffusion rules are following (see [51]):{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Here, only the vertices having property q can be susceptible and the diffusion property p represents that a vertex is infected. Properties {a mathematical formula}ri ({a mathematical formula}i≠t) express that a vertex is in the infectious state at time {a mathematical formula}t−1 and {a mathematical formula}rt means that a vertex is recovered. In our experiments, we set {a mathematical formula}t=2. The constant {a mathematical formula}dpSIR is the probability that the vertex v will be infected. The SIR model falls into the category of cascade models.
+     </paragraph>
+     <paragraph>
+      We conclude this section by showing how the well-known linear threshold model can be expressed with GAPs. Recall that in the linear threshold model, a vertex v is influenced by each neighbor w according to a weight {a mathematical formula}bw,v such that {a mathematical formula}∑wneighbor ofvbw,v≤1. Furthermore, each vertex v has a threshold {a mathematical formula}θv∈[0,1], which is the weighted fraction of v's neighbors that must become active in order for v to become active, that is, v becomes active if {a mathematical formula}∑wactive neighbor ofvbw,v≥θv. The GAP below captures the behavior of the linear threshold model. For each vertex v, the GAP has a rule of the following form:{a mathematical formula} Notice that the SN is assumed to be modeled with facts of the form {a mathematical formula}e(w,v):bv,w, meaning that w is a neighbor of v and {a mathematical formula}bw,v is the weight according to which w influences v. If a vertex v is active, then {a mathematical formula}p(v):1 holds, otherwise {a mathematical formula}p(v):0 holds.
+     </paragraph>
+    </section>
+    <section label="Appendix B">
+     <section-title>
+      Proofs
+     </section-title>
+     <paragraph label="Proposition 3">
+      Consider an SN{a mathematical formula}S, a property p, and a GAP Π. Let ψ be the interpretation{a mathematical formula}lfp(ΠS∪Πp⁎). Then,{a mathematical formula}lfp(Π∪ΠS)(p(v))=lfp((Πp∖Πp⁎)∪{A:ψ(A)|A∈A})(p(v))for every vertex v of{a mathematical formula}S.
+     </paragraph>
+     <paragraph label="Proof">
+      All the rules in {a mathematical formula}Π∖Πp have a predicate in the head atom that cannot reach predicate p, and then these rules do not affect the value of {a mathematical formula}lfp(Π∪ΠS)(p(v)). As we are interested in computing the diffusion centrality for property p, we can ignore these rules in the computation. Moreover, rules in {a mathematical formula}Πp can be partitioned into two sets of rules, namely {a mathematical formula}Πp⁎ and {a mathematical formula}(Πp∖Πp⁎), and by definition of {a mathematical formula}Πp⁎, we have that rules in {a mathematical formula}(Πp∖Πp⁎) “depend on” rules in {a mathematical formula}Πp⁎ because an atom having predicate symbol {a mathematical formula}q∈IΠ,p may appear in the head of a rule in {a mathematical formula}Πp⁎ and in the body of a rule in {a mathematical formula}(Πp∖Πp⁎), but not vice versa. Thus, the rules in {a mathematical formula}(Πp∖Πp⁎) do not contribute to the least fixed point of {a mathematical formula}Πp⁎ and then the value of ψ can be pre-computed. □
+     </paragraph>
+     <paragraph label="Proposition 4">
+      The Flickr model is p-monotonic and p-dwindling. The Jackson–Yariv model is p-monotonic but not p-dwindling. The SIR model is neither p-monotonic nor p-dwindling.
+     </paragraph>
+     <paragraph label="Proof">
+      The GAP describing the Flickr model is p-monotonic because the function {a mathematical formula}μv′,v×μp×μq×dpF in the head of its unique rule is clearly monotonic. The GAP is also p-dwindling because the value of the function {a mathematical formula}μv′,v×μp×μq×dpF is less than or equal to any value that {a mathematical formula}μp can assume, as the annotations {a mathematical formula}μv′,v, {a mathematical formula}μq and the constant {a mathematical formula}dpF can assume only values between 0 and 1.The GAP describing the Jackson–Yariv model is p-monotonic too. In fact, the function in the head of its unique rule is monotonic as the term {a mathematical formula}bici×r(∑jEj)×1∑jEj×dpJY is a constant. However, the GAP describing the Jackson–Yariv model is not p-dwindling because of the term {a mathematical formula}∑jωj in the head atom function.The GAP describing the SIR model is not p-monotonic because of the terms {a mathematical formula}(1−R) and {a mathematical formula}(1−R′) in the head atom annotation function of the first rule (which is {a mathematical formula}(1−R)×μv′,ve×μv′p×(1−R′)×μvq×dpSIR). Moreover, the GAP is not p-dwindling. To see this, it is sufficient to note that, because of the presence of the terms {a mathematical formula}(1−R) and {a mathematical formula}(1−R′) in the head atom annotation function of the first rule, we cannot say that the value assumed by this function is always less than or equal to R or {a mathematical formula}R′ (remember that {a mathematical formula}IΠSIR,p={p,r1,r2}). □
+     </paragraph>
+     <paragraph label="Proposition 5">
+      The worst-case time complexity of Algorithm HyperLFP is{a mathematical formula}O(|N|+1α⋅|H|⋅(log⁡|H|+Umax⋅(Smax+log⁡|H|))), where{a mathematical formula}Umax=maxv∈V,q∈IΠ,p⁡{|{h|h∈H∧q(v)∈S(h)}|},{a mathematical formula}Smax=maxh∈H⁡{|S(h)|}, and α is the minimum value obtained at line 9 for{a mathematical formula}(w−M′[q][v]).
+     </paragraph>
+     <paragraph label="Proof">
+      The cost of making two copies of the matrix M at Lines 1–2 is {a mathematical formula}O(|N|). The loop at Line 5 is executed {a mathematical formula}|H| times, as at each iteration we remove an hyper-edge from {a mathematical formula}Heap (Line 6). Within this loop, the predominant costs are the cost of deleting the maximum from {a mathematical formula}Heap (Line 6), which is {a mathematical formula}O(log⁡|H|), and the cost of the loop at Line 10. This loop is executed for each hyper-edge {a mathematical formula}h′∈U[q][v] whose number is {a mathematical formula}Umax in the worst-case and at each iteration the cost of computing the function W at Line 11 is {a mathematical formula}O(Smax) in the worst-case, while the cost of adding {a mathematical formula}〈h′,w′〉 either to {a mathematical formula}Heap (Line 16) or {a mathematical formula}Heap′ (Line 18) is {a mathematical formula}O(log⁡|H|). Thus, the cost of executing Lines 5–19 is {a mathematical formula}O(|N|+|H|⋅(log|H|+Umax⋅Smax)). Finally, the loop at Line 3 is executed {a mathematical formula}1α times in the worst-case as 1 is the maximum growth the annotation of an atom can have and α is the minimum increment step. □
+     </paragraph>
+     <paragraph label="Proposition 6">
+      The worst-case time complexity of Algorithm HyperDC is{a mathematical formula}O(|V|⋅(|N|+1α⋅|H|⋅(log⁡|H|+Umax⋅(Smax+log⁡|H|)))), where{a mathematical formula}Umax=maxv∈V⁡{|{h|h∈H∧v∈S(h)}|},{a mathematical formula}Smax=maxh∈H⁡{|S(h)|}, and α is defined as inProposition 5.
+     </paragraph>
+     <paragraph label="Proof">
+      By leveraging Proposition 1, the HyperDC algorithm computes one least fix point for each vertex, so its worst-case time complexity is given by the number of vertices ({a mathematical formula}|V|) times the worst-case time complexity of the HyperLFP algorithm (which is {a mathematical formula}O(|N|+1α⋅|H|⋅(log⁡|H|+Umax⋅(Smax+log⁡|H|)))) called at line 17. □
+     </paragraph>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

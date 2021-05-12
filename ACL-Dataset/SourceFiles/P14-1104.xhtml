@@ -1,0 +1,630 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Active Learning with Efficient Feature Weighting Methods for Improving Data Quality and Classification Accuracy</title>
+<!--Generated on Tue Jun 10 18:37:18 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Active Learning with Efficient Feature Weighting Methods 
+<br class="ltx_break"/>for Improving Data Quality and Classification Accuracy</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Justin Martineau<sup class="ltx_sup">1</sup>,
+Lu Chen<sup class="ltx_sup">2</sup><sup class="ltx_sup"> </sup>,
+Doreen Cheng<sup class="ltx_sup">3</sup>, 
+</span><span class="ltx_author_notes"><span>This author’s research was done during an internship with Samsung Research America.</span></span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Amit Sheth<sup class="ltx_sup">4</sup> 
+<br class="ltx_break"/> <sup class="ltx_sup">1,3</sup> Samsung Research America, Silicon Valley 
+<br class="ltx_break"/><sup class="ltx_sup">1,3</sup> 75 W Plumeria Dr. San Jose, CA 95134 USA 
+<br class="ltx_break"/><sup class="ltx_sup">2,4</sup> Kno.e.sis Center, Wright State University 
+<br class="ltx_break"/><sup class="ltx_sup">2,4</sup> 3640 Colonel Glenn Hwy. Fairborn, OH 45435 USA 
+<br class="ltx_break"/><sup class="ltx_sup">1,3</sup> {justin.m, doreen.c}@samsung.com 
+<br class="ltx_break"/><sup class="ltx_sup">2,4</sup> {chen, amit}@knoesis.org 
+<br class="ltx_break"/>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Many machine learning datasets are noisy with a substantial number of mislabeled instances. This noise yields sub-optimal classification performance. In this paper we study a large, low quality annotated dataset, created quickly and cheaply using Amazon Mechanical Turk to crowdsource annotations. We describe computationally cheap feature weighting techniques and a novel non-linear distribution spreading algorithm that can be used to iteratively and interactively correcting mislabeled instances to significantly improve annotation quality at low cost. Eight different emotion extraction experiments on Twitter data demonstrate that our approach is just as effective as more computationally expensive techniques. Our techniques save a considerable amount of time.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Supervised classification algorithms require annotated data to teach the machine, by example, how to perform a specific task. There are generally two ways to collect annotations of a dataset: through a few expert annotators, or through crowdsourcing services (e.g., Amazon’s Mechanical Turk). High-quality annotations can be produced by expert annotators, but the process is usually slow and costly. The latter option is appealing since it creates a large annotated dataset at low cost. In recent years, there have been an increasing number of studies <cite class="ltx_cite">[<a href="#bib.bib1" title="Internet-scale collection of human-reviewed data" class="ltx_ref">20</a>, <a href="#bib.bib2" title="Crowdsourcing user studies with mechanical turk" class="ltx_ref">9</a>, <a href="#bib.bib3" title="Get another label? improving data quality and data mining using multiple, noisy labelers" class="ltx_ref">18</a>, <a href="#bib.bib4" title="Cheap and fast—but is it good?: evaluating non-expert annotations for natural language tasks" class="ltx_ref">19</a>, <a href="#bib.bib5" title="Fast, cheap, and creative: evaluating translation quality using amazon’s mechanical turk" class="ltx_ref">2</a>]</cite> using crowdsourcing for data annotation. However, because annotators that are recruited this way may lack expertise and motivation, the annotations tend to be more noisy and unreliable, which significantly reduces the performance of the classification model. This is a challenge faced by many real world applications – <span class="ltx_text ltx_font_italic">given a large, quickly and cheaply created, low quality annotated dataset, how can one improve its quality and learn an accurate classifier from it?</span></p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Re-annotating the whole dataset is too expensive. To reduce the annotation effort, it is desirable to have an algorithm that selects the most likely mislabeled examples first for re-labeling. The process of selecting and re-labeling data points can be conducted with multiple rounds to iteratively improve the data quality. This is similar to the strategy of active learning. The basic idea of active learning is to learn an accurate classifier using less training data. An active learner uses a small set of labeled data to iteratively select the most informative instances from a large pool of unlabeled data for human annotators to label  <cite class="ltx_cite">[<a href="#bib.bib8" title="Active learning literature survey" class="ltx_ref">17</a>]</cite>. In this work, we borrow the idea of active learning to interactively and iteratively correct labeling errors.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">The crucial step is to <span class="ltx_text ltx_font_italic">effectively and efficiently</span> select the most likely mislabeled instances. An intuitive idea is to design algorithms that classify the data points and rank them according to the decreasing confidence scores of their labels. The data points with the highest confidence scores but conflicting preliminary labels are most likely mislabeled. The algorithm should be computationally cheap as well as accurate, so it fits well with active learning and other problems that require frequent iterations on large datasets. Specifically, we propose a novel non-linear distribution spreading algorithm, which first uses Delta IDF technique <cite class="ltx_cite">[<a href="#bib.bib7" title="Delta tfidf: an improved feature space for sentiment analysis." class="ltx_ref">11</a>]</cite> to weight features, and then leverages the distribution of Delta IDF scores of a feature across different classes to efficiently recognize discriminative features for the classification task in the presence of mislabeled data. The idea is that some effective features may be subdued due to label noise, and the proposed techniques are capable of counteracting such effect, so that the performance of classification algorithms could be less affected by the noise. With the proposed algorithm, the active learner becomes more accurate and resistant to label noise, thus the mislabeled data points can be more easily and accurately identified.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">We consider emotion analysis as an interesting and challenging problem domain of this study, and conduct comprehensive experiments on Twitter data. We employ Amazon’s Mechanical Turk (AMT) to label the emotions of Twitter data, and apply the proposed methods to the AMT dataset with the goals of improving the annotation quality at low cost, as well as learning accurate emotion classifiers. Extensive experiments show that, the proposed techniques are as effective as more computational expensive techniques (e.g, Support Vector Machines) but require significantly less time for training/running, which makes it well-suited for active learning.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related Work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">Research on handling noisy dataset of mislabeled instances has focused on three major groups of techniques: (1) noise tolerance, (2) noise elimination, and (3) noise correction.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">Noise tolerance techniques aim to improve the learning algorithm itself to avoid over-fitting caused by mislabeled instances in the training phase, so that the constructed classifier becomes more noise-tolerant. Decision tree <cite class="ltx_cite">[<a href="#bib.bib14" title="An empirical comparison of pruning methods for decision tree induction" class="ltx_ref">12</a>, <a href="#bib.bib15" title="Handling uncertain labels in multiclass problems using belief decision trees" class="ltx_ref">21</a>]</cite> and boosting <cite class="ltx_cite">[<a href="#bib.bib16" title="Some theoretical aspects of boosting in the presence of noisy data" class="ltx_ref">6</a>, <a href="#bib.bib17" title="Boosting in the presence of noise" class="ltx_ref">7</a>, <a href="#bib.bib18" title="A boosting approach to remove class label noise" class="ltx_ref">8</a>]</cite> are two learning algorithms that have been investigated in many studies. Mingers (1989) explores pruning methods for identifying and removing unreliable branches from a decision tree to reduce the influence of noise. Vannoorenberghe and Denoeux (2002) propose a method based on belief decision trees to handle uncertain labels in the training set. Jiang (2001) studies some theoretical aspects of regression and classification boosting algorithms in dealing with noisy data. Kalaia and Servediob (2005) present a boosting algorithm which can achieve arbitrarily high accuracy in the presence of data noise. Karmaker and Kwek (2006) propose a modified AdaBoost algorithm – ORBoost, which minimizes the impact of outliers and becomes more tolerant to class label noise. One of the main disadvantages of noise tolerance techniques is that they are learning algorithm-dependent. In contrast, noise elimination/correction approaches are more generic and can be more easily applied to various problems.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">A large number of studies have explored noise elimination techniques <cite class="ltx_cite">[<a href="#bib.bib9" title="Identifying mislabeled training data" class="ltx_ref">1</a>, <a href="#bib.bib10" title="Ensemble methods for noise elimination in classification problems" class="ltx_ref">22</a>, <a href="#bib.bib11" title="Eliminating class noise in large datasets" class="ltx_ref">25</a>, <a href="#bib.bib12" title="Identifying and handling mislabelled instances" class="ltx_ref">13</a>, <a href="#bib.bib13" title="Identifying mislabeled training data with the aid of unlabeled data" class="ltx_ref">5</a>]</cite>, which identifies and removes mislabeled examples from the dataset as a pre-processing step before building classifiers. One widely used approach <cite class="ltx_cite">[<a href="#bib.bib9" title="Identifying mislabeled training data" class="ltx_ref">1</a>, <a href="#bib.bib10" title="Ensemble methods for noise elimination in classification problems" class="ltx_ref">22</a>]</cite> is to create an ensemble classifier that combines the outputs of multiple classifiers by either majority vote or consensus, and an instance is tagged as mislabeled and removed from the training set if it is classified into a different class than its training label by the ensemble classifier. The similar approach is adopted by Guan et al. (2011) and they further demonstrate that its performance can be significantly improved by utilizing unlabeled data. To deal with the noise in large or distributed datasets, Zhu et al. (2003) propose a partition-based approach, which constructs classification rules from each subset of the dataset, and then evaluates each instance using these rules. Two noise identification schemes, majority and non-objection, are used to combine the decision from each set of rules to decide whether an instance is mislabeled. Muhlenbach et al. (2004) propose a different approach, which represents the proximity between instances in a geometrical neighborhood graph, and an instance is considered suspect if in its neighborhood the proportion of examples of the same class is not significantly greater than in the dataset itself.</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p">Removing mislabeled instances has been demonstrated to be effective in increasing the classification accuracy in prior studies, but there are also some major drawbacks. For example, useful information can be removed with noise elimination, since annotation errors are likely to occur on ambiguous instances that are potentially valuable for learning algorithms. In addition, when the noise ratio is high, there may not be adequate amount of data remaining for building an accurate classifier. The proposed approach does not suffer these limitations.</p>
+</div>
+<div id="S2.p5" class="ltx_para">
+<p class="ltx_p">Instead of eliminating the mislabeled examples from training data, some researchers <cite class="ltx_cite">[<a href="#bib.bib20" title="An algorithm for correcting mislabeled data" class="ltx_ref">24</a>, <a href="#bib.bib21" title="Active label correction" class="ltx_ref">15</a>, <a href="#bib.bib22" title="Error correction in learning using svms" class="ltx_ref">10</a>]</cite> propose to correct labeling errors either with or without consulting human experts. Zeng and Martinez (2001) present an approach based on backpropagation neural networks to automatically correct the mislabeled data. Laxman et al. (2012) propose an algorithm which first trains individual SVM classifiers on several small, class-balanced, random subsets of the dataset, and then reclassifies each training instance using a majority vote of these individual classifiers. However, the automatic correction may introduce new noise to the dataset by mistakenly changing a correct label to a wrong one.</p>
+</div>
+<div id="S2.p6" class="ltx_para">
+<p class="ltx_p">In many scenarios, it is worth the effort and cost to fix the labeling errors by human experts, in order to obtain a high quality dataset that can be reused by the community. Rebbapragada et al. (2012) propose a solution called Active Label Correction (ALC) which iteratively presents the experts with small sets of suspected mislabeled instances at each round. Our work employs a similar framework that uses active learning for data cleaning.</p>
+</div>
+<div id="S2.p7" class="ltx_para">
+<p class="ltx_p">In Active Learning <cite class="ltx_cite">[<a href="#bib.bib8" title="Active learning literature survey" class="ltx_ref">17</a>]</cite> a small set of labeled data is used to find documents that should be annotated from a large pool of unlabeled documents. Many different strategies have been used to select the best points to annotate. These strategies can be generally divided into two groups: (1) selecting points in poorly sampled regions, and (2) selecting points that will have the greatest impact on models that were constructed using the dataset.</p>
+</div>
+<div id="S2.p8" class="ltx_para">
+<p class="ltx_p">Active learning for data cleaning differs from traditional active learning because the data already has low quality labels. It uses the difference between the low quality label for each data point and a prediction of the label using supervised machine learning models built upon the low quality labels. Unlike the work in <cite class="ltx_cite">[<a href="#bib.bib21" title="Active label correction" class="ltx_ref">15</a>]</cite>, this paper focuses on developing algorithms that can enhance the ability of active learner on identifying labeling errors, which we consider as a key challenge of this approach but ALC has not addressed.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>An Active Learning Framework for Label Correction</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m1" class="ltx_Math" alttext="\hat{D}=\{(x_{1},y_{1}),...,(x_{n},y_{n})\}" display="inline"><mrow><mover accent="true"><mi>D</mi><mo stretchy="false">^</mo></mover><mo>=</mo><mrow><mo>{</mo><mrow><mrow><mo>(</mo><mrow><msub><mi>x</mi><mn>1</mn></msub><mo>,</mo><msub><mi>y</mi><mn>1</mn></msub></mrow><mo>)</mo></mrow><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mrow><mo>(</mo><mrow><msub><mi>x</mi><mi>n</mi></msub><mo>,</mo><msub><mi>y</mi><mi>n</mi></msub></mrow><mo>)</mo></mrow></mrow><mo>}</mo></mrow></mrow></math> be a dataset of binary labeled instances, where the instance <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m2" class="ltx_Math" alttext="x_{i}" display="inline"><msub><mi>x</mi><mi>i</mi></msub></math> belongs to domain <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m3" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math>, and its label <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m4" class="ltx_Math" alttext="y_{i}\in\{-1,+1\}" display="inline"><mrow><msub><mi>y</mi><mi>i</mi></msub><mo>∈</mo><mrow><mo>{</mo><mrow><mrow><mo>-</mo><mn>1</mn></mrow><mo>,</mo><mrow><mo>+</mo><mn>1</mn></mrow></mrow><mo>}</mo></mrow></mrow></math>. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m5" class="ltx_Math" alttext="\hat{D}" display="inline"><mover accent="true"><mi>D</mi><mo stretchy="false">^</mo></mover></math> contains an unknown number of mislabeled data points. The problem is to obtain a high-quality dataset <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m6" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math> by fixing labeling errors in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m7" class="ltx_Math" alttext="\hat{D}" display="inline"><mover accent="true"><mi>D</mi><mo stretchy="false">^</mo></mover></math>, and learn an accurate classifier <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m8" class="ltx_Math" alttext="C" display="inline"><mi>C</mi></math> from it.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">Algorithm <a href="#S3" title="3 An Active Learning Framework for Label Correction ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> illustrates an active learning approach to the problem. This algorithm takes the noisy dataset <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m1" class="ltx_Math" alttext="\hat{D}" display="inline"><mover accent="true"><mi>D</mi><mo stretchy="false">^</mo></mover></math> as input. The training set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m2" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math> is initialized with the data in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m3" class="ltx_Math" alttext="\hat{D}" display="inline"><mover accent="true"><mi>D</mi><mo stretchy="false">^</mo></mover></math> and then updated each round with new labels generated during re-annotation. Data sets <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m4" class="ltx_Math" alttext="S_{r}" display="inline"><msub><mi>S</mi><mi>r</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m5" class="ltx_Math" alttext="S" display="inline"><mi>S</mi></math> are used to maintain the instances that have been selected for re-annotation in the whole process and in the current iteration, respectively.
+<span class="ltx_ERROR undefined">{algorithm}</span>
+<span class="ltx_ERROR undefined">\KwData</span>noisy data <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m6" class="ltx_Math" alttext="\hat{D}" display="inline"><mover accent="true"><mi>D</mi><mo stretchy="false">^</mo></mover></math>
+<span class="ltx_ERROR undefined">\KwResult</span>cleaned data <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m7" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math>, classifier <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m8" class="ltx_Math" alttext="C" display="inline"><mi>C</mi></math>
+Initialize training set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m9" class="ltx_Math" alttext="T=\hat{D}" display="inline"><mrow><mi>T</mi><mo>=</mo><mover accent="true"><mi>D</mi><mo stretchy="false">^</mo></mover></mrow></math>  
+Initialize re-annotated data sets <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m10" class="ltx_Math" alttext="S_{r}=\emptyset" display="inline"><mrow><msub><mi>S</mi><mi>r</mi></msub><mo>=</mo><mi mathvariant="normal">∅</mi></mrow></math>; <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m11" class="ltx_Math" alttext="S=\emptyset" display="inline"><mrow><mi>S</mi><mo>=</mo><mi mathvariant="normal">∅</mi></mrow></math>  
+<span class="ltx_ERROR undefined">\Repeat</span>for I iterations
+Train classifier <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m12" class="ltx_Math" alttext="C" display="inline"><mi>C</mi></math> using <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m13" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math>  
+Use <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m14" class="ltx_Math" alttext="C" display="inline"><mi>C</mi></math> to select a set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m15" class="ltx_Math" alttext="S" display="inline"><mi>S</mi></math> of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m16" class="ltx_Math" alttext="m" display="inline"><mi>m</mi></math> suspected mislabeled instances from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m17" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math>  
+Experts re-annotate the instances in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m18" class="ltx_Math" alttext="S-(S_{r}\cap S)" display="inline"><mrow><mi>S</mi><mo>-</mo><mrow><mo>(</mo><mrow><msub><mi>S</mi><mi>r</mi></msub><mo>∩</mo><mi>S</mi></mrow><mo>)</mo></mrow></mrow></math>  
+Update <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m19" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math> with the new labels in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m20" class="ltx_Math" alttext="S" display="inline"><mi>S</mi></math>  
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m21" class="ltx_Math" alttext="S_{r}=S_{r}\cup S" display="inline"><mrow><msub><mi>S</mi><mi>r</mi></msub><mo>=</mo><mrow><msub><mi>S</mi><mi>r</mi></msub><mo>∪</mo><mi>S</mi></mrow></mrow></math>; <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m22" class="ltx_Math" alttext="S=\emptyset" display="inline"><mrow><mi>S</mi><mo>=</mo><mi mathvariant="normal">∅</mi></mrow></math>  
+
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m23" class="ltx_Math" alttext="D=T" display="inline"><mrow><mi>D</mi><mo>=</mo><mi>T</mi></mrow></math>  
+<span class="ltx_text ltx_caption">Active Learning Approach for Label Correction</span></p>
+</div>
+<div id="S3.p3" class="ltx_para">
+<p class="ltx_p">In each iteration, the algorithm trains classifiers using the training data in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m1" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math>. In practice, we apply <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m2" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>-fold cross-validation. We partition <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m3" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math> into <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m4" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> subsets, and each time we keep a different subset as testing data and train a classifier using the other <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m5" class="ltx_Math" alttext="k-1" display="inline"><mrow><mi>k</mi><mo>-</mo><mn>1</mn></mrow></math> subsets of data. This process is repeated <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m6" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> times so that we get a classifier for each of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m7" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> subsets. The goal is to use the classifiers to efficiently and accurately seek out the most likely mislabeled instances from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m8" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math> for expert annotators to examine and re-annotate. When applying a classifier to classify the instances in the corresponding data subset, we get the probability about how likely one instance belongs to a class. The top <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m9" class="ltx_Math" alttext="m" display="inline"><mi>m</mi></math> instances with the highest probabilities belonging to some class but conflicting preliminary labels are selected as the most likely errors for annotators to fix. During the re-annotation process we keep the old labels hidden to prevent that information from biasing annotators’ decisions. Similarly, we keep the probability scores hidden while annotating.</p>
+</div>
+<div id="S3.p4" class="ltx_para">
+<p class="ltx_p">This process is done with multiple iterations of training, sampling, and re-annotating. We maintain the re-annotated instances in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m1" class="ltx_Math" alttext="S_{r}" display="inline"><msub><mi>S</mi><mi>r</mi></msub></math> to avoid annotating the same instance multiple times. After each round of annotation, we compare the old labels to the new labels to measure the degree of impact this process is having on the dataset. We stop re-annotating on the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m2" class="ltx_Math" alttext="Ith" display="inline"><mrow><mi>I</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>h</mi></mrow></math> round after we decide that the reward for an additional round of annotation is too low to justify.</p>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Feature Weighting Methods</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">Building the classifier <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m1" class="ltx_Math" alttext="C" display="inline"><mi>C</mi></math> that allows the most likely mislabeled instances to be selected and annotated is the essence of the active learning approach. There are two main goals of developing this classifier: (1) accurately predicting the labels of data points and ranking them based on prediction confidence, so that the most likely errors can be effectively identified; (2) requiring less time on training, so that the saved time can be spent on correcting more labeling errors. Thus we aim to build a classifier that is both accurate and time efficient.</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">Labeling noise affects the classification accuracy. One possible reason is that some effective features that should be given high weights are inhibited in the training phase due to the labeling errors. For example, emoticon “:D” is a good indicator for emotion <span class="ltx_text ltx_font_italic">happy</span>, however, if by mistake many instances containing this emoticon are not correctly labeled as <span class="ltx_text ltx_font_italic">happy</span>, this class-specific feature would be underestimated during training. Following this idea, we develop computationally cheap feature weighting techniques to counteract such effect by boosting the weight of discriminative features, so that they would not be subdued and the instances with such features would have higher chance to be correctly classified.</p>
+</div>
+<div id="S4.p3" class="ltx_para">
+<p class="ltx_p">Specifically, we propose a non-linear distribution spreading algorithm for feature weighting. This algorithm first utilizes Delta IDF to weigh the features, and then non-linearly spreads out the distribution of features’ Delta IDF scores to exaggerate the weight of discriminative features. We first introduce Delta-IDF technique, and then describe our algorithm of distribution spreading. Since we focus on n-gram features, we use the words <span class="ltx_text ltx_font_italic">feature</span> and <span class="ltx_text ltx_font_italic">term</span> interchangeably in this paper.</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Delta IDF Weighting Scheme</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">Different from the commonly used TF (term frequency) or TF.IDF (term frequency.inverse document frequency) weighting schemes, Delta IDF treats the positive and negative training instances as two separate corpora, and weighs the terms by how biased they are to one corpus. The more biased a term is to one class, the higher (absolute value of) weight it will get. Delta IDF boosts the importance of terms that tend to be class-specific in the dataset, since they are usually effective features in distinguishing one class from another.</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">Each training instance (e.g., a document) is represented as a feature vector: <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m1" class="ltx_Math" alttext="x_{i}=(w_{1,i},...,w_{|V|,i})" display="inline"><mrow><msub><mi>x</mi><mi>i</mi></msub><mo>=</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mrow><mn>1</mn><mo>,</mo><mi>i</mi></mrow></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>w</mi><mrow><mrow><mo fence="true">|</mo><mi>V</mi><mo fence="true">|</mo></mrow><mo>,</mo><mi>i</mi></mrow></msub></mrow><mo>)</mo></mrow></mrow></math>, where each dimension in the vector corresponds to a n-gram term in vocabulary <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m2" class="ltx_Math" alttext="V=\{t_{1},...,t_{|V|}\}" display="inline"><mrow><mi>V</mi><mo>=</mo><mrow><mo>{</mo><mrow><msub><mi>t</mi><mn>1</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>t</mi><mrow><mo fence="true">|</mo><mi>V</mi><mo fence="true">|</mo></mrow></msub></mrow><mo>}</mo></mrow></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m3" class="ltx_Math" alttext="|V|" display="inline"><mrow><mo fence="true">|</mo><mi>V</mi><mo fence="true">|</mo></mrow></math> is the number of unique terms, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m4" class="ltx_Math" alttext="w_{j,i}(1\leq j\leq|V|)" display="inline"><mrow><msub><mi>w</mi><mrow><mi>j</mi><mo>,</mo><mi>i</mi></mrow></msub><mrow><mo>(</mo><mn>1</mn><mo>≤</mo><mi>j</mi><mo>≤</mo><mo>|</mo><mi>V</mi><mo>|</mo><mo>)</mo></mrow></mrow></math> is the weight of term <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m5" class="ltx_Math" alttext="t_{j}" display="inline"><msub><mi>t</mi><mi>j</mi></msub></math> in instance <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m6" class="ltx_Math" alttext="x_{i}" display="inline"><msub><mi>x</mi><mi>i</mi></msub></math>. Delta IDF <cite class="ltx_cite">[<a href="#bib.bib7" title="Delta tfidf: an improved feature space for sentiment analysis." class="ltx_ref">11</a>]</cite> assigns score <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m7" class="ltx_Math" alttext="\Delta\_idf_{j}" display="inline"><mrow><mi mathvariant="normal">Δ</mi><mo>⁢</mo><mi mathvariant="normal">_</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><msub><mi>f</mi><mi>j</mi></msub></mrow></math> to term <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m8" class="ltx_Math" alttext="t_{j}" display="inline"><msub><mi>t</mi><mi>j</mi></msub></math> in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m9" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math> as:</p>
+<table id="S6.EGx1" class="ltx_equationgroup ltx_eqn_eqnarray">
+
+<tr id="S4.E1" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E1.m1" class="ltx_Math" alttext="\displaystyle\Delta\_idf_{j}=\log\frac{(N+1)(P_{j}+1)}{(N_{j}+1)(P+1)}" display="inline"><mrow><mrow><mi mathvariant="normal">Δ</mi><mo>⁢</mo><mi mathvariant="normal">_</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><msub><mi>f</mi><mi>j</mi></msub></mrow><mo>=</mo><mrow><mi>log</mi><mo>⁡</mo><mstyle displaystyle="true"><mfrac><mrow><mrow><mo>(</mo><mrow><mi>N</mi><mo>+</mo><mn>1</mn></mrow><mo>)</mo></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>P</mi><mi>j</mi></msub><mo>+</mo><mn>1</mn></mrow><mo>)</mo></mrow></mrow><mrow><mrow><mo>(</mo><mrow><msub><mi>N</mi><mi>j</mi></msub><mo>+</mo><mn>1</mn></mrow><mo>)</mo></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>P</mi><mo>+</mo><mn>1</mn></mrow><mo>)</mo></mrow></mrow></mfrac></mstyle></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m10" class="ltx_Math" alttext="P" display="inline"><mi>P</mi></math> (or <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m11" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math>) is the number of positively (or negatively) labeled training instances, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m12" class="ltx_Math" alttext="P_{j}" display="inline"><msub><mi>P</mi><mi>j</mi></msub></math> (or <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m13" class="ltx_Math" alttext="N_{j}" display="inline"><msub><mi>N</mi><mi>j</mi></msub></math>) is the number of positively (or negatively) labeled training instances with term <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m14" class="ltx_Math" alttext="t_{j}" display="inline"><msub><mi>t</mi><mi>j</mi></msub></math>. Simple add-one smoothing is used to smooth low frequency terms and prevent dividing by zero when a term appears in only one corpus. We calculate the Delta IDF score of every term in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m15" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math>, and get the Delta IDF weight vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m16" class="ltx_Math" alttext="\Delta=(\Delta\_idf_{1},...,\Delta\_idf_{|V|})" display="inline"><mrow><mi mathvariant="normal">Δ</mi><mo>=</mo><mrow><mo>(</mo><mrow><mrow><mi mathvariant="normal">Δ</mi><mo>⁢</mo><mi mathvariant="normal">_</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><msub><mi>f</mi><mn>1</mn></msub></mrow><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mrow><mi mathvariant="normal">Δ</mi><mo>⁢</mo><mi mathvariant="normal">_</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><msub><mi>f</mi><mrow><mo fence="true">|</mo><mi>V</mi><mo fence="true">|</mo></mrow></msub></mrow></mrow><mo>)</mo></mrow></mrow></math> for all terms.</p>
+</div>
+<div id="S4.SS1.p3" class="ltx_para">
+<p class="ltx_p">When the dataset is imblanced, to avoid building a biased model, we down sample the majority class before calculating the Delta IDF score and then use the a bias balancing procedure to balance the Delta IDF weight vector. This procedure first divides the Delta IDF weight vector to two vectors, one of which contains all the features with positive scores, and the other of which contains all the features with negative scores. It then applies L2 normalization to each of the two vectors, and add them together to create the final vector.</p>
+</div>
+<div id="S4.SS1.p4" class="ltx_para">
+<p class="ltx_p">For each instance, we can calculate the TF.Delta-IDF score as its weight:</p>
+<table id="S6.EGx2" class="ltx_equationgroup ltx_eqn_eqnarray">
+
+<tr id="S4.E2" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E2.m1" class="ltx_Math" alttext="\displaystyle w_{j,i}=tf_{j,i}\times\Delta\_idf_{j}" display="inline"><mrow><msub><mi>w</mi><mrow><mi>j</mi><mo>,</mo><mi>i</mi></mrow></msub><mo>=</mo><mrow><mrow><mrow><mi>t</mi><mo>⁢</mo><msub><mi>f</mi><mrow><mi>j</mi><mo>,</mo><mi>i</mi></mrow></msub></mrow><mo>×</mo><mi mathvariant="normal">Δ</mi></mrow><mo>⁢</mo><mi mathvariant="normal">_</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><msub><mi>f</mi><mi>j</mi></msub></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m1" class="ltx_Math" alttext="tf_{j,i}" display="inline"><mrow><mi>t</mi><mo>⁢</mo><msub><mi>f</mi><mrow><mi>j</mi><mo>,</mo><mi>i</mi></mrow></msub></mrow></math> is the number of times term <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m2" class="ltx_Math" alttext="t_{j}" display="inline"><msub><mi>t</mi><mi>j</mi></msub></math> occurs in document <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m3" class="ltx_Math" alttext="x_{i}" display="inline"><msub><mi>x</mi><mi>i</mi></msub></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m4" class="ltx_Math" alttext="\Delta\_idf_{j}" display="inline"><mrow><mi mathvariant="normal">Δ</mi><mo>⁢</mo><mi mathvariant="normal">_</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><msub><mi>f</mi><mi>j</mi></msub></mrow></math> is the Delta IDF score of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m5" class="ltx_Math" alttext="t_{j}" display="inline"><msub><mi>t</mi><mi>j</mi></msub></math>.</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>A Non-linear Distribution Spreading Algorithm</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">Delta IDF technique boosts the weight of features with strong discriminative power. The model’s ability to discriminate at the feature level can be further enhanced by leveraging the distribution of feature weights across multiple classes, e.g., multiple emotion categories <span class="ltx_text ltx_font_italic">funny</span>, <span class="ltx_text ltx_font_italic">happy</span>, <span class="ltx_text ltx_font_italic">sad</span>, <span class="ltx_text ltx_font_italic">exciting</span>, <span class="ltx_text ltx_font_italic">boring</span>, etc.. The distinction of multiple classes can be used to further force feature bias scores apart to improve the identification of class-specific features in the presence of labeling errors.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m1" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math> be a set of target classes, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m2" class="ltx_Math" alttext="|L|" display="inline"><mrow><mo fence="true">|</mo><mi>L</mi><mo fence="true">|</mo></mrow></math> be the number of classes in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m3" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math>. For each class <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m4" class="ltx_Math" alttext="l\in L" display="inline"><mrow><mi>l</mi><mo>∈</mo><mi>L</mi></mrow></math>, we create a binary labeled dataset <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m5" class="ltx_Math" alttext="\hat{D^{l}}" display="inline"><mover accent="true"><msup><mi>D</mi><mi>l</mi></msup><mo stretchy="false">^</mo></mover></math>. Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m6" class="ltx_Math" alttext="V^{l}" display="inline"><msup><mi>V</mi><mi>l</mi></msup></math> be the vocabulary of dataset <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m7" class="ltx_Math" alttext="\hat{D^{l}}" display="inline"><mover accent="true"><msup><mi>D</mi><mi>l</mi></msup><mo stretchy="false">^</mo></mover></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m8" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math> be the vocabulary of all datasets, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m9" class="ltx_Math" alttext="|V|" display="inline"><mrow><mo fence="true">|</mo><mi>V</mi><mo fence="true">|</mo></mrow></math> is the number of unique terms in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m10" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math>. Using Formula (<a href="#S4.E1" title="(1) ‣ 4.1 Delta IDF Weighting Scheme ‣ 4 Feature Weighting Methods ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>) and dataset <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m11" class="ltx_Math" alttext="\hat{D^{l}}" display="inline"><mover accent="true"><msup><mi>D</mi><mi>l</mi></msup><mo stretchy="false">^</mo></mover></math>, we get the Delta IDF weight vector for each class <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m12" class="ltx_Math" alttext="l" display="inline"><mi>l</mi></math>: <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m13" class="ltx_Math" alttext="\Delta^{l}=(\Delta\_idf_{1}^{l},...,\Delta\_idf_{|V|}^{l})" display="inline"><mrow><msup><mi mathvariant="normal">Δ</mi><mi>l</mi></msup><mo>=</mo><mrow><mo>(</mo><mrow><mrow><mi mathvariant="normal">Δ</mi><mo>⁢</mo><mi mathvariant="normal">_</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><msubsup><mi>f</mi><mn>1</mn><mi>l</mi></msubsup></mrow><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mrow><mi mathvariant="normal">Δ</mi><mo>⁢</mo><mi mathvariant="normal">_</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><msubsup><mi>f</mi><mrow><mo fence="true">|</mo><mi>V</mi><mo fence="true">|</mo></mrow><mi>l</mi></msubsup></mrow></mrow><mo>)</mo></mrow></mrow></math>. Note that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m14" class="ltx_Math" alttext="\Delta\_idf_{j}^{l}=0" display="inline"><mrow><mrow><mi mathvariant="normal">Δ</mi><mo>⁢</mo><mi mathvariant="normal">_</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><msubsup><mi>f</mi><mi>j</mi><mi>l</mi></msubsup></mrow><mo>=</mo><mn>0</mn></mrow></math> for any term <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m15" class="ltx_Math" alttext="t_{j}\in V-V^{l}" display="inline"><mrow><msub><mi>t</mi><mi>j</mi></msub><mo>∈</mo><mrow><mi>V</mi><mo>-</mo><msup><mi>V</mi><mi>l</mi></msup></mrow></mrow></math>. For a class <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m16" class="ltx_Math" alttext="u" display="inline"><mi>u</mi></math>, we calculate the spreading score <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m17" class="ltx_Math" alttext="spread_{j}^{u}" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><msubsup><mi>d</mi><mi>j</mi><mi>u</mi></msubsup></mrow></math> of each feature <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m18" class="ltx_Math" alttext="t_{j}\in V" display="inline"><mrow><msub><mi>t</mi><mi>j</mi></msub><mo>∈</mo><mi>V</mi></mrow></math> using a non-linear distribution spreading formula as following (where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m19" class="ltx_Math" alttext="s" display="inline"><mi>s</mi></math> is the configurable spread parameter):</p>
+<table id="S6.EGx3" class="ltx_equationgroup ltx_eqn_eqnarray">
+
+<tr id="S4.Ex1" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E3.m1" class="ltx_Math" alttext="\displaystyle spread_{j}^{u}" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><msubsup><mi>d</mi><mi>j</mi><mi>u</mi></msubsup></mrow></math></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E3.m2" class="ltx_Math" alttext="\displaystyle=" display="inline"><mo>=</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E3.m3" class="ltx_Math" alttext="\displaystyle\Delta\_idf_{j}^{u}\times" display="inline"><mrow><mi mathvariant="normal">Δ</mi><mi mathvariant="normal">_</mi><mi>i</mi><mi>d</mi><msubsup><mi>f</mi><mi>j</mi><mi>u</mi></msubsup><mo>×</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="2" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+<tr class="ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_center"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex1.m3" class="ltx_Math" alttext="\displaystyle\frac{\sum_{l\in L-u}|\Delta\_idf_{j}^{u}-\Delta\_idf_{j}^{l}|^{s%&#10;}}{|L|-1}" display="inline"><mstyle displaystyle="true"><mfrac><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mrow><mi>l</mi><mo>∈</mo><mrow><mi>L</mi><mo>-</mo><mi>u</mi></mrow></mrow></msub><msup><mrow><mo fence="true">|</mo><mrow><mrow><mi mathvariant="normal">Δ</mi><mo>⁢</mo><mi mathvariant="normal">_</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><msubsup><mi>f</mi><mi>j</mi><mi>u</mi></msubsup></mrow><mo>-</mo><mrow><mi mathvariant="normal">Δ</mi><mo>⁢</mo><mi mathvariant="normal">_</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><msubsup><mi>f</mi><mi>j</mi><mi>l</mi></msubsup></mrow></mrow><mo fence="true">|</mo></mrow><mi>s</mi></msup></mrow><mrow><mrow><mo fence="true">|</mo><mi>L</mi><mo fence="true">|</mo></mrow><mo>-</mo><mn>1</mn></mrow></mfrac></mstyle></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S4.SS2.p3" class="ltx_para">
+<p class="ltx_p">For any term <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m1" class="ltx_Math" alttext="t_{j}\in V" display="inline"><mrow><msub><mi>t</mi><mi>j</mi></msub><mo>∈</mo><mi>V</mi></mrow></math>, we can get its Delta IDF score on a class <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m2" class="ltx_Math" alttext="l" display="inline"><mi>l</mi></math>. The distribution of Delta IDF scores of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m3" class="ltx_Math" alttext="t_{j}" display="inline"><msub><mi>t</mi><mi>j</mi></msub></math> on all classes in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m4" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math> is represented as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m5" class="ltx_Math" alttext="\delta_{j}=\{\Delta\_idf_{j}^{1},...,\Delta\_idf_{j}^{|L|}\}" display="inline"><mrow><msub><mi>δ</mi><mi>j</mi></msub><mo>=</mo><mrow><mo>{</mo><mrow><mrow><mi mathvariant="normal">Δ</mi><mo>⁢</mo><mi mathvariant="normal">_</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><msubsup><mi>f</mi><mi>j</mi><mn>1</mn></msubsup></mrow><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mrow><mi mathvariant="normal">Δ</mi><mo>⁢</mo><mi mathvariant="normal">_</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><msubsup><mi>f</mi><mi>j</mi><mrow><mo fence="true">|</mo><mi>L</mi><mo fence="true">|</mo></mrow></msubsup></mrow></mrow><mo>}</mo></mrow></mrow></math>.</p>
+</div>
+<div id="S4.SS2.p4" class="ltx_para">
+<p class="ltx_p">The mechanism of Formula (<a href="#S4.Ex1" title="(3) ‣ 4.2 A Non-linear Distribution Spreading Algorithm ‣ 4 Feature Weighting Methods ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>) is to non-linearly spread out the distribution, so that the importance of class-specific features can be further boosted to counteract the effect of noisy labels. Specifically, according to Formula (<a href="#S4.Ex1" title="(3) ‣ 4.2 A Non-linear Distribution Spreading Algorithm ‣ 4 Feature Weighting Methods ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>), a high (absolute value of) spread score indicates that the Delta IDF score of that term on that class is high and deviates greatly from the scores on other classes. In other words, our algorithm assigns high spread score (absolute value) to a term on a class for which the term has strong discriminative power and very specific to that class compared with to other classes. When the dataset is imbalanced, we apply the similar bias balancing procedure as described in Section <a href="#S4.SS1" title="4.1 Delta IDF Weighting Scheme ‣ 4 Feature Weighting Methods ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a> to the spreading model.</p>
+</div>
+<div id="S4.SS2.p5" class="ltx_para">
+<p class="ltx_p">While these feature weighting models can be used to score and rank instances for data cleaning, better classification and regression models can be built by using the feature weights generated by these models as a pre-weight on the data points for other machine learning algorithms.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Experiments</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">We conduct experiments on a Twitter dataset that contains tweets about TV shows and movies. The goal is to extract consumers’ emotional reactions to multimedia content, which has broad commercial applications including targeted advertising, intelligent search, and recommendation. To create the dataset, we collected 2 billion unique tweets using Twitter API queries for a list of known TV shows and movies on IMDB. Spam tweets were filtered out using a set of heuristics and manually crafted rules. From the set of 2 billion tweets we randomly selected a small subset of 100K tweets about the 60 most highly mentioned TV shows and movies in the dataset. Tweets were randomly sampled for each show using the round robin algorithm. Duplicates were not allowed. This samples an equal number of tweets for each show. We then sent these tweets to Amazon Mechanical Turk for annotation.</p>
+</div>
+<div id="S5.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Funny</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Happy</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Sad</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Exciting</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Boring</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Angry</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Fear</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Heartwarming</th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"># Pos.</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">1,324</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">405</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">618</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">313</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">209</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">92</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">164</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">24</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"># Neg.</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">88,782</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">95,639</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">84,212</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">79,902</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">82,443</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">57,326</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">46,746</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">15,857</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_r ltx_border_t"># Total</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">90,106</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">96,044</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">84,830</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">80,215</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">82,652</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">57,418</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">46,910</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">15,881</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 1: </span>Amazon Mechanical Turk annotation label counts.</div>
+</div>
+<div id="S5.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Funny</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Happy</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Sad</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Exciting</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Boring</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Angry</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Fear</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Heartwarming</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"># Pos.</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">1,781</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">4,847</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">788</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">1,613</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">216</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">763</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">285</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">326</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"># Neg.</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">88,277</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">91,075</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">84,031</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">78,573</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">82,416</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">56,584</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">46,622</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">15,542</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_r ltx_border_t"># Total<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>The total number of tweets is lower than the AMT dataset because the experts removed some off-topic tweets.</span></span></span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">90,058</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">95,922</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">84,819</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">80,186</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">82,632</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">57,347</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">46,907</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">15,868</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 2: </span>Ground truth annotation label counts for each emotion.<span class="ltx_note ltx_role_footnotemark"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup><span class="ltx_note_type">footnotemark: </span></span></span></span></div>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">We defined our own set of emotions to annotate. The widely accepted emotion taxonomies, including Ekmanâs Basic Emotions <cite class="ltx_cite">[<a href="#bib.bib23" title="Basic emotions" class="ltx_ref">3</a>]</cite>, Russellâs Circumplex model <cite class="ltx_cite">[<a href="#bib.bib24" title="Core affect, prototypical emotional episodes, and other things called emotion: dissecting the elephant." class="ltx_ref">16</a>]</cite>, and Plutchikâs emotion wheel <cite class="ltx_cite">[<a href="#bib.bib25" title="The nature of emotions" class="ltx_ref">14</a>]</cite>, did not fit well for TV shows and Movies. For example, the emotion expressed by laughter is a very important emotion for TV shows and movies, but this emotion is not covered by the taxonomies listed above. After browsing through the raw dataset, reviewing the literature on emotion analysis, and considering the TV and movie problem domain, we decided to focus on eight emotions: <span class="ltx_text ltx_font_italic">funny</span>, <span class="ltx_text ltx_font_italic">happy</span>, <span class="ltx_text ltx_font_italic">sad</span>, <span class="ltx_text ltx_font_italic">exciting</span>, <span class="ltx_text ltx_font_italic">boring</span>, <span class="ltx_text ltx_font_italic">angry</span>, <span class="ltx_text ltx_font_italic">fear</span>, and <span class="ltx_text ltx_font_italic">heartwarming</span>.</p>
+</div>
+<div id="S5.p3" class="ltx_para">
+<p class="ltx_p">Emotion annotation is a non-trivial task that is typically time-consuming, expensive and error-prone. This task is difficult because: (1) There are multiple emotions to annotate. In this work, we annotate eight different emotions. (2) Emotion expressions could be subtle and ambiguous and thus are easy to miss when labeling quickly. (3) The dataset is very imbalanced, which increases the problem of confirmation bias. As minority classes, emotional tweets can be easily missed because the last X tweets are all not emotional, and the annotators do not expect the next one to be either. Due to these reasons, there is a lack of sufficient and high quality labeled data for emotion research. Some researchers have studied harnessing Twitter hashtags to automatically create an emotion annotated dataset <cite class="ltx_cite">[<a href="#bib.bib27" title="Harnessing twitter” big data” for automatic emotion identification" class="ltx_ref">23</a>]</cite>.</p>
+</div>
+<div id="S5.p4" class="ltx_para">
+<p class="ltx_p">In order to evaluate our approach in real world scenarios, instead of creating a high quality annotated dataset and then introducing artificial noise, we followed the common practice of crowdsoucing, and collected emotion annotations through Amazon Mechanical Turk (AMT). This AMT annotated dataset was used as the low quality dataset <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p4.m1" class="ltx_Math" alttext="\hat{D}" display="inline"><mover accent="true"><mi>D</mi><mo stretchy="false">^</mo></mover></math> in our evaluation. After that, the same dataset was annotated independently by a group of expert annotators to create the ground truth. We evaluate the proposed approach on two factors, the effectiveness of the models for emotion classification, and the improvement of annotation quality provided by the active learning procedure. We first describe the AMT annotation and ground truth annotation, and then discuss the baselines and experimental results.</p>
+</div>
+<div id="S5.p5" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Amazon Mechanical Turk Annotation</span>: we posted the set of 100K tweets to the workers on AMT for emotion annotation. We defined a set of annotation guidelines, which specified rules and examples to help annotators determine when to tag a tweet with an emotion. We applied substantial quality control to our AMT workers to improve the initial quality of annotation following the common practice of crowdsourcing. Each tweet was annotated by at least two workers. We used a series of tests to identify bad workers. These tests include (1) identifying workers with poor pairwise agreement, (2) identifying workers with poor performance on English language annotation, (3) identifying workers that were annotating at unrealistic speeds, (4) identifying workers with near random annotation distributions, and (5) identifying workers that annotate each tweet for a given TV show the same (or nearly the same) way. We manually inspected any worker with low performance on any of these tests before we made a final decision about using any of their annotations.
+
+</p>
+</div>
+<div id="S5.p6" class="ltx_para">
+<p class="ltx_p">For further quality control, we also gathered additional annotations from additional workers for tweets where only one out of two workers identified an emotion. After these quality control steps we defined minimum emotion annotation thresholds to determine and assign preliminary emotion labels to tweets. Note that some tweets were discarded as mixed examples for each emotion based upon thresholds for how many times they were tagged, and it resulted in different number of tweets in each emotion dataset. See Table <a href="#S5.T1" title="Table 1 ‣ 5 Experiments ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> for the statistics of the annotations collected from AMT.</p>
+</div>
+<div id="S5.F3" class="ltx_figure"><span class="ltx_ERROR undefined ltx_centering">{subfigure}</span>
+<p class="ltx_p ltx_align_center">[t]0.48
+<img src="P14-1104/image001.png" id="S5.F3.g1" class="ltx_graphics" width="676" height="532" alt=""/></p>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Macro-Averaged MAP</div><span class="ltx_ERROR undefined ltx_centering">{subfigure}</span>
+<p class="ltx_p ltx_align_center">[t]0.48
+<img src="P14-1104/image002.png" id="S5.F3.g2" class="ltx_graphics" width="676" height="532" alt=""/></p>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>Macro-Averaged F1 Score</div>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 3: </span>Performance comparison of mislabeled instance selection methods. Classifiers become more accurate as more instances are re-annotated. Spread achieves comparable performance with SVMs in terms of both MAP and F1 Score.</div>
+</div>
+<div id="S5.p7" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Ground Truth Annotation</span>:
+After we obtained the annotated dataset from AMT, we posted the same dataset (without the labels) to a group of expert annotators. The experts followed the same annotation guidelines, and each tweet was labeled by at least two experts. When there was a disagreement between two experts, they discussed to reach an agreement or gathered additional opinion from another expert to decide the label of a tweet. We used this annotated dataset as ground truth. See Table <a href="#S5.T2" title="Table 2 ‣ 5 Experiments ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> for the statistics of the ground truth annotations. Compared with the ground truth, many emotion bearing tweets were missed by the AMT annotators, despite the quality control we applied. It demonstrates the challenge of annotation by crowdsourcing. The imbalanced class distribution aggravates the confirmation bias – the minority class examples are especially easy to miss when labeling quickly due to their rare presence in the dataset.</p>
+</div>
+<div id="S5.p8" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Evaluation Metric</span>:
+We evaluated the results with both Mean Average Precision (MAP) and F1 Score. Average Precision (AP) is the average of the algorithm’s precision at every position in the confidence ranked list of results where a true emotional document has been identified. Thus, AP places extra emphasis on getting the front of the list correct. MAP is the mean of the average precision scores for each ranked list. This is highly desirable for many practical application such as intelligent search, recommendation, and target advertising where users almost never see results that are not at the top of the list. F1 is a widely-used measure of classification accuracy.</p>
+</div>
+<div id="S5.p9" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Methods</span>:
+We evaluated the overall performance relative to the common SVM bag of words approach that can be ubiquitously found in text mining literature. We implemented the following four classification methods:</p>
+<ul id="I1" class="ltx_itemize">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Delta-IDF</span>: Takes the dot product of the Delta IDF weight vector (Formula <a href="#S4.E1" title="(1) ‣ 4.1 Delta IDF Weighting Scheme ‣ 4 Feature Weighting Methods ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>) with the document’s term frequency vector.</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Spread</span>: Takes the dot product of the distribution spread weight vector (Formula <a href="#S4.Ex1" title="(3) ‣ 4.2 A Non-linear Distribution Spreading Algorithm ‣ 4 Feature Weighting Methods ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>) with the document’s term frequency vector. For all the experiments, we used spread parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i2.p1.m1" class="ltx_Math" alttext="s=2" display="inline"><mrow><mi>s</mi><mo>=</mo><mn>2</mn></mrow></math>.</p>
+</div></li>
+<li id="I1.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i3.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">SVM-TF</span>: Uses a bag of words SVM with term frequency weights.</p>
+</div></li>
+<li id="I1.i4" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i4.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">SVM-Delta-IDF</span>: Uses a bag of words SVM classification with TF.Delta-IDF weights (Formula <a href="#S4.E2" title="(2) ‣ 4.1 Delta IDF Weighting Scheme ‣ 4 Feature Weighting Methods ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>) in the feature vectors before training or testing an SVM.</p>
+</div></li>
+</ul>
+<p class="ltx_p">We employed each method to build the active learner <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p9.m1" class="ltx_Math" alttext="C" display="inline"><mi>C</mi></math> described in Algorithm <a href="#S3" title="3 An Active Learning Framework for Label Correction ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>. We used standard bag of <em class="ltx_emph">unigram</em> and <em class="ltx_emph">bigram</em> words representation and <em class="ltx_emph">topic-based fold cross validation</em>. Since in real world applications people are primarily concerned with how well the algorithm will work for new TV shows or movies that may not be included in the training data, we defined a test fold for each TV show or movie in our labeled data set. Each test fold corresponded to a training fold containing all the labeled data from all the other TV shows and movies. We call it topic-based fold cross validation.</p>
+</div>
+<div id="S5.p10" class="ltx_para">
+<p class="ltx_p">We built the SVM classifiers using LIBLINEAR <cite class="ltx_cite">[<a href="#bib.bib26" title="LIBLINEAR: a library for large linear classification" class="ltx_ref">4</a>]</cite> and applied its L2-regularized support vector regression model. Based on the dot product or SVM regression scores, we ranked the tweets by how strongly they express the emotion. We selected the top <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p10.m1" class="ltx_Math" alttext="m" display="inline"><mi>m</mi></math> tweets with the highest dot product or regression scores but conflicting preliminary AMT labels as the suspected mislabeled instances for re-annotation, just as described in Algorithm <a href="#S3" title="3 An Active Learning Framework for Label Correction ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>. For the experimental purpose, the re-annotation was done by assigning the ground truth labels to the selected instances. Since the dataset is highly imbalanced, we applied the <em class="ltx_emph">under-sampling strategy</em> when training the classifiers.</p>
+</div>
+<div id="S5.p11" class="ltx_para">
+<p class="ltx_p">Figure <a href="#S5.F3" title="Figure 3 ‣ 5 Experiments ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> compares the performance of different approaches in each iteration after a certain number of potentially mislabeled instances are re-annotated. The X axis shows the total number of data points that have been examined for each emotion so far till the current iteration (i.e., 300, 900, 1800, 3000, 4500, 6900, 10500, 16500, and 26100). We reported both the macro-averaged MAP (Figure <a href="#S5.F3" title="Figure 3 ‣ 5 Experiments ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>) and the macro-averaged F1 Score (Figure <a href="#S5.F3" title="Figure 3 ‣ 5 Experiments ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>) on eight emotions as the overall performance of three competitive methods – Spread, SVM-Delta-IDF and SVM-TF. We have also conducted experiments using Delta-IDF, but its performance is low and not comparable with the other three methods.</p>
+</div>
+<div id="S5.p12" class="ltx_para">
+<p class="ltx_p">Generally, Figure <a href="#S5.F3" title="Figure 3 ‣ 5 Experiments ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> shows consistent performance gains as more labels are corrected during active learning. In comparison, SVM-Delta-IDF significantly outperforms SVM-TF with respect to both MAP and F1 Score. SVM-TF achieves higher MAP and F1 Score than Spread at the first few iterations, but then it is beat by Spread after 16,500 tweets had been selected and re-annotated till the eighth iteration. Overall, at the end of the active learning process, Spread outperforms SVM-TF by 3.03% the MAP score (and by 4.29% the F1 score), and SVM-Delta-IDF outperforms SVM-TF by 8.59% the MAP score (and by 5.26% the F1 score). Spread achieves a F1 Score of 58.84%, which is quite competitive compared to 59.82% achieved by SVM-Delta-IDF, though SVM-Delta-IDF outperforms Spread with respect to MAP.</p>
+</div>
+<div id="S5.p13" class="ltx_para">
+<p class="ltx_p">Spread and Delta-IDF are superior with respect to the time efficiency. Figure <a href="#S5.F4" title="Figure 4 ‣ 5 Experiments ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> shows the average training time of the four methods on eight emotions. The time spent training SVM-TF classifiers is twice that of SVM-Delta-IDF classifiers, 12 times that of Spread classifiers, and 31 times that of Delta-IDF classifiers. In our experiments, on average, it took <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p13.m1" class="ltx_Math" alttext="258.8" display="inline"><mn>258.8</mn></math> seconds to train a SVM-TF classifier for one emotion. In comparison, the average training time of a Spread classifier was only <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p13.m2" class="ltx_Math" alttext="21.4" display="inline"><mn>21.4</mn></math> seconds, and it required almost no parameter tuning. In total, our method Spread saved up to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p13.m3" class="ltx_Math" alttext="(258.8-21.4)*9*8=17092.8" display="inline"><mrow><mrow><mrow><mo>(</mo><mrow><mn>258.8</mn><mo>-</mo><mn>21.4</mn></mrow><mo>)</mo></mrow><mo>*</mo><mn>9</mn><mo>*</mo><mn>8</mn></mrow><mo>=</mo><mn>17092.8</mn></mrow></math> seconds (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p13.m4" class="ltx_Math" alttext="4.75" display="inline"><mn>4.75</mn></math> hours) over nine iterations of active learning for all the eight emotions. This is enough time to re-annotate thousands of data points.</p>
+</div>
+<div id="S5.F4" class="ltx_figure"><img src="P14-1104/image003.png" id="S5.F4.g1" class="ltx_graphics ltx_centering" width="303" height="239" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 4: </span>Average training time on eight emotions. Spread requires only one-twelfth of the time spent to training an SVM-TF classifier. Note that the time spent tuning the SVM’s parameters has not been included, but is considerable. Compared with such computationally expensive methods, Spread is more appropriate for use with active learning.</div>
+</div>
+<div id="S5.F5" class="ltx_figure"><img src="P14-1104/image004.png" id="S5.F5.g1" class="ltx_graphics ltx_centering" width="325" height="254" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 5: </span>Accumulated average percentage of fixed labels on eight emotions. Spreading the feature weights reduces the number of data points that must be examined in order to correct the mislabeled instances. SVMs require slightly fewer points but take far longer to build.</div>
+</div>
+<div id="S5.p14" class="ltx_para">
+<p class="ltx_p">The other important quantity to measure is annotation quality. One measure of improvement for annotation quality is the number of mislabeled instances that can be fixed after a certain number of active learning iterations. Better methods can fix more labels with fewer iterations.</p>
+</div>
+<div id="S5.p15" class="ltx_para">
+<p class="ltx_p">Besides the four methods, we also implemented a random baseline (Random) which randomly selected the specified number of instances for re-annotation in each round. We compared the improved dataset with the final ground truth at the end of each round to monitor the progress. Figure <a href="#S5.F5" title="Figure 5 ‣ 5 Experiments ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> reports the accumulated average percentage of corrected labels on all emotions in each iteration of the active learning process.</p>
+</div>
+<div id="S5.p16" class="ltx_para">
+<p class="ltx_p">According to the figure, SVM-Delta-IDF and SVM-TF are the most advantageous methods, followed by Spread and Delta-IDF. After the last iteration, SVM-Delta-IDF, SVM-TF, Spread and Delta-IDF has fixed 85.23%, 85.85%, 81.05% and 58.66% of the labels, respectively, all of which significantly outperform the Random baseline (29.74%).</p>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Conclusion</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">In this paper, we explored an active learning approach to improve data annotation quality for classification tasks. Instead of training the active learner using computationally expensive techniques (e.g., SVM-TF), we used a novel non-linear distribution spreading algorithm. This algorithm first weighs the features using the Delta-IDF technique, and then non-linearly spreads out the distribution of the feature scores to enhance the model’s ability to discriminate at the feature level. The evaluation shows that our algorithm has the following advantages: (1) It intelligently ordered the data points for annotators to annotate the most likely errors first. The accuracy was at least comparable with computationally expensive baselines (e.g. SVM-TF). (2) The algorithm trained and ran much faster than SVM-TF, allowing annotators to finish more annotations than competitors. (3) The annotation process improved the dataset quality by positively impacting the accuracy of classifiers that were built upon it.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. E. Brodley and M. A. Friedl</span><span class="ltx_text ltx_bib_year">(1999)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Identifying mislabeled training data</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Artificial Intelligence Research</span> <span class="ltx_text ltx_bib_volume">11</span>, <span class="ltx_text ltx_bib_pages"> pp. 131–167</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related Work ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Callison-Burch</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Fast, cheap, and creative: evaluating translation quality using amazon’s mechanical turk</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 286–295</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib23" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Ekman</span><span class="ltx_text ltx_bib_year">(1999)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Basic emotions</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Handbook of cognition and emotion</span> <span class="ltx_text ltx_bib_volume">4</span>, <span class="ltx_text ltx_bib_pages"> pp. 5–60</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p2" title="5 Experiments ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib26" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Fan, K. Chang, C. Hsieh, X. Wang and C. Lin</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">LIBLINEAR: a library for large linear classification</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">The Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">9</span>, <span class="ltx_text ltx_bib_pages"> pp. 1871–1874</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p10" title="5 Experiments ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Guan, W. Yuan, Y. Lee and S. Lee</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Identifying mislabeled training data with the aid of unlabeled data</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Applied Intelligence</span> <span class="ltx_text ltx_bib_volume">35</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 345–358</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related Work ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib16" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">W. Jiang</span><span class="ltx_text ltx_bib_year">(2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Some theoretical aspects of boosting in the presence of noisy data</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib17" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. T. Kalaia and R. A. Servediob</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Boosting in the presence of noise</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Computer and System Sciences</span> <span class="ltx_text ltx_bib_volume">71</span>, <span class="ltx_text ltx_bib_pages"> pp. 266–290</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Karmaker and S. Kwek</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A boosting approach to remove class label noise</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">International Journal of Hybrid Intelligent Systems</span> <span class="ltx_text ltx_bib_volume">3</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 169–177</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Kittur, E. H. Chi and B. Suh</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Crowdsourcing user studies with mechanical turk</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 453–456</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib22" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Laxman, S. Mittal and R. Venkatesan</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Error correction in learning using svms</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">arXiv preprint arXiv:1301.2012</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p5" title="2 Related Work ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Martineau and T. Finin</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Delta tfidf: an improved feature space for sentiment analysis.</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.SS1.p2" title="4.1 Delta IDF Weighting Scheme ‣ 4 Feature Weighting Methods ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib14" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Mingers</span><span class="ltx_text ltx_bib_year">(1989)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">An empirical comparison of pruning methods for decision tree induction</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Machine learning</span> <span class="ltx_text ltx_bib_volume">4</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 227–243</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. Muhlenbach, S. Lallich and D. A. Zighed</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Identifying and handling mislabelled instances</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Intelligent Information Systems</span> <span class="ltx_text ltx_bib_volume">22</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 89–109</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related Work ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib25" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Plutchik</span><span class="ltx_text ltx_bib_year">(2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The nature of emotions</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">American Scientist</span> <span class="ltx_text ltx_bib_volume">89</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 344–350</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p2" title="5 Experiments ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib21" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">U. Rebbapragada, C. E. Brodley, D. Sulla-Menashe and M. A. Friedl</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Active label correction</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1080–1085</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p5" title="2 Related Work ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.p8" title="2 Related Work ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. A. Russell and L. F. Barrett</span><span class="ltx_text ltx_bib_year">(1999)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Core affect, prototypical emotional episodes, and other things called emotion: dissecting the elephant.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of personality and social psychology</span> <span class="ltx_text ltx_bib_volume">76</span> (<span class="ltx_text ltx_bib_number">5</span>), <span class="ltx_text ltx_bib_pages"> pp. 805</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p2" title="5 Experiments ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Settles</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Active learning literature survey</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Technical Report 1648, University of Wisconsin, Madison</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p7" title="2 Related Work ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">V. S. Sheng, F. Provost and P. G. Ipeirotis</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Get another label? improving data quality and data mining using multiple, noisy labelers</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 614–622</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Snow, B. O’Connor, D. Jurafsky and A. Y. Ng</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Cheap and fast—but is it good?: evaluating non-expert annotations for natural language tasks</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 254–263</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Q. Su, D. Pavlov, J. Chow and W. C. Baker</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Internet-scale collection of human-reviewed data</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 231–240</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib15" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Vannoorenberghe and T. Denoeux</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Handling uncertain labels in multiclass problems using belief decision trees</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">3</span>, <span class="ltx_text ltx_bib_pages"> pp. 1919–1926</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Verbaeten and A. Van Assche</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Ensemble methods for noise elimination in classification problems</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_inbook">Multiple classifier systems</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 317–325</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related Work ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib27" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">W. Wang, L. Chen, K. Thirunarayan and A. P. Sheth</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Harnessing twitter” big data” for automatic emotion identification</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 587–592</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p3" title="5 Experiments ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">X. Zeng and T. R. Martinez</span><span class="ltx_text ltx_bib_year">(2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">An algorithm for correcting mislabeled data</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Intelligent data analysis</span> <span class="ltx_text ltx_bib_volume">5</span> (<span class="ltx_text ltx_bib_number">6</span>), <span class="ltx_text ltx_bib_pages"> pp. 491–502</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p5" title="2 Related Work ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">X. Zhu, X. Wu and Q. Chen</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Eliminating class noise in large datasets</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 920–927</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related Work ‣ Active Learning with Efficient Feature Weighting Methods  for Improving Data Quality and Classification Accuracy" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 18:37:18 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

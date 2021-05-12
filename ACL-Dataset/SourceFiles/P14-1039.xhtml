@@ -1,0 +1,1297 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>That’s Not What I Meant!Using Parsers to Avoid Structural Ambiguities in Generated Text</title>
+<!--Generated on Tue Jun 10 17:31:47 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">That’s Not What I Meant!
+<br class="ltx_break"/>Using Parsers to Avoid Structural Ambiguities in Generated Text</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Manjuan Duan 
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Michael White
+<br class="ltx_break"/>Department of Linguistics
+<br class="ltx_break"/>The Ohio State University
+<br class="ltx_break"/>Columbus, OH 43210, USA
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">duan,mwhite</span>}<span class="ltx_text ltx_font_typewriter">@ling.osu.edu</span>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">We investigate whether parsers can be used for self-monitoring in
+surface realization in order to avoid egregious errors involving
+“vicious” ambiguities, namely those where the intended
+interpretation fails to be considerably more likely than alternative
+ones. Using parse accuracy in a simple reranking strategy for
+self-monitoring, we find that with a state-of-the-art averaged
+perceptron realization ranking model, BLEU scores cannot be improved
+with any of the well-known Treebank parsers we tested, since these
+parsers too often make errors that human readers would be unlikely
+to make. However, by using an SVM ranker to combine the realizer’s
+model score together with features from multiple parsers, including
+ones designed to make the ranker more robust to parsing mistakes, we
+show that significant increases in BLEU scores can be achieved.
+Moreover, via a targeted manual analysis, we demonstrate that the
+SVM reranker frequently manages to avoid vicious ambiguities, while
+its ranking errors tend to affect fluency much more often than
+adequacy.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Rajkumar &amp;
+White <cite class="ltx_cite">[<a href="#bib.bib15" title="Linguistically motivated complementizer choice in surface realization" class="ltx_ref">28</a>, <a href="#bib.bib12" title="Minimal dependency length in realization ranking" class="ltx_ref">36</a>]</cite>
+have recently shown that some rather egregious surface realization
+errors—in the sense that the reader would likely end up with the
+wrong interpretation—can be avoided by making use of features
+inspired by psycholinguistics research together with an otherwise
+state-of-the-art averaged perceptron realization ranking model
+<cite class="ltx_cite">[<a href="#bib.bib5" title="Perceptron reranking for CCG realization" class="ltx_ref">35</a>]</cite>, as reviewed in the next
+section. However, one is apt to wonder: could one use a parser
+to check whether the intended interpretation is easy to recover,
+either as an alternative or to catch additional mistakes? Doing so
+would be tantamount to self-monitoring in
+Levelt’s <cite class="ltx_cite">[<a href="#bib.bib41" title="Speaking: from intention to articulation" class="ltx_ref">21</a>]</cite> model of language production.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Neumann &amp; van Noord <cite class="ltx_cite">[<a href="#bib.bib35" title="Self-monitoring with reversible grammars" class="ltx_ref">22</a>]</cite> pursued
+the idea of self-monitoring for generation in early work with
+reversible grammars. As Neumann &amp; van Noord observed, a simple,
+brute-force way to generate unambiguous sentences is to enumerate
+possible realizations of an input logical form, then to parse each
+realization to see how many interpretations it has, keeping only those
+that have a single reading; they then went on to devise a more
+efficient method of using self-monitoring to avoid generating
+ambiguous sentences, targeted to the ambiguous portion of the output.
+We might question, however, whether it is really possible to avoid
+ambiguity entirely in the general case, since
+Abney <cite class="ltx_cite">[<a href="#bib.bib39" title="Statistical methods and linguistics" class="ltx_ref">1</a>]</cite> and others have argued that
+nearly every sentence is potentially ambiguous, though we (as human
+comprehenders) may not notice the ambiguities if they are
+unlikely. Taking up this issue, Khan et
+al. <cite class="ltx_cite">[<a href="#bib.bib40" title="Generation of referring expressions: managing structural ambiguities" class="ltx_ref">18</a>]</cite>—building on Chantree et
+al.’s <cite class="ltx_cite">[<a href="#bib.bib38" title="Identifying nocuous ambiguities in natural language requirements" class="ltx_ref">5</a>]</cite> approach to identifying
+“innocuous” ambiguities—conducted several experiments to test
+whether ambiguity could be balanced against length or fluency in the
+context of generating referring expressions involving coordinate
+structures. Though Khan et al.’s study was limited to this one kind of
+structural ambiguity, they do observe that generating the brief
+variants when the intended interpretation is clear instantiates Van
+Deemter’s <cite class="ltx_cite">[<a href="#bib.bib37" title="Towards a probabilistic version of bidirectional OT syntax and semantics" class="ltx_ref">33</a>]</cite> general strategy of only avoiding
+<span class="ltx_text ltx_font_bold">vicious ambiguities</span>—that is, ambiguities where the intended
+interpretation fails to be considerably more likely than any other
+distractor interpretations—rather than trying to avoid all
+ambiguities.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">In this paper, we investigate whether Neumann &amp; van Noord’s
+brute-force strategy for avoiding ambiguities in surface realization
+can be updated to only avoid vicious ambiguities, extending (and
+revising) Van Deemter’s general strategy to all kinds of structural
+ambiguity, not just the one investigated by Khan et al. To do so—in
+a nutshell—we enumerate an <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p3.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-best list of realizations and rerank
+them if necessary to avoid vicious ambiguities, as determined by one
+or more automatic parsers. A potential obstacle, of course, is that
+automatic parsers may not be sufficiently representative of human
+readers, insofar as errors that a parser makes may not be problematic
+for human comprehension; moreover, parsers are rarely
+successful in fully recovering the intended interpretation for
+sentences of moderate length, even with carefully edited news text.
+Consequently, we examine two reranking strategies, one a simple
+baseline approach and the other using an SVM reranker
+<cite class="ltx_cite">[<a href="#bib.bib27" title="Optimizing search engines using clickthrough data" class="ltx_ref">17</a>]</cite>.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">Our simple reranking strategy for self-monitoring is to rerank the
+realizer’s <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p4.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-best list by parse accuracy, preserving the original
+order in case of ties. In this way, if there is a realization in the
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p4.m2" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-best list that can be parsed more accurately than the top-ranked
+realization—even if the intended interpretation cannot be recovered
+with 100% accuracy—it will become the preferred output of the
+combined realization-with-self-monitoring system. With this simple
+reranking strategy and each of three different Treebank parsers, we
+find that it is possible to improve BLEU scores on Penn Treebank
+development data with White &amp;
+Rajkumar’s <cite class="ltx_cite">[<a href="#bib.bib15" title="Linguistically motivated complementizer choice in surface realization" class="ltx_ref">28</a>, <a href="#bib.bib12" title="Minimal dependency length in realization ranking" class="ltx_ref">36</a>]</cite>
+baseline generative model, but not with their averaged perceptron
+model. In inspecting the results of reranking with this strategy, we
+observe that while it does sometimes succeed in avoiding egregious
+errors involving vicious ambiguities, common parsing mistakes such as
+PP-attachment errors lead to unnecessarily sacrificing conciseness or
+fluency in order to avoid ambiguities that would be easily tolerated
+by human readers. Therefore, to develop a more nuanced
+self-monitoring reranker that is more robust to such parsing mistakes,
+we trained an SVM using dependency precision and recall features for
+all three parses, their <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p4.m3" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-best parsing results, and per-label
+precision and recall for each type of dependency, together with the
+realizer’s normalized perceptron model score as a feature. With the
+SVM reranker, we obtain a significant improvement in BLEU scores over
+White &amp; Rajkumar’s averaged perceptron model on both development and
+test data. Additionally, in a targeted manual analysis, we find that
+in cases where the SVM reranker improves the BLEU score, improvements
+to fluency and adequacy are roughly balanced, while in cases where the
+BLEU score goes down, it is mostly fluency that is made worse (with
+reranking yielding an acceptable paraphrase roughly one third of the
+time in both cases).</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">The paper is structured as follows. In Section <a href="#S2" title="2 Background ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+we review the realization ranking models that serve as a starting
+point for the paper. In Section <a href="#S3" title="3 Simple Reranking ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>, we report on
+our experiments with the simple reranking strategy, including a
+discussion of the ways in which this method typically fails. In
+Section <a href="#S4" title="4 Reranking with SVMs ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>, we describe how we trained an SVM
+reranker and report our results using BLEU scores <cite class="ltx_cite">[<a href="#bib.bib92" title="BLEU: a method for automatic evaluation of machine translation" class="ltx_ref">24</a>]</cite>.
+In Section <a href="#S5" title="5 Analysis and Discussion ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>, we present a targeted manual analysis
+of the development set sentences with the greatest change in BLEU
+scores, discussing both successes and errors. In
+Section <a href="#S6" title="6 Related Work ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>, we briefly review related work on broad
+coverage surface realization. Finally, in Section <a href="#S7" title="7 Conclusion ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>, we
+sum up and discuss opportunities for future work in this direction.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Background</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">We use the OpenCCG<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup><a href="http://openccg.sf.net" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://openccg.sf.net</span></a></span></span></span> surface
+realizer for the experiments reported in this paper. The OpenCCG
+realizer generates surface strings for input semantic dependency
+graphs (or logical forms) using a chart-based algorithm
+<cite class="ltx_cite">[<a href="#bib.bib21" title="Efficient Realization of Coordinate Structures in Combinatory Categorial Grammar" class="ltx_ref">37</a>]</cite> for Combinatory Categorial Grammar
+<cite class="ltx_cite">[<a href="#bib.bib86" title="The syntactic process" class="ltx_ref">31</a>]</cite> together with a “hypertagger” for
+probabilistically assigning lexical categories to lexical predicates
+in the input <cite class="ltx_cite">[<a href="#bib.bib6" title="Hypertagging: supertagging for surface realization with CCG" class="ltx_ref">10</a>]</cite>. An example
+input appears in Figure <a href="#S2.F1" title="Figure 1 ‣ 2 Background ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>. In the figure, nodes
+correspond to discourse referents labeled with lexical predicates, and
+dependency relations between nodes encode argument structure (gold
+standard CCG lexical categories are also shown); note that
+semantically empty function words such as infinitival-<span class="ltx_text ltx_font_italic">to</span> are
+missing. The grammar is extracted from a version of the CCGbank
+<cite class="ltx_cite">[<a href="#bib.bib89" title="CCGbank: A Corpus of CCG Derivations and Dependency Structures Extracted from the Penn Treebank" class="ltx_ref">15</a>]</cite> enhanced for realization; the enhancements include:
+better analyses of punctuation <cite class="ltx_cite">[<a href="#bib.bib24" title="A more precise analysis of punctuation for broad-coverage surface realization with CCG" class="ltx_ref">34</a>]</cite>; less
+error prone handling of named entities <cite class="ltx_cite">[<a href="#bib.bib8" title="Exploiting named entity classes in CCG surface realization" class="ltx_ref">26</a>]</cite>;
+re-inserting quotes into the CCGbank; and assignment of consistent
+semantic roles across diathesis alternations
+<cite class="ltx_cite">[<a href="#bib.bib22" title="Projecting Propbank roles onto the CCGbank" class="ltx_ref">4</a>]</cite>, using PropBank <cite class="ltx_cite">[<a href="#bib.bib126" title="The proposition bank: a corpus annotated with semantic roles" class="ltx_ref">23</a>]</cite>.</p>
+</div>
+<div id="S2.F1" class="ltx_figure"><img src="P14-1039/image001.png" id="S2.F1.g1" class="ltx_graphics ltx_centering" width="677" height="634" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Example OpenCCG semantic dependency input for <span class="ltx_text ltx_font_italic">he has
+a point he wants to make</span>, with gold standard lexical categories
+for each node</div>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">To select preferred outputs from the chart, we use White &amp;
+Rajkumar’s <cite class="ltx_cite">[<a href="#bib.bib5" title="Perceptron reranking for CCG realization" class="ltx_ref">35</a>, <a href="#bib.bib12" title="Minimal dependency length in realization ranking" class="ltx_ref">36</a>]</cite>
+realization ranking model, recently augmented with a large-scale
+5-gram model based on the Gigaword corpus. The ranking model makes
+choices addressing all three interrelated sub-tasks traditionally
+considered part of the surface realization task in natural language
+generation research <cite class="ltx_cite">[<a href="#bib.bib58" title="Building natural generation systems" class="ltx_ref">29</a>, <a href="#bib.bib85" title="Natural language generation" class="ltx_ref">30</a>]</cite>: inflecting
+lemmas with grammatical word forms, inserting function words and
+linearizing the words in a grammatical and natural order. The model
+takes as its starting point two probabilistic models of syntax that
+have been developed for CCG parsing, Hockenmaier &amp; Steedman’s
+<cite class="ltx_cite">[<a href="#bib.bib26" title="Generative models for statistical parsing with Combinatory Categorial Grammar" class="ltx_ref">14</a>]</cite> generative model and Clark &amp;
+Curran’s <cite class="ltx_cite">[<a href="#bib.bib115" title="Wide-Coverage Efficient Statistical Parsing with CCG and Log-Linear Models" class="ltx_ref">7</a>]</cite> normal-form model. Using the
+averaged perceptron algorithm <cite class="ltx_cite">[<a href="#bib.bib120" title="Discriminative training methods for hidden Markov models: theory and experiments with perceptron algorithms" class="ltx_ref">8</a>]</cite>, White &amp;
+Rajkumar <cite class="ltx_cite">[<a href="#bib.bib5" title="Perceptron reranking for CCG realization" class="ltx_ref">35</a>]</cite> trained a structured
+prediction ranking model to combine these existing syntactic models
+with several <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-gram language models. This model improved upon the
+state-of-the-art in terms of automatic evaluation scores on held-out
+test data, but nevertheless an error analysis revealed a surprising
+number of word order, function word and inflection errors. For each
+kind of error, subsequent work investigated the utility of employing
+more linguistically motivated features to improve the ranking model.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">To improve word ordering decisions, White &amp;
+Rajkumar <cite class="ltx_cite">[<a href="#bib.bib12" title="Minimal dependency length in realization ranking" class="ltx_ref">36</a>]</cite> demonstrated that
+incorporating a feature into the ranker inspired by
+Gibson’s <cite class="ltx_cite">[<a href="#bib.bib77" title="Dependency locality theory: A distance-based theory of linguistic complexity" class="ltx_ref">12</a>]</cite> dependency locality theory
+can deliver statistically significant improvements in automatic
+evaluation scores, better match the distributional characteristics of
+sentence orderings, and significantly reduce the number of serious
+ordering errors (some involving vicious ambiguities) as confirmed by a
+targeted human evaluation. Supporting Gibson’s theory, comprehension
+and corpus studies have found that the tendency to <span class="ltx_text ltx_font_bold">minimize
+dependency length</span> has a strong influence on constituent ordering
+choices; see <cite class="ltx_cite">Temperley (<a href="#bib.bib148" title="Minimization of dependency length in written English" class="ltx_ref">2007</a>)</cite> and
+<cite class="ltx_cite">Gildea and Temperley (<a href="#bib.bib149" title="Do grammars minimize dependency length?" class="ltx_ref">2010</a>)</cite> for an overview.</p>
+</div>
+<div id="S2.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle" style="width:390.258pt;">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">wsj_0015.7</span></th>
+<td class="ltx_td ltx_align_justify ltx_border_t"><span class="ltx_text ltx_font_small">the exact amount of the refund will be determined </span><span class="ltx_text ltx_font_bold ltx_font_small">next year</span><span class="ltx_text ltx_font_small">
+based on actual collections made until Dec. 31 of this year .</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_smallcaps ltx_font_small">deplen</span></th>
+<td class="ltx_td ltx_align_justify"><span class="ltx_text ltx_font_small">[same]</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_smallcaps ltx_font_small">depord</span></th>
+<td class="ltx_td ltx_align_justify"><span class="ltx_text ltx_font_small">the exact amount of the refund will be determined based on
+actual collections made until Dec. 31 of this year </span><span class="ltx_text ltx_font_italic ltx_font_small">next year</span><span class="ltx_text ltx_font_small"> .</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"/>
+<td class="ltx_td ltx_align_justify"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">wsj_0020.1</span></th>
+<td class="ltx_td ltx_align_justify"><span class="ltx_text ltx_font_small">the U.S. , claiming some success in its trade
+diplomacy , removed South Korea , Taiwan and
+Saudi Arabia from a list of countries it is closely watching for allegedly failing to honor
+U.S. patents , copyrights and other intellectual-property rights .</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_smallcaps ltx_font_small">deplen</span></th>
+<td class="ltx_td ltx_align_justify"><span class="ltx_text ltx_font_small">the U.S.  claiming some success in its trade diplomacy
+, removed </span><span class="ltx_text ltx_font_bold ltx_font_small">South Korea , Taiwan and Saudi Arabia</span><span class="ltx_text ltx_font_small"> from a list of
+countries it is </span><span class="ltx_text ltx_font_italic ltx_font_small">watching closely</span><span class="ltx_text ltx_font_small"> for allegedly failing to honor
+U.S. patents , copyrights and other intellectual-property rights .</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_smallcaps ltx_font_small">depord</span></th>
+<td class="ltx_td ltx_align_justify"><span class="ltx_text ltx_font_small">the U.S. removed from a list of countries it is </span><span class="ltx_text ltx_font_italic ltx_font_small">watching
+closely</span><span class="ltx_text ltx_font_small"> for allegedly failing to honor U.S. patents , copyrights and
+other intellectual-property rights , claiming some success in its
+trade diplomacy , </span><span class="ltx_text ltx_font_italic ltx_font_small">South Korea , Taiwan and Saudi Arabia</span><span class="ltx_text ltx_font_small"> .</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"/>
+<td class="ltx_td ltx_align_justify"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span>Examples of realized output for full models with and without
+the dependency length feature <cite class="ltx_cite">[<a href="#bib.bib12" title="Minimal dependency length in realization ranking" class="ltx_ref">36</a>]</cite></div>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p">Table <a href="#S2.T1" title="Table 1 ‣ 2 Background ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> shows examples from
+<cite class="ltx_cite">White and Rajkumar (<a href="#bib.bib12" title="Minimal dependency length in realization ranking" class="ltx_ref">2012</a>)</cite> of how the dependency length
+feature (<span class="ltx_text ltx_font_smallcaps">deplen</span>) affects the OpenCCG realizer’s output even
+in comparison to a model (<span class="ltx_text ltx_font_smallcaps">depord</span>) with a rich set of
+discriminative syntactic and dependency ordering features, but no
+features directly targeting relative weight. In wsj_0015.7, the
+dependency length model produces an exact match, while the
+<span class="ltx_text ltx_font_smallcaps">depord</span> model fails to shift the short temporal adverbial
+<span class="ltx_text ltx_font_italic">next year</span> next to the verb, leaving a confusingly repetitive
+<span class="ltx_text ltx_font_italic">this year next year</span> at the end of the sentence. Note how
+shifting <span class="ltx_text ltx_font_italic">next year</span> from its canonical VP-final position to
+appear next to the verb shortens its dependency length considerably,
+while barely lengthening the dependency to <span class="ltx_text ltx_font_italic">based on</span>; at the
+same time, it avoids ambiguity in what <span class="ltx_text ltx_font_italic">next year</span> is
+modifying. In wsj_0020.1 we see the reverse case: the dependency
+length model produces a nearly exact match with just an equally
+acceptable inversion of <span class="ltx_text ltx_font_italic">closely watching</span>, keeping the direct
+object in its canonical position. By contrast, the <span class="ltx_text ltx_font_smallcaps">depord</span>
+model mistakenly shifts the direct object <span class="ltx_text ltx_font_italic">South Korea, Taiwan
+and Saudia Arabia</span> to the end of the sentence where it is difficult
+to understand following two very long intervening phrases.</p>
+</div>
+<div id="S2.p5" class="ltx_para">
+<p class="ltx_p">With function words, <cite class="ltx_cite">Rajkumar and White (<a href="#bib.bib15" title="Linguistically motivated complementizer choice in surface realization" class="ltx_ref">2011</a>)</cite> showed
+that they could improve upon the earlier model’s predictions for when
+to employ <span class="ltx_text ltx_font_italic">that</span>-complementizers using features inspired by
+Jaeger’s <cite class="ltx_cite">[<a href="#bib.bib63" title="Redundancy and reduction: speakers manage information density" class="ltx_ref">16</a>]</cite> work on using the principle
+of <span class="ltx_text ltx_font_bold">uniform information density</span>, which holds that human
+language use tends to keep information density relatively constant in
+order to optimize communicative efficiency. In news text,
+complementizers are left out two times out of three, but in some cases
+the presence of <span class="ltx_text ltx_font_italic">that</span> is crucial to the
+interpretation. Generally, inserting a complementizer makes the onset
+of a complement clause more predictable, and thus less information
+dense, thereby avoiding a potential spike in information density that
+is associated with comprehension difficulty. Rajkumar &amp; White’s
+experiments confirmed the efficacy of the features based on Jaeger’s
+work, including information density–based features, in a local
+classification model.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>Note that the features from the local
+classification model for <span class="ltx_text ltx_font_italic">that</span>-complementizer choice have
+not yet been incorporated into OpenCCG’s global realization ranking
+model, and thus do not inform the baseline realization choices in
+this work.</span></span></span> Their experiments also showed that the improvements in
+prediction accuracy apply to cases in which the presence of a <span class="ltx_text ltx_font_italic">that</span>-complementizer arguably makes a substantial difference to
+fluency or intelligiblity. For example, in (1), the
+presence of <span class="ltx_text ltx_font_italic">that</span> avoids a local ambiguity, helping the reader
+to understand that <span class="ltx_text ltx_font_italic">for the second month in a row</span> modifies the
+reporting of the shortage; without <span class="ltx_text ltx_font_italic">that</span>, it is very easy to
+mis-parse the sentence as having <span class="ltx_text ltx_font_italic">for the second month in a
+row</span> modifying the saying event.</p>
+</div>
+<div id="S2.p6" class="ltx_para">
+<ul id="I1" class="ltx_itemize">
+<li id="I1.ix1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">(1)</span> 
+<div id="I1.ix1.p1" class="ltx_para">
+<p class="ltx_p">He said <span class="ltx_text" style="text-decoration:underline;">that</span>/<math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.ix1.p1.m1" class="ltx_Math" alttext="\emptyset" display="inline"><mi mathvariant="normal">∅</mi></math>? for
+the second month in a row, food processors reported a shortage of
+nonfat dry milk. (PTB WSJ0036.61)</p>
+</div></li>
+</ul>
+</div>
+<div id="S2.p7" class="ltx_para">
+<p class="ltx_p">Finally, to reduce the number of subject-verb agreement errors,
+<cite class="ltx_cite">Rajkumar and White (<a href="#bib.bib13" title="Designing agreement features for realization ranking" class="ltx_ref">2010</a>)</cite> extended the earlier model with features
+enabling it to make correct verb form choices in sentences involving
+complex coordinate constructions and with expressions such as
+<span class="ltx_text ltx_font_italic">a lot of</span> where the correct choice is not determined solely
+by the head noun. They also improved animacy agreement with
+relativizers, reducing the number of errors where <span class="ltx_text ltx_font_italic">that</span> or
+<span class="ltx_text ltx_font_italic">which</span> was chosen to modify an animate noun rather than
+<span class="ltx_text ltx_font_italic">who</span> or <span class="ltx_text ltx_font_italic">whom</span> (and vice-versa), while also allowing
+both choices where corpus evidence was mixed.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Simple Reranking</h2>
+
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Methods</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">We ran two OpenCCG surface realization models on the CCGbank dev set
+(derived from Section 00 of the Penn Treebank) and obtained <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-best
+(<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m2" class="ltx_Math" alttext="n=10" display="inline"><mrow><mi>n</mi><mo>=</mo><mn>10</mn></mrow></math>) realizations. The first one is the baseline generative
+model (hereafter, generative model) used in training the averaged
+perceptron model. This model ranks realizations using the product of
+the Hockenmaier syntax model, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m3" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-gram models over words, POS tags and
+supertags in the training sections of the CCGbank, and the large-scale
+5-gram model from Gigaword. The second one is the averaged perceptron
+model (hereafter, perceptron model), which uses all the features
+reviewed in Section <a href="#S2" title="2 Background ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>. In order to experiment with
+multiple parsers, we used the Stanford dependencies
+<cite class="ltx_cite">[<a href="#bib.bib1" title="Generating typed dependency parses from phrase structure parses" class="ltx_ref">9</a>]</cite>, obtaining gold dependencies from the
+gold-standard PTB parses and automatic dependencies from the automatic
+parses of each realization. Using dependencies allowed us to measure
+parse accuracy independently of word order. We chose the Berkeley
+parser <cite class="ltx_cite">[<a href="#bib.bib3" title="Learning accurate, compact, and interpretable tree annotation" class="ltx_ref">25</a>]</cite>, Brown parser <cite class="ltx_cite">[<a href="#bib.bib4" title="Coarse-to-fine n-best parsing and maxent discriminative reranking" class="ltx_ref">6</a>]</cite> and
+Stanford parser <cite class="ltx_cite">[<a href="#bib.bib2" title="Accurate unlexicalized parsing" class="ltx_ref">19</a>]</cite> to parse the realizations
+generated by the two realization models and calculated precision,
+recall and F<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m4" class="ltx_Math" alttext="{}_{1}" display="inline"><msub><mi/><mn>1</mn></msub></math> of the dependencies for each realization by comparing
+them with the gold dependencies. We then ranked the realizations by
+their F<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m5" class="ltx_Math" alttext="{}_{1}" display="inline"><msub><mi/><mn>1</mn></msub></math> score of parse accuracy, keeping the original ranking in
+case of ties. We also tried using unlabeled (and unordered)
+dependencies, in order to possibly make better use of parses that were
+close to being correct. In this setting, as long as the right pair of tokens
+occur in a dependency relation, it was counted as a correctly
+recovered dependency.</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Results</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">Simple ranking with the Berkeley parser of the generative model’s
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-best realizations raised the BLEU score from 85.55 to 86.07,
+well below the averaged perceptron model’s BLEU score of 87.93.
+However, as shown in Table <a href="#S3.T2" title="Table 2 ‣ 3.2 Results ‣ 3 Simple Reranking ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>, none of the parsers
+yielded significant improvements on the top of the perceptron model.</p>
+</div>
+<div id="S3.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_t">Berkeley</th>
+<th class="ltx_td ltx_align_center ltx_border_t">Brown</th>
+<th class="ltx_td ltx_align_center ltx_border_t">Stanford</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_t">No reranking</th>
+<td class="ltx_td ltx_align_center ltx_border_t">87.93</td>
+<td class="ltx_td ltx_align_center ltx_border_t">87.93</td>
+<td class="ltx_td ltx_align_center ltx_border_t">87.93</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right">Labeled</th>
+<td class="ltx_td ltx_align_center">87.77</td>
+<td class="ltx_td ltx_align_center">87.87</td>
+<td class="ltx_td ltx_align_center">87.12</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right">Unlabeled</th>
+<td class="ltx_td ltx_align_center">87.90</td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">87.97</span></td>
+<td class="ltx_td ltx_align_center">86.97</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 2: </span>Devset BLEU scores for simple ranking on top of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m2" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-best perceptron
+model realizations</div>
+</div>
+<div id="S3.F2" class="ltx_figure"><img src="P14-1039/image002.png" id="S3.F2.g1" class="ltx_graphics ltx_centering" width="744" height="1052" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>Example parsing mistake in PP-attachment (wsj_0043.1)</div>
+</div>
+<div id="S3.F3" class="ltx_figure"><img src="P14-1039/image003.png" id="S3.F3.g1" class="ltx_graphics ltx_centering" width="744" height="1052" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 3: </span>Example parsing mistakes in a noun-noun
+compound and a coordinate structure (wsj_0085.45)</div>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p">Inspecting the results of simple ranking revealed that while simple
+ranking did successfully avoid vicious ambiguities in some cases,
+parser mistakes with PP-attachments, noun-noun compounds and
+coordinate structures too often blocked the gold realization from
+emerging on top. To illustrate, Figure <a href="#S3.F2" title="Figure 2 ‣ 3.2 Results ‣ 3 Simple Reranking ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> shows an example
+with a PP-attachment mistake. In the figure, the key gold
+dependencies of the reference sentence are shown in (a), the
+dependencies of the realization selected by the simple ranker are
+shown in (b), and the dependencies of the realization selected by the
+perceptron ranker (same as gold) appear in (c), with the parsing mistake indicated by
+the dashed line. The simple ranker ends up choosing (b) as the best
+realization because it has the most accurate parse compared to the
+reference sentence, given the mistake with (c).</p>
+</div>
+<div id="S3.SS2.p3" class="ltx_para">
+<p class="ltx_p">Other common parse errors are illustrated in Figure <a href="#S3.F3" title="Figure 3 ‣ 3.2 Results ‣ 3 Simple Reranking ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>. Here,
+(b) ends up getting chosen by the simple ranker as the realization
+with the most accurate parse given the failures in (c), where
+<span class="ltx_text ltx_font_italic">the additional technology, personnel training</span> is mistakenly
+analyzed as one noun phrase, a reading unlikely to be considered by
+human readers.</p>
+</div>
+<div id="S3.SS2.p4" class="ltx_para">
+<p class="ltx_p">In sum, although simple ranking helps to avoid vicious ambiguity in
+some cases, the overall results of simple ranking are no better than
+the perceptron model (according to BLEU, at least), as parse failures
+that are not reflective of human intepretive tendencies too often lead
+the ranker to choose dispreferred realizations. As such, we turn now
+to a more nuanced model for combining the results of multiple parsers
+in a way that is less sensitive to such parsing mistakes, while also
+letting the perceptron model have a say in the final ranking.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Reranking with SVMs</h2>
+
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Methods</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">Since different parsers make different errors, we conjectured that
+dependencies in the intersection of the output of multiple parsers may
+be more reliable and thus may more reliably reflect human
+comprehension preferences. Similarly, we conjectured that large
+differences in the realizer’s perceptron model score may more reliably
+reflect human fluency preferences than small ones, and thus we
+combined this score with features for parser accuracy in
+an SVM ranker. Additionally, given that parsers may more reliably
+recover some kinds of dependencies than others, we included features
+for each dependency type, so that the SVM ranker might learn how to
+weight them appropriately. Finally, since the differences among the
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-best parses reflect the least certain parsing decisions, and thus
+ones that may require more common sense inference that is easy for
+humans but not machines, we conjectured that including features from the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m2" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-best
+parses may help to better match human performance. In more detail, we
+made use of the following feature classes for each candidate
+realization:</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<dl id="I2" class="ltx_description">
+<dt id="I2.ix1" class="ltx_item"><span class="ltx_tag ltx_tag_description">perceptron model score</span></dt>
+<dd class="ltx_item">
+<div id="I2.ix1.p1" class="ltx_para">
+<p class="ltx_p">the score from the realizer’s model,
+normalized to [0,1] for the realizations in the <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.ix1.p1.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-best list</p>
+</div></dd>
+<dt id="I2.ix2" class="ltx_item"><span class="ltx_tag ltx_tag_description">precision and recall</span></dt>
+<dd class="ltx_item">
+<div id="I2.ix2.p1" class="ltx_para">
+<p class="ltx_p">labeled and unlabeled precision and recall
+for each parser’s best parse</p>
+</div></dd>
+<dt id="I2.ix3" class="ltx_item"><span class="ltx_tag ltx_tag_description">per-label precision and recall (<span class="ltx_text ltx_font_italic">dep</span>)</span></dt>
+<dd class="ltx_item">
+<div id="I2.ix3.p1" class="ltx_para">
+<p class="ltx_p">precision and recall for each type of
+dependency obtained from each parser’s best parse (using zero if not
+defined for lack of predicted or gold dependencies with a given label)</p>
+</div></dd>
+<dt id="I2.ix4" class="ltx_item"><span class="ltx_tag ltx_tag_description"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.ix4.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-best precision and recall (<span class="ltx_text ltx_font_italic">nbest</span>)</span></dt>
+<dd class="ltx_item">
+<div id="I2.ix4.p1" class="ltx_para">
+<p class="ltx_p">labeled and
+unlabeled precision and recall for each parser’s top five parses,
+along with the same features for the most accurate of these parses</p>
+</div></dd>
+</dl>
+</div>
+<div id="S4.SS1.p3" class="ltx_para">
+<p class="ltx_p">In training, we used the BLEU scores of each realization compared with
+its reference sentence to establish a preference order over pairs of
+candidate realizations, assuming that the original corpus sentences are generally better than
+related alternatives, and that BLEU can somewhat reliably predict
+human preference judgments.</p>
+</div>
+<div id="S4.SS1.p4" class="ltx_para">
+<p class="ltx_p">We trained the SVM ranker <cite class="ltx_cite">[<a href="#bib.bib27" title="Optimizing search engines using clickthrough data" class="ltx_ref">17</a>]</cite> with a linear kernel and
+chose the hyper-parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m1" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math>, which tunes the trade-off between
+training error and margin, with 6-fold cross-validation on the
+devset. We trained different models to investigate the contribution
+made by different parsers and different types of features, with the
+perceptron model score included as a feature in all models. For each
+parser, we trained a model with its overall precision and recall
+features, as shown at the top of Table <a href="#S4.T3" title="Table 3 ‣ 4.2 Results ‣ 4 Reranking with SVMs ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>. Then we
+combined these three models to get a new model (Bkl+Brw+St in the
+table) . Next, to this combined model we separately added (i) the
+per-label precision and recall features from all the parsers
+(BBS+dep), and (ii) the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m2" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-best features from the parsers
+(BBS+nbest). The full model (BBS+dep+nbest) includes all the features
+listed above. Finally, since the Berkeley parser yielded the best
+results on its own, we also tested models using all the feature
+classes but only using this parser by itself.</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Results</h3>
+
+<div id="S4.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_t">BLEU</td>
+<td class="ltx_td ltx_align_center ltx_border_t">sig.</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t">perceptron baseline</th>
+<td class="ltx_td ltx_align_center ltx_border_t">87.93</td>
+<td class="ltx_td ltx_align_center ltx_border_t">–</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">Berkeley</th>
+<td class="ltx_td ltx_align_center">88.45</td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">*</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">Brown</th>
+<td class="ltx_td ltx_align_center">88.34</td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">Stanford</th>
+<td class="ltx_td ltx_align_center">88.18</td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">Bkl+Brw+St</th>
+<td class="ltx_td ltx_align_center">88.44</td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">*</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">BBS+dep</th>
+<td class="ltx_td ltx_align_center">88.63</td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">**</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">BBS+nbest</th>
+<td class="ltx_td ltx_align_center">88.60</td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">**</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">BBS+dep+nbest</th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">88.73</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">**</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t">Bkl+dep</th>
+<td class="ltx_td ltx_align_center ltx_border_t">88.63</td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">**</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">Bkl+nbest</th>
+<td class="ltx_td ltx_align_center">88.48</td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">*</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">Bkl +dep+nbest</th>
+<td class="ltx_td ltx_align_center">88.68</td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">**</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 3: </span>Devset results of SVM ranking on top of perceptron
+model. Significance codes: <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m5" class="ltx_Math" alttext="**" display="inline"><mrow><mo>*</mo><mo>⁣</mo><mo>*</mo></mrow></math> for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m6" class="ltx_Math" alttext="p&lt;0.05" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.05</mn></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m7" class="ltx_Math" alttext="*" display="inline"><mo>*</mo></math> for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m8" class="ltx_Math" alttext="p&lt;0.1" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.1</mn></mrow></math>.</div>
+</div>
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">Table <a href="#S4.T3" title="Table 3 ‣ 4.2 Results ‣ 4 Reranking with SVMs ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> shows the results of different SVM ranking
+models on the devset. We calculated significance using paired bootstrap resampling
+<cite class="ltx_cite">[<a href="#bib.bib95" title="Statistical significance tests for machine translation evaluation" class="ltx_ref">20</a>]</cite>.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>Kudos to Kevin Gimpel for making his
+implementation available:
+<a href="http://www.ark.cs.cmu.edu/MT/paired_bootstrap_v13a.tar.gz" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://www.ark.cs.cmu.edu/MT/paired_bootstrap_v13a.tar.gz</span></a></span></span></span>
+Both the per-label precision &amp; recall features and the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-best parse
+features contributed to achieving a significant improvement compared
+to the perceptron model. Somewhat surprisingly, the Berkeley parser
+did as well as all three parsers using just the overall precision and
+recall features, but not quite as well using all features.
+The complete model, BBS+dep+nbest, achieved a BLEU score of 88.73,
+significantly improving upon the perceptron model (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m2" class="ltx_Math" alttext="p&lt;0.02" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.02</mn></mrow></math>). We
+then confirmed this result on the final test set, Section 23 of the
+CCGbank, as shown in Table <a href="#S4.T4" title="Table 4 ‣ 4.2 Results ‣ 4 Reranking with SVMs ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m3" class="ltx_Math" alttext="p&lt;0.02" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.02</mn></mrow></math> as well).</p>
+</div>
+<div id="S4.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_t">BLEU</th>
+<th class="ltx_td ltx_align_center ltx_border_t">sig.</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t">perceptron baseline</th>
+<td class="ltx_td ltx_align_center ltx_border_t">86.94</td>
+<td class="ltx_td ltx_align_center ltx_border_t">–</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">BBS+dep+nbest</th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">87.64</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">**</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 4: </span>Final test results of SVM ranking on top of perceptron
+model. Significance codes: <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T4.m5" class="ltx_Math" alttext="**" display="inline"><mrow><mo>*</mo><mo>⁣</mo><mo>*</mo></mrow></math> for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T4.m6" class="ltx_Math" alttext="p&lt;0.05" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.05</mn></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T4.m7" class="ltx_Math" alttext="*" display="inline"><mo>*</mo></math> for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T4.m8" class="ltx_Math" alttext="p&lt;0.1" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.1</mn></mrow></math>.</div>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Analysis and Discussion</h2>
+
+<div id="S5.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.1 </span>Targeted Manual Analysis</h3>
+
+<div id="S5.SS1.p1" class="ltx_para">
+<p class="ltx_p">In order to gain a better understanding of the successes and failures
+of our SVM ranker, we present here a targeted manual analysis of the
+development set sentences with the greatest change in BLEU scores,
+carried out by the second author (a native speaker). In this
+analysis, we consider whether the reranked realization improves upon
+or detracts from realization quality—in terms of adequacy, fluency,
+both or neither—along with a linguistic categorization of the
+differences between the reranked realization and the original
+top-ranked realization according to the averaged perceptron model.
+Unlike the broad-based and objective evaluation in terms of BLEU
+scores presented above, this analysis is narrowly targeted and
+subjective, though the interested reader is invited to review the
+complete set of analyzed examples that accompany the paper as a
+supplement. We leave a more broad-based human evaluation by naive
+subjects for future work.</p>
+</div>
+<div id="S5.T5" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T5.m1" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math>adq</th>
+<th class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T5.m2" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math>flu</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">=eq</th>
+<th class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T5.m3" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math>vpord</th>
+<th class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T5.m4" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math>npord</th>
+<th class="ltx_td ltx_align_center ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T5.m5" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math>nn</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T5.m6" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math>ne</th>
+<th class="ltx_td ltx_align_center ltx_border_t">=vpord</th>
+<th class="ltx_td ltx_align_center ltx_border_t">=sbjinv</th>
+<th class="ltx_td ltx_align_center ltx_border_t">=cntrc</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">BLEU wins</td>
+<td class="ltx_td ltx_align_center ltx_border_t">15</td>
+<td class="ltx_td ltx_align_center ltx_border_t">22</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">16</td>
+<td class="ltx_td ltx_align_center ltx_border_t">10</td>
+<td class="ltx_td ltx_align_center ltx_border_t">9</td>
+<td class="ltx_td ltx_align_center ltx_border_t">7</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">3</td>
+<td class="ltx_td ltx_align_center ltx_border_t">4</td>
+<td class="ltx_td ltx_align_center ltx_border_t">-</td>
+<td class="ltx_td ltx_align_center ltx_border_t">11</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">BLEU losses</td>
+<td class="ltx_td ltx_align_center">4</td>
+<td class="ltx_td ltx_align_center">32</td>
+<td class="ltx_td ltx_align_center ltx_border_r">15</td>
+<td class="ltx_td ltx_align_center">8</td>
+<td class="ltx_td ltx_align_center">13</td>
+<td class="ltx_td ltx_align_center">5</td>
+<td class="ltx_td ltx_align_center ltx_border_r">5</td>
+<td class="ltx_td ltx_align_center">4</td>
+<td class="ltx_td ltx_align_center">7</td>
+<td class="ltx_td ltx_align_center">-</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 5: </span>Manual analysis of devset sentences where the SVM ranker
+achieved the greatest increase/decrease in BLEU scores (50 each of
+wins/losses) compared to the averaged perceptron baseline model
+in terms of positive or negative changes in adequacy (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T5.m13" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math>adq), fluency (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T5.m14" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math>flu) or
+neither (=eq); changes in VP ordering (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T5.m15" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math>vpord), NP ordering (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T5.m16" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math>npord),
+noun-noun compound ordering (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T5.m17" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math>nn) and named entities (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T5.m18" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math>ne);
+and neither positive nor negative
+changes in VP ordering (=vpord), subject-inversion (=sbjinv) and
+contractions (=cntrc). In all but one case (counted as =eq here), the
+BLEU wins saw positive changes and the BLEU losses saw negative changes.</div>
+</div>
+<div id="S5.SS1.p2" class="ltx_para">
+<p class="ltx_p">Table <a href="#S5.T5" title="Table 5 ‣ 5.1 Targeted Manual Analysis ‣ 5 Analysis and Discussion ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> shows the results of the analysis, both
+overall and for the most frequent categories of changes. Of the 50
+sentences where the BLEU score went up the most, 15 showed an
+improvement in adequacy (i.e., in conveying the intended meaning), 22
+showed an improvement in fluency (with 3 cases also improving
+adequacy), and 16 yielded no discernible change in fluency or
+adequacy. By contrast, with the 50 sentences where the BLEU score
+went down the most, adequacy was only affected 4 times, though fluency
+was affected 32 times, and 15 remained essentially
+unchanged.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>The difference in the distribution of adequacy change,
+fluency change and no change counts between the two conditions is
+highly significant statistically (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p2.m1" class="ltx_Math" alttext="\chi^{2}=9.3,df=2,p&lt;0.01" display="inline"><mrow><mrow><msup><mi>χ</mi><mn>2</mn></msup><mo>=</mo><mn>9.3</mn></mrow><mo>,</mo><mrow><mrow><mrow><mi>d</mi><mo>⁢</mo><mi>f</mi></mrow><mo>=</mo><mn>2</mn></mrow><mo>,</mo><mrow><mi>p</mi><mo>&lt;</mo><mn>0.01</mn></mrow></mrow></mrow></math>). In this comparison, items where both fluency and
+adequacy were affected were counted as adequacy cases.</span></span></span> The table
+also shows that differences in the order of VP constituents usually
+led to a change in adequacy or fluency, as did ordering changes within
+NPs, with noun-noun compounds and named entities as the most frequent
+subcategories of NP-ordering changes. Of the cases where adequacy and
+fluency were not affected, contractions and subject-verb inversions
+were the most frequent differences.</p>
+</div>
+<div id="S5.T6" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle" style="width:424.9476pt;">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">wsj_0036.54</span></th>
+<td class="ltx_td ltx_align_justify ltx_border_t"><span class="ltx_text ltx_font_small">the purchasing managers ’ report is based on data
+provided by more than 250 </span><span class="ltx_text ltx_font_bold ltx_font_small">purchasing</span><span class="ltx_text ltx_font_small"> executives .</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_smallcaps ltx_font_small">SVM ranker</span></th>
+<td class="ltx_td ltx_align_justify"><span class="ltx_text ltx_font_small">[same]</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_smallcaps ltx_font_small">percep best</span></th>
+<td class="ltx_td ltx_align_justify"><span class="ltx_text ltx_font_small">the purchasing managers ’ report is based on
+data provided by </span><span class="ltx_text ltx_font_italic ltx_font_small">purchasing</span><span class="ltx_text ltx_font_small"> more than 250 executives .</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"/>
+<td class="ltx_td ltx_align_justify"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">wsj_0088.25</span></th>
+<td class="ltx_td ltx_align_justify"><span class="ltx_text ltx_font_small">Markey said we could have done this </span><span class="ltx_text ltx_font_bold ltx_font_small">in public</span><span class="ltx_text ltx_font_small"> because so
+little sensitive information was disclosed , the aide said .</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_smallcaps ltx_font_small">SVM ranker</span></th>
+<td class="ltx_td ltx_align_justify"><span class="ltx_text ltx_font_small">Markey said </span><span class="ltx_text ltx_font_italic ltx_font_small">,</span><span class="ltx_text ltx_font_small"> we could have done this </span><span class="ltx_text ltx_font_bold ltx_font_small">in public</span><span class="ltx_text ltx_font_small">
+because so little sensitive information was disclosed , the aide said .</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_smallcaps ltx_font_small">percep best</span></th>
+<td class="ltx_td ltx_align_justify"><span class="ltx_text ltx_font_small">Markey said </span><span class="ltx_text ltx_font_italic ltx_font_small">,</span><span class="ltx_text ltx_font_small"> we could have done this because
+so little sensitive information was disclosed </span><span class="ltx_text ltx_font_italic ltx_font_small">in public</span><span class="ltx_text ltx_font_small"> , the aide said .</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"/>
+<td class="ltx_td ltx_align_justify"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">wsj_0041.18</span></th>
+<td class="ltx_td ltx_align_justify ltx_border_t"><span class="ltx_text ltx_font_small">the screen shows two distorted , unrecognizable photos
+, </span><span class="ltx_text ltx_font_bold ltx_font_small">presumably</span><span class="ltx_text ltx_font_small"> of two politicians .</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_smallcaps ltx_font_small">SVM ranker</span></th>
+<td class="ltx_td ltx_align_justify"><span class="ltx_text ltx_font_small">the screen shows two distorted , unrecognizable
+photos </span><span class="ltx_text ltx_font_italic ltx_font_small">presumably</span><span class="ltx_text ltx_font_small"> , of two politicians .</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_smallcaps ltx_font_small">percep best</span></th>
+<td class="ltx_td ltx_align_justify"><span class="ltx_text ltx_font_small">[same as original]</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"/>
+<td class="ltx_td ltx_align_justify"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">wsj_0044.111</span></th>
+<td class="ltx_td ltx_align_justify ltx_border_t"><span class="ltx_text ltx_font_small">“ I was dumbfounded ” , Mrs. Ward </span><span class="ltx_text ltx_font_bold ltx_font_small">recalls</span><span class="ltx_text ltx_font_small"> .</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_smallcaps ltx_font_small">SVM ranker</span></th>
+<td class="ltx_td ltx_align_justify"><span class="ltx_text ltx_font_small">“ I was dumbfounded ” , </span><span class="ltx_text ltx_font_italic ltx_font_small">recalls</span><span class="ltx_text ltx_font_small">
+Mrs. Ward .</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_smallcaps ltx_font_small">percep best</span></th>
+<td class="ltx_td ltx_align_justify"><span class="ltx_text ltx_font_small">[same as original]</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"/>
+<td class="ltx_td ltx_align_justify"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 6: </span>Examples of devset sentences where the SVM ranker
+improved adequacy (top), made it worse (middle) or left it the same (bottom)</div>
+</div>
+<div id="S5.SS1.p3" class="ltx_para">
+<p class="ltx_p">Examples of the changes yielded by the SVM ranker appear in
+Table <a href="#S5.T6" title="Table 6 ‣ 5.1 Targeted Manual Analysis ‣ 5 Analysis and Discussion ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>. With wsj_0036.54, the averaged
+perceptron model selects a realization that regrettably (though
+amusingly) swaps <span class="ltx_text ltx_font_italic">purchasing</span> and <span class="ltx_text ltx_font_italic">more than
+250</span>—yielding a sentence that suggests that the executives have
+been purchased!—while the SVM ranker succeeds in ranking the
+original sentence above all competing realizations. With
+wsj_0088.25, self-monitoring with the SVM ranker yields a realization
+nearly identical to the original except for an extra comma, where it
+is clear that <span class="ltx_text ltx_font_italic">in public</span> modifies <span class="ltx_text ltx_font_italic">do this</span>; by
+contrast, in the perceptron-best realization, <span class="ltx_text ltx_font_italic">in public</span>
+mistakenly appears to modify <span class="ltx_text ltx_font_italic">be disclosed</span>. With
+wsj_0041.18, the SVM ranker unfortunately prefers a realization where
+<span class="ltx_text ltx_font_italic">presumably</span> seems to modify <span class="ltx_text ltx_font_italic">shows</span> rather than
+<span class="ltx_text ltx_font_italic">of two politicians</span> as in the original, which the averaged
+perceptron model prefers. Finally, wsj_0044.111 is an example where
+a subject-inversion makes no difference to adequacy or fluency.</p>
+</div>
+</div>
+<div id="S5.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.2 </span>Discussion</h3>
+
+<div id="S5.SS2.p1" class="ltx_para">
+<p class="ltx_p">The BLEU evaluation and targeted manual analysis together show that
+the SVM ranker increases the similarity to the original corpus of
+realizations produced with self-monitoring, often in ways that are
+crucial for the intended meaning to be apparent to human readers.</p>
+</div>
+<div id="S5.SS2.p2" class="ltx_para">
+<p class="ltx_p">A limitation of the experiments reported in this paper is that
+OpenCCG’s input semantic dependency graphs are not the same as the
+Stanford dependencies used with the Treebank parsers, and thus we have
+had to rely on the gold parses in the PTB to derive gold dependencies
+for measuring accuracy of parser dependency recovery. In a realistic
+application scenario, however, we would need to measure parser
+accuracy relative to the realizer’s input. We initially tried using
+OpenCCG’s parser in a simple ranking approach, but found that it did
+not improve upon the averaged perceptron model, like the three parsers
+used subsequently. Given that with the more refined SVM ranker, the
+Berkeley parser worked nearly as well as all three parsers together
+using the complete feature set, the prospects for future work on a
+more realistic scenario using the OpenCCG parser in an SVM ranker for
+self-monitoring now appear much more promising, either using OpenCCG’s
+reimplementation of Hockenmaier &amp; Steedman’s generative CCG model, or
+using the Berkeley parser trained on OpenCCG’s enhanced version of the
+CCGbank, along the lines of <cite class="ltx_cite">Fowler and Penn (<a href="#bib.bib90" title="Accurate context-free parsing with Combinatory Categorial Grammar" class="ltx_ref">2010</a>)</cite>.</p>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Related Work</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">Approaches to surface realization have been developed for LFG, HPSG,
+and TAG, in addition to CCG, and recently statistical dependency-based
+approaches have been developed as well; see the report from the first
+surface realization shared task
+<cite class="ltx_cite">[<a href="#bib.bib11" title="Finding common ground: towards a surface realisation shared task" class="ltx_ref">3</a>, <a href="#bib.bib10" title="The first surface realisation shared task: overview and evaluation results" class="ltx_ref">2</a>]</cite> for an overview. To
+our knowledge, however, a comprehensive investigation of avoiding
+vicious structural ambiguities with broad coverage statistical parsers
+has not been previously explored. As our SVM ranking model does not
+make use of CCG-specific features, we would expect our
+self-monitoring method to be equally applicable to realizers using
+other frameworks.</p>
+</div>
+</div>
+<div id="S7" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">7 </span>Conclusion</h2>
+
+<div id="S7.p1" class="ltx_para">
+<p class="ltx_p">In this paper, we have shown that while using parse accuracy in a
+simple reranking strategy for self-monitoring fails to improve BLEU
+scores over a state-of-the-art averaged perceptron realization ranking
+model, it is possible to significantly increase BLEU scores using an
+SVM ranker that combines the realizer’s model score together with
+features from multiple parsers, including ones designed to make the
+ranker more robust to parsing mistakes that human readers would be
+unlikely to make. Additionally, via a targeted manual analysis, we
+showed that the SVM reranker frequently manages to avoid egregious
+errors involving “vicious” ambiguities, of the kind that would
+mislead human readers as to the intended meaning.</p>
+</div>
+<div id="S7.p2" class="ltx_para">
+<p class="ltx_p">As noted in Reiter’s <cite class="ltx_cite">[<a href="#bib.bib85" title="Natural language generation" class="ltx_ref">30</a>]</cite> survey, many NLG
+systems use surface realizers as off-the-shelf components. In this
+paper, we have focused on broad coverage surface realization using
+widely-available PTB data—where there are many sentences of varying
+complexity with gold-standard annotations—following the common
+assumption that experiments with broad coverage realization are (or
+eventually will be) relevant for NLG applications. Of course, the
+kinds of ambiguity that can be problematic in news text may or may not
+be the same as the ones encountered in particular
+applications. Moreover, for certain applications (e.g. ones with medical or legal
+implications), it may be better to err on the side of ambiguity
+avoidance, even at some expense to fluency, thereby requiring training
+data reflecting the desired trade-off to adapt the methods described here.
+We leave these application-centered issues for investigation in future work.</p>
+</div>
+<div id="S7.p3" class="ltx_para">
+<p class="ltx_p">The current approach is primarily suitable for offline use, for example
+in report generation where there are no real-time interaction demands.
+In future work, we also plan to investigate ways that self-monitoring might
+be implemented more efficiently as a combined process, rather than
+running independent parsers as a post-process following realization.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">We thank Mark Johnson, Micha Elsner, the OSU Clippers Group and the
+anonymous reviewers for helpful comments and discussion. This work
+was supported in part by NSF grants IIS-1143635 and IIS-1319318.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib39" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Abney</span><span class="ltx_text ltx_bib_year">(1996)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Statistical methods and linguistics</span>.
+</span>
+<span class="ltx_bibblock">in <span class="ltx_text ltx_bib_editor">J. Klavans and P. Resnik (Eds.)</span>, <span class="ltx_text ltx_bib_inbook">The balancing act: Combining symbolic and statistical
+approaches to language</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1–26</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Belz, M. White, D. Espinosa, E. Kow, D. Hogan and A. Stent</span><span class="ltx_text ltx_bib_year">(2011-09)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The first surface realisation shared task: overview and evaluation results</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Nancy, France</span>, <span class="ltx_text ltx_bib_pages"> pp. 217–226</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W11-2832" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p1" title="6 Related Work ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Belz, M. White, J. van Genabith, D. Hogan and A. Stent</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Finding common ground: towards a surface realisation shared task</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 267–272</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p1" title="6 Related Work ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib22" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Boxwell and M. White</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Projecting Propbank roles onto the CCGbank</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Background ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib38" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. Chantree, B. Nuseibeh, A. De Roeck and A. Willis</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Identifying nocuous ambiguities in natural language requirements</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 59–68</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Charniak and M. Johnson</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Coarse-to-fine n-best parsing and maxent discriminative reranking</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Ann Arbor, Michigan</span>, <span class="ltx_text ltx_bib_pages"> pp. 173–180</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p1" title="3.1 Methods ‣ 3 Simple Reranking ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib115" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Clark and J. R. Curran</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Wide-Coverage Efficient Statistical Parsing with CCG and Log-Linear Models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">33</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 493–552</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Background ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib120" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Collins</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Discriminative training methods for hidden Markov models: theory and experiments with perceptron algorithms</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Background ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. de Marneffe, B. MacCartney and C. Manning</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Generating typed dependency parses from phrase structure parses</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p1" title="3.1 Methods ‣ 3 Simple Reranking ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Espinosa, M. White and D. Mehay</span><span class="ltx_text ltx_bib_year">(2008-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Hypertagging: supertagging for surface realization with CCG</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Columbus, Ohio</span>, <span class="ltx_text ltx_bib_pages"> pp. 183–191</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P/P08/P08-1022" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Background ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib90" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. A. D. Fowler and G. Penn</span><span class="ltx_text ltx_bib_year">(2010-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Accurate context-free parsing with Combinatory Categorial Grammar</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Uppsala, Sweden</span>, <span class="ltx_text ltx_bib_pages"> pp. 335–344</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P10-1035" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS2.p2" title="5.2 Discussion ‣ 5 Analysis and Discussion ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>.
+</span></li>
+<li id="bib.bib77" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Gibson</span><span class="ltx_text ltx_bib_year">(2000)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Dependency locality theory: A distance-based theory of linguistic complexity</span>.
+</span>
+<span class="ltx_bibblock">in <span class="ltx_text ltx_bib_editor">A. Marantz, Y. Miyashita and W. O’Neil (Eds.)</span>, <span class="ltx_text ltx_bib_inbook">Image, Language, brain: Papers from the First Mind Articulation Project Symposium</span>,
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.ling.uni-potsdam.de/~vasishth/Papers/Gibson-Cognition2000.pdf" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Background ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib149" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Gildea and D. Temperley</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Do grammars minimize dependency length?</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Cognitive Science</span> <span class="ltx_text ltx_bib_volume">34</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 286–310</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Background ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib26" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Hockenmaier and M. Steedman</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Generative models for statistical parsing with Combinatory Categorial Grammar</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Background ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib89" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Hockenmaier and M. Steedman</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">CCGbank: A Corpus of CCG Derivations and Dependency Structures Extracted from the Penn Treebank</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">33</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 355–396</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Background ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib63" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. F. Jaeger</span><span class="ltx_text ltx_bib_year">(2010-08)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Redundancy and reduction: speakers manage information density</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Cognitive Psychology</span> <span class="ltx_text ltx_bib_volume">61</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 23–62</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dx.doi.org/10.1016/j.cogpsych.2010.02.002" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p5" title="2 Background ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib27" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Joachims</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Optimizing search engines using clickthrough data</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.SS1.p4" title="4.1 Methods ‣ 4 Reranking with SVMs ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib40" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">I.H. Khan, K. Van Deemter and G. Ritchie</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Generation of referring expressions: managing structural ambiguities</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 433–440</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Klein and C. Manning</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Accurate unlexicalized parsing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 423–430</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p1" title="3.1 Methods ‣ 3 Simple Reranking ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib95" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Koehn</span><span class="ltx_text ltx_bib_year">(2004-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Statistical significance tests for machine translation evaluation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Barcelona, Spain</span>, <span class="ltx_text ltx_bib_pages"> pp. 388–395</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p1" title="4.2 Results ‣ 4 Reranking with SVMs ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib41" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">W. J. M. Levelt</span><span class="ltx_text ltx_bib_year">(1989)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Speaking: from intention to articulation</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">MIT Press</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib35" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. Neumann and G. van Noord</span><span class="ltx_text ltx_bib_year">(1992)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Self-monitoring with reversible grammars</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">COLING ’92</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 700–706</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dx.doi.org/10.3115/992133.992178" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.3115/992133.992178" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib126" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Palmer, D. Gildea and P. Kingsbury</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The proposition bank: a corpus annotated with semantic roles</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">31</span> (<span class="ltx_text ltx_bib_number">1</span>).
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Background ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib92" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Papineni, S. Roukos, T. Ward and W. Zhu</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">BLEU: a method for automatic evaluation of machine translation</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p5" title="1 Introduction ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Petrov, L. Barrett, R. Thibaux and D. Klein</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning accurate, compact, and interpretable tree annotation</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p1" title="3.1 Methods ‣ 3 Simple Reranking ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Rajkumar, M. White and D. Espinosa</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Exploiting named entity classes in CCG surface realization</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Background ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Rajkumar and M. White</span><span class="ltx_text ltx_bib_year">(2010-08)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Designing agreement features for realization ranking</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Beijing, China</span>, <span class="ltx_text ltx_bib_pages"> pp. 1032–1040</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/C10-2119" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p7" title="2 Background ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib15" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[28]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Rajkumar and M. White</span><span class="ltx_text ltx_bib_year">(2011-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Linguistically motivated complementizer choice in surface realization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Edinburgh, Scotland</span>, <span class="ltx_text ltx_bib_pages"> pp. 39–44</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W11-2706" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p4" title="1 Introduction ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p5" title="2 Background ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib58" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[29]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Reiter and R. Dale</span><span class="ltx_text ltx_bib_year">(2000)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Building natural generation systems</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">Studies in Natural Language Processing</span>,  <span class="ltx_text ltx_bib_publisher">Cambridge University Press</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Background ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib85" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[30]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Reiter</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Natural language generation</span>.
+</span>
+<span class="ltx_bibblock">in <span class="ltx_text ltx_bib_editor">A. Clark, C. Fox and S. Lappin (Eds.)</span>, <span class="ltx_text ltx_bib_inbook">The Handbook of Computational Linguistics and Natural Language Processing (Blackwell Handbooks in Linguistics)</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">Blackwell Handbooks in Linguistics</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 1405155817,9781405155816</span></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Background ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S7.p2" title="7 Conclusion ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+</span></li>
+<li id="bib.bib86" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[31]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Steedman</span><span class="ltx_text ltx_bib_year">(2000)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The syntactic process</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">MIT Press</span>, <span class="ltx_text ltx_bib_place">Cambridge, MA, USA</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 0-262-19420-1</span></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Background ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib148" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[32]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Temperley</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Minimization of dependency length in written English</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Cognition</span> <span class="ltx_text ltx_bib_volume">105</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 300–333</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Background ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib37" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[33]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Van Deemter</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Towards a probabilistic version of bidirectional OT syntax and semantics</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Semantics</span> <span class="ltx_text ltx_bib_volume">21</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 251–280</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[34]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. White and R. Rajkumar</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A more precise analysis of punctuation for broad-coverage surface realization with CCG</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 17–24</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Background ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[35]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. White and R. Rajkumar</span><span class="ltx_text ltx_bib_year">(2009-08)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Perceptron reranking for CCG realization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Singapore</span>, <span class="ltx_text ltx_bib_pages"> pp. 410–419</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/D/D09/D09-1043" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p2" title="2 Background ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[36]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. White and R. Rajkumar</span><span class="ltx_text ltx_bib_year">(2012-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Minimal dependency length in realization ranking</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Jeju Island, Korea</span>, <span class="ltx_text ltx_bib_pages"> pp. 244–255</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/D12-1023" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p4" title="1 Introduction ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.T1" title="Table 1 ‣ 2 Background ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p2" title="2 Background ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.p3" title="2 Background ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.p4" title="2 Background ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib21" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[37]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. White</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Efficient Realization of Coordinate Structures in Combinatory Categorial Grammar</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Research on Language &amp; Computation</span> <span class="ltx_text ltx_bib_volume">4</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 39–75</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Background ‣ That’s Not What I Meant! Using Parsers to Avoid Structural Ambiguities in Generated Text" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 17:31:47 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

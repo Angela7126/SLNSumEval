@@ -1,0 +1,734 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>DepecheMood: a Lexicon for Emotion Analysis from Crowd-Annotated News</title>
+<!--Generated on Wed Jun 11 17:56:06 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">DepecheMood: 
+<br class="ltx_break"/>a Lexicon for Emotion Analysis from Crowd-Annotated News</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Jacopo Staiano 
+<br class="ltx_break"/>University of Trento
+<br class="ltx_break"/>Trento - Italy
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">staiano@disi.unitn.it</span> 
+<br class="ltx_break"/>
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Marco Guerini 
+<br class="ltx_break"/>Trento RISE
+<br class="ltx_break"/>Trento - Italy
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">marco.guerini@trentorise.eu</span>
+
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">While many lexica annotated with words polarity are available for sentiment analysis, very few tackle the harder task of emotion analysis and are
+usually quite limited in coverage. In this paper, we present a novel approach for extracting – in a totally automated way – a high-coverage and high-precision lexicon of roughly 37 thousand terms annotated
+with emotion scores, called <span class="ltx_text ltx_font_typewriter">DepecheMood</span>.
+Our approach exploits in an original way ‘crowd-sourced’ affective annotation implicitly provided by readers of news articles from <span class="ltx_text ltx_font_typewriter">rappler.com</span>.
+By providing new state-of-the-art performances in unsupervised settings for regression and classification tasks, even using a naïve approach, our experiments show the
+beneficial impact of harvesting
+social media data for affective lexicon building.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Sentiment analysis has proved useful in several application scenarios,
+for instance in buzz monitoring – the marketing technique for keeping track of consumer responses to services and
+products – where identifying positive and negative customer experiences helps to assess product and service demand, tackle crisis management, etc.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">On the other hand, the use of finer-grained models, accounting for the role of individual emotions, is still in its infancy.
+The simple division in
+‘positive’ vs. ‘negative’ comments may not suffice, as in these examples: ‘<em class="ltx_emph">I’m so miserable, I dropped my IPhone in the water and now it’s not working anymore</em>’
+(<span class="ltx_text ltx_font_smallcaps">sadness</span>) vs. ‘<em class="ltx_emph">I am very upset, my new IPhone keeps not working!</em>’ (<span class="ltx_text ltx_font_smallcaps">anger</span>). While both texts express a negative sentiment, the latter, connected to anger, is more relevant
+for buzz monitoring.
+Thus, emotion analysis represents a natural evolution of sentiment analysis.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">Many approaches to sentiment analysis make use of lexical resources – i.e. lists of positive and negative words – often deployed as baselines or as features for other methods,
+usually machine learning based <cite class="ltx_cite">[]</cite>. In these lexica, words are associated with their prior polarity, i.e. whether such word out of context evokes something positive or
+something negative. For example, <em class="ltx_emph">wonderful</em> has a positive connotation – prior polarity – while <em class="ltx_emph">horrible</em> has a negative one.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">The quest for a high precision and high coverage lexicon, where words are associated with either sentiment or emotion scores,
+has several reasons.
+First,
+it is fundamental for tasks such as affective modification of existing texts, where words’ polarity together with
+their score are necessary for creating multiple <em class="ltx_emph">graded</em> variations of the original text <cite class="ltx_cite">[]</cite>.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">Second, considering word order makes a difference in sentiment analysis. This calls
+for a role of compositionality, where the score of a sentence is computed by composing the scores of the words up in the syntactic tree. Works worth mentioning in this
+connection are: <cite class="ltx_cite"/>, which uses recursive neural networks to learn compositional rules for sentiment analysis, and <cite class="ltx_cite">[]</cite>
+which exploit hand-coded rules to compose the emotions expressed by words in a sentence.
+In this respect, compositional approaches represent a new promising trend, since all other approaches, either using semantic similarity or Bag-of-Words (BOW) based machine-learning, cannot
+handle, for example, cases of texts with same wording but different words order:
+“<em class="ltx_emph">The dangerous killer escaped one month ago, but recently he was arrested</em>” (<span class="ltx_text ltx_font_smallcaps">relief</span>, <span class="ltx_text ltx_font_smallcaps">happyness</span>) vs. “<em class="ltx_emph">The dangerous killer was arrested one month ago, but recently he
+escaped</em>” (<span class="ltx_text ltx_font_smallcaps">fear</span>). The work in  <cite class="ltx_cite">[]</cite> partially accounts for this problem and argues that using word bigram features allows improving over BOW based methods, where words are taken as features in isolation. This way it is possible to capture simple
+compositional
+phenomena like polarity reversing in “<em class="ltx_emph">killing cancer</em>”.</p>
+</div>
+<div id="S1.p6" class="ltx_para">
+<p class="ltx_p">Finally, tasks such as copywriting, where evocative names are a key element to a successful product <cite class="ltx_cite">[]</cite> require exhaustive lists of emotion
+related words. In such cases no context is given and the brand name alone, with its perceived prior polarity, is responsible for stating the area of competition and evoking
+semantic associations. For example <em class="ltx_emph">Mitsubishi</em> changed the name of one of its SUVs for the Spanish market, since the original name <em class="ltx_emph">Pajero</em> had a very negative prior
+polarity, as it means ‘wanker’ in Spanish <cite class="ltx_cite">[]</cite>. Evoking emotions is also fundamental for a successful name: consider names of a perfume like
+<em class="ltx_emph">Obsession</em>, or technological products like MacBook <em class="ltx_emph">air</em>.</p>
+</div>
+<div id="S1.p7" class="ltx_para">
+<p class="ltx_p">In this work, we aim at automatically producing a high coverage and high precision emotion lexicon using distributional semantics, with numerical scores associated with each emotion, like it has already been done for sentiment
+analysis. To this end, we take advantage in an original way of massive crowd-sourced affective annotations associated with news articles, obtained by crawling the <span class="ltx_text ltx_font_typewriter">rappler.com</span> social
+news network. We also evaluate our lexicon by integrating it in unsupervised classification and
+regression settings for emotion recognition. Results indicate that the use of our resource, even if automatically acquired, is highly beneficial in affective text recognition.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related Work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">Within the broad field of sentiment analysis, we hereby provide a short
+review of research efforts put towards building sentiment and emotion lexica, regardless of the approach in which
+such lists are then used (machine learning, rule based or deep learning). A general overview can be found in <cite class="ltx_cite">[]</cite>.</p>
+</div>
+<div id="S2.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_script">AFRAID</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_script">AMUSED</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_script">ANGRY</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_script">ANNOYED</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_script">DONT_CARE</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_script">HAPPY</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_script">INSPIRED</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_script">SAD</span></td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">doc_10002</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.75</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.00</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.00</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.00</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.00</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.00</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.25</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.00</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">doc_10003</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.00</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.50</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.00</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.16</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.17</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.17</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.00</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.00</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">doc_10004</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.52</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.02</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.03</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.02</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.02</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.06</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.02</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.31</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">doc_10011</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.40</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.00</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.00</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.20</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.00</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.20</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.20</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.00</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_footnote">doc_10028</span></th>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_footnote">0.00</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_footnote">0.30</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_footnote">0.08</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_footnote">0.00</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_footnote">0.00</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_footnote">0.23</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_footnote">0.31</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_footnote">0.08</span></td>
+<td class="ltx_td ltx_border_b"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span>An excerpt of the Document-by-Emotion Matrix - <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m2" class="ltx_Math" alttext="M_{DE}" display="inline"><msub><mi>M</mi><mrow><mi>D</mi><mo>⁢</mo><mi>E</mi></mrow></msub></math></div>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Sentiment Lexica</span>.
+In recent years there has been an increasing focus on producing lists of words (lexica) with prior
+polarities, to be used in sentiment analysis.
+When building such lists, a trade-off between coverage of the resource and its precision is to be found.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">One of the most well-known resources is <em class="ltx_emph">SentiWordNet</em> (SWN) <cite class="ltx_cite">[]</cite>, in which each entry is associated with the numerical scores <span class="ltx_text ltx_font_typewriter">Pos(s)</span> and <span class="ltx_text ltx_font_typewriter">Neg(s)</span>, ranging from 0 to 1. These scores –
+automatically assigned starting from a bunch of seed terms – represent the positive and negative valence (or posterior polarity) of each entry, that takes the form <span class="ltx_text ltx_font_typewriter">lemma#pos#sense-number</span>.
+Starting from SWN, several prior polarities for words (<em class="ltx_emph">SWN-prior</em>), in the form <span class="ltx_text ltx_font_typewriter">lemma#PoS</span>, can be computed (e.g. considering only the first-sense, averaging on all the senses, etc.).
+These approaches, detailed in <cite class="ltx_cite">[]</cite>, produce a list of 155k words, where the lower precision given by the automatic scoring of SWN is compensated
+by the high coverage.</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p">Another widely used resource is <em class="ltx_emph">ANEW</em> <cite class="ltx_cite">[]</cite>, providing
+valence scores for 1k words, which were manually assigned by several annotators. This resource has a low coverage, but the precision is maximized.
+Similarly, the <em class="ltx_emph">SO-CAL</em> entries <cite class="ltx_cite">[]</cite> were
+manually tagged by a small number
+of annotators with a multi-class label (from <span class="ltx_text ltx_font_typewriter">very_negative</span> to <span class="ltx_text ltx_font_typewriter">very_positive</span>). These ratings were further
+validated through crowd-sourcing, ending up with a list of roughly 4k words.
+More recently, a resource that replicated ANEW annotation approach using crowd-sourcing, was released <cite class="ltx_cite">[]</cite>, providing sentiment scores for 14k words.
+Interestingly, this resource annotates the most frequent words in English, so, even if lexicon coverage is still far lower than SWN-prior, it grants a high coverage, with human precision, of language use.</p>
+</div>
+<div id="S2.p5" class="ltx_para">
+<p class="ltx_p">Finally, the <em class="ltx_emph">General
+Inquirer</em> lexicon <cite class="ltx_cite">[]</cite> provides a binary
+classification (<span class="ltx_text ltx_font_typewriter">positive</span>/<span class="ltx_text ltx_font_typewriter">negative</span>) of 4k
+sentiment-bearing words, while the resource in
+<cite class="ltx_cite">[]</cite> expands the General
+Inquirer to 6k words.</p>
+</div>
+<div id="S2.p6" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Emotion Lexica</span>.
+Compared to sentiment lexica, far less emotion lexica have been produced, and all have lower coverage.
+One of the most used resources is <em class="ltx_emph">WordNetAffect</em> <cite class="ltx_cite">[]</cite> which contains manually assigned affective labels to WordNet synsets
+(<span class="ltx_text ltx_font_smallcaps">anger</span>, <span class="ltx_text ltx_font_smallcaps">joy</span>, <span class="ltx_text ltx_font_smallcaps">fear</span>, etc.). It currently provides 900 annotated synsets and 1.6k words in the form <span class="ltx_text ltx_font_typewriter">lemma#PoS#sense</span>, corresponding to roughly 1 thousand
+<span class="ltx_text ltx_font_typewriter">lemma#PoS</span>.</p>
+</div>
+<div id="S2.p7" class="ltx_para">
+<p class="ltx_p"><em class="ltx_emph">AffectNet</em>, part of the SenticNet project <cite class="ltx_cite">[]</cite>, contains 10k words (out of 23k entries) taken from ConceptNet and aligned with WordNetAffect. This
+resource extends WordNetAffect labels to concepts like ‘have breakfast’.
+<em class="ltx_emph">Fuzzy Affect Lexicon</em> <cite class="ltx_cite">[]</cite> contains roughly 4k <span class="ltx_text ltx_font_typewriter">lemma#PoS</span> manually annotated by one linguist using 80 emotion labels.
+<em class="ltx_emph">EmoLex</em> <cite class="ltx_cite">[]</cite> contains almost 10k lemmas annotated with an intensity label for each emotion using Mechanical Turk.
+Finally <em class="ltx_emph">Affect database</em> is an extension of SentiFul <cite class="ltx_cite">[]</cite> and contains 2.5K words in the form <span class="ltx_text ltx_font_typewriter">lemma#PoS</span>. The latter is the only lexicon
+providing words annotated also with emotion scores rather than only with labels.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Dataset Collection</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">To build our emotion lexicon we harvested all the news articles from <span class="ltx_text ltx_font_typewriter">rappler.com</span>, as of June 3rd 2013: the final dataset consists of
+13.5 M words over 25.3 K documents, with an average of 530 words per document. For each document, along with the text we also harvested the information displayed by Rappler’s
+<em class="ltx_emph">Mood Meter</em>, a small interface
+offering the readers the opportunity to click on the emotion that a given Rappler story made them feel. The
+idea behind the Mood Meter is actually “getting people to <em class="ltx_emph">crowdsource</em> the mood for the
+day”<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>http://nie.mn/QuD17Z</span></span></span>, and returning the percentage of votes for each
+emotion label for a given story. This way, hundreds of thousands votes have been collected since the launch of the service.
+In our novel approach to ‘crowdsourcing’, as compared to other NLP tasks that rely on tools like Amazon’s Mechanical Turk <cite class="ltx_cite">[]</cite>, the subjects are aware of the ‘implicit annotation task’ but
+they are not paid. From this data, we built a document-by-emotion matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m1" class="ltx_Math" alttext="M_{DE}" display="inline"><msub><mi>M</mi><mrow><mi>D</mi><mo>⁢</mo><mi>E</mi></mrow></msub></math>, providing the voting percentages for each document
+in the eight affective dimensions available in Rappler. An excerpt is provided in Table <a href="#S2.T1" title="Table 1 ‣ 2 Related Work ‣ DepecheMood:  a Lexicon for Emotion Analysis from Crowd-Annotated News" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">The idea of using documents annotated with emotions is not new <cite class="ltx_cite">[]</cite>, but these works had the limitation of
+providing a single emotion label per document, rather than a score for each emotion, and, moreover, the annotation was performed by the author of the document alone.</p>
+</div>
+<div id="S3.p3" class="ltx_para">
+<p class="ltx_p">Table <a href="#S3.T2" title="Table 2 ‣ 3 Dataset Collection ‣ DepecheMood:  a Lexicon for Emotion Analysis from Crowd-Annotated News" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> reports the average percentage of votes for each emotion on the whole corpus: <span class="ltx_text ltx_font_smallcaps">happiness</span> has a far higher percentage of votes (at least three times). There
+are several possible explanations, out of the scope of the present paper, for this bias: (i) it is due to cultural characteristics of the audience
+(ii)
+the bias is in the dataset itself, being formed mainly by ‘positive’ news; (iii) it is a psychological phenomenon due to the fact that people tend to express more positive moods on
+social networks <cite class="ltx_cite">[]</cite>. In any case, the predominance of happy mood has been found in other datasets, for instance <span class="ltx_text ltx_font_typewriter">LiveJournal.com</span> posts <cite class="ltx_cite">[]</cite>.
+In the following section we will discuss how we handled this problem.</p>
+</div>
+<div id="S3.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">EMOTION</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">Votes</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m1" class="ltx_Math" alttext="{}_{\mu}" display="inline"><msub><mi/><mi>μ</mi></msub></math></th>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">EMOTION</span></th>
+<th class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_footnote">Votes</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m2" class="ltx_Math" alttext="{}_{\mu}" display="inline"><msub><mi/><mi>μ</mi></msub></math></th>
+<th class="ltx_td ltx_border_t"/>
+<th class="ltx_td ltx_border_t"/></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">AFRAID</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">0.04</span></th>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">DONT_CARE</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_footnote">0.05</span></td>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">AMUSED</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">0.10</span></th>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">HAPPY</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.32</span></td>
+<td class="ltx_td"/>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">ANGRY</span></th>
+<th class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">0.10</span></th>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">INSPIRED</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.10</span></td>
+<td class="ltx_td"/>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b"><span class="ltx_text ltx_font_footnote">ANNOYED</span></th>
+<th class="ltx_td ltx_align_right ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_footnote">0.06</span></th>
+<th class="ltx_td ltx_align_left ltx_border_b"><span class="ltx_text ltx_font_footnote">SAD</span></th>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_footnote">0.11</span></td>
+<td class="ltx_td ltx_border_b"/>
+<td class="ltx_td ltx_border_b"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 2: </span>Average percentages of votes.</div>
+</div>
+<div id="S3.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">Word</span></th>
+<th class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_footnote">AFRAID</span></th>
+<th class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_footnote">AMUSED</span></th>
+<th class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_footnote">ANGRY</span></th>
+<th class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_footnote">ANNOYED</span></th>
+<th class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_footnote">DONT_CARE</span></th>
+<th class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_footnote">HAPPY</span></th>
+<th class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_footnote">INSPIRED</span></th>
+<th class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_footnote">SAD</span></th>
+<th class="ltx_td ltx_border_t"/></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">awe#n</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_footnote">0.08</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_footnote">0.12</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_footnote">0.04</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_footnote">0.11</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_footnote">0.07</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_footnote">0.15</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_footnote">0.38</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_footnote">0.05</span></td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">comical#a</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.02</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_footnote">0.51</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.04</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.05</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.12</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.17</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.03</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.06</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">crime#n</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.11</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.10</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_footnote">0.23</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.15</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.07</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.09</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.09</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.15</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">criminal#a</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.12</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.10</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_footnote">0.25</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.14</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.10</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.11</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.07</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.11</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">dead#a</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.17</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.07</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.17</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.07</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.07</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.05</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.05</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_footnote">0.35</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">funny#a</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.04</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_footnote">0.29</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.04</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.11</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.16</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.13</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.15</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.08</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">future#n</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.09</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.12</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.09</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.12</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.13</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.13</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_footnote">0.21</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.10</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">game#n</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.06</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.15</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.06</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.08</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.15</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_footnote">0.23</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.15</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.12</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">kill#v</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_footnote">0.23</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.06</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_footnote">0.21</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.07</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.05</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.06</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.05</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_footnote">0.27</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">rapist#n</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.02</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.07</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_footnote">0.46</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.07</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.08</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.16</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.03</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.12</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">sad#a</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.06</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.12</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.09</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.14</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.13</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.07</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.15</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_footnote">0.24</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_footnote">warning#n</span></th>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_bold ltx_font_footnote">0.44</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_footnote">0.06</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_footnote">0.09</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_footnote">0.09</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_footnote">0.06</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_footnote">0.06</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_footnote">0.04</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_footnote">0.16</span></td>
+<td class="ltx_td ltx_border_b"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 3: </span>An excerpt of the Word-by-Emotion Matrix (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m3" class="ltx_Math" alttext="M_{WE}" display="inline"><msub><mi>M</mi><mrow><mi>W</mi><mo>⁢</mo><mi>E</mi></mrow></msub></math>) using normalized frequencies (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m4" class="ltx_Math" alttext="nf" display="inline"><mrow><mi>n</mi><mo>⁢</mo><mi>f</mi></mrow></math>). Emotions weighting more than 20% in a word are highlighted for readability purposes.</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Emotion Lexicon Creation</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">As a next step we built a word-by-emotion matrix starting from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m1" class="ltx_Math" alttext="M_{DE}" display="inline"><msub><mi>M</mi><mrow><mi>D</mi><mo>⁢</mo><mi>E</mi></mrow></msub></math> using an approach based on compositional semantics.
+To do so, we first lemmatized and PoS tagged all the documents (where PoS can be adj., nouns, verbs, adv.) and kept only those <span class="ltx_text ltx_font_typewriter">lemma#PoS</span> present also in WordNet, similar to SWN-prior and WordNetAffect resources, to which we want to align.
+We then computed the term-by-document matrices using raw frequencies, normalized
+frequencies, and tf-idf (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m2" class="ltx_Math" alttext="M_{WD,f}" display="inline"><msub><mi>M</mi><mrow><mrow><mi>W</mi><mo>⁢</mo><mi>D</mi></mrow><mo>,</mo><mi>f</mi></mrow></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m3" class="ltx_Math" alttext="M_{WD,nf}" display="inline"><msub><mi>M</mi><mrow><mrow><mi>W</mi><mo>⁢</mo><mi>D</mi></mrow><mo>,</mo><mrow><mi>n</mi><mo>⁢</mo><mi>f</mi></mrow></mrow></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m4" class="ltx_Math" alttext="M_{WD,tfidf}" display="inline"><msub><mi>M</mi><mrow><mrow><mi>W</mi><mo>⁢</mo><mi>D</mi></mrow><mo>,</mo><mrow><mi>t</mi><mo>⁢</mo><mi>f</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mi>f</mi></mrow></mrow></msub></math> respectively), so to test which of the three weights is better.
+After that, we applied matrix multiplication between the document-by-emotion and word-by-document matrices (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m5" class="ltx_Math" alttext="M_{DE}\cdot M_{WD}" display="inline"><mrow><msub><mi>M</mi><mrow><mi>D</mi><mo>⁢</mo><mi>E</mi></mrow></msub><mo>⋅</mo><msub><mi>M</mi><mrow><mi>W</mi><mo>⁢</mo><mi>D</mi></mrow></msub></mrow></math>) to obtain a (raw) word-by-emotion matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m6" class="ltx_Math" alttext="M_{WE}" display="inline"><msub><mi>M</mi><mrow><mi>W</mi><mo>⁢</mo><mi>E</mi></mrow></msub></math>. This method allows us to ‘merge’ words with emotions by summing the products of the weight of a word with the weight of the emotions in each document.</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">Finally, we transformed <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m1" class="ltx_Math" alttext="M_{WE}" display="inline"><msub><mi>M</mi><mrow><mi>W</mi><mo>⁢</mo><mi>E</mi></mrow></msub></math>
+by first applying
+normalization column-wise
+(so to eliminate the over representation for happiness as discussed in Section <a href="#S3" title="3 Dataset Collection ‣ DepecheMood:  a Lexicon for Emotion Analysis from Crowd-Annotated News" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>)
+and then scaling the data row-wise so to sum up to one.
+An excerpt of the final Matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m2" class="ltx_Math" alttext="M_{WE}" display="inline"><msub><mi>M</mi><mrow><mi>W</mi><mo>⁢</mo><mi>E</mi></mrow></msub></math> is presented in Table <a href="#S3.T3" title="Table 3 ‣ 3 Dataset Collection ‣ DepecheMood:  a Lexicon for Emotion Analysis from Crowd-Annotated News" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>, and it can be interpreted as a list of
+words with scores that represent how much
+weight a given word has in the affective dimensions we consider. So, for example, <span class="ltx_text ltx_font_typewriter">awe#n</span> has a predominant weight in <span class="ltx_text ltx_font_smallcaps">inspired</span> (0.38), <span class="ltx_text ltx_font_typewriter">comical#a</span> has a predominant weight in <span class="ltx_text ltx_font_smallcaps">amused</span> (0.51), while <span class="ltx_text ltx_font_typewriter">kill#v</span> has a predominant weight in <span class="ltx_text ltx_font_smallcaps">afraid</span>, <span class="ltx_text ltx_font_smallcaps">angry</span> and <span class="ltx_text ltx_font_smallcaps">sad</span> (0.23, 0.21 and 0.27 respectively). This matrix, that we call <span class="ltx_text ltx_font_typewriter">DepecheMood<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup><span class="ltx_text ltx_font_serif">In French, ‘depeche’ means dispatch/news.</span></span></span></span></span>, represents our emotion lexicon, it contains 37k entries and is freely available for research purposes at http://git.io/MqyoIg.</p>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Experiments</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">To evaluate the performance we can obtain with our lexicon, we use the public dataset provided for the SemEval 2007 task on ‘Affective Text’ <cite class="ltx_cite">[]</cite>. The task was focused on emotion recognition in one thousand news headlines,
+both in regression and classification settings. Headlines typically consist of a few words and are often written with the
+intention to ‘provoke’ emotions so to attract the readers’ attention. An example of headline from the dataset is the following: “<em class="ltx_emph">Iraq car
+bombings kill 22 People, wound more than 60</em>”. For the regression task the values provided are: <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m1" class="ltx_Math" alttext="&lt;" display="inline"><mo>&lt;</mo></math><span class="ltx_text ltx_font_typewriter">anger (0.32), disgust (0.27), fear (0.84),
+joy (0.0), sadness (0.95), surprise (0.20)<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m2" class="ltx_Math" alttext="&gt;" display="inline"><mo mathvariant="normal">&gt;</mo></math></span>
+while for the classification task the labels provided are {<span class="ltx_text ltx_font_typewriter">FEAR, SADNESS</span>}.</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">This dataset is of interest to us since the ‘compositional’ problem is less prominent given the simplified
+syntax of news headlines, containing, for example, fewer adverbs (like negations or intensifiers) than normal sentences <cite class="ltx_cite">[]</cite>. Furthermore, this is to our
+knowledge the only dataset available providing numerical scores for emotions. Finally, this dataset was meant for unsupervised approaches (just a small trial sample was
+provided), so to avoid simple text categorization approaches.</p>
+</div>
+<div id="S5.p3" class="ltx_para">
+<p class="ltx_p">As the affective dimensions present in the test set – based on the six basic emotions model <cite class="ltx_cite">[]</cite> – do not exactly
+match with the ones provided by Rappler’s Mood Meter, we first define a mapping between the two when possible, see
+Table <a href="#S5.T4" title="Table 4 ‣ 5 Experiments ‣ DepecheMood:  a Lexicon for Emotion Analysis from Crowd-Annotated News" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>. Then, we proceed to transform the test headlines to the <span class="ltx_text ltx_font_typewriter">lemma#PoS</span> format.</p>
+</div>
+<div id="S5.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">SemEval</span></th>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">Rappler</span></td>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">SemEval</span></th>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">Rappler</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">FEAR</span></th>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">AFRAID</span></td>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_footnote">SURPRISE</span></th>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_footnote">INSPIRED</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">ANGER</span></th>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">ANGRY</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">-</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">ANNOYED</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">JOY</span></th>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">HAPPY</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">-</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">AMUSED</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">SADNESS</span></th>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">SAD</span></td>
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">-</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">DON’T CARE</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_tt"/>
+<td class="ltx_td ltx_border_tt"/>
+<th class="ltx_td ltx_border_tt"/>
+<td class="ltx_td ltx_border_tt"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 4: </span>Mapping of Rappler labels on Semeval2007. In bold, cases of suboptimal mapping.</div>
+</div>
+<div id="S5.p4" class="ltx_para">
+<p class="ltx_p">Only one test headline contained exclusively words not present in <span class="ltx_text ltx_font_typewriter">DepecheMood</span>, further indicating the high-coverage nature of our resource. In Table
+<a href="#S5.T5" title="Table 5 ‣ 5 Experiments ‣ DepecheMood:  a Lexicon for Emotion Analysis from Crowd-Annotated News" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> we report the coverage of some Sentiment and Emotion Lexica of different sizes on the same dataset. Similar to Warriner et al. (2013), we
+observe that even if the number of entries of our lexicon is far lower than SWN-prior approaches, the fact that we extracted and annotated words from documents grants a high
+coverage of language use.</p>
+</div>
+<div id="S5.T5" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_tt" rowspan="3"><span class="ltx_text ltx_font_footnote">
+<span class="ltx_inline-block ltx_parbox ltx_align_top" style="width:45.5pt;">
+<p class="ltx_p">Sentiment Lexica</p>
+</span></span></th>
+<th class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_text ltx_font_footnote">ANEW</span></th>
+<td class="ltx_td ltx_align_right ltx_border_tt"><span class="ltx_text ltx_font_footnote">1k entries</span></td>
+<td class="ltx_td ltx_align_right ltx_border_tt"><span class="ltx_text ltx_font_footnote">0.10</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">Warriner et. al</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">13k entries</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.51</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">SWN-prior</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">155k entries</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_footnote">0.67</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_r ltx_border_t" rowspan="2"><span class="ltx_text ltx_font_footnote">
+<span class="ltx_inline-block ltx_parbox ltx_align_top" style="width:42.7pt;">
+<p class="ltx_p">Emotion Lexica</p>
+</span></span></th>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_footnote">WNAffect</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_footnote">1k entries</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_footnote">0.12</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b"><span class="ltx_text ltx_font_footnote">DepecheMood</span></th>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_footnote">37k entries</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_bold ltx_font_footnote">0.64</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 5: </span>Statistics on words coverage per headline.</div>
+</div>
+<div id="S5.p5" class="ltx_para">
+<p class="ltx_p">Since our primary goal is to assess the quality of <span class="ltx_text ltx_font_typewriter">DepecheMood</span> we first focus on the regression task.
+We do so by using a very naïve approach, similar to “WordNetAffect presence” discussed in <cite class="ltx_cite">[]</cite>: for each headline,
+we simply compute a value, for any affective dimension, by averaging the corresponding affective scores –obtained from <span class="ltx_text ltx_font_typewriter">DepecheMood</span>- of all <span class="ltx_text ltx_font_typewriter">lemma#PoS</span> present in the headline.</p>
+</div>
+<div id="S5.p6" class="ltx_para">
+<p class="ltx_p">In Table <a href="#S5.T6" title="Table 6 ‣ 5 Experiments ‣ DepecheMood:  a Lexicon for Emotion Analysis from Crowd-Annotated News" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> we report the results obtained using the three versions of our resource (Pearson correlation), along with the best performance on each emotion of
+other systems<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>Systems participating in the ‘Affective Text’ task plus the approaches in  <cite class="ltx_cite">[]</cite>. Other supervised approaches in the classification task <cite class="ltx_cite">[]</cite>, reporting only overall performances, are not considered.</span></span></span> (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p6.m1" class="ltx_Math" alttext="best_{se}" display="inline"><mrow><mi>b</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><msub><mi>t</mi><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi></mrow></msub></mrow></math>); the last column contains the upper bound of inter-annotator agreement.
+For all the 5 emotions we improve over the best performing
+systems (<span class="ltx_text ltx_font_typewriter">DISGUST</span> has no alignment with our labels and was discarded).</p>
+</div>
+<div id="S5.p7" class="ltx_para">
+<p class="ltx_p">Interestingly, even using a sub-optimal alignment for <span class="ltx_text ltx_font_typewriter">SURPRISE</span> we still manage to outperform other systems. Considering the naïve approach we used, we can
+reasonably conclude that the quality and coverage of our resource are the reason of such results, and that adopting more complex approaches (i.e. compositionality) can possibly further improve
+performances in text-based emotion recognition.</p>
+</div>
+<div id="S5.T6" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t" colspan="3"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T6.m1" class="ltx_Math" alttext="DepecheMood" display="inline"><mrow><mi>D</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>M</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>d</mi></mrow></math></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T6.m2" class="ltx_Math" alttext="best_{se}" display="inline"><mrow><mi>b</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><msub><mi>t</mi><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi></mrow></msub></mrow></math></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_footnote">upper</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_right"><em class="ltx_emph ltx_font_footnote">f</em></td>
+<td class="ltx_td ltx_align_right"><em class="ltx_emph ltx_font_footnote">nf</em></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><em class="ltx_emph ltx_font_footnote">tfidf</em></td>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">FEAR</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_footnote">0.56</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.54</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">0.53</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">0.45</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.64</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">ANGER</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.36</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_footnote">0.38</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">0.36</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">0.32</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.50</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">SURPRISE*</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_footnote">0.25</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.21</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">0.24</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">0.16</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.36</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">JOY</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.39</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_footnote">0.40</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">0.39</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">0.26</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.60</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">SADNESS</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_footnote">0.48</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.47</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">0.46</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">0.41</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.68</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 6: </span>Regression results – Pearson’s correlation</div>
+</div>
+<div id="S5.p8" class="ltx_para">
+<p class="ltx_p">As a final test, we evaluate our resource in the classification task.
+The naïve approach used in this case consists in mapping the average of the scores of
+all words in the headline to a binary decision with fixed threshold at 0.5 for each emotion (after min-max normalization on all test headlines scores).
+In Table <a href="#S5.T7" title="Table 7 ‣ 5 Experiments ‣ DepecheMood:  a Lexicon for Emotion Analysis from Crowd-Annotated News" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a> we report the results (F1 measure) of our
+approach along with the best performance of other systems on each emotion (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p8.m1" class="ltx_Math" alttext="best_{se}" display="inline"><mrow><mi>b</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><msub><mi>t</mi><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi></mrow></msub></mrow></math>), as in the previous case.
+For 3 emotions out of 5 we improve over the best performing systems, for one emotion we obtain the same results, and for one emotion we do not outperform other systems. In this case the difference
+in performances among the various ways of representing the word-by-document matrix is more prominent: normalized frequencies (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p8.m2" class="ltx_Math" alttext="nf" display="inline"><mrow><mi>n</mi><mo>⁢</mo><mi>f</mi></mrow></math>) provide the best results.</p>
+</div>
+<div id="S5.T7" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t" colspan="3"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T7.m1" class="ltx_Math" alttext="DepecheMood" display="inline"><mrow><mi>D</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>M</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>d</mi></mrow></math></th>
+<th class="ltx_td ltx_align_right ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T7.m2" class="ltx_Math" alttext="best_{se}" display="inline"><mrow><mi>b</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><msub><mi>t</mi><mrow><mi>s</mi><mo>⁢</mo><mi>e</mi></mrow></msub></mrow></math></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r"/>
+<th class="ltx_td ltx_align_right"><em class="ltx_emph ltx_font_footnote">f</em></th>
+<th class="ltx_td ltx_align_right"><em class="ltx_emph ltx_font_footnote">nf</em></th>
+<th class="ltx_td ltx_align_right ltx_border_r"><em class="ltx_emph ltx_font_footnote">tfidf</em></th>
+<th class="ltx_td"/></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">FEAR</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.25</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_footnote">0.32</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">0.31</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.23</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">ANGER</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.00</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.00</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">0.00</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_footnote">0.17</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">SURPRISE*</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.13</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_footnote">0.16</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">0.09</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.15</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">JOY</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.22</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">0.30</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_footnote">0.32</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_footnote">0.32</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_footnote">SADNESS</span></th>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_footnote">0.36</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_bold ltx_font_footnote">0.40</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_footnote">0.38</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_footnote">0.30</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 7: </span>Classification results – F1 measures</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Conclusions</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">We presented <span class="ltx_text ltx_font_typewriter">DepecheMood</span>, an emotion lexicon built in a novel and totally automated way by harvesting crowd-sourced affective annotation from a social news network. Our experimental results indicate
+high-coverage and high-precision of the lexicon, showing significant improvements over state-of-the-art unsupervised approaches even when using the resource with
+very naïve classification and regression strategies.
+We believe that the wealth of information provided by social media can be harnessed to build models and resources for emotion recognition from text, going a step beyond
+sentiment analysis.
+Our future work will include testing Singular Value Decomposition on the word-by-document matrices, allowing to propagate emotions values for a document to similar
+words non present in the document itself, and the study of perceived mood effects on virality indices and readers engagement by exploiting tweets, likes, reshares and comments.
+<span class="ltx_note ltx_role_footnotetext"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup><span class="ltx_note_type">footnotetext: </span>This work has been partially supported by the Trento RISE PerTe project.</span></span></span></p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 17:56:06 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

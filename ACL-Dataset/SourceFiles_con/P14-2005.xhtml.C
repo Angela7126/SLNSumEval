@@ -1,0 +1,1255 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   An Extension of BLANC to System Mentions.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_abstract">
+      <h6 class="ltx_title ltx_title_abstract">
+       Abstract
+      </h6>
+      <p class="ltx_p">
+       BLANC is a link-based coreference evaluation metric
+for measuring the quality of coreference systems
+on gold mentions. This paper extends the original BLANC (“BLANC-gold” henceforth) to system mentions,
+removing the gold mention assumption. The proposed BLANC
+falls back seamlessly to the original one
+if system mentions are identical to gold mentions, and
+it is shown to strongly correlate with
+existing metrics on the 2011 and 2012 CoNLL data.
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Coreference resolution aims at identifying natural language expressions
+(or mentions) that refer to the same entity. It entails partitioning
+(often imperfect) mentions into equivalence classes. A critically important
+problem is how to measure the quality of a coreference resolution system.
+Many evaluation metrics have been proposed in the past two decades, including
+the MUC measure
+        [9]
+        , B-cubed
+        [1]
+        , CEAF
+        [3]
+        and,
+more recently, BLANC-gold
+        [7]
+        .
+B-cubed and CEAF treat entities as sets of mentions and measure the
+agreement between key (or gold standard) entities and response
+(or system-generated) entities, while MUC and BLANC-gold are link-based.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        In particular, MUC measures the degree of agreement
+between key coreference links (i.e., links among mentions within entities)
+and response coreference links, while
+non-coreference links (i.e., links formed by mentions from different entities)
+are not explicitly taken into account.
+This leads to a phenomenon where coreference systems outputting large
+entities are scored more favorably than those outputting small entities
+        [3]
+        .
+BLANC
+        [7]
+        , on the other hand, considers both
+coreference links and non-coreference
+links. It
+calculates recall, precision and F-measure separately on
+coreference and non-coreference links in the usual way,
+and defines the overall recall,
+precision and F-measure as the mean of the respective measures for coreference
+and non-coreference links.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        The BLANC-gold metric was developed with the assumption
+that response mentions and key mentions are identical.
+In reality, however, mentions need to be detected from natural language text
+and the result is, more often than not, imperfect: some key mentions may be missing
+in the response, and some response mentions may be spurious—so-called “twinless” mentions by
+        Stoyanov et al. (2009)
+        .
+Therefore, the identical-mention-set assumption limits BLANC-gold’s applicability
+when gold mentions are not available, or when one wants to have a single score
+measuring both the quality of mention detection and coreference resolution.
+The goal of this paper is to extend the BLANC-gold metric to imperfect response mentions.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        We first briefly review the original definition of BLANC, and rewrite its
+definition using set notation. We then argue that the gold-mention assumption
+in
+        Recasens and Hovy (2011)
+        can be lifted without changing the original definition.
+In fact, the proposed BLANC metric subsumes
+the original one in that its value is identical to the original one
+when response mentions are identical to key mentions.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p5">
+       <p class="ltx_p">
+        The rest of the paper is organized as follows. We introduce
+the notions used in this paper in Section
+        2
+        .
+We then present the original BLANC-gold in Section
+        3
+        using the set notation defined in Section
+        2
+        .
+This paves the way to generalize it to imperfect system mentions,
+which is presented in Section
+        4
+        .
+The proposed BLANC is applied to the CoNLL 2011 and 2012 shared task participants,
+and the scores and its correlations with existing metrics are shown in Section
+        5
+        .
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Notations
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        To facilitate the presentation, we define the notations used in the paper.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p2">
+       <p class="ltx_p">
+        We use
+        key
+        to refer to gold standard mentions or entities, and
+        response
+        to refer to system mentions or entities.
+The collection of
+        key
+        entities is denoted by
+        K={ki}i=1|K|
+        , where
+        ki
+        is the
+        it⁢h
+        key entity; accordingly,
+        R={rj}j=1|R|
+        is the set of
+        response
+        entities,
+and
+        rj
+        is the
+        jt⁢h
+        response entity.
+We assume that mentions in
+        {ki}
+        and
+        {rj}
+        are unique; in other words, there is no duplicate
+mention.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p3">
+       <p class="ltx_p">
+        Let
+        Ck⁢(i)
+        and
+        Cr⁢(j)
+        be the set of
+        coreference
+        links formed by mentions in
+        ki
+        and
+        rj
+        :
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p4">
+       <table class="ltx_equationgroup ltx_eqn_align" id="Sx1.EGx1">
+        <tr class="ltx_equation ltx_align_baseline" id="S2.Ex1">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          Ck⁢(i)
+         </td>
+         <td class="ltx_td ltx_align_left">
+          ={(m1,m2):m1∈ki,m2∈ki,m1≠m2}
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+        <tr class="ltx_equation ltx_align_baseline" id="S2.Ex2">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          Cr⁢(j)
+         </td>
+         <td class="ltx_td ltx_align_left">
+          ={(m1,m2):m1∈rj,m2∈rj,m1≠m2}
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+       </table>
+       <p class="ltx_p">
+        As can be seen, a link is an undirected edge between two mentions, and it can be equivalently
+represented by a pair of mentions.
+Note that when an entity consists of a single mention, its coreference link set is empty.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p5">
+       <p class="ltx_p">
+        Let
+        Nk⁢(i,j)
+        (i≠j)
+        be key
+        non-coreference
+        links formed between mentions in
+        ki
+        and those in
+        kj
+        ,
+and let
+        Nr⁢(i,j)
+        (i≠j)
+        be response
+        non-coreference
+        links formed between mentions in
+        ri
+        and those in
+        rj
+        , respectively:
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p6">
+       <table class="ltx_equationgroup ltx_eqn_align" id="Sx1.EGx2">
+        <tr class="ltx_equation ltx_align_baseline" id="S2.Ex3">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          Nk⁢(i,j)
+         </td>
+         <td class="ltx_td ltx_align_left">
+          ={(m1,m2):m1∈ki,m2∈kj}
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+        <tr class="ltx_equation ltx_align_baseline" id="S2.Ex4">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          Nr⁢(i,j)
+         </td>
+         <td class="ltx_td ltx_align_left">
+          ={(m1,m2):m1∈ri,m2∈rj}
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+       </table>
+       <p class="ltx_p">
+        Note that the non-coreference link set is empty when all mentions are in the same entity.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p7">
+       <p class="ltx_p">
+        We use the same letter and subscription without the index in parentheses to denote
+the union of sets, e.g.,
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p8">
+       <table class="ltx_equationgroup ltx_eqn_align" id="Sx1.EGx3">
+        <tr class="ltx_equation ltx_align_baseline" id="S2.Ex5">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          Ck=∪iCk⁢(i),
+         </td>
+         <td class="ltx_td ltx_align_left">
+          ⁢Nk=∪i≠jNk⁢(i,j)
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+        <tr class="ltx_equation ltx_align_baseline" id="S2.Ex6">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          Cr=∪jCr⁢(j),
+         </td>
+         <td class="ltx_td ltx_align_left">
+          ⁢Nr=∪i≠jNr⁢(i,j)
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+       </table>
+       <p class="ltx_p">
+        We use
+        Tk=Ck∪Nk
+        and
+        Tr=Cr∪Nr
+        to denote the total set of key links
+and total set of response links, respectively. Clearly,
+        Ck
+        and
+        Nk
+        form a partition
+of
+        Tk
+        since
+        Ck∩Nk=∅
+        ,
+        Tk=Ck∪Nk
+        . Likewise,
+        Cr
+        and
+        Nr
+        form a partition of
+        Tr
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p9">
+       <p class="ltx_p">
+        We say that a key link
+        l1∈Tk
+        equals a response link
+        l2∈Tr
+        if and only if
+the pair of mentions from which the links are formed are identical. We write
+        l1=l2
+        if two links
+are equal. It is easy to see that the gold mention assumption—same set of response mentions as the
+set of key mentions—can be equivalently stated as
+        Tk=Tr
+        (this does not necessarily
+mean that
+        Ck=Cr
+        or
+        Nk=Nr
+        ).
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p10">
+       <p class="ltx_p">
+        We also use
+        |⋅|
+        to denote the size of a set.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Original BLANC
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        BLANC-gold is adapted from Rand Index
+        [6]
+        , a metric for clustering
+objects. Rand Index is defined
+as the ratio between the number of correct within-cluster links plus the number of correct
+cross-cluster links, and the total number of links.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p2">
+       <p class="ltx_p">
+        When
+        Tk=Tr
+        , Rand Index can be applied directly since coreference resolution
+reduces to a clustering problem where mentions are partitioned into clusters (entities):
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p3">
+       <table class="ltx_equationgroup ltx_eqn_align" id="Sx1.EGx4">
+        <tr class="ltx_equation ltx_align_baseline" id="S3.E1">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          Rand Index
+         </td>
+         <td class="ltx_td ltx_align_left">
+          =|Ck∩Cr|+|Nk∩Nr|12⁢(|Tk|⁢(|Tk|-1))
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="1">
+          <span class="ltx_tag ltx_tag_equation">
+           (1)
+          </span>
+         </td>
+        </tr>
+       </table>
+       <p class="ltx_p">
+        In practice, though, the simple-minded adoption of Rand Index is not
+satisfactory since the number of non-coreference links
+often overwhelms that of coreference links
+        [7]
+        ,
+or,
+        |Nk|≫|Ck|
+        and
+        |Nr|≫|Cr|
+        .
+Rand Index, if used without modification,
+would not be sensitive to changes of coreference links.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p4">
+       <p class="ltx_p">
+        BLANC-gold solves this problem by averaging the F-measure computed over coreference links
+and the F-measure over non-coreference links. Using the notations in Section
+        2
+        ,
+the recall, precision, and F-measure on coreference links are:
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p5">
+       <table class="ltx_equationgroup ltx_eqn_align" id="Sx1.EGx5">
+        <tr class="ltx_equation ltx_align_baseline" id="S3.E2">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          Rc(g)
+         </td>
+         <td class="ltx_td ltx_align_left">
+          =|Ck∩Cr||Ck∩Cr|+|Ck∩Nr|
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="1">
+          <span class="ltx_tag ltx_tag_equation">
+           (2)
+          </span>
+         </td>
+        </tr>
+        <tr class="ltx_equation ltx_align_baseline" id="S3.E3">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          Pc(g)
+         </td>
+         <td class="ltx_td ltx_align_left">
+          =|Ck∩Cr||Cr∩Ck|+|Cr∩Nk|
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="1">
+          <span class="ltx_tag ltx_tag_equation">
+           (3)
+          </span>
+         </td>
+        </tr>
+        <tr class="ltx_equation ltx_align_baseline" id="S3.E4">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          Fc(g)
+         </td>
+         <td class="ltx_td ltx_align_left">
+          =2⁢Rc(g)⁢Pc(g)Rc(g)+Pc(g);
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="1">
+          <span class="ltx_tag ltx_tag_equation">
+           (4)
+          </span>
+         </td>
+        </tr>
+       </table>
+       <p class="ltx_p">
+        Similarly, the recall, precision, and F-measure on non-coreference links are computed as:
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p6">
+       <table class="ltx_equationgroup ltx_eqn_align" id="Sx1.EGx6">
+        <tr class="ltx_equation ltx_align_baseline" id="S3.E5">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          Rn(g)
+         </td>
+         <td class="ltx_td ltx_align_left">
+          =|Nk∩Nr||Nk∩Cr|+|Nk∩Nr|
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="1">
+          <span class="ltx_tag ltx_tag_equation">
+           (5)
+          </span>
+         </td>
+        </tr>
+        <tr class="ltx_equation ltx_align_baseline" id="S3.E6">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          Pn(g)
+         </td>
+         <td class="ltx_td ltx_align_left">
+          =|Nk∩Nr||Nr∩Ck|+|Nr∩Nk|
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="1">
+          <span class="ltx_tag ltx_tag_equation">
+           (6)
+          </span>
+         </td>
+        </tr>
+        <tr class="ltx_equation ltx_align_baseline" id="S3.E7">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          Fn(g)
+         </td>
+         <td class="ltx_td ltx_align_left">
+          =2⁢Rn(g)⁢Pn(g)Rn(g)+Pn(g).
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="1">
+          <span class="ltx_tag ltx_tag_equation">
+           (7)
+          </span>
+         </td>
+        </tr>
+       </table>
+       <p class="ltx_p">
+        Finally, the BLANC-gold metric is the arithmetic average of
+        Fc(g)
+        and
+        Fn(g)
+        :
+       </p>
+       <table class="ltx_equationgroup ltx_eqn_align" id="Sx1.EGx7">
+        <tr class="ltx_equation ltx_align_baseline" id="S3.E8">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          BLANC(g)
+         </td>
+         <td class="ltx_td ltx_align_left">
+          =Fc(g)+Fn(g)2.
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="1">
+          <span class="ltx_tag ltx_tag_equation">
+           (8)
+          </span>
+         </td>
+        </tr>
+       </table>
+       <p class="ltx_p">
+        Superscript
+        g
+        in these equations highlights the fact that they are meant for
+coreference systems with gold mentions.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p7">
+       <p class="ltx_p">
+        Eqn. (
+        8
+        ) indicates that BLANC-gold assigns equal weight
+to
+        Fc(g)
+        , the F-measure from coreference links,
+and
+        Fn(g)
+        , the F-measure from non-coreference links. This avoids
+the problem that
+        |Nk|≫|Ck|
+        and
+        |Nr|≫|Cr|
+        , should the original
+Rand Index be used.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p8">
+       <p class="ltx_p">
+        In Eqn. (
+        2
+        ) - (
+        3
+        ) and
+Eqn. (
+        5
+        ) - (
+        6
+        ), denominators
+are written as a sum of disjoint subsets so they can be
+related to the contingency table in
+        [7]
+        . Under the assumption that
+        Tk=Tr
+        , it is clear that
+        Ck=(Ck∩Cr)∪(Ck∩Nr)
+        ,
+        Cr=(Ck∩Cr)∪(Nk∩Cr)
+        , and so on.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       BLANC for Imperfect Response Mentions
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        Under the assumption that the key and response mention sets are identical (which implies that
+        Tk=Tr
+        ), Equations (
+        2
+        ) to (
+        7
+        ) make sense.
+For example,
+        Rc
+        is the ratio of the number of correct coreference links
+over the number of key coreference links;
+        Pc
+        is the ratio of the number
+of correct coreference links over the number of response coreference links, and so on.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p2">
+       <p class="ltx_p">
+        However, when response mentions are not identical to key mentions, a key
+coreference link may not appear in either
+        Cr
+        or
+        Nr
+        , so
+Equations (
+        2
+        ) to (
+        7
+        ) cannot be applied
+directly to systems with imperfect mentions. For instance,
+if the key entities are {
+        a,b,c
+        }
+        {
+        d,e
+        }; and the response entities are
+{
+        b,c
+        }
+        {
+        e,f,g
+        },
+then the key coreference link
+        (a,b)
+        is not seen on the response side; similarly,
+it is possible that a response link does not appear on the key side either:
+        (c,f)
+        and
+        (f,g)
+        are not in the key in the above example.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p3">
+       <p class="ltx_p">
+        To account for missing or spurious links, we observe that
+        <span class="ltx_text ltx_phantom">
+         <span style="visibility:hidden">
+          x
+         </span>
+        </span>
+        ∙
+        Ck∖Tr
+        are key coreference links missing in the response;
+        <span class="ltx_text ltx_phantom">
+         <span style="visibility:hidden">
+          x
+         </span>
+        </span>
+        ∙
+        Nk∖Tr
+        are key non-coreference links missing in the response;
+        <span class="ltx_text ltx_phantom">
+         <span style="visibility:hidden">
+          x
+         </span>
+        </span>
+        ∙
+        Cr∖Tk
+        are response coreference links missing in the key;
+        <span class="ltx_text ltx_phantom">
+         <span style="visibility:hidden">
+          x
+         </span>
+        </span>
+        ∙
+        Nr∖Tk
+        are response non-coreference links missing in the key,
+        and we propose to extend the coreference F-measure and non-coreference F-measure
+as follows. Coreference recall, precision and F-measure are changed to:
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p4">
+       <table class="ltx_equationgroup ltx_eqn_align" id="Sx1.EGx8">
+        <tr class="ltx_equation ltx_align_baseline" id="S4.E9">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          Rc
+         </td>
+         <td class="ltx_td ltx_align_left">
+          =|Ck∩Cr||Ck∩Cr|+|Ck∩Nr|+|Ck∖Tr|
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="1">
+          <span class="ltx_tag ltx_tag_equation">
+           (9)
+          </span>
+         </td>
+        </tr>
+        <tr class="ltx_equation ltx_align_baseline" id="S4.E10">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          Pc
+         </td>
+         <td class="ltx_td ltx_align_left">
+          =|Ck∩Cr||Cr∩Ck|+|Cr∩Nk|+|Cr∖Tk|
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="1">
+          <span class="ltx_tag ltx_tag_equation">
+           (10)
+          </span>
+         </td>
+        </tr>
+        <tr class="ltx_equation ltx_align_baseline" id="S4.E11">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          Fc
+         </td>
+         <td class="ltx_td ltx_align_left">
+          =2⁢Rc⁢PcRc+Pc
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="1">
+          <span class="ltx_tag ltx_tag_equation">
+           (11)
+          </span>
+         </td>
+        </tr>
+       </table>
+       <p class="ltx_p">
+        Non-coreference recall, precision and F-measure are changed to:
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p5">
+       <table class="ltx_equationgroup ltx_eqn_align" id="Sx1.EGx9">
+        <tr class="ltx_equation ltx_align_baseline" id="S4.E12">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          Rn
+         </td>
+         <td class="ltx_td ltx_align_left">
+          =|Nk∩Nr||Nk∩Cr|+|Nk∩Nr|+|Nk∖Tr|
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="1">
+          <span class="ltx_tag ltx_tag_equation">
+           (12)
+          </span>
+         </td>
+        </tr>
+        <tr class="ltx_equation ltx_align_baseline" id="S4.E13">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          Pn
+         </td>
+         <td class="ltx_td ltx_align_left">
+          =|Nk∩Nr||Nr∩Ck|+|Nr∩Nk|+|Nr∖Tk|
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="1">
+          <span class="ltx_tag ltx_tag_equation">
+           (13)
+          </span>
+         </td>
+        </tr>
+        <tr class="ltx_equation ltx_align_baseline" id="S4.E14">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          Fn
+         </td>
+         <td class="ltx_td ltx_align_left">
+          =2⁢Rn⁢PnRn+Pn.
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="1">
+          <span class="ltx_tag ltx_tag_equation">
+           (14)
+          </span>
+         </td>
+        </tr>
+       </table>
+       <p class="ltx_p">
+        The proposed BLANC continues to be the arithmetic average of
+        Fc
+        and
+        Fn
+        :
+       </p>
+       <table class="ltx_equationgroup ltx_eqn_align" id="Sx1.EGx10">
+        <tr class="ltx_equation ltx_align_baseline" id="S4.E15">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          BLANC=Fc+Fn2.
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="1">
+          <span class="ltx_tag ltx_tag_equation">
+           (15)
+          </span>
+         </td>
+        </tr>
+       </table>
+      </div>
+      <div class="ltx_para" id="S4.p6">
+       <p class="ltx_p">
+        We observe that the definition of the proposed BLANC, Equ. (
+        9
+        )-(
+        14
+        )
+subsume the BLANC-gold (
+        2
+        )
+to (
+        7
+        ) due to the following proposition:
+        If
+        Tk=Tr
+        , then
+        B⁢L⁢A⁢N⁢C=B⁢L⁢A⁢N⁢C(g)
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p7">
+       <p class="ltx_p">
+        Proof
+        . We only need to show that
+        Rc=Rc(g)
+        ,
+        Pc=Pc(g)
+        ,
+        Rn=Rn(g)
+        , and
+        Pn=Pn(g)
+        . We prove the first one
+(the other proofs are similar and elided due to space limitations).
+Since
+        Tk=Tr
+        and
+        Ck⊂Tk
+        ,
+we have
+        Ck⊂Tr
+        ; thus
+        Ck∖Tr=∅
+        ,
+and
+        |Ck∩Tr|=0
+        . This establishes that
+        Rc=Rc(g)
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p8">
+       <p class="ltx_p">
+        Indeed, since
+        Ck
+        is a union of three disjoint subsets:
+        Ck=(Ck∩Cr)∪(Ck∩Nr)∪(Ck∖Tr)
+        ,
+        Rc(g)
+        and
+        Rc
+        can be unified as
+        |Ck∩Cr||CK|
+        .
+Unification for other component recalls and precisions can be done similarly.
+So the final definition of BLANC can be succinctly stated as:
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p9">
+       <table class="ltx_equationgroup ltx_eqn_align" id="Sx1.EGx11">
+        <tr class="ltx_equation ltx_align_baseline" id="S4.E16">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+         </td>
+         <td class="ltx_td ltx_align_left">
+          Rc=|Ck∩Cr||Ck|, Pc=|Ck∩Cr||Cr|
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="1">
+          <span class="ltx_tag ltx_tag_equation">
+           (16)
+          </span>
+         </td>
+        </tr>
+        <tr class="ltx_equation ltx_align_baseline" id="S4.E17">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+         </td>
+         <td class="ltx_td ltx_align_left">
+          Rn=|Nk∩Nr||Nk|, Pn=|Nk∩Nr||Nr|
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="1">
+          <span class="ltx_tag ltx_tag_equation">
+           (17)
+          </span>
+         </td>
+        </tr>
+        <tr class="ltx_equation ltx_align_baseline" id="S4.E18">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+         </td>
+         <td class="ltx_td ltx_align_left">
+          Fc=2⁢|Ck∩Cr||Ck|+|Cr|, Fn=2⁢|Nk∩Nr||Nk|+|Nr|
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="1">
+          <span class="ltx_tag ltx_tag_equation">
+           (18)
+          </span>
+         </td>
+        </tr>
+        <tr class="ltx_equation ltx_align_baseline" id="S4.E19">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+         </td>
+         <td class="ltx_td ltx_align_left">
+          BLANC=Fc+Fn2
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="1">
+          <span class="ltx_tag ltx_tag_equation">
+           (19)
+          </span>
+         </td>
+        </tr>
+       </table>
+      </div>
+      <div class="ltx_subsection" id="S4.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.1
+        </span>
+        Boundary Cases
+       </h3>
+       <div class="ltx_para" id="S4.SS1.p1">
+        <p class="ltx_p">
+         Care has to be taken when counts of the BLANC definition are 0.
+This can happen when all key (or response) mentions are in one cluster or
+are all singletons: the former case will lead to
+         Nk=∅
+         (or
+         Nr=∅
+         );
+the latter will lead to
+         Ck=∅
+         (or
+         Cr=∅
+         ).
+Observe that as long as
+         |Ck|+|Cr|&gt;0
+         ,
+         Fc
+         in (
+         18
+         ) is well-defined;
+as long as
+         |Nk|+|Nr|&gt;0
+         ,
+         Fn
+         in (
+         18
+         ) is well-defined.
+So we only need to augment the BLANC definition for the following cases:
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p2">
+        <p class="ltx_p">
+         (1) If
+         Ck=Cr=∅
+         and
+         Nk=Nr=∅
+         , then
+         BLANC=I(Mk=Mr)
+         , where
+         I⁢(⋅)
+         is an indicator function
+whose value is 1 if its argument is true, and 0 otherwise.
+         Mk
+         and
+         Mr
+         are the key and response mention set. This can happen when a document has no more than one mention and there is no link.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p3">
+        <p class="ltx_p">
+         (2) If
+         Ck=Cr=∅
+         and
+         |Nk|+|Nr|&gt;0
+         , then
+         BLANC=Fn
+         . This is the case where the key and response
+side has only entities consisting of singleton mentions. Since there is no coreference link, BLANC
+reduces to the non-coreference F-measure
+         Fn
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p4">
+        <p class="ltx_p">
+         (3) If
+         Nk=Nr=∅
+         and
+         |Ck|+|Cr|&gt;0
+         , then
+         BLANC=Fc
+         . This is the case where all mentions
+in the key and response are in one entity. Since there is no non-coreference link,
+BLANC reduces to the coreference F-measure
+         Fc
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.2
+        </span>
+        Toy Examples
+       </h3>
+       <div class="ltx_para" id="S4.SS2.p1">
+        <p class="ltx_p">
+         We walk through a few examples and show how BLANC is calculated in detail.
+In all the examples below, each lower-case letter represents a mention; mentions
+in an entity are closed in {}; two letters in () represent a link.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p2">
+        <p class="ltx_p">
+         Example 1.
+         Key entities are
+         {a⁢b⁢c}
+         and
+         {d}
+         ; response entities are
+         {b⁢c}
+         and
+         {d⁢e}
+         . Obviously,
+         Ck={(a⁢b),(b⁢c),(a⁢c)}
+         ;
+         Nk={(a⁢d),(b⁢d),(c⁢d)}
+         ;
+         Cr={(b⁢c),(d⁢e)}
+         ;
+         Nr={(b⁢d),(b⁢e),(c⁢d),(c⁢e)}
+         .
+         Therefore,
+         Ck∩Cr={(b⁢c)}
+         ,
+         Nk∩Nr={(b⁢d),(c⁢d)}
+         , and
+         Rc=13
+         ,
+         Pc=12
+         ,
+         Fc=25
+         ;
+         Rn=23
+         ,
+         Pn=24
+         ,
+         Fn=47
+         . Finally,
+         BLANC=1735
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p3">
+        <p class="ltx_p">
+         Example 2.
+         Key entity is
+         {a}
+         ; response entity is
+         {b}
+         . This is boundary case (1):
+         BLANC=0
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p4">
+        <p class="ltx_p">
+         Example 3.
+         Key entities are
+         {a}⁢{b}⁢{c}
+         ; response entities are
+         {a}⁢{b}⁢{d}
+         . This is boundary case (2): there are no coreference links.
+Since
+         Nk={(a⁢b),(b⁢c),(c⁢a)}
+         ,
+         Nr={(a⁢b),(b⁢d),(a⁢d)}
+         ,
+         we have
+         Nk∩Nr={(a⁢b)}
+         , and
+         Rn=13
+         ,
+         Pn=13
+         .
+         So
+         BLANC=Fn=13
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p5">
+        <p class="ltx_p">
+         Example 4.
+         Key entity is
+         {a⁢b⁢c}
+         ; response entity is
+         {b⁢c}
+         . This is boundary case (3): there are no non-coreference links.
+Since
+         Ck={(a⁢b),(b⁢c),(c⁢a)}
+         , and
+         Cr={(b⁢c)}
+         ,
+         we have
+         Ck∩Cr={(b⁢c)}
+         , and
+         Rc=13
+         ,
+         Pc=1
+         ,
+         So
+         BLANC=Fc=24=12
+         .
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Results
+      </h2>
+      <div class="ltx_subsection" id="S5.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.1
+        </span>
+        CoNLL-2011/12
+       </h3>
+       <div class="ltx_para" id="S5.SS1.p1">
+        <p class="ltx_p">
+         We have updated the publicly available CoNLL coreference scorer
+         with the proposed BLANC, and used it to compute the proposed BLANC scores for all the CoNLL 2011
+         [5]
+         and 2012
+         [4]
+         participants in the official track, where participants had to automatically predict the mentions. Tables
+         1
+         and
+         2
+         report the updated results.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.2
+        </span>
+        Correlation with Other Measures
+       </h3>
+       <div class="ltx_para" id="S5.SS2.p1">
+        <p class="ltx_p">
+         Figure
+         1
+         shows how the proposed BLANC measure works when compared with
+existing metrics such as MUC, B-cubed and CEAF, using the BLANC and F1 scores. The proposed BLANC is highly positively correlated with the other measures along R, P and F1 (Table
+         3
+         ), showing that BLANC is able to capture most entity-based similarities measured by B-cubed and CEAF. However, the CoNLL data sets come from OntoNotes
+         [2]
+         , where singleton entities are not annotated, and BLANC has a wider dynamic range on data sets with singletons
+         [7]
+         . So the correlations will likely be lower on data sets with singleton entities.
+        </p>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

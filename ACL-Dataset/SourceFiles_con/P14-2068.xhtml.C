@@ -1,0 +1,481 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Modeling Factuality Judgments in Social Media Text.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_abstract">
+      <h6 class="ltx_title ltx_title_abstract">
+       Abstract
+      </h6>
+      <p class="ltx_p">
+       How do journalists mark quoted content as certain or uncertain, and how do readers interpret these signals? Predicates such as
+       thinks
+       ,
+       claims
+       , and
+       admits
+       offer a range of options for framing quoted content according to the author’s own perceptions of its credibility. We gather a new dataset of direct and indirect quotes from Twitter, and obtain annotations of the perceived certainty of the quoted statements. We then compare the ability of linguistic and extra-linguistic features to predict readers’ assessment of the certainty of quoted content. We see that readers are indeed influenced by such framing devices — and we find no evidence that they consider other factors, such as the source, journalist, or the content itself. In addition, we examine the impact of specific framing devices on perceptions of credibility.
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Contemporary journalism is increasingly conducted through social media services like Twitter
+        [9, 6]
+        . As events unfold, journalists and political commentators use quotes — often indirect — to convey potentially uncertain information and claims from their sources and informants, e.g.,
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        A key pragmatic goal of such messages is to convey the provenance and uncertainty of the quoted content. In some cases, the author may also introduce their own perspective
+        [8]
+        through the use of framing
+        [5]
+        . For instance, consider the use of the word
+        claims
+        in Figure
+        1
+        , which conveys the author’s doubt about the indirectly quoted content.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        Detecting and reasoning about the certainty of propositional content has been identified as a key task for information extraction, and is now supported by the FactBank corpus of annotations for newstext
+        [14]
+        . However, less is known about this phenomenon in social media — a domain whose endemic uncertainty makes proper treatment of factuality even more crucial
+        [10]
+        . Successful automation of factuality judgments could help to detect online rumors
+        [15]
+        , and might enable new applications, such as the computation of reliability ratings for ongoing stories.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        This paper investigates how linguistic resources and extra-linguistic factors affect perceptions of the certainty of quoted information in Twitter. We present a new dataset of Twitter messages that use FactBank predicates (e.g.,
+        claim
+        ,
+        say
+        ,
+        insist
+        ) to scope the claims of named entity sources. This dataset was annotated by Mechanical Turk workers who gave ratings for the factuality of the scoped claims in each Twitter message. This enables us to build a predictive model of the factuality annotations, with the goal of determining the full set of relevant factors, including the predicate, the source, the journalist, and the content of the claim itself. However, we find that these extra-linguistic factors do not predict readers’ factuality judgments, suggesting that the journalist’s own framing plays a decisive role in the credibility of the information being conveyed. We explore the specific linguistic feature that affect factuality judgments, and compare our findings with previously-proposed groupings of factuality-related predicates.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Text data
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        We gathered a dataset of Twitter messages from 103 professional journalists and bloggers who work in the field of American Politics.
+        Tweets were gathered using Twitter’s streaming API, extracting the complete permissible timeline up to February 23, 2014. A total of 959,754 tweets were gathered, and most were written in early 2014.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p2">
+       <p class="ltx_p">
+        Our interest in this text is specifically in quoted content — including “indirect” quotes, which may include paraphrased quotations, as in the examples in Figure
+        1
+        .
+While labeled datasets for such quotes have been created
+        [12, 13]
+        , these are not freely available at present. In any case, the relevance of these datasets to Twitter text is currently unproven. Therefore, rather than train a supervised model to detect quotations, we apply a simple dependency-based heuristic.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p3">
+       <ul class="ltx_itemize" id="I1">
+        [leftmargin=*,itemsep=0pt,parsep=0pt]
+        <li class="ltx_item" id="I1.i1" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_itemize">
+          •
+         </span>
+         <div class="ltx_para" id="I1.i1.p1">
+          <p class="ltx_p">
+           We focus on tweets that contain any member of a list of source-introducing predicates (we borrow the terminology of
+           Pareti (2012)
+           and call this the
+           cue
+           ). Our complete list — shown in Table
+           1
+           — was selected mainly from the examples presented by
+           Saurí and Pustejovsky (2012)
+           , but with reference also to Saurí’s (2008) dissertation for cues that are common in Twitter. The Porter Stemmer is applied to match inflections, e.g.
+           denies
+           /
+           denied
+           ;
+for irregular cases not handled by the Porter Stemmer (e.g.,
+           forget/forgot
+           ), we include both forms. We use the CMU Twitter Part-of-Speech Tagger
+           [11]
+           to select only instances in the verb sense. Figure
+           2
+           shows the distribution of the cues and Figure
+           3
+           shows the distribution of the cue groups. For cues that appear in multiple groups, we chose the most common group.
+          </p>
+         </div>
+        </li>
+        <li class="ltx_item" id="I1.i2" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_itemize">
+          •
+         </span>
+         <div class="ltx_para" id="I1.i2.p1">
+          <p class="ltx_p">
+           We run the Stanford Dependency parser to obtain labeled dependencies
+           [4]
+           , requiring that the cue has outgoing edges of the type
+           NSUBJ
+           (noun subject)
+and
+           CCOMP
+           (clausal complement). The subtree headed by the modifier of the
+           CCOMP
+           relation is considered the
+           claim
+           ; the subtree headed by the modifier of the
+           NSUBJ
+           relation is considered the
+           source
+           . See Figure
+           4
+           for an example.
+          </p>
+         </div>
+        </li>
+        <li class="ltx_item" id="I1.i3" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_itemize">
+          •
+         </span>
+         <div class="ltx_para" id="I1.i3.p1">
+          <p class="ltx_p">
+           We use a combination of regular expressions and dependency rules to capture expressions of the type “
+           claim, according to source
+           .” Specifically, the
+           PCOMP
+           path from
+           according
+           is searched for the pattern
+           according to *
+           . The text that matches the * is the source and the remaining text other than the source is taken as the claim.
+          </p>
+         </div>
+        </li>
+        <li class="ltx_item" id="I1.i4" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_itemize">
+          •
+         </span>
+         <div class="ltx_para" id="I1.i4.p1">
+          <p class="ltx_p">
+           Finally, we restrict consideration to tweets in which the source contains a named entity or twitter username.
+This eliminates expressions of personal belief such as
+           I doubt Obama will win
+           , as well as anonymous sources such as
+           Team sources report that Lebron has demanded a trade to New York.
+           Investigating the factuality judgments formed in response to such tweets is clearly an important problem for future research, but is outside the scope of this paper.
+          </p>
+         </div>
+        </li>
+       </ul>
+      </div>
+      <div class="ltx_para" id="S2.p4">
+       <p class="ltx_p">
+        This heuristic pipeline may miss many relevant tweets, but since the overall volume is high, we prioritize precision. The resulting dataset is summarized in Table
+        2
+        .
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Annotation
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        We used Amazon Mechanical Turk (AMT) to collect ratings of claims. AMT has been widely used by the NLP community to collect data
+        [18]
+        , with “best practices” defined to help requesters best design Turk jobs
+        [1]
+        . We followed these guidelines to perform pilot experiments to test the instruction set and the quality of responses.
+Based on the pilot study we designed Human Intelligence Tasks (HITs) to annotate 1265 claims.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p2">
+       <p class="ltx_p">
+        Each HIT contained a batch of ten tweets and rewarded $0.10 per hit. To ensure quality control we required the Turkers to have at least 85% hit approval rating and to reside in the United States, because the Twitter messages in our dataset were related to American politics. For each tweet, we obtained five independent ratings from Turkers satisfying the above qualifications. The ratings were based on a 5-point Likert scale ranging from “[-2] Certainly False” to “[2] Certainly True” and allowing for “[0] Uncertain”. We also allowed for “Not Applicable” option to capture ratings where the Turkers did not have sufficient knowledge about the statement or if the statement was not really a claim. Figure
+        6
+        shows the set of instructions provided to the Turkers, and Figure
+        5
+        illustrates the annotation interface.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p3">
+       <p class="ltx_p">
+        We excluded tweets for which three or more Turkers gave a rating of “Not Applicable,” leaving us with a dataset of 1170 tweets. Within this set, the average variance per tweet (excluding “Not Applicable” ratings) was 0.585.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Modeling factuality judgments
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        Having obtained a corpus of factuality ratings, we now model the factors that drive these ratings.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S4.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.1
+        </span>
+        Predictive accuracy
+       </h3>
+       <div class="ltx_para" id="S4.SS1.p1">
+        <p class="ltx_p">
+         First, we attempt to determine the impact of various predictive features on rater judgments of factuality. We consider the following features:
+        </p>
+        <ul class="ltx_itemize" id="I2">
+         [itemsep=-5pt,topsep=0pt]
+         <li class="ltx_item" id="I2.i1" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I2.i1.p1">
+           <p class="ltx_p">
+            Cue word
+            : after stemming
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I2.i2" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I2.i2.p1">
+           <p class="ltx_p">
+            Cue word group
+            : as given in Table
+            1
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I2.i3" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I2.i3.p1">
+           <p class="ltx_p">
+            Source
+            : represented by the named entity or username in the source field (see Figure
+            4
+            )
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I2.i4" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I2.i4.p1">
+           <p class="ltx_p">
+            Journalist
+            : represented by their Twitter ID
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I2.i5" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I2.i5.p1">
+           <p class="ltx_p">
+            Claim
+            : represented by a bag-of-words vector from the claim field (Figure
+            4
+            )
+           </p>
+          </div>
+         </li>
+        </ul>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p2">
+        <p class="ltx_p">
+         These features are used as predictors in a series of linear ridge regressions, where the dependent variable is the mean certainty rating. We throw out tweets that were rated as “not applicable” by a majority of raters, but otherwise ignore “not applicable” ratings of the remaining tweets. The goal of these regressions is to determine which features are predictive of raters’ factuality judgments. The ridge regression regularization parameter was tuned via cross-validation in the training set. We used the bootstrap to obtain multiple training/test splits (70% training), which were used for significance testing.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p3">
+        <p class="ltx_p">
+         Table
+         3
+         reports mean average error for each feature group, as well as a baseline that simply reports the mean rating across the training set. Each accuracy was compared with the baseline using a paired z-test. Only the cue word features pass this test at
+         p&lt;.05
+         . The other features do not help, even in combination with the cue word.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p4">
+        <p class="ltx_p">
+         While these findings must be interpreted with caution, they suggest that readers — at least, Mechanical Turk workers — use relatively little independent judgment to assess the validity of quoted text that they encounter on Twitter. Of course, richer linguistic models, more advanced machine learning, or experiments with more carefully-selected readers might offer a different view. But the results at hand are most compatible with the conclusion that readers base their assessments of factuality only on the framing provided by the journalist who reports the quote.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.2
+        </span>
+        Cue words and cue groups
+       </h3>
+       <div class="ltx_para" id="S4.SS2.p1">
+        <p class="ltx_p">
+         Given the importance of cue words as a signal for factuality, we want to assess the factuality judgments induced by each cue. A second question is whether proposed groupings of cue words into groups cohere with such perceptions.
+         Saurí (2008)
+         describes several classes of source-introducing predicates, which indicate how the source relates to the quoted claim. These classes are summarized in Table
+         1
+         , along with frequently-occuring cues from our corpus. We rely on FactBank to assign the cue words to classes; the only word not covered by FactBank was
+         sense
+         , which we placed in predicates of perception.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p2">
+        <p class="ltx_p">
+         We performed another set of linear regressions, again using the mean certainty rating as the dependent variable. In this case, there was no training/test split, so confidence intervals on the resulting parameters are computed using the analytic closed form. We performed two such regressions: first using only the individual cues as predictors, and then using only the cue groups. Results are shown in Figures
+         7
+         and
+         8
+         ; Figure
+         7
+         includes only cues which appear at least ten times, although all cues were included in the regression.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p3">
+        <p class="ltx_p">
+         The cues that give the highest factuality coefficients are
+         learn
+         and
+         admit
+         , which are labeled as predicates of knowledge. These cues carry a substantial amount of framing, as they purport to describe the private mental state of the source. The word
+         admit
+         often applies to statements that are perceived as damaging to the source, such as
+         Bill Gates admits Control-Alt-Delete was a mistake
+         ; since there can be no self-interest behind such statements, they may be perceived as more likely to be true.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p4">
+        <p class="ltx_p">
+         Several of the cues with the lowest factuality coefficients are predicates of belief:
+         suggest
+         ,
+         predict
+         and
+         think
+         . The words
+         suggest
+         ,
+         think
+         , and
+         believe
+         also purport to describe the private mental state of the source, but their framing function is the opposite of the predicates of knowledge: they imply that it is important to mark the claim as the source’s belief, and not a widely-accepted fact. For example,
+         Mubarak clearly believes he has the military leadership’s support
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p5">
+        <p class="ltx_p">
+         A third group of interest are the predicates of report, which have widely-varying certainty coefficients. The cues
+         according
+         ,
+         report
+         ,
+         say
+         , and
+         tell
+         are strongly predictive of certainty, but the cues
+         claim
+         and
+         deny
+         convey uncertainty. Both
+         according
+         and
+         report
+         are often used in conjunction with impersonal and institutional sources, e.g.,
+         Cuccinelli trails McAuliffe by 24 points , according to a new poll
+         . In contrast,
+         insist
+         ,
+         claim
+         , and
+         deny
+         imply that there is uncertainty about the quoted statement, e.g.,
+         Christie insists that Fort Lee Mayor was never on my radar
+         . In this case, the fact that the predicate indicates a report is not enough to determine the framing: different sorts of reports carry radically different perceptions of factuality.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Related work
+      </h2>
+      <div class="ltx_paragraph" id="S5.SS2.SSS0.P1">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Factuality and Veridicality
+       </h4>
+       <div class="ltx_para" id="S5.SS2.SSS0.P1.p1">
+        <p class="ltx_p">
+         The creation of FactBank
+         [14]
+         has enabled recent work on the factuality (or “veridicality”) of event mentions in text.
+         Saurí and Pustejovsky (2012)
+         propose a two-dimensional factuality annotation scheme, including polarity and certainty; they then build a classifier to predict annotations of factuality from statements in FactBank. Their work on source-introducing predicates provides part of the foundation for this research, which focuses on quoted statements in social media text.
+         de Marneffe et al. (2012)
+         conduct an empirical evaluation of FactBank ratings from Mechanical Turk workers, finding a high degree of disagreement between raters. They also construct a statistical model to predict these ratings. We are unaware of prior work comparing the contribution of linguistic and extra-linguistic predictors (e.g., source and journalist features) for factuality ratings. This prior work also does not measure the impact of individual cues and cue classes on assessment of factuality.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S5.SS2.SSS0.P2">
+       <h4 class="ltx_title ltx_title_paragraph">
+        Credibility in social media
+       </h4>
+       <div class="ltx_para" id="S5.SS2.SSS0.P2.p1">
+        <p class="ltx_p">
+         Recent work in the area of computational social science focuses on understanding credibility cues on Twitter. Such studies have found that users express concern over the credibility of tweets belonging to certain topics (politics, news, emergency). By manipulating several features of a tweet,
+         Morris et al. (2012)
+         found that in addition to content, users often use additional markers while assessing the tweet credibility, such as the user name of the source.
+The search for reliable signals of information credibility in social media has led to the construction of automatic classifiers to identify credible tweets
+         [2]
+         . However, this prior work has not explored the
+         linguistic
+         basis of factuality judgments, which we show to depend on framing devices such as cue words.
+        </p>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

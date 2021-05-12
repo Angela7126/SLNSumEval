@@ -1,0 +1,760 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   A Hybrid Approach to Skeleton-based Translation.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_abstract">
+      <h6 class="ltx_title ltx_title_abstract">
+       Abstract
+      </h6>
+      <p class="ltx_p">
+       In this paper we explicitly consider sentence skeleton information for Machine Translation (MT). The basic idea is that we translate the key elements of the input sentence using a skeleton translation model, and then cover the remain segments using a full translation model. We apply our approach to a state-of-the-art phrase-based system and demonstrate very promising BLEU improvements and TER reductions on the NIST Chinese-English MT evaluation data.
+      </p>
+     </div>
+     <div class="ltx_para" id="p1">
+      <p class="ltx_p">
+       GBKsong
+      </p>
+     </div>
+     <div class="ltx_para" id="p2">
+      <p class="ltx_p">
+       GBKsong
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Current Statistical Machine Translation (SMT) approaches model the translation problem as a process of generating a derivation of atomic translation units, assuming that every unit is drawn out of the same model. The simplest of these is the phrase-based approach
+        [Och et al.1999, Koehn et al.2003]
+        which employs a global model to process any sub-strings of the input sentence. In this way, all we need is to increasingly translate a sequence of source words each time until the entire sentence is covered. Despite good results in many tasks, such a method ignores the roles of each source word and is somewhat different from the way used by translators. For example, an important-first strategy is generally adopted in human translation - we translate the key elements/structures (or skeleton) of the sentence first, and then translate the remaining parts. This especially makes sense for some languages, such as Chinese, where complex structures are usually involved.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        Note that the source-language structural information has been intensively investigated in recent studies of syntactic translation models. Some of them developed syntax-based models on complete syntactic trees with Treebank annotations
+        [Liu et al.2006, Huang et al.2006, Zhang et al.2008]
+        , and others used source-language syntax as soft constraints
+        [Marton and Resnik2008, Chiang2010]
+        . However, these approaches suffer from the same problem as the phrase-based counterpart and use the single global model to handle different translation units, no matter they are from the skeleton of the input tree/sentence or other not-so-important sub-structures.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        In this paper we instead explicitly model the translation problem with sentence skeleton information. In particular,
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <ul class="ltx_itemize" id="I1">
+        <li class="ltx_item" id="I1.i1" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_itemize">
+          •
+         </span>
+         <div class="ltx_para" id="I1.i1.p1">
+          <p class="ltx_p">
+           We develop a skeleton-based model which divides translation into two sub-models: a skeleton translation model (i.e., translating the key elements) and a full translation model (i.e., translating the remaining source words and generating the complete translation).
+          </p>
+         </div>
+        </li>
+        <li class="ltx_item" id="I1.i2" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_itemize">
+          •
+         </span>
+         <div class="ltx_para" id="I1.i2.p1">
+          <p class="ltx_p">
+           We develop a skeletal language model to describe the possibility of translation skeleton and handle some of the long-distance word dependencies.
+          </p>
+         </div>
+        </li>
+        <li class="ltx_item" id="I1.i3" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_itemize">
+          •
+         </span>
+         <div class="ltx_para" id="I1.i3.p1">
+          <p class="ltx_p">
+           We apply the proposed model to Chinese-English phrase-based MT and demonstrate promising BLEU improvements and TER reductions on the NIST evaluation data.
+          </p>
+         </div>
+        </li>
+       </ul>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       A Skeleton-based Approach to MT
+      </h2>
+      <div class="ltx_subsection" id="S2.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.1
+        </span>
+        Skeleton Identification
+       </h3>
+       <div class="ltx_para" id="S2.SS1.p1">
+        <p class="ltx_p">
+         The first issue that arises is how to identify the skeleton for a given source sentence. Many ways are available. E.g., we can start with a full syntactic tree and transform it into a simpler form (e.g., removing a sub-tree). Here we choose a simple and straightforward method: a skeleton is obtained by dropping all unimportant words in the original sentence, while preserving the grammaticality. See the following for an example skeleton of a Chinese sentence.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p2">
+        <p class="ltx_p">
+         Original Sentence
+         (subscripts represent indices):
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p3">
+        <p class="ltx_p ltx_parbox ltx_align_top" style="width:43.4pt;">
+         Ã¿
+         [1]
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p4">
+        <p class="ltx_p">
+         per
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p5">
+        <p class="ltx_p ltx_parbox ltx_align_top" style="width:39.0pt;">
+         ¶Ö
+         [2]
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p6">
+        <p class="ltx_p">
+         ton
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p7">
+        <p class="ltx_p ltx_parbox ltx_align_top" style="width:199.5pt;">
+         º£Ë®µ­»¯
+         [3]
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p8">
+        <p class="ltx_p">
+         seawater desalination
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p9">
+        <p class="ltx_p ltx_parbox ltx_align_top" style="width:86.7pt;">
+         ´¦Àí
+         [4]
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p10">
+        <p class="ltx_p">
+         treatment
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p11">
+        <p class="ltx_p ltx_parbox ltx_align_top" style="width:43.4pt;">
+         µÄ
+         [5]
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p12">
+        <p class="ltx_p">
+         of
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p13">
+        <p class="ltx_p ltx_parbox ltx_align_top" style="width:78.1pt;">
+         ³É±¾
+         [6]
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p14">
+        <p class="ltx_p">
+         the cost
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p15">
+        <p class="ltx_p ltx_parbox ltx_align_top" style="width:43.4pt;">
+         ÔÚ
+         [7]
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p16">
+        <p class="ltx_p ltx_parbox ltx_align_top" style="width:43.4pt;">
+         5
+         [8]
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p17">
+        <p class="ltx_p">
+         5
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p18">
+        <p class="ltx_p ltx_parbox ltx_align_top" style="width:56.4pt;">
+         Ôª
+         [9]
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p19">
+        <p class="ltx_p">
+         yuan
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p20">
+        <p class="ltx_p ltx_parbox ltx_align_top" style="width:52.0pt;">
+         µÄ
+         [10]
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p21">
+        <p class="ltx_p">
+         of
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p22">
+        <p class="ltx_p ltx_parbox ltx_align_top" style="width:73.7pt;">
+         »ù´¡
+         [11]
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p23">
+        <p class="ltx_p">
+         from
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p24">
+        <p class="ltx_p ltx_parbox ltx_align_top" style="width:34.7pt;">
+         ÉÏ
+         [12]
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p25">
+        <p class="ltx_p ltx_parbox ltx_align_top" style="width:173.4pt;">
+         ½øÒ»²½
+         [13]
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p26">
+        <p class="ltx_p">
+         has been further
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p27">
+        <p class="ltx_p ltx_parbox ltx_align_top" style="width:78.1pt;">
+         ÏÂ½µ
+         [14]
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p28">
+        <p class="ltx_p">
+         reduced
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p29">
+        <p class="ltx_p ltx_parbox ltx_align_top" style="width:21.7pt;">
+         ¡£
+         [15]
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p30">
+        <p class="ltx_p">
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p31">
+        <p class="ltx_p">
+         (The cost of seawater desalination treatment has been further reduced from 5 yuan per ton.)
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p32">
+        <p class="ltx_p">
+         Sentence Skeleton
+         (subscripts represent indices):
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p33">
+        <p class="ltx_p ltx_parbox ltx_align_top" style="width:78.1pt;">
+         ³É±¾
+         [6]
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p34">
+        <p class="ltx_p">
+         the cost
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p35">
+        <p class="ltx_p ltx_parbox ltx_align_top" style="width:173.4pt;">
+         ½øÒ»²½
+         [13]
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p36">
+        <p class="ltx_p">
+         has been further
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p37">
+        <p class="ltx_p ltx_parbox ltx_align_top" style="width:78.1pt;">
+         ÏÂ½µ
+         [14]
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p38">
+        <p class="ltx_p">
+         reduced
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p39">
+        <p class="ltx_p ltx_parbox ltx_align_top" style="width:21.7pt;">
+         ¡£
+         [15]
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p40">
+        <p class="ltx_p">
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p41">
+        <p class="ltx_p">
+         (The cost has been further reduced.)
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p42">
+        <p class="ltx_p">
+         Obviously the skeleton used in this work can be viewed as a simplified sentence. Thus the problem is in principle the same as sentence simplification/compression. The motivations of defining the problem in this way are two-fold. First, as the skeleton is a well-formed (but simple) sentence, all current MT approaches are applicable to the skeleton translation problem. Second, obtaining simplified sentences by word deletion is a well-studied issue
+         [Knight and Marcu2000, Clarke and Lapata2006, Galley and McKeown2007, Cohn and Lapata2008, Yamangil and Shieber2010, Yoshikawa et al.2012]
+         . Many good sentence simpliciation/compression methods are available to our work. Due to the lack of space, we do not go deep into this problem. In Section
+         3.1
+         we describe the corpus and system employed for automatic generation of sentence skeletons.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S2.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.2
+        </span>
+        Base Model
+       </h3>
+       <div class="ltx_para" id="S2.SS2.p1">
+        <p class="ltx_p">
+         Next we describe our approach to integrating skeleton information into MT models. We start with an assumption that the 1-best skeleton is provided by the skeleton identification system. Then we define skeleton-based translation as a task of searching for the best target string
+         t^
+         given the source string and its skeleton
+         τ
+         :
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p2">
+        t^=arg⁢maxtP(t|τ,s)
+
+(1)
+       </div>
+       <div class="ltx_para" id="S2.SS2.p3">
+        <p class="ltx_p">
+         As is standard in SMT, we further assume that 1) the translation process can be decomposed into a derivation of phrase-pairs (for phrase-based models) or translation rules (for syntax-based models); 2) and a linear function
+         g⁢(⋅)
+         is used to assign a model score to each derivation. Let
+         ds,τ,t
+         (or
+         d
+         for short) denote a translation derivation. The above problem can be redefined in a Viterbi fashion - we find the derivation
+         d^
+         with the highest model score given
+         s
+         and
+         τ
+         :
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p4">
+        d^=arg⁢maxd⁡g⁢(d)
+
+(2)
+       </div>
+       <div class="ltx_para" id="S2.SS2.p5">
+        <p class="ltx_p">
+         In this way, the MT output can be regarded as the target-string encoded in
+         d^
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p6">
+        <p class="ltx_p">
+         To compute
+         g⁢(d)
+         , we use a linear combination of a skeleton translation model
+         gs⁢k⁢e⁢l⁢(d)
+         and a full translation model
+         gf⁢u⁢l⁢l⁢(d)
+         :
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p7">
+        g⁢(d)=gs⁢k⁢e⁢l⁢(d)+gf⁢u⁢l⁢l⁢(d)
+
+(3)
+       </div>
+       <div class="ltx_para" id="S2.SS2.p8">
+        <p class="ltx_p">
+         where the skeleton translation model handles the translation of the sentence skeleton, while the full translation model is the baseline model and handles the original problem of translating the whole sentence. The motivation here is straightforward: we use an additional score
+         gs⁢k⁢e⁢l⁢(d)
+         to model the problem of skeleton translation and interpolate it with the baseline model. See Figure
+         1
+         for an example of applying the above model to phrase-based MT. In the figure, each source phrase is translated into a target phrase, which is represented by linked rectangles. The skeleton translation model focuses on the translation of the sentence skeleton, i.e., the solid (red) rectangles; while the full translation model computes the model score for all those phrase-pairs, i.e., all solid and dashed rectangles.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p9">
+        <p class="ltx_p">
+         Another note on the model. Eq. (
+         3
+         ) provides a very flexible way for model selection. While we will restrict ourself to phrase-based translation in the following description and experiments, we can choose different models/features for
+         gs⁢k⁢e⁢l⁢(d)
+         and
+         gf⁢u⁢l⁢l⁢(d)
+         . E.g., one may introduce syntactic features into
+         gs⁢k⁢e⁢l⁢(d)
+         due to their good ability in capturing structural information; and employ a standard phrase-based model for
+         gf⁢u⁢l⁢l⁢(d)
+         in which not all segments of the sentence need to respect syntactic constraints.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S2.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.3
+        </span>
+        Model Score Computation
+       </h3>
+       <div class="ltx_para" id="S2.SS3.p1">
+        <p class="ltx_p">
+         In this work both the skeleton translation model
+         gs⁢k⁢e⁢l⁢(d)
+         and full translation model
+         gf⁢u⁢l⁢l⁢(d)
+         resemble the usual forms used in phrase-based MT, i.e., the model score is computed by a linear combination of a group of phrase-based features and language models. In phrase-based MT, the translation problem is modeled by a derivation of phrase-pairs. Given a translation model
+         m
+         , a language model
+         l⁢m
+         and a vector of feature weights
+         𝐰
+         , the model score of a derivation
+         d
+         is computed by
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS3.p2">
+        g⁢(d;𝐰,m,l⁢m)=𝐰m⋅𝐟m⁢(d)+wl⁢m⋅l⁢m⁢(d)
+
+(4)
+       </div>
+       <div class="ltx_para" id="S2.SS3.p3">
+        <p class="ltx_p">
+         where
+         𝐟m⁢(d)
+         is a vector of feature values defined on
+         d
+         , and
+         𝐰m
+         is the corresponding weight vector.
+         l⁢m⁢(d)
+         and
+         wl⁢m
+         are the score and weight of the language model, respectively.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS3.p4">
+        <p class="ltx_p">
+         To ease modeling, we only consider
+         skeleton-consistent
+         derivations in this work. A derivation
+         d
+         is skeleton-consistent if no phrases in
+         d
+         cross skeleton boundaries (e.g., a phrase where two of the source words are in the skeleton and one is outside). Obviously, from any skeleton-consistent derivation
+         d
+         we can extract a skeleton derivation
+         dτ
+         which covers the sentence skeleton exactly. For example, in Figure
+         1
+         , the derivation of phrase-pairs
+         {p1,p2,…,p9}
+         is skeleton-consistent, and the skeleton derivation is formed by
+         {p1,p4,p5,p9}
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS3.p5">
+        <p class="ltx_p">
+         Then, we can simply define
+         gs⁢k⁢e⁢l⁢(d)
+         and
+         gf⁢u⁢l⁢l⁢(d)
+         as the model scores of
+         dτ
+         and
+         d
+         :
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS3.p6">
+        <table class="ltx_equationgroup ltx_eqn_eqnarray" id="A0.EGx1">
+         <tr class="ltx_equation ltx_align_baseline" id="S2.E5">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           gs⁢k⁢e⁢l⁢(d)
+          </td>
+          <td class="ltx_td ltx_align_center">
+           ≜
+          </td>
+          <td class="ltx_td ltx_align_left">
+           g⁢(dτ;𝐰τ,m,l⁢mτ)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (5)
+           </span>
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S2.E6">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           gf⁢u⁢l⁢l⁢(d)
+          </td>
+          <td class="ltx_td ltx_align_center">
+           ≜
+          </td>
+          <td class="ltx_td ltx_align_left">
+           g⁢(d;𝐰,m,l⁢m)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (6)
+           </span>
+          </td>
+         </tr>
+        </table>
+       </div>
+       <div class="ltx_para" id="S2.SS3.p7">
+        <p class="ltx_p">
+         This model makes the skeleton translation and full translation much simpler because they perform in the same way of string translation in phrase-based MT. Both
+         gs⁢k⁢e⁢l⁢(d)
+         and
+         gf⁢u⁢l⁢l⁢(d)
+         share the same translation model
+         m
+         which can easily learned from the bilingual data
+         . On the other hand, it has different feature weight vectors for individual models (i.e.,
+         𝐰
+         and
+         𝐰τ
+         ).
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS3.p8">
+        <p class="ltx_p">
+         For language modeling,
+         l⁢m
+         is the standard
+         n
+         -gram language model adopted in the baseline system.
+         l⁢mτ
+         is a skeletal language for estimating the well-formedness of the translation skeleton. Here a translation skeleton is a target string where all segments of non-skeleton translation are generalized to a symbol X. E.g., in Figure
+         1
+         , the translation skeleton is ’
+         the cost X has been further reduced X .
+         ’, where two Xs represent non-skeleton segments in the translation. In such a way of string representation, the skeletal language model can be implemented as a standard
+         n
+         -gram language model, that is, a string probability is calculated by a product of a sequence of
+         n
+         -gram probabilities (involving normal words and X). To learn the skeletal language model, we replace non-skeleton parts of the target sentences in the bilingual corpus to Xs using the source sentence skeletons and word alignments. The skeletal language model is then trained on these generalized strings in a standard way of
+         n
+         -gram language modeling.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS3.p9">
+        <p class="ltx_p">
+         By substituting Eq. (
+         4
+         ) into Eqs. (
+         5
+         ) and (
+         6
+         ), and then Eqs. (
+         3
+         ) and (
+         2
+         ), we have the final model used in this work:
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS3.p10">
+        <table class="ltx_equationgroup ltx_eqn_eqnarray" id="A0.EGx2">
+         <tr class="ltx_equation ltx_align_baseline" id="S2.E7">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           d^
+          </td>
+          <td class="ltx_td ltx_align_center">
+           =
+          </td>
+          <td class="ltx_td ltx_align_left">
+           arg⁢maxd(𝐰m⋅𝐟m(d)+wl⁢m⋅lm(d)+
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="2">
+           <span class="ltx_tag ltx_tag_equation">
+            (7)
+           </span>
+          </td>
+         </tr>
+         <tr class="ltx_align_baseline">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+          </td>
+          <td class="ltx_td ltx_align_center">
+          </td>
+          <td class="ltx_td ltx_align_left">
+           𝐰mτ⋅𝐟m(dτ)+wl⁢mτ⋅lmτ(dτ))
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+        </table>
+       </div>
+       <div class="ltx_para" id="S2.SS3.p11">
+        <p class="ltx_p">
+         Figure
+         1
+         shows the translation process and associated model scores for the example sentence. Note that this method does not require any new translation models for implementation. Given a baseline phrase-based system, all we need is to learn the feature weights
+         𝐰
+         and
+         𝐰τ
+         on the development set (with source-language skeleton annotation) and the skeletal language model
+         l⁢mτ
+         on the target-language side of the bilingual corpus. To implement Eq. (
+         7
+         ), we can perform standard decoding while ”doubly weighting” the phrases which cover a skeletal section of the sentence, and combining the two language models and the translation model in a linear fashion.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Evaluation
+      </h2>
+      <div class="ltx_subsection" id="S3.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.1
+        </span>
+        Experimental Setup
+       </h3>
+       <div class="ltx_para" id="S3.SS1.p1">
+        <p class="ltx_p">
+         We experimented with our approach on Chinese-English translation using the NiuTrans open-source MT toolkit
+         [Xiao et al.2012]
+         . Our bilingual corpus consists of 2.7M sentence pairs. All these sentences were aligned in word level using the GIZA++ system and the ”grow-diag-final-and” heuristics. A 5-gram language model was trained on the Xinhua portion of the English Gigaword corpus in addition to the target-side of the bilingual data. This language model was used in both the baseline and our improved systems. For our skeletal language model, we trained a 5-gram language model on the target-side of the bilingual data by generalizing non-skeleton segments to Xs. We used the newswire portion of the NIST MT06 evaluation data as our development set, and used the evaluation data of MT04 and MT05 as our test sets. We chose the default feature set of the NiuTrans.Phrase engine for building the baseline, including phrase translation probabilities, lexical weights, a 5-gram language model, word and phrase bonuses, a ME-based lexicalized reordering model. All feature weights were learned using minimum error rate training
+         [Och2003]
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p2">
+        <p class="ltx_p">
+         Our skeleton identification system was built using the t3 toolkit
+         which implements a state-of-the-art sentence simplification system. We used the NEU Chinese sentence simplification (NEUCSS) corpus as our training data
+         [Zhang et al.2013]
+         . It contains the annotation of sentence skeleton on the Chinese-language side of the Penn Parallel Chinese-English Treebank (LDC2003E07). We trained our system using the Parts 1-8 of the NEUCSS corpus and obtained a 65.2% relational F1 score and 63.1% compression rate in held-out test (Part 10). For comparison, we also manually annotated the MT development and test data with skeleton information according to the annotation standard provided within NEUCSS.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.2
+        </span>
+        Results
+       </h3>
+       <div class="ltx_para" id="S3.SS2.p1">
+        <p class="ltx_p">
+         Table
+         1
+         shows the case-insensitive IBM-version BLEU and TER scores of different systems. We see, first of all, that the MT system benefits from our approach in most cases. In both the manual and automatic identification of sentence skeleton (rows 2 and 4), there is a significant improvement on the ”All” data set. However, using different skeleton identification results for training and inference (row 3) does not show big improvements due to the data inconsistency problem.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p2">
+        <p class="ltx_p">
+         Another interesting question is whether the skeletal language model really contributes to the improvements. To investigate it, we removed the skeletal language model from our skeleton-based translation system (with automatic skeleton identification on both the development and test sets). Seen from row
+         -l⁢mτ
+         of Table
+         1
+         , the removal of the skeletal language model results in a significant drop in both BLEU and TER performance. It indicates that this language model is very beneficial to our system. For comparison, we removed the skeleton-based translation model from our system as well. Row
+         -mτ
+         of Table
+         1
+         shows that the skeleton-based translation model can contribute to the overall improvement but there is no big differences between baseline and
+         -mτ
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p3">
+        <p class="ltx_p">
+         Apart from showing the effects of the skeleton-based model, we also studied the behavior of the MT system under the different settings of search space. Row s-space of Table
+         1
+         shows the BLEU and TER results of restricting the baseline system to the space of skeleton-consistent derivations, i.e., we remove both the skeleton-based translation model and language model from the SBMT system. We see that the limited search space is a little harmful to the baseline system. Further, we regarded skeleton-consistent derivations as an indicator feature and introduced it into the baseline system. Seen from row s-feat., this feature does not show promising improvements. These results indicate that the real improvements are due to the skeleton-based model/features used in this work, rather than the ”well-formed” derivations.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Related Work
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        Skeleton is a concept that has been used in several sub-areas in MT for years. For example, in confusion network-based system combination it refers to the backbone hypothesis for building confusion networks
+        [Rosti et al.2007, Rosti et al.2008]
+        ;
+        Liu et al.2011
+        regard skeleton as a shortened sentence after removing some of the function words for better word deletion. In contrast, we define sentence skeleton as the key segments of a sentence and develop a new MT approach based on this information.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p2">
+       <p class="ltx_p">
+        There are some previous studies on the use of sentence skeleton or related information in MT
+        [Mellebeek et al.2006a, Mellebeek et al.2006b, Owczarzak et al.2006]
+        . In spite of their good ideas of using skeleton skeleton information, they did not model the skeleton-based translation problem in modern SMT pipelines. Our work is a further step towards the use of sentence skeleton in MT. More importantly, we develop a complete approach to this issue and show its effectiveness in a state-of-the-art MT system.
+       </p>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

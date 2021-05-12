@@ -1,0 +1,42 @@
+<html>
+<head>
+<meta name="TextLength" content="SENT_NUM:35, WORD_NUM:1139">
+</head>
+<body bgcolor="white">
+<a href="#0" id="0">In this work, we have proposed a characterization of acceptability semantics for the Attack–Support Argumentation Framework (ASAF) [29].</a>
+<a href="#1" id="1">On the one hand, similarly to [29], we adopted an extension-based approach.</a>
+<a href="#2" id="2">On the other hand, differently from [29], we characterized the acceptability semantics directly on the ASAF, without making use of a translation into a Dung's AF.</a>
+<a href="#3" id="3">Before characterizing the acceptability semantics of the framework, we first identified the different situations under which the elements of the ASAF are in conflict; as a result, we identified two groups of defeats that may occur: the unconditional defeats and the conditional defeats.</a>
+<a href="#4" id="4">The former are defeats that can be inferred from the attack relation since they correspond to conflicts that do not involve the existence of supports.</a>
+<a href="#5" id="5">Specifically, the unconditional defeats are the direct defeats (which correspond to attacks expressed in the attack relation of the ASAF) and indirect defeats (which capture the intuition that attacks on an argument also affect the attacks that argument originates).</a>
+<a href="#6" id="6">The latter group corresponds to conditional defeats: the extended defeats and extended-indirect defeats.</a>
+<a href="#7" id="7">In particular, conditional defeats aim at capturing conflicts that arise from the coexistence of the attack and support relations of the ASAF.</a>
+<a href="#8" id="8">Moreover, given that the ASAF adopts a necessity interpretation for the support relation, the extended defeats coincide with their homonymous attacks in the Argumentation Framework with Necessities (AFN) [46] and thus, they allow to enforce the acceptability constraints derived from the necessary support relation.</a>
+<a href="#9" id="9">As a first step towards defining the acceptability semantics of the ASAF, following Dung's methodology [30], we defined the notions of conflict-freeness, acceptability, and admissibility in the context of the ASAF.</a>
+<a href="#10" id="10">When defining these notions, it was necessary to account for all the kinds of defeat that may occur between the elements of an ASAF.</a>
+<a href="#11" id="11">In particular, since the conditional defeats require the consideration of a set of supports, when characterizing the notion of acceptability it was necessary to account for all the ways in which defense against a defeat can be provided: either by defeating the corresponding attack or, in the case of conditional defeats, by defeating one of the involved supports.</a>
+<a href="#12" id="12">Then, starting from the basic semantic notions, we provided a full characterization of complete, preferred, grounded and stable semantics for the ASAF.</a>
+<a href="#13" id="13">Alongside the formalization of the acceptability semantics, we provided a series of formal results, which can be divided into different categories.</a>
+<a href="#14" id="14">The first group of results regards the relationship between the different forms of defeat that may occur in the ASAF.</a>
+<a href="#15" id="15">The second group of results shows that the ASAF complies with the acceptability constraints derived from its attack and necessary support relations.</a>
+<a href="#16" id="16">Then, the final group of results corresponds to properties shown for Dung's AFs in [30], which involve the monotonicity of the notion of acceptability, Dung's Fundamental Lemma, and the relationship between the complete, preferred, stable, and grounded semantics of the framework.</a>
+<a href="#17" id="17">Later, we showed that the approach for obtaining the extensions of the ASAF that we proposed in this paper is equivalent to the one given in [29], in the sense that they lead to obtaining the same extensions under the complete, preferred, stable and grounded semantics.</a>
+<a href="#18" id="18">To prove the equivalence between the approach of [29] and ours, we made use of intermediate results that prove the equivalence of the two approaches in terms of the basic semantic notions of conflict-freeness, acceptability, and admissibility.</a>
+<a href="#19" id="19">Then, we effectively showed that there exists a one-to-one correspondence between the complete, preferred, stable, and grounded extensions obtained directly on the ASAF and those obtained via its associated AF.</a>
+<a href="#20" id="20">We also provided a formal account of the relationship between the ASAF and the two formalisms it is inspired on, namely, the Argumentation Framework with Recursive Attacks (AFRA) [10] and the Argumentation Framework with Necessities (AFN) [46].</a>
+<a href="#21" id="21">On the one hand, we showed that an ASAF where attacks and supports occur only at the argument level is equivalent to an AFN having the same arguments, attacks and supports as the ASAF, where the support relation is closed under transitivity.</a>
+<a href="#22" id="22">On the other hand, we proved that the ASAF is indeed an extension of the AFRA by formally showing that an ASAF with an empty support relation is equivalent to the AFRA specified by the arguments and the attack relation of the ASAF.</a>
+<a href="#23" id="23">As it was mentioned before, the results in this paper regard the complete, preferred, stable, and grounded semantics.</a>
+<a href="#24" id="24">However, these results could be extended to other semantics, such as semi-stable [19], or ideal [31]; we plan to take additional semantics into account in our future work.</a>
+<a href="#25" id="25">Another issue that we aim at addressing in the future is the study of the computational complexity of the approach for computing the extensions of the ASAF proposed in this paper.</a>
+<a href="#26" id="26">In particular, we are aware that the characterization of acceptability given in Definition 20 may encompass a high computational cost since it requires the consideration of many combinations of attacks and supports leading to the existence of defeats.</a>
+<a href="#27" id="27">As another line of future work, we seek to empirically contrast the approach of [29] for computing the ASAF extensions through the use of translations against the direct computation via the semantics characterized in this paper.</a>
+<a href="#28" id="28">For the first part, by using the AF associated with an ASAF, we can make use of the existing implementations for Dung's AFs, like the developments based on SAT solvers [54] or implementations for Abstract Dialectical Frameworks (ADFs) [34], [32], [33].</a>
+<a href="#29" id="29">Thus, for implementing the approach of [29] we would just need to codify the translation resulting from Definition 23, Definition 10, which can be easily done as it involves the creation of arguments and interactions that is linear on the size the ASAF.</a>
+<a href="#30" id="30">On the other hand, as a first step towards implementing the direct computation of the ASAF semantics, we plan to characterize the complete labeling of the ASAF similarly to [20].</a>
+<a href="#31" id="31">Then, we aim at following the approach of [26], which relies on encoding the constraints of the complete labeling as a SAT problem and then make use of existing strategies like the ones discussed in [54] to iteratively produce and solve modified versions of the initial SAT problem according to the needs of the search process.</a>
+<a href="#32" id="32">Specifically, the constraints corresponding to a complete labeling would be encoded in conjunctive normal form, with different sets of clauses capturing different aspects of the semantics' behavior.</a>
+<a href="#33" id="33">Finally, it should be noted that, even though the extensions of an ASAF could be efficiently obtained by means of existing implementations for other argumentation formalisms, the direct characterization of semantic notions proposed in this paper provides advantages from a modeling point of view.</a>
+<a href="#34" id="34">Furthermore, they provide intuitive means for the theoretical analysis of the ASAF, while also allowing for a better understanding of the impact of having recursive bipolar interactions in abstract argumentation frameworks.</a>
+</body>
+</html>

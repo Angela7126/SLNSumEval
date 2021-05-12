@@ -1,0 +1,748 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Unsupervised Alignment of Privacy Policies using Hidden Markov Models</title>
+<!--Generated on Wed Jun 11 18:14:05 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Unsupervised Alignment of Privacy Policies using Hidden Markov Models</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Rohan Ramanath  Fei Liu  Norman Sadeh  Noah
+A. Smith 
+<br class="ltx_break"/>School of Computer Science 
+<br class="ltx_break"/>Carnegie Mellon University
+
+<br class="ltx_break"/>Pittsburgh, PA 15213, USA 
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">rrohan,feiliu,sadeh,nasmith</span>}<span class="ltx_text ltx_font_typewriter">@cs.cmu.edu</span>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">To support empirical study of online privacy policies,
+as well as tools for users with privacy concerns, we consider the problem of aligning sections of a thousand
+policy documents, based on the issues they address.
+We apply an unsupervised HMM; in two new (and reusable) evaluations, we find the approach more effective than clustering and
+topic models.</p>
+</div><span class="ltx_ERROR undefined">\setitemize</span>
+<div id="p1" class="ltx_para">
+<p class="ltx_p">topsep=0pt,itemsep=-0.4em,labelwidth=0.5em,leftmargin=0.6em<span class="ltx_ERROR undefined">\setenumerate</span>topsep=0pt,itemsep=-0.4em,labelwidth=0.5em,leftmargin=0.75em</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Privacy policy documents are verbose, often esoteric legal documents that many people encounter as clients of companies that provide services on the web. <cite class="ltx_cite">McDonald and Cranor (<a href="#bib.bib3" title="The cost of reading privacy policies" class="ltx_ref">2008</a>)</cite> showed that, if users were to read the privacy policies of every website they access during the course of a year, they would end up spending a substantial amount of their time doing just that and would often still not be able to answer basic questions about what these policies really say. Unsurprisingly, many people do not read them <cite class="ltx_cite">[<a href="#bib.bib4" title="Protecting consumer privacy in an era of rapid change: recommendations for businesses and policymakers" class="ltx_ref">9</a>]</cite>.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Such policies therefore offer an excellent opportunity for NLP tools that summarize or extract key information that (i) helps users understand the implications of agreeing to these policies and (ii) helps legal analysts understand the contents of these policies and make recommendations on how they can be improved or made more clear. Past applications of NLP have sought to parse privacy policies into machine-readable representations <cite class="ltx_cite">[<a href="#bib.bib8" title="An empirical study of natural language parsing of privacy policy rules using the SPARCLE policy workbench" class="ltx_ref">5</a>]</cite> or extract sub-policies from larger documents <cite class="ltx_cite">[<a href="#bib.bib7" title="Automated extraction of security policies from natural-language software documents" class="ltx_ref">14</a>]</cite>. Machine learning has been applied to assess certain attributes of policies <cite class="ltx_cite">[<a href="#bib.bib13" title="A machine learning solution to assess privacy policy completeness" class="ltx_ref">7</a>, <a href="#bib.bib15" title="Automatic categorization of privacy policies: A pilot study" class="ltx_ref">1</a>, <a href="#bib.bib12" title="What websites know about you" class="ltx_ref">6</a>, <a href="#bib.bib14" title="Machine learning for privacy policy" class="ltx_ref">15</a>]</cite>.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">This paper instead analyzes policies in aggregate, seeking to <em class="ltx_emph">align</em> sections of policies. This task is motivated by an expectation that many policies will address similar issues,<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>Personal communication, Joel Reidenberg.</span></span></span> such as
+collection of a user’s contact, location, health, and financial information, sharing with third parties, and deletion of data.
+This expectation is supported by recommendation by privacy experts <cite class="ltx_cite">[<a href="#bib.bib16" title="Fair information practices: a basic history (v. 2.11)" class="ltx_ref">10</a>]</cite> and policymakers <cite class="ltx_cite">[<a href="#bib.bib4" title="Protecting consumer privacy in an era of rapid change: recommendations for businesses and policymakers" class="ltx_ref">9</a>]</cite>; in the financial services sector,
+the Gramm-Leach-Bliley Act <em class="ltx_emph">requires</em> these institutions to address a specific set of issues.
+Aligning policy sections is a first step toward our aforementioned summarization and extraction goals.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">We present the following contributions:</p>
+<ul id="I1" class="ltx_itemize">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p">A new corpus of over 1,000 privacy policies gathered from widely used websites, manually segmented into subtitled sections by crowdworkers (§<a href="#S2" title="2 Data Collection ‣ Unsupervised Alignment of Privacy Policies using Hidden Markov Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>).</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p">An unsupervised approach to aligning the policy sections based on the issues they discuss. For example, sections that discuss “user data on the company’s server” should be grouped together. The approach is inspired by the application of hidden Markov models to sequence alignment in computational biology (Durbin et al., 1998;<cite class="ltx_cite"/> §<a href="#S3" title="3 Approach ‣ Unsupervised Alignment of Privacy Policies using Hidden Markov Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>).</p>
+</div></li>
+<li id="I1.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i3.p1" class="ltx_para">
+<p class="ltx_p">Two reusable evaluation benchmarks for the resulting alignment of policy sections (§<a href="#S4" title="4 Evaluation ‣ Unsupervised Alignment of Privacy Policies using Hidden Markov Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>). We demonstrate that our approach outperforms naïve methods (§<a href="#S5" title="5 Experiment ‣ Unsupervised Alignment of Privacy Policies using Hidden Markov Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>).</p>
+</div></li>
+</ul>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">Our corpus and benchmarks are available at <a href="http://usableprivacy.org/data" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://usableprivacy.org/data</span></a>.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Data Collection</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">We collected 1,010
+unique privacy policy documents from the top websites ranked by
+Alexa.com.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup><a href="http://www.alexa.com" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://www.alexa.com</span></a></span></span></span> These policies were
+collected during a period of six weeks during December 2013 and
+January 2014. They are a snapshot of privacy policies of mainstream
+websites covering fifteen of Alexa.com’s seventeen categories (Table <a href="#S2.T1" title="Table 1 ‣ 2 Data Collection ‣ Unsupervised Alignment of Privacy Policies using Hidden Markov Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>).<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>The “Adult” category
+was excluded; the “World” category was excluded since it contains
+mainly popular websites in different languages, and we opted to
+focus on policies in English in this first stage of research, though
+mulitlingual policy analysis presents interesting challenges for
+future work.</span></span></span></p>
+</div>
+<div id="S2.T1" class="ltx_table">
+<span class="ltx_inline-block ltx_align_center ltx_transformed_outer" style="width:283.5pt;height:92.5px;vertical-align:-1.8pt;"><span class="ltx_transformed_inner" style="transform:translate(-15.7pt,-3.7pt) scale(0.9,0.9) ;-webkit-transform:translate(-15.7pt,-3.7pt) scale(0.9,0.9) ;-ms-transform:translate(-15.7pt,-3.7pt) scale(0.9,0.9) ;">
+<table class="ltx_tabular ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">Business</td>
+<td class="ltx_td ltx_align_left">Computers</td>
+<td class="ltx_td ltx_align_left">Games</td>
+<td class="ltx_td ltx_align_left">Health</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">Home</td>
+<td class="ltx_td ltx_align_left">News</td>
+<td class="ltx_td ltx_align_left">Recreation</td>
+<td class="ltx_td ltx_align_left">Shopping</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">Arts</td>
+<td class="ltx_td ltx_align_left">Kids and Teens</td>
+<td class="ltx_td ltx_align_left">Reference</td>
+<td class="ltx_td ltx_align_left">Regional</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">Science</td>
+<td class="ltx_td ltx_align_left">Society</td>
+<td class="ltx_td ltx_align_left">Sports</td>
+<td class="ltx_td"/></tr>
+</tbody>
+</table>
+</span></span>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 1: </span>Fifteen website categories provided by Alexa.com. We
+collect privacy policies from the top 100 websites in each.
+</div>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">Finding a website’s policy is not trivial. Though many well-regulated
+commercial websites provide a “privacy” link on their homepages, not
+all do. We found university websites to be exceptionally unlikely to
+provide such a link. Even once the policy’s URL is identified,
+extracting the text presents the usual challenges associated with
+scraping documents from the web. Since every site is different in
+its placement of the document (e.g., buried deep within the website,
+distributed across several pages, or mingled together with Terms of Service)
+and format (e.g., HTML, PDF, etc.), and since
+we wish to preserve as much document structure as possible (e.g.,
+section labels), full automation was not a viable solution.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">We therefore crowdsourced the privacy policy document collection using
+Amazon Mechanical Turk. For each website, we
+created a HIT in which a worker was asked to copy and paste the
+following privacy policy-related information into text boxes:
+(i) privacy policy URL;
+(ii) last updated date (or effective date) of the current privacy policy;
+(iii) privacy policy full text; and
+(iv) the section subtitles in the top-most layer of the privacy policy.
+To identify the privacy policy URL, workers were encouraged to go to the website and search for the privacy link.
+Alternatively, they could form a search query using the website name and “privacy policy” (e.g., “Amazon.com privacy policy”) and search in the returned results for the most appropriate privacy policy URL.
+Given the privacy policy full text and the section subtitles,
+we partition the full privacy document into different sections, delimited by the section subtitles.
+A privacy policy is then converted into XML.</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p">Each HIT was completed by three workers, paid $0.05, for a total
+cost of $380 (including Amazon’s surcharge).</p>
+</div>
+<div id="S2.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">Websites with</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">Unique privacy</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">Unique privacy</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">Ave. sections</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">Ave. tokens</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_footnote">Category</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">privacy URL</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">policies</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">policies w/ date</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">per policy</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">per policy</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">Arts</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">94</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">80</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">72</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">11.1 (</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T2.m1" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_footnote"> 3.8)</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">2894 (</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T2.m2" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_footnote"> 1815)</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_footnote">Business</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">100</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">95</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">75</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">10.1 (</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T2.m3" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_footnote"> 4.9)</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">2531 (</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T2.m4" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_footnote"> 1562)</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_footnote">Computers</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">100</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">78</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">62</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">10.7 (</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T2.m5" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_footnote"> 4.9)</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">2535 (</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T2.m6" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_footnote"> 1763)</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_footnote">Games</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">92</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">80</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">51</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">10.2 (</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T2.m7" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_footnote"> 4.9)</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">2662 (</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T2.m8" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_footnote"> 2267)</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_footnote">Health</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">92</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">86</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">57</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">10.0 (</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T2.m9" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_footnote"> 4.4)</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">2325 (</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T2.m10" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_footnote"> 1891)</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_footnote">Home</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">100</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">84</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">68</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">11.5 (</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T2.m11" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_footnote"> 3.8)</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">2493 (</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T2.m12" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_footnote"> 1405)</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_footnote">Kids and Teens</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">96</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">86</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">62</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">10.3 (</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T2.m13" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_footnote"> 4.5)</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">2683 (</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T2.m14" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_footnote"> 1979)</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_footnote">News</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">96</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">91</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">68</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">10.7 (</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T2.m15" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_footnote"> 3.9)</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">2588 (</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T2.m16" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_footnote"> 2493)</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_footnote">Recreation</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">98</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">97</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">67</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">11.9 (</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T2.m17" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_footnote"> 4.5)</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">2678 (</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T2.m18" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_footnote"> 1421)</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_footnote">Reference</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">84</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">86</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">55</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">9.9 (</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T2.m19" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_footnote"> 4.1)</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">2002 (</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T2.m20" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_footnote"> 1454)</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_footnote">Regional</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">98</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">91</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">72</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">11.2 (</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T2.m21" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_footnote"> 4.2)</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">2557 (</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T2.m22" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_footnote"> 1359)</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_footnote">Science</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">71</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">75</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">49</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">9.2 (</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T2.m23" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_footnote"> 4.1)</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">1705 (</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T2.m24" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_footnote"> 1136)</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_footnote">Shopping</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">100</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">99</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">84</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">12.0 (</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T2.m25" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_footnote"> 4.1)</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">2683 (</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T2.m26" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_footnote"> 1154)</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_footnote">Society</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">96</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">94</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">65</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">10.2 (</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T2.m27" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_footnote"> 4.6)</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">2505 (</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T2.m28" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_footnote"> 1587)</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_footnote">Sports</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">96</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">62</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">38</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">10.9 (</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T2.m29" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_footnote"> 4.0)</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_footnote">2222 (</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T2.m30" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_footnote"> 1241)</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_footnote">Average</span></th>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_footnote">94.2</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_footnote">85.6</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_footnote">63.0</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_footnote">10.7 (</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T2.m31" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_footnote"> 4.3)</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_footnote">2471 (</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T2.m32" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math><span class="ltx_text ltx_font_footnote"> 1635)</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_footnote"><span class="ltx_tag ltx_tag_table">Table 2: </span>Statistics of each
+website category, including (i) the number of websites with an
+identified privacy policy link; (ii) number of unique privacy
+policies in each category (note that in rare cases, multiple unique privacy policies were identified for the same website, e.g., a website that contains links to both new and old versions of its privacy policy); (iii) number of websites with
+an identified privacy modification date; (iv) average number of sections per policy; (v) average number of tokens per policy.
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Approach</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">Given the corpus of privacy policies described in §<a href="#S2" title="2 Data Collection ‣ Unsupervised Alignment of Privacy Policies using Hidden Markov Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>, we designed a model to efficiently infer an alignment of policy sections. While we expect that different kinds of websites will likely address different privacy issues, we believe that many policies will discuss roughly the same set of issues. Aligning the policies is a first step in a larger effort to (i) automatically analyze policies to make them less opaque to users and (ii) support legal experts who wish to characterize the state of privacy online and make recommendations <cite class="ltx_cite">[<a href="#bib.bib13" title="A machine learning solution to assess privacy policy completeness" class="ltx_ref">7</a>, <a href="#bib.bib15" title="Automatic categorization of privacy policies: A pilot study" class="ltx_ref">1</a>, <a href="#bib.bib12" title="What websites know about you" class="ltx_ref">6</a>]</cite>.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">We are inspired by multiple sequence alignment methods in computational biology <cite class="ltx_cite">[<a href="#bib.bib5" title="Biological sequence analysis: probabilistic models of proteins and nucleic acids" class="ltx_ref">8</a>]</cite> and by <cite class="ltx_cite">Barzilay and Lee (<a href="#bib.bib2" title="Catching the drift: probabilistic content models, with applications to generation and summarization" class="ltx_ref">2004</a>)</cite>, who described a hidden Markov model (HMM) for document content where each state corresponds to a distinct topic and generates sentences relevant to that topic according to a language model. We estimate an HMM-like model on our corpus, exploiting similarity across privacy policies to the extent it is evident in the data. In our formulation, each hidden state corresponds to an issue or topic, characterized by a distribution over words and bigrams appearing in privacy policy sections addressing that issue. The transition distribution captures tendencies of privacy policy authors to organize these sections in similar orders, though with some variation.</p>
+</div>
+<div id="S3.p3" class="ltx_para">
+<p class="ltx_p">The generative story for our model is as follows. Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m1" class="ltx_Math" alttext="\mathcal{S}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒮</mi></math> denote the set of hidden states.</p>
+<ol id="I2" class="ltx_enumerate">
+<li id="I2.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">1.</span> 
+<div id="I2.i1.p1" class="ltx_para">
+<p class="ltx_p">Choose a start state <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m1" class="ltx_Math" alttext="y_{1}" display="inline"><msub><mi>y</mi><mn>1</mn></msub></math> from <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m2" class="ltx_Math" alttext="\mathcal{S}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒮</mi></math> according to the start-state distribution.</p>
+</div></li>
+<li id="I2.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">2.</span> 
+<div id="I2.i2.p1" class="ltx_para">
+<p class="ltx_p">For <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i2.p1.m1" class="ltx_Math" alttext="t=1,2,\ldots" display="inline"><mrow><mi>t</mi><mo>=</mo><mrow><mn>1</mn><mo>,</mo><mn>2</mn><mo>,</mo><mi mathvariant="normal">…</mi></mrow></mrow></math>, until <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i2.p1.m2" class="ltx_Math" alttext="y_{t}" display="inline"><msub><mi>y</mi><mi>t</mi></msub></math> is the stopping state:</p>
+<ol id="I2.I1" class="ltx_enumerate">
+<li id="I2.I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">(a)</span> 
+<div id="I2.I1.i1.p1" class="ltx_para">
+<p class="ltx_p">Sample the <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.I1.i1.p1.m1" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math>th section of the document by drawing a bag of terms, <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.I1.i1.p1.m2" class="ltx_Math" alttext="\boldsymbol{o}_{t}" display="inline"><msub><mi>𝒐</mi><mi>t</mi></msub></math>, according to the emission multinomial distribution for state <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.I1.i1.p1.m3" class="ltx_Math" alttext="y_{t}" display="inline"><msub><mi>y</mi><mi>t</mi></msub></math>. Note the difference from traditional HMMs, in which a <em class="ltx_emph">single</em> observation symbol is drawn at each time step. <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.I1.i1.p1.m4" class="ltx_Math" alttext="\boldsymbol{o}_{t}" display="inline"><msub><mi>𝒐</mi><mi>t</mi></msub></math> is generated by repeatedly sampling from a distribution over terms that includes all unigrams and bigrams except those that occur in fewer than 5% of the documents and in more than 98% of the documents. This filtering rule was designed to eliminate uninformative stopwords as well as company-specific terms (e.g., the name of the company).<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>The emission distributions are not a proper language models (e.g., a bigram may be generated by as many as three draws from the emission distribution: once for each unigram it contains and once for the bigram).</span></span></span></p>
+</div></li>
+<li id="I2.I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">(b)</span> 
+<div id="I2.I1.i2.p1" class="ltx_para">
+<p class="ltx_p">Sample the next state, <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.I1.i2.p1.m1" class="ltx_Math" alttext="y_{t+1}" display="inline"><msub><mi>y</mi><mrow><mi>t</mi><mo>+</mo><mn>1</mn></mrow></msub></math>, according to the transition distribution over <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.I1.i2.p1.m2" class="ltx_Math" alttext="\mathcal{S}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒮</mi></math>.</p>
+</div></li>
+</ol>
+</div></li>
+</ol>
+<p class="ltx_p">This model can nearly be understood as a hidden <em class="ltx_emph">semi</em>-Markov model <cite class="ltx_cite">[<a href="#bib.bib6" title="Statistical inference for probabilistic functions of finite state Markov chains" class="ltx_ref">3</a>]</cite>, though we treat the section lengths as observable. Indeed, our model does not even generate these lengths, since doing so would force the states to “explain” the length of each section, not just its content. The likelihood function for the model is shown in Figure <a href="#S3.Ex1" title="Figure 1 ‣ 3 Approach ‣ Unsupervised Alignment of Privacy Policies using Hidden Markov Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.</p>
+</div>
+<div id="S3.F1" class="ltx_figure">
+<table id="S3.Ex1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex1.m1" class="ltx_Math" alttext="P_{\boldsymbol{\pi},\boldsymbol{\eta},\boldsymbol{\gamma}}\left(\langle y_{t},%&#10;\boldsymbol{o}_{t}\rangle_{t=1}^{n}\mid\langle\ell_{t}\rangle_{t=1}^{n}\right)%&#10;=\pi(y_{1})\prod_{t=1}^{n}\left(\prod_{i=1}^{\ell_{t}}\eta(o_{t,i}\mid y_{i})%&#10;\right)\gamma(y_{t+1}\mid y_{t})" display="block"><mrow><msub><mi>P</mi><mrow><mi>𝝅</mi><mo>,</mo><mi>𝜼</mi><mo>,</mo><mi>𝜸</mi></mrow></msub><mrow><mo>(</mo><msubsup><mrow><mo>⟨</mo><msub><mi>y</mi><mi>t</mi></msub><mo>,</mo><msub><mi>𝒐</mi><mi>t</mi></msub><mo>⟩</mo></mrow><mrow><mi>t</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></msubsup><mo>∣</mo><msubsup><mrow><mo>⟨</mo><msub><mi mathvariant="normal">ℓ</mi><mi>t</mi></msub><mo>⟩</mo></mrow><mrow><mi>t</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></msubsup><mo>)</mo></mrow><mo>=</mo><mi>π</mi><mrow><mo>(</mo><msub><mi>y</mi><mn>1</mn></msub><mo>)</mo></mrow><munderover><mo largeop="true" movablelimits="false" symmetric="true">∏</mo><mrow><mi>t</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover><mrow><mo>(</mo><munderover><mo largeop="true" movablelimits="false" symmetric="true">∏</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><msub><mi mathvariant="normal">ℓ</mi><mi>t</mi></msub></munderover><mi>η</mi><mrow><mo>(</mo><msub><mi>o</mi><mrow><mi>t</mi><mo>,</mo><mi>i</mi></mrow></msub><mo>∣</mo><msub><mi>y</mi><mi>i</mi></msub><mo>)</mo></mrow><mo>)</mo></mrow><mi>γ</mi><mrow><mo>(</mo><msub><mi>y</mi><mrow><mi>t</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>∣</mo><msub><mi>y</mi><mi>t</mi></msub><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 1: </span> The likelihood function for the alignment model (one privacy policy). <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m9" class="ltx_Math" alttext="y_{t}" display="inline"><msub><mi>y</mi><mi>t</mi></msub></math> is the hidden state for the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m10" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math>th section, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m11" class="ltx_Math" alttext="\boldsymbol{o}_{t}" display="inline"><msub><mi>𝒐</mi><mi>t</mi></msub></math> is the bag of unigram and bigram terms observed in that section, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m12" class="ltx_Math" alttext="\ell_{t}" display="inline"><msub><mi mathvariant="normal">ℓ</mi><mi>t</mi></msub></math> is the size of the bag. Start-state, emission, and transition distributions are denoted respectively by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m13" class="ltx_Math" alttext="\pi" display="inline"><mi>π</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m14" class="ltx_Math" alttext="\eta" display="inline"><mi>η</mi></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m15" class="ltx_Math" alttext="\gamma" display="inline"><mi>γ</mi></math>. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m16" class="ltx_Math" alttext="y_{n+1}" display="inline"><msub><mi>y</mi><mrow><mi>n</mi><mo>+</mo><mn>1</mn></mrow></msub></math> is the silent stopping state. </div>
+</div>
+<div id="S3.p4" class="ltx_para">
+<p class="ltx_p">The parameters of the model are almost identical to those of a classic HMM (start state distribution, emission distributions, and transition distributions), except that emissions are characterized by multinomial rather than a categorical distributions. These are learned using Expectation-Maximization, with a forward-backward algorithm to calculate marginals (E-step) and smoothed maximum likelihood estimation for the M-step <cite class="ltx_cite">[<a href="#bib.bib1" title="A tutorial on hidden Markov models and selected applications in speech recognition" class="ltx_ref">13</a>]</cite>.
+After learning, the most probable assignment of a policy’s sections to states can be recovered using a variant of the Viterbi algorithm.</p>
+</div>
+<div id="S3.p5" class="ltx_para">
+<p class="ltx_p">We consider three HMM variants.
+“Vanilla” allows all transitions. The other two posit an ordering on the states <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p5.m1" class="ltx_Math" alttext="\mathcal{S}=\{s_{1},s_{2},\ldots,s_{K}\}" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒮</mi><mo>=</mo><mrow><mo>{</mo><mrow><msub><mi>s</mi><mn>1</mn></msub><mo>,</mo><msub><mi>s</mi><mn>2</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>s</mi><mi>K</mi></msub></mrow><mo>}</mo></mrow></mrow></math>, and restrict the set of transitions that are possible, imposing bias on the learner. “All Forward” only allows <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p5.m2" class="ltx_Math" alttext="s_{k}" display="inline"><msub><mi>s</mi><mi>k</mi></msub></math> to transition to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p5.m3" class="ltx_Math" alttext="\{s_{k},s_{k+1},\ldots,s_{K}\}" display="inline"><mrow><mo>{</mo><mrow><msub><mi>s</mi><mi>k</mi></msub><mo>,</mo><msub><mi>s</mi><mrow><mi>k</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>s</mi><mi>K</mi></msub></mrow><mo>}</mo></mrow></math>. “Strict Forward” only allows <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p5.m4" class="ltx_Math" alttext="s_{k}" display="inline"><msub><mi>s</mi><mi>k</mi></msub></math> to transition to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p5.m5" class="ltx_Math" alttext="s_{k}" display="inline"><msub><mi>s</mi><mi>k</mi></msub></math> or <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p5.m6" class="ltx_Math" alttext="s_{k+1}" display="inline"><msub><mi>s</mi><mrow><mi>k</mi><mo>+</mo><mn>1</mn></mrow></msub></math>.</p>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Evaluation</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">Developing a gold-standard alignment of privacy policies would either require an interface that allows each annotator to interact with the entire corpus of previously aligned documents while reading the one she is annotating, or the definition (and likely iterative refinement) of a set of categories for manually labeling policy sections. These were too costly for us to consider, so
+we instead propose two generic methods to evaluate models for sequence alignment of a collection of documents with generally similar content. Though our model (particularly the restricted variants) treats the problem as one of <em class="ltx_emph">alignment</em>, our evaluations consider <em class="ltx_emph">groupings</em> of policy sections. In the sequel, a grouping on a set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m1" class="ltx_Math" alttext="X" display="inline"><mi>X</mi></math> is defined as a collection of subsets <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m2" class="ltx_Math" alttext="X_{i}\subseteq X" display="inline"><mrow><msub><mi>X</mi><mi>i</mi></msub><mo>⊆</mo><mi>X</mi></mrow></math>; these may overlap (i.e., there might be <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m3" class="ltx_Math" alttext="x\in X_{i}\cap X_{j}" display="inline"><mrow><mi>x</mi><mo>∈</mo><mrow><msub><mi>X</mi><mi>i</mi></msub><mo>∩</mo><msub><mi>X</mi><mi>j</mi></msub></mrow></mrow></math>) and need not be exhaustive (i.e., there might be <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m4" class="ltx_Math" alttext="x\in X\setminus\bigcup_{i}X_{i}" display="inline"><mrow><mi>x</mi><mo>∈</mo><mrow><mi>X</mi><mo>∖</mo><mrow><msub><mo largeop="true" mathsize="1.5em" stretchy="false" symmetric="true">⋃</mo><mi>i</mi></msub><msub><mi>X</mi><mi>i</mi></msub></mrow></mrow></mrow></math>).</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Evaluation by Human QA</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">This study was carried out as part of a larger collaboration with legal scholars who study privacy. In that work, we have formulated a set of nine multiple choice questions about a single policy that ask about collection of contact, location, health, and financial information, sharing of each with third parties, and deletion of data.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup>The questions are available in an online appendix at <a href="http://usableprivacy.org/data" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://usableprivacy.org/data</span></a>.</span></span></span> The questions were inspired primarily by the substantive interest of these domain experts—not by this particular algorithmic study.</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">For thirty policies, we obtained answers from each of six domain experts who were not involved in designing the questions. For the purposes of this study, the experts’ answers are not important. In addition to answering each question for each policy, we also asked each expert to copy and paste the text of the policy that contains the answer. Experts were allowed to select as many sections for each question as they saw fit, since answering some questions may require synthesizing information from different sections.</p>
+</div>
+<div id="S4.SS1.p3" class="ltx_para">
+<p class="ltx_p">For each of the nine questions, we take the union of all policy sections that contain text selected by any annotator as support for her answer. This results in nine groups of policy sections, which we call <span class="ltx_text ltx_font_bold">answer-sets</span> denoted <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p3.m1" class="ltx_Math" alttext="A_{1},\ldots,A_{9}" display="inline"><mrow><msub><mi>A</mi><mn>1</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>A</mi><mn>9</mn></msub></mrow></math>. Our method allows these to overlap (63% of the sections in any <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p3.m2" class="ltx_Math" alttext="A_{i}" display="inline"><msub><mi>A</mi><mi>i</mi></msub></math> occurred in more than one <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p3.m3" class="ltx_Math" alttext="A_{i}" display="inline"><msub><mi>A</mi><mi>i</mi></msub></math>), and they are not exhaustive (since many sections of the policies were not deemed to contain answers to any of the nine questions by any expert).</p>
+</div>
+<div id="S4.SS1.p4" class="ltx_para">
+<p class="ltx_p">Together, these can be used as a gold standard grouping of policy sections, against which we can compare our system’s output. To do this, we define the set of section <em class="ltx_emph">pairs</em> that are grouped together in answer sets,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m1" class="ltx_Math" alttext="G=|\{\langle a,b\rangle\mid\exists A_{i}\ni a,b\}|" display="inline"><mrow><mi>G</mi><mo>=</mo><mrow><mo fence="true">|</mo><mrow><mo>{</mo><mrow><mrow><mo>⟨</mo><mrow><mi>a</mi><mo>,</mo><mi>b</mi></mrow><mo>⟩</mo></mrow><mo separator="true">∣</mo><mrow><mrow><mo>∃</mo><msub><mi>A</mi><mi>i</mi></msub></mrow><mo>∋</mo><mrow><mi>a</mi><mo>,</mo><mi>b</mi></mrow></mrow></mrow><mo>}</mo></mrow><mo fence="true">|</mo></mrow></mrow></math>, and a similar set of pairs <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m2" class="ltx_Math" alttext="H" display="inline"><mi>H</mi></math> from a model’s grouping. From these sets, we calculate estimates of precision (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m3" class="ltx_Math" alttext="|G\cap H|/|H|" display="inline"><mrow><mrow><mo fence="true">|</mo><mrow><mi>G</mi><mo>∩</mo><mi>H</mi></mrow><mo fence="true">|</mo></mrow><mo>/</mo><mrow><mo fence="true">|</mo><mi>H</mi><mo fence="true">|</mo></mrow></mrow></math>) and recall (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m4" class="ltx_Math" alttext="|G\cap H|/|G|" display="inline"><mrow><mrow><mo fence="true">|</mo><mrow><mi>G</mi><mo>∩</mo><mi>H</mi></mrow><mo fence="true">|</mo></mrow><mo>/</mo><mrow><mo fence="true">|</mo><mi>G</mi><mo fence="true">|</mo></mrow></mrow></math>).</p>
+</div>
+<div id="S4.SS1.p5" class="ltx_para">
+<p class="ltx_p">One shortcoming of this approach, for which the second evaluation seeks to compensate, is that a very small, and likely biased, subset of the policy sections is considered.</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Evaluation by Direct Judgment</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">We created a separate gold standard of judgments of pairs of privacy policy sections. The data selected for judgment was a sample of pairs stratified by a simple measure of text similarity.
+We derived unigram tfidf vectors for each section in each of 50 randomly sampled policies per category.
+We then binned <em class="ltx_emph">pairs</em> of sections by cosine similarity (into four bins bounded by 0.25, 0.5, and 0.75). We sampled 994 section pairs uniformly across the 15 categories’ four bins each.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">Crowdsourcing was used to determine, for each pair, whether the two sections should be grouped together.
+A HIT consisted of a pair of policy sections and a multiple choice question, “After reading the two sections given below, would you say that they broadly discuss the same topic?” The possible answers were:</p>
+<ol id="I3" class="ltx_enumerate">
+<li id="I3.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">1.</span> 
+<div id="I3.i1.p1" class="ltx_para">
+<p class="ltx_p">Yes, both the sections essentially convey the same message in a privacy policy.</p>
+</div></li>
+<li id="I3.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">2.</span> 
+<div id="I3.i2.p1" class="ltx_para">
+<p class="ltx_p">Although, the sections do not convey the same message, the broadly discuss the same topic. (For ease of understanding, some examples of content on “the same topic” were included.)</p>
+</div></li>
+<li id="I3.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">3.</span> 
+<div id="I3.i3.p1" class="ltx_para">
+<p class="ltx_p">No, the sections discuss two different topics.</p>
+</div></li>
+</ol>
+<p class="ltx_p">The first two options were considered a “yes” for the majority voting and for defining a gold standard.
+Every section-pair was annotated by at least three annotators (as many as 15, increased until an absolute majority was reached). Turkers with an acceptance rate greater than 95% with an experience of at least 100 HITs were allowed and paid $0.03 per annotation. The total cost including some initial trials was $130. 535 out of the 994 pairs were annotated to be similar in topic. An example is shown in Figure <a href="#S4.F2" title="Figure 2 ‣ 4.2 Evaluation by Direct Judgment ‣ 4 Evaluation ‣ Unsupervised Alignment of Privacy Policies using Hidden Markov Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.</p>
+</div>
+<div id="S4.SS2.p3" class="ltx_para">
+<p class="ltx_p">As in §<a href="#S4.SS1" title="4.1 Evaluation by Human QA ‣ 4 Evaluation ‣ Unsupervised Alignment of Privacy Policies using Hidden Markov Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>, we calculate precision and recall on pairs. This does not penalize the model for grouping together a “no” pair; we chose it nonetheless because it is interpretable.</p>
+</div>
+<div id="S4.F2" class="ltx_figure">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify" style="width:390.3pt;" width="390.3pt"><em class="ltx_emph ltx_font_small">Section 5 of <span class="ltx_text ltx_font_typewriter">classmates.com</span>:</em></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t" style="width:390.3pt;" width="390.3pt"><span class="ltx_text ltx_font_small">[46 words] … You may also be required to use a password to
+access certain pages on the Services where certain types of your
+personal information can be changed or deleted.  … [113 words]</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:390.3pt;" width="390.3pt"><em class="ltx_emph ltx_font_small">Section 2 of <span class="ltx_text ltx_font_typewriter">192.com</span>:</em></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_l ltx_border_r ltx_border_t" style="width:390.3pt;" width="390.3pt"><span class="ltx_text ltx_font_small">[50 words] … This Policy sets out the means by which You can
+have Your Personal Information removed from the Service. 192.com is
+also committed to keeping Personal Information of users of the
+Service secure and only to use it for the purposes set out in this
+Policy and as agreed by You. … [24 words]</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 2: </span> Selections from sections that discuss the issue of “deletion of personal
+information” and were labeled as discussing the same issue by
+crowdworkers. Both naïve grouping and LDA put them in two
+different groups, but the Strict Forward
+variant of our model correctly groups them
+together.
+</div>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Experiment</h2>
+
+<div id="S5.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_small">Precision</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_small">Recall</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="2"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m1" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Mean</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">S.D.</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Mean</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">S.D.</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Mean</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">S.D.</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Clust.</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.63</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">–</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.30</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">–</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.40</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">–</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">LDA</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.56</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.03</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.20</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.05</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.29</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.06</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Vanilla</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.62</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.04</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.41</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.04</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.49</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.03</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">All F.</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.63</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.03</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.47</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.12</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.53</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.06</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">Strict F.</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.62</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.05</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.46</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.18</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.51</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.07</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">Clust.</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">0.62</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">–</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">0.23</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">–</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">0.34</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">–</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">LDA</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.57</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.03</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.18</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.01</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.28</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.02</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Vanilla</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.57</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.01</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.30</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.03</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.39</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">0.02</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">All F.</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.58</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.02</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.32</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.06</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.41</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.04</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">Strict F.</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">0.58</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">0.03</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">0.32</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">0.14</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">0.40</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">0.08</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 3: </span>Evaluation by human QA (above) and direct
+judgment (below), aggregated across ten independent runs where
+appropriate (see text). Vanilla, All F(orward), and Strict
+F(orward) are three variants of our HMM.
+</div>
+</div>
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">In this section, we evaluate the three HMM variants described in
+§<a href="#S3" title="3 Approach ‣ Unsupervised Alignment of Privacy Policies using Hidden Markov Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>, and two baselines,
+using the methods in §<a href="#S4" title="4 Evaluation ‣ Unsupervised Alignment of Privacy Policies using Hidden Markov Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>. All of the methods
+require the specification of the number of groups or hidden states,
+which we fix to ten, the average number of sections per policy.</p>
+</div>
+<div id="S5.SS2.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Baselines.</h4>
+
+<div id="S5.SS2.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">Our first baseline is a greedy divisive clustering algorithm<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">6</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">6</sup>As implemented
+in CLUTO, <a href="http://glaros.dtc.umn.edu/gkhome/cluto/cluto/overview" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://glaros.dtc.umn.edu/gkhome/cluto/cluto/overview</span></a></span></span></span> to partition the policy
+sections into ten clusters. In this method, the desired <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS0.P1.p1.m1" class="ltx_Math" alttext="K" display="inline"><mi>K</mi></math>-way
+clustering solution is computed by performing a sequence of bisections. The implementation uses unigram features and
+cosine similarity.
+Our second baseline is latent Dirichlet allocation (LDA;
+<cite class="ltx_cite"/> Blei et al., 2003), with ten topics and online variational Bayes for inference <cite class="ltx_cite">[<a href="#bib.bib11" title="Online learning for latent Dirichlet allocation" class="ltx_ref">11</a>]</cite>.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">7</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">7</sup>As implemented in gensim <cite class="ltx_cite">[<a href="#bib.bib9" title="Software framework for topic modelling with large corpora" class="ltx_ref">16</a>]</cite>.</span></span></span>
+To more closely match our models, LDA is given access to the same
+unigram and bigram tokens.</p>
+</div>
+</div>
+<div id="S5.SS2.SSS0.P2" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Results.</h4>
+
+<div id="S5.SS2.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">Table <a href="#S5.T3" title="Table 3 ‣ 5 Experiment ‣ Unsupervised Alignment of Privacy Policies using Hidden Markov Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> shows the results. For LDA and the HMM
+variants (which use random initialization), we report mean and
+standard deviation across ten independent runs. All three variants of the HMM improve over the baselines on both tasks, in terms of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS0.P2.p1.m1" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math>. In the human QA evaluation, this is mostly due to recall improvements (i.e., more pairs of sections relevant to the same policy question were grouped together).</p>
+</div>
+<div id="S5.SS2.SSS0.P2.p2" class="ltx_para">
+<p class="ltx_p">The three variants of the model performed similarly on average, though Strict Forward had very high variance. Its maximum performance across ten runs was very high (67% and 53% <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS0.P2.p2.m1" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math> on the two tasks), suggesting the potential benefits of good initialization or model selection.</p>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Conclusion</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">We considered the task of aligning sections of a collection of roughly similarly-structured legal documents, based on the issues they address.
+We introduced an unsupervised model for this task along with two new (and reusable) evaluations. Our experiments show the approach to be more effective than clustering and topic models. The corpus and evaluation data have been made available at <a href="http://usableprivacy.org/data" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://usableprivacy.org/data</span></a> . In future work, policy section alignments will be used in automated analysis to extract useful information for users and privacy scholars.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">The authors gratefully acknowledge helpful comments from Lorrie Cranor, Joel Reidenberg, Florian Schaub, and several anonymous reviewers. This research was supported by NSF grant SaTC-1330596.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib15" class="ltx_bibitem ltx_bib_report"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">W. Ammar, S. Wilson, N. Sadeh and N. A. Smith</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatic categorization of privacy policies: A pilot study</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_type">Technical report</span>
+</span>
+<span class="ltx_bibblock">Technical Report <span class="ltx_text ltx_bib_number">CMU-LTI-12-019</span>,  <span class="ltx_text ltx_bib_publisher">Carnegie Mellon University</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Unsupervised Alignment of Privacy Policies using Hidden Markov Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.p1" title="3 Approach ‣ Unsupervised Alignment of Privacy Policies using Hidden Markov Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Barzilay and L. Lee</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Catching the drift: probabilistic content models, with applications to generation and summarization</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p2" title="3 Approach ‣ Unsupervised Alignment of Privacy Policies using Hidden Markov Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. E. Baum and T. Petrie</span><span class="ltx_text ltx_bib_year">(1966)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Statistical inference for probabilistic functions of finite state Markov chains</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Annals of Mathematical Statistics</span> <span class="ltx_text ltx_bib_volume">37</span>, <span class="ltx_text ltx_bib_pages"> pp. 1554–1563</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p3" title="3 Approach ‣ Unsupervised Alignment of Privacy Policies using Hidden Markov Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. M. Blei, A. Y. Ng and M. I. Jordan</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Latent Dirichlet allocation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">the Journal of machine Learning research</span> <span class="ltx_text ltx_bib_volume">3</span>, <span class="ltx_text ltx_bib_pages"> pp. 993–1022</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS2.SSS0.P1.p1" title="Baselines. ‣ 5 Experiment ‣ Unsupervised Alignment of Privacy Policies using Hidden Markov Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. A. Brodie, C. Karat and J. Karat</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">An empirical study of natural language parsing of privacy policy rules using the SPARCLE policy workbench</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Unsupervised Alignment of Privacy Policies using Hidden Markov Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Costante, J. Hartog and M. PetkoviÄ</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">What websites know about you</span>.
+</span>
+<span class="ltx_bibblock">in <span class="ltx_text ltx_bib_editor">R. Pietro, J. Herranz, E. Damiani and R. State (Eds.)</span>, <span class="ltx_text ltx_bib_inbook">Data Privacy Management and Autonomous Spontaneous Security</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">Lecture Notes in Computer Science</span>, Vol. <span class="ltx_text ltx_bib_volume">7731</span>, <span class="ltx_text ltx_bib_pages"> pp. 146–159</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-3-642-35889-0</span>,
+<a href="http://dx.doi.org/10.1007/978-3-642-35890-6_11" title="" class="ltx_ref doi ltx_bib_external">Document</a>,
+<a href="http://dx.doi.org/10.1007/978-3-642-35890-6_11" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Unsupervised Alignment of Privacy Policies using Hidden Markov Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.p1" title="3 Approach ‣ Unsupervised Alignment of Privacy Policies using Hidden Markov Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Costante, Y. Sun, M. Petković and J. den Hartog</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A machine learning solution to assess privacy policy completeness</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Unsupervised Alignment of Privacy Policies using Hidden Markov Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.p1" title="3 Approach ‣ Unsupervised Alignment of Privacy Policies using Hidden Markov Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Durbin, S. R. Eddy, A. Krogh and G. Mitchison</span><span class="ltx_text ltx_bib_year">(1998)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Biological sequence analysis: probabilistic models of proteins and nucleic acids</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Cambridge University Press</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I1.i2.p1" title="1 Introduction ‣ Unsupervised Alignment of Privacy Policies using Hidden Markov Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.p2" title="3 Approach ‣ Unsupervised Alignment of Privacy Policies using Hidden Markov Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_misc"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Federal Trade Commission</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Protecting consumer privacy in an era of rapid change: recommendations for businesses and policymakers</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.ftc.gov/reports/protecting-consumer-privacy-era-rapid-change-recommendations-businesses-policymakers" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Unsupervised Alignment of Privacy Policies using Hidden Markov Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p3" title="1 Introduction ‣ Unsupervised Alignment of Privacy Policies using Hidden Markov Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib16" class="ltx_bibitem ltx_bib_misc"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Gellman</span><span class="ltx_text ltx_bib_year">(2014)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Fair information practices: a basic history (v. 2.11)</span>.
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note">Available at <span class="ltx_ERROR undefined">\url</span>http://www.bobgellman.com/rg-docs/rg-FIPShistory.pdf</span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Unsupervised Alignment of Privacy Policies using Hidden Markov Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. D. Hoffman, D. M. Blei and F. R. Bach</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Online learning for latent Dirichlet allocation</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS2.SSS0.P1.p1" title="Baselines. ‣ 5 Experiment ‣ Unsupervised Alignment of Privacy Policies using Hidden Markov Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. M. McDonald and L. F. Cranor</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The cost of reading privacy policies</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">I/S: A Journal of Law and Policy for the Information Society</span> <span class="ltx_text ltx_bib_volume">4</span> (<span class="ltx_text ltx_bib_number">3</span>).
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Unsupervised Alignment of Privacy Policies using Hidden Markov Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Rabiner</span><span class="ltx_text ltx_bib_year">(1989)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A tutorial on hidden Markov models and selected applications in speech recognition</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Proceedings of the IEEE</span> <span class="ltx_text ltx_bib_volume">77</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 257–286</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p4" title="3 Approach ‣ Unsupervised Alignment of Privacy Policies using Hidden Markov Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">X. Xiao, A. Paradkar, S. Thummalapenta and T. Xie</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automated extraction of security policies from natural-language software documents</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Unsupervised Alignment of Privacy Policies using Hidden Markov Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib14" class="ltx_bibitem ltx_bib_misc"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Zimmeck and S. M. Bellovin</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Machine learning for privacy policy</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Unsupervised Alignment of Privacy Policies using Hidden Markov Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Řehůřek and P. Sojka</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Software framework for topic modelling with large corpora</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS2.SSS0.P1.p1" title="Baselines. ‣ 5 Experiment ‣ Unsupervised Alignment of Privacy Policies using Hidden Markov Models" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 18:14:05 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

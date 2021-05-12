@@ -1,0 +1,907 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Automatic Detection of Multilingual Dictionaries on the Web</title>
+<!--Generated on Wed Jun 11 17:33:30 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Automatic Detection of Multilingual Dictionaries on the Web</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Gintarė Grigonytė<math xmlns="http://www.w3.org/1998/Math/MathML" id="m1" class="ltx_Math" alttext="{}^{\spadesuit}" display="inline"><msup><mi/><mi mathvariant="normal">♠</mi></msup></math>   Timothy Baldwin<math xmlns="http://www.w3.org/1998/Math/MathML" id="m2" class="ltx_Math" alttext="{}^{\heartsuit}" display="inline"><msup><mi/><mi mathvariant="normal">♡</mi></msup></math>
+<br class="ltx_break"/>
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="m3" class="ltx_Math" alttext="\spadesuit" display="inline"><mi mathvariant="normal">♠</mi></math> Department of Linguistics, Stockholm University
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m4" class="ltx_Math" alttext="\heartsuit" display="inline"><mi mathvariant="normal">♡</mi></math> Department of Computing and Information Systems, The University of
+Melbourne
+<br class="ltx_break"/><span class="ltx_ERROR undefined">\smaller</span><a href="gintare@ling.su.se" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">gintare@ling.su.se</span></a>     <a href="tb@ldwin.net" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">tb@ldwin.net</span></a>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">This paper presents an approach to query construction to detect
+multilingual dictionaries for predetermined language combinations on
+the web, based on the identification of terms which are likely to
+occur in bilingual dictionaries but not in general web documents. We
+use eight target languages for our case study, and train our method on
+pre-identified multilingual dictionaries and the Wikipedia dump for
+each of our languages.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Motivation</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Translation dictionaries and other multilingual lexical resources are
+valuable in a myriad of contexts, from language preservation
+<cite class="ltx_cite">[<a href="#bib.bib12" title="Linguistic data management" class="ltx_ref">21</a>]</cite> to language learning
+<cite class="ltx_cite">[<a href="#bib.bib13" title="Assessing the effectiveness of monolingual, bilingual, and “bilingualised” dictionaries in the comprehension and production of new words" class="ltx_ref">10</a>]</cite>, cross-language information retrieval
+<cite class="ltx_cite">[<a href="#bib.bib15" title="Cross-language information retrieval" class="ltx_ref">17</a>]</cite> and machine translation
+<cite class="ltx_cite">[<a href="#bib.bib16" title="Improving machine translation performance by exploiting non-parallel corpora" class="ltx_ref">15</a>, <a href="#bib.bib18" title="Lemmatic machine translation" class="ltx_ref">20</a>]</cite>. While there are syndicated
+efforts to produce multilingual dictionaries for different pairings of
+the world’s languages such as <a href="freedict.org" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">freedict.org</span></a>, more commonly,
+multilingual dictionaries are developed in isolation for a specific set
+of languages, with ad hoc formatting, great variability in lexical
+coverage, and no central indexing of the content or existence of that
+dictionary <cite class="ltx_cite">[<a href="#bib.bib19" title="PanLex and LEXTRACT: translating all words of all languages of the world" class="ltx_ref">2</a>]</cite>. Projects such as <a href="panlex.org" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">panlex.org</span></a>
+aspire to aggregate these dictionaries into a single lexical database,
+but are hampered by the need to identify individual multilingual
+dictionaries, especially for language pairs where there is a sparsity of
+data from existing dictionaries
+<cite class="ltx_cite">[<a href="#bib.bib19" title="PanLex and LEXTRACT: translating all words of all languages of the world" class="ltx_ref">2</a>, <a href="#bib.bib10" title="PanLex: building a resource for panlingual lexical translation" class="ltx_ref">9</a>]</cite>. This paper is an attempt to
+automate the detection of multilingual dictionaries on the web, through
+query construction for an arbitrary language pair. Note that for the
+method to work, we require that the dictionary occurs in “list form”,
+that is it takes the form of a single document (or at least, a
+significant number of dictionary entries on a single page), and is not
+split across multiple small-scale sub-documents.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related Work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">This research seeks to identify documents of a particular type on the
+web, namely multilingual dictionaries. Related work broadly falls into
+four categories: (1) mining of parallel corpora; (2) automatic
+construction of bilingual dictionaries/thesauri; (3) automatic detection
+of multilingual documents; and (4) classification of document genre.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">Parallel corpus construction is the task of automatically detecting
+document sets that contain the same content in different languages,
+commonly based on a combination of site-structural and content-based
+features <cite class="ltx_cite">[<a href="#bib.bib21" title="Parallel web text mining for cross-language IR" class="ltx_ref">3</a>, <a href="#bib.bib20" title="The web as a parallel corpus" class="ltx_ref">19</a>]</cite>. Such methods could
+potentially identify parallel word lists from which to construct a
+bilingual dictionary, although more realistically, bilingual
+dictionaries exist as single documents and are not well suited to this
+style of analysis.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">Methods have also been proposed to automatically construct bilingual
+dictionaries or thesauri, e.g. based on crosslingual glossing in
+predictable patterns such as a technical term being immediately
+proceeded by that term in a lingua franca source language such as
+English <cite class="ltx_cite">[<a href="#bib.bib23" title="Using the web as a bilingual dictionary" class="ltx_ref">16</a>, <a href="#bib.bib24" title="Bilingual dictionary extraction from Wikipedia" class="ltx_ref">24</a>]</cite>. Alternatively, comparable or
+parallel corpora can be used to extract bilingual dictionaries based on
+crosslingual distributional similarity <cite class="ltx_cite">[<a href="#bib.bib22" title="Automatic construction of clean broad-coverage translation lexicons" class="ltx_ref">14</a>, <a href="#bib.bib9" title="A statistical view on bilingual lexicon extraction: from parallel corpora to non-parallel corpora" class="ltx_ref">7</a>]</cite>. While the
+precision of these methods is generally relatively high, the recall is
+often very low, as there is a strong bias towards novel technical terms
+being glossed but more conventional terms not.</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p">Also relevant to this work is research on language identification, and
+specifically the detection of multilingual documents
+<cite class="ltx_cite">[<a href="#bib.bib29" title="Linguini: language identification for multilingual documents" class="ltx_ref">18</a>, <a href="#bib.bib30" title="Text segmentation by language using minimum description length" class="ltx_ref">23</a>, <a href="#bib.bib28" title="Automatic detection and language identification of multilingual documents" class="ltx_ref">11</a>]</cite>. Here,
+multi-label document classification methods have been adapted to
+identify what mix of languages is present in a given document, which
+could be used as a pre-filter to locate documents containing a given
+mixture of languages, although there is, of course, no guarantee that a
+multilingual document is a dictionary.</p>
+</div>
+<div id="S2.p5" class="ltx_para">
+<p class="ltx_p">Finally, document genre classification is relevant in that it is
+theoretically possible to develop a document categorisation method which
+classifies documents as multilingual dictionaries or not, with the
+obvious downside that it would need to be applied exhaustively to all
+documents on the web. The general assumption in genre classification is
+that the type of a document should be judged not by its content but
+rather by its form. A variety of document genre methods have been
+proposed, generally based on a mixture of structural and content-based
+features <cite class="ltx_cite">[<a href="#bib.bib14" title="Task-oriented world wide web retrieval by document type classification" class="ltx_ref">12</a>, <a href="#bib.bib8" title="Genre classification and domain transfer for information filtering" class="ltx_ref">5</a>, <a href="#bib.bib27" title="Genre classification of web pages" class="ltx_ref">25</a>]</cite>.</p>
+</div>
+<div id="S2.p6" class="ltx_para">
+<p class="ltx_p">While all of these lines of research are relevant to this work, as far
+as we are aware, there has not been work which has proposed a direct
+method for identifying pre-existing multilingual dictionaries in document
+collections.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Methodology</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">Our method is based on a query formulation approach, and querying
+against a pre-existing index of a document collection (e.g. the web)
+via an information retrieval system.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">The first intuition underlying our approach is that certain words are a
+priori more “language-discriminating” than others, and should be
+preferred in query construction (e.g. <span class="ltx_text ltx_font_italic">sushi</span> occurs as a
+[transliterated] word in a wide variety of languages, whereas
+<span class="ltx_text ltx_font_italic">anti-discriminatory</span> is found predominantly in English
+documents). As such, we prefer search terms <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m1" class="ltx_Math" alttext="w_{i}" display="inline"><msub><mi>w</mi><mi>i</mi></msub></math> with a higher value
+for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m2" class="ltx_Math" alttext="\max_{l}P(l|w_{i})" display="inline"><mrow><msub><mo>max</mo><mi>l</mi></msub><mi>P</mi><mrow><mo>(</mo><mi>l</mi><mo>|</mo><msub><mi>w</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m3" class="ltx_Math" alttext="l" display="inline"><mi>l</mi></math> is the language of interest.</p>
+</div>
+<div id="S3.p3" class="ltx_para">
+<p class="ltx_p">The second intuition is that the lexical coverage of dictionaries varies
+considerably, especially with multilingual lexicons, which are often
+compiled by a single developer or small community of developers, with
+little systematicity in what is including or not included in the
+dictionary. As such, if we are to follow a query construction approach
+to lexicon discovery, we need to be able to predict the likelihood of a
+given word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m1" class="ltx_Math" alttext="w_{i}" display="inline"><msub><mi>w</mi><mi>i</mi></msub></math> being included in an arbitrarily-selected dictionary
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m2" class="ltx_Math" alttext="D_{l}" display="inline"><msub><mi>D</mi><mi>l</mi></msub></math> incorporating language <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m3" class="ltx_Math" alttext="l" display="inline"><mi>l</mi></math> (i.e. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m4" class="ltx_Math" alttext="P(w_{i}|D_{l})" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><msub><mi>w</mi><mi>i</mi></msub><mo>|</mo><msub><mi>D</mi><mi>l</mi></msub><mo>)</mo></mrow></mrow></math>). Factors which
+impact on this include the lexical prior of the word in the language
+(e.g. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m5" class="ltx_Math" alttext="P(\text{{paper}}|\text{en})" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><mtext>𝑝𝑎𝑝𝑒𝑟</mtext><mo>|</mo><mtext>en</mtext><mo>)</mo></mrow></mrow></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m6" class="ltx_Math" alttext="&gt;" display="inline"><mo>&gt;</mo></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m7" class="ltx_Math" alttext="P(\text{{papyrus}}|\text{en})" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><mtext>𝑝𝑎𝑝𝑦𝑟𝑢𝑠</mtext><mo>|</mo><mtext>en</mtext><mo>)</mo></mrow></mrow></math>), whether they are
+lemmas or not (noting that multilingual dictionaries tend not to contain
+inflected word forms), and their word class (e.g. multilingual
+dictionaries tend to contain more nouns and verbs than function words).</p>
+</div>
+<div id="S3.p4" class="ltx_para">
+<p class="ltx_p">The third intuition is that certain word <span class="ltx_text ltx_font_italic">combinations</span> are more
+selective of multilingual dictionaries than others, i.e. if certain words
+are found together (e.g. <span class="ltx_text ltx_font_italic">cruiser</span>, <span class="ltx_text ltx_font_italic">gospel</span> and <span class="ltx_text ltx_font_italic">noodle</span>),
+the containing document is highly likely to be a dictionary of some
+description rather than a “conventional” document.</p>
+</div>
+<div id="S3.p5" class="ltx_para">
+<p class="ltx_p">Below, we describe our methodology for query construction based on these
+elements in greater detail. The only assumption on the method is that we
+have access to a selection of dictionaries <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p5.m1" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math> (mono- or multilingual)
+and a corpus of conventional (non-dictionary) documents <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p5.m2" class="ltx_Math" alttext="C" display="inline"><mi>C</mi></math>, and
+knowledge of the language(s) contained in each dictionary and document.</p>
+</div>
+<div id="S3.p6" class="ltx_para">
+<p class="ltx_p">Given a set of dictionaries <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p6.m1" class="ltx_Math" alttext="D_{l}" display="inline"><msub><mi>D</mi><mi>l</mi></msub></math> for a language <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p6.m2" class="ltx_Math" alttext="l" display="inline"><mi>l</mi></math> and the complement
+set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p6.m3" class="ltx_Math" alttext="D_{\overline{l}}=D\setminus D_{l}" display="inline"><mrow><msub><mi>D</mi><mover accent="true"><mi>l</mi><mo>¯</mo></mover></msub><mo>=</mo><mrow><mi>D</mi><mo>∖</mo><msub><mi>D</mi><mi>l</mi></msub></mrow></mrow></math>, we first construct the lexicon
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p6.m4" class="ltx_Math" alttext="L_{l}" display="inline"><msub><mi>L</mi><mi>l</mi></msub></math> for that language as follows:</p>
+<table id="S3.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E1.m1" class="ltx_Math" alttext="L_{l}=\left\{w_{i}|w_{i}\in D_{l}\cap w_{i}\notin D_{\overline{l}}\right\}" display="block"><mrow><msub><mi>L</mi><mi>l</mi></msub><mo>=</mo><mrow><mo>{</mo><mrow><msub><mi>w</mi><mi>i</mi></msub><mo separator="true">|</mo><mrow><msub><mi>w</mi><mi>i</mi></msub><mo>∈</mo><mrow><msub><mi>D</mi><mi>l</mi></msub><mo>∩</mo><msub><mi>w</mi><mi>i</mi></msub></mrow><mo>∉</mo><msub><mi>D</mi><mover accent="true"><mi>l</mi><mo>¯</mo></mover></msub></mrow></mrow><mo>}</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+<p class="ltx_p">This creates a language-discriminating lexicon for each language,
+satisfying the first criterion.</p>
+</div>
+<div id="S3.p7" class="ltx_para">
+<p class="ltx_p">Lexical resources differ in size, scope and coverage. For instance, a
+well-developed, mature multilingual dictionary may contain over 100,000
+multilingual lexical records, while a specialised 5-way multilingual domain
+dictionary may contain as few as 100 multilingual lexical records. In
+line with our second criterion, we want to select words which have a
+higher likelihood of occurrence in a multilingual dictionary involving
+that language. To this end, we calculate the weight <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p7.m1" class="ltx_Math" alttext="\text{sdict}(w_{i,l})" display="inline"><mrow><mtext>sdict</mtext><mo>⁢</mo><mrow><mo>(</mo><msub><mi>w</mi><mrow><mi>i</mi><mo>,</mo><mi>l</mi></mrow></msub><mo>)</mo></mrow></mrow></math> for
+each word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p7.m2" class="ltx_Math" alttext="w_{i,l}\in L_{l}" display="inline"><mrow><msub><mi>w</mi><mrow><mi>i</mi><mo>,</mo><mi>l</mi></mrow></msub><mo>∈</mo><msub><mi>L</mi><mi>l</mi></msub></mrow></math>:</p>
+<table id="S3.E2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E2.m1" class="ltx_Math" alttext="\text{sdict}(w_{i,l})=\sum_{d\in D_{l}}\left\{\begin{matrix}\frac{|L_{l}|-|d|}%&#10;{|L_{l}|}&amp;\text{if }w_{i,l}\in d\\&#10;-\frac{|d|}{|L_{l}|}&amp;\text{otherwise}\end{matrix}\right." display="block"><mrow><mtext>sdict</mtext><mrow><mo>(</mo><msub><mi>w</mi><mrow><mi>i</mi><mo>,</mo><mi>l</mi></mrow></msub><mo>)</mo></mrow><mo>=</mo><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>d</mi><mo>∈</mo><msub><mi>D</mi><mi>l</mi></msub></mrow></munder><mrow><mo>{</mo><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="center"><mfrac><mrow><mrow><mo fence="true">|</mo><msub><mi>L</mi><mi>l</mi></msub><mo fence="true">|</mo></mrow><mo>-</mo><mrow><mo fence="true">|</mo><mi>d</mi><mo fence="true">|</mo></mrow></mrow><mrow><mo fence="true">|</mo><msub><mi>L</mi><mi>l</mi></msub><mo fence="true">|</mo></mrow></mfrac></mtd><mtd columnalign="center"><mrow><mrow><mtext>if </mtext><mo>⁢</mo><msub><mi>w</mi><mrow><mi>i</mi><mo>,</mo><mi>l</mi></mrow></msub></mrow><mo>∈</mo><mi>d</mi></mrow></mtd></mtr><mtr><mtd columnalign="center"><mrow><mo>-</mo><mfrac><mrow><mo fence="true">|</mo><mi>d</mi><mo fence="true">|</mo></mrow><mrow><mo fence="true">|</mo><msub><mi>L</mi><mi>l</mi></msub><mo fence="true">|</mo></mrow></mfrac></mrow></mtd><mtd columnalign="center"><mtext>otherwise</mtext></mtd></mtr></mtable></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p7.m3" class="ltx_Math" alttext="|d|" display="inline"><mrow><mo fence="true">|</mo><mi>d</mi><mo fence="true">|</mo></mrow></math> is the size of dictionary <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p7.m4" class="ltx_Math" alttext="d" display="inline"><mi>d</mi></math> in terms of the number of
+lexemes it contains.</p>
+</div>
+<div id="S3.p8" class="ltx_para">
+<p class="ltx_p">The final step is to weight words by their typicality in a given
+language, as calculated by their likelihood of occurrence in a random
+document in that language. This is estimated by the proportion of
+Wikipedia documents in that language which contain the word in question:</p>
+<table id="S3.E3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E3.m1" class="ltx_Math" alttext="\text{Score}(w_{i,l})=\frac{df(w_{i,l})}{N_{l}}\text{sdict}(w_{i,l})" display="block"><mrow><mrow><mtext>Score</mtext><mo>⁢</mo><mrow><mo>(</mo><msub><mi>w</mi><mrow><mi>i</mi><mo>,</mo><mi>l</mi></mrow></msub><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mfrac><mrow><mi>d</mi><mo>⁢</mo><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>w</mi><mrow><mi>i</mi><mo>,</mo><mi>l</mi></mrow></msub><mo>)</mo></mrow></mrow><msub><mi>N</mi><mi>l</mi></msub></mfrac><mo>⁢</mo><mtext>sdict</mtext><mo>⁢</mo><mrow><mo>(</mo><msub><mi>w</mi><mrow><mi>i</mi><mo>,</mo><mi>l</mi></mrow></msub><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p8.m1" class="ltx_Math" alttext="df(w_{i,l})" display="inline"><mrow><mi>d</mi><mo>⁢</mo><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>w</mi><mrow><mi>i</mi><mo>,</mo><mi>l</mi></mrow></msub><mo>)</mo></mrow></mrow></math> is the count of Wikipedia documents of language <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p8.m2" class="ltx_Math" alttext="l" display="inline"><mi>l</mi></math>
+which contain <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p8.m3" class="ltx_Math" alttext="w_{i}" display="inline"><msub><mi>w</mi><mi>i</mi></msub></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p8.m4" class="ltx_Math" alttext="N_{l}" display="inline"><msub><mi>N</mi><mi>l</mi></msub></math> is the total number of Wikipedia
+documents in language <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p8.m5" class="ltx_Math" alttext="l" display="inline"><mi>l</mi></math>.</p>
+</div>
+<div id="S3.p9" class="ltx_para">
+<p class="ltx_p">In all experiments in this paper, we assume that we have access to at
+least one multilingual dictionary containing each of our target
+languages, but in absence of such a dictionary, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p9.m1" class="ltx_Math" alttext="\text{sdict}(w_{i,l})" display="inline"><mrow><mtext>sdict</mtext><mo>⁢</mo><mrow><mo>(</mo><msub><mi>w</mi><mrow><mi>i</mi><mo>,</mo><mi>l</mi></mrow></msub><mo>)</mo></mrow></mrow></math>
+could be set to 1 for all words <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p9.m2" class="ltx_Math" alttext="w_{i,l}" display="inline"><msub><mi>w</mi><mrow><mi>i</mi><mo>,</mo><mi>l</mi></mrow></msub></math> in the language.</p>
+</div>
+<div id="S3.p10" class="ltx_para">
+<p class="ltx_p">The result of this term weighing is a ranked list of words for each
+language. The next step is to identify combinations of words that are
+likely to be found in multilingual dictionaries and not standard
+documents for a given language, in accordance with our third criterion.</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Apriori-based query generation</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">We perform query construction for each language based on frequent item
+set mining, using the Apriori algorithm <cite class="ltx_cite">[<a href="#bib.bib25" title="Mining association rules between sets of items in large databases" class="ltx_ref">1</a>]</cite>. For a
+given combination of languages (e.g. English and Swaheli), queries are
+then formed simply by combining monolingual queries for the component
+languages.</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">The basic approach is to use a modified support formulation within the
+Apriori algorithm to prefer word combinations that do not cooccur in
+regular documents. Based on the assumption that querying a (pre-indexed)
+document collection is relatively simple, we generate a range of queries
+of decreasing length and increasing likelihood of term co-occurrence in
+standard documents, and query until a non-empty set of results is
+returned.</p>
+</div>
+<div id="S3.SS1.p3" class="ltx_para">
+<p class="ltx_p">The modified support formulation is as follows:</p>
+<table id="S6.EGx1" class="ltx_equationgroup ltx_eqn_eqnarray">
+
+<tr id="S3.Ex2" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td colspan="3" class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex1.m1" class="ltx_Math" alttext="\displaystyle\text{cscore}(w_{1},...,w_{n})=" display="inline"><mrow><mrow><mtext>cscore</mtext><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>w</mi><mi>n</mi></msub></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mi/></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr class="ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_center"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex2.m3" class="ltx_Math" alttext="\displaystyle\left\{\begin{matrix}0&amp;\text{if }\exists d,w_{i},w_{j}:\text{co}_%&#10;{d}(w_{i},w_{j})\\&#10;\prod_{i}Score(w_{i})&amp;\text{otherwise}\\&#10;\end{matrix}\right." display="inline"><mrow><mo>{</mo><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="center"><mn>0</mn></mtd><mtd columnalign="center"><mrow><mrow><mrow><mtext>if </mtext><mo>⁢</mo><mrow><mo>∃</mo><mi>d</mi></mrow></mrow><mo>,</mo><msub><mi>w</mi><mi>i</mi></msub><mo>,</mo><msub><mi>w</mi><mi>j</mi></msub></mrow><mo>:</mo><mrow><msub><mtext>co</mtext><mi>d</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mi>i</mi></msub><mo>,</mo><msub><mi>w</mi><mi>j</mi></msub></mrow><mo>)</mo></mrow></mrow></mrow></mtd></mtr><mtr><mtd columnalign="center"><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∏</mo><mi>i</mi></munder></mstyle><mrow><mi>S</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>w</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></mrow></mtd><mtd columnalign="center"><mtext>otherwise</mtext></mtd></mtr></mtable></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m1" class="ltx_Math" alttext="\text{co}_{d}(w_{i},w_{j})" display="inline"><mrow><msub><mtext>co</mtext><mi>d</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mi>i</mi></msub><mo>,</mo><msub><mi>w</mi><mi>j</mi></msub></mrow><mo>)</mo></mrow></mrow></math> is a Boolean function which
+evaluates to true iff <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m2" class="ltx_Math" alttext="w_{i}" display="inline"><msub><mi>w</mi><mi>i</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m3" class="ltx_Math" alttext="w_{j}" display="inline"><msub><mi>w</mi><mi>j</mi></msub></math> co-occur in document <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m4" class="ltx_Math" alttext="d" display="inline"><mi>d</mi></math>. That is,
+we reject any combinations of words which are found to co-occur in
+Wikipedia documents for that language. Note that the actual calculation
+of this co-occurrence can be performed efficiently, as: (a) for a given
+iteration of Apriori, it only needs to be performed between the new word
+that we are adding to the query (“item set” in the terminology of
+Apriori) and each of the other words in a non-zero support itemset from
+the previous iteration of the algorithm (which are guaranteed to not
+co-occur with each other); and (b) the determination of whether two
+terms collocate can be performed efficiently using an inverted index of
+Wikipedia for that language.</p>
+</div>
+<div id="S3.SS1.p4" class="ltx_para">
+<p class="ltx_p">In our experiments, we apply the Apriori algorithm exhaustively for a
+given language with a support threshold of 0.5, and return the resultant
+item sets in ranked order of combined score for the component words.</p>
+</div>
+<div id="S3.SS1.p5" class="ltx_para">
+<p class="ltx_p">A random selection of queries learned for each of the 8 languages
+targeted in this research is presented in Figure <a href="#S3.F1" title="Figure 1 ‣ 3.1 Apriori-based query generation ‣ 3 Methodology ‣ Automatic Detection of Multilingual Dictionaries on the Web" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.</p>
+</div>
+<div id="S3.F1" class="ltx_figure"><img src="P14-2016/image001.png" id="S3.F1.g1" class="ltx_graphics ltx_centering" width="243" height="165" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Examples of learned queries for different languages</div>
+</div>
+<div id="S3.T1" class="ltx_table"><span class="ltx_ERROR undefined ltx_centering">\smaller</span>
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">Lang</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">Wikipedia articles (M)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">Dictionaries</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">Queries learned</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">Avg. query length</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_t">en</td>
+<td class="ltx_td ltx_align_center ltx_border_t">3.1</td>
+<td class="ltx_td ltx_align_center ltx_border_t">26</td>
+<td class="ltx_td ltx_align_center ltx_border_t">2546</td>
+<td class="ltx_td ltx_align_center ltx_border_t">3.2</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">zh</td>
+<td class="ltx_td ltx_align_center">0.3</td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_phantom"><span style="visibility:hidden">0</span></span>0</td>
+<td class="ltx_td ltx_align_center">5034</td>
+<td class="ltx_td ltx_align_center">3.6</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">es</td>
+<td class="ltx_td ltx_align_center">0.5</td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_phantom"><span style="visibility:hidden">0</span></span>2</td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_phantom"><span style="visibility:hidden">0</span></span>356</td>
+<td class="ltx_td ltx_align_center">2.9</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">ja</td>
+<td class="ltx_td ltx_align_center">0.6</td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_phantom"><span style="visibility:hidden">0</span></span>0</td>
+<td class="ltx_td ltx_align_center">1532</td>
+<td class="ltx_td ltx_align_center">3.3</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">de</td>
+<td class="ltx_td ltx_align_center">1.0</td>
+<td class="ltx_td ltx_align_center">13</td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_phantom"><span style="visibility:hidden">0</span></span>634</td>
+<td class="ltx_td ltx_align_center">2.7</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">fr</td>
+<td class="ltx_td ltx_align_center">0.9</td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_phantom"><span style="visibility:hidden">0</span></span>5</td>
+<td class="ltx_td ltx_align_center">4126</td>
+<td class="ltx_td ltx_align_center">3.0</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">it</td>
+<td class="ltx_td ltx_align_center">0.6</td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_phantom"><span style="visibility:hidden">0</span></span>4</td>
+<td class="ltx_td ltx_align_center">1955</td>
+<td class="ltx_td ltx_align_center">3.0</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b">ar</td>
+<td class="ltx_td ltx_align_center ltx_border_b">0.1</td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_phantom"><span style="visibility:hidden">0</span></span>2</td>
+<td class="ltx_td ltx_align_center ltx_border_b">9004</td>
+<td class="ltx_td ltx_align_center ltx_border_b">3.2</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span>Details of the training data and queries learned for each language</div>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Experimental methodology</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">We evaluate our proposed methodology in two ways:</p>
+<ol id="I1" class="ltx_enumerate">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">1.</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p">against a synthetic dataset, whereby we injected bilingual
+dictionaries into a collection of web documents, and evaluated the
+ability of the method to return multilingual dictionaries for
+individual languages; in this, we naively assume that all web
+documents in the background collection are not multilingual
+dictionaries, and as such, the results are potentially an
+underestimate of the true retrieval effectiveness.</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">2.</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p">against the open web via the Google search API for a given
+combination of languages, and hand evaluation of the returned
+documents</p>
+</div></li>
+</ol>
+<p class="ltx_p">Note that the first evaluation with the synthetic dataset is based on
+<span class="ltx_text ltx_font_italic">monolingual</span> dictionary retrieval effectiveness because we have
+very few (and often no) multilingual dictionaries for a given pairing of
+our target languages. For a given language, we are thus evaluating the
+ability of our method to retrieve multilingual dictionaries containing
+that language (and other indeterminate languages).</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">For both the synthetic dataset and open web experiments, we evaluate our
+method based on mean average precision (MAP), that is the mean of the
+average precision scores for each query which returns a non-empty
+result set.</p>
+</div>
+<div id="S4.p3" class="ltx_para">
+<p class="ltx_p">To train our method, we use 52 bilingual Freedict <cite class="ltx_cite">[<a href="#bib.bib5" title="Freedict dictionaries" class="ltx_ref">6</a>]</cite>
+dictionaries and Wikipedia<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>Based on 2009 dumps.</span></span></span> documents for
+each of our target languages. As there are no bilingual dictionaries in
+Freedict for Chinese and Japanese, the training of <span class="ltx_text ltx_markedasmath">Score</span> values
+is based on the Wikipedia documents only. Morphological segmentation for
+these two languages was carried out using MeCab <cite class="ltx_cite">[<a href="#bib.bib6" title="" class="ltx_ref">13</a>]</cite> and the
+Stanford Word Segmenter <cite class="ltx_cite">[<a href="#bib.bib17" title="A conditional random field word segmenter for sighan bakeoff 2005" class="ltx_ref">22</a>]</cite>, respectively. See
+Table <a href="#S3.T1" title="Table 1 ‣ 3.1 Apriori-based query generation ‣ 3 Methodology ‣ Automatic Detection of Multilingual Dictionaries on the Web" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> for details of the number of Wikipedia articles
+and dictionaries for each language.</p>
+</div>
+<div id="S4.p4" class="ltx_para">
+<p class="ltx_p">Below, we detail the construction of the synthetic dataset.</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Synthetic dataset</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">The synthetic dataset was constructed using a subset of ClueWeb09
+<cite class="ltx_cite">[<a href="#bib.bib3" title="The ClueWeb09 dataset" class="ltx_ref">4</a>]</cite> as the background web document collection. The original
+ClueWeb09 dataset consists of around 1 billion web pages in ten
+languages that were collected in January and February 2009. The relative
+proportions of documents in the different languages in the original
+dataset are as detailed in Table <a href="#S4.T2" title="Table 2 ‣ 4.1 Synthetic dataset ‣ 4 Experimental methodology ‣ Automatic Detection of Multilingual Dictionaries on the Web" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.</p>
+</div>
+<div id="S4.T2" class="ltx_table"><span class="ltx_ERROR undefined ltx_centering">\smaller</span>
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t">Language</th>
+<th class="ltx_td ltx_align_right ltx_border_t">Proportion</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t">en (English)</th>
+<td class="ltx_td ltx_align_right ltx_border_t">48.41%</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">zh (Chinese)</th>
+<td class="ltx_td ltx_align_right">17.05%</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">es (Spanish)</th>
+<td class="ltx_td ltx_align_right">7.62%</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">ja (Japanese)</th>
+<td class="ltx_td ltx_align_right">6.47%</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">de (German)</th>
+<td class="ltx_td ltx_align_right">4.89%</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">fr (French)</th>
+<td class="ltx_td ltx_align_right">4.79%</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">ko (Korean)</th>
+<td class="ltx_td ltx_align_right">3.61%</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">it (Italian)</th>
+<td class="ltx_td ltx_align_right">2.8%</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">pt (Portuguese)</th>
+<td class="ltx_td ltx_align_right">2.62%</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b">ar (Arabic)</th>
+<td class="ltx_td ltx_align_right ltx_border_b">1.74%</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 2: </span>Language proportions in ClueWeb09.</div>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">We randomly downsampled ClueWeb09 to 10 million documents for the 8
+languages targeted in this research (the original 10 ClueWeb09 languages
+minus Korean and Portuguese). We then sourced a random set of 246
+multilingual dictionaries that were used in the construction of
+<a href="panlex.org" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">panlex.org</span></a>, and injected them into the document collection. Each
+of these dictionaries contains at least one of our 8 target languages,
+with the second language potentially being outside the 8. A total of 49
+languages are contained in the dictionaries.</p>
+</div>
+<div id="S4.SS1.p3" class="ltx_para">
+<p class="ltx_p">We indexed the synthetic dataset using Indri <cite class="ltx_cite">[<a href="#bib.bib4" title="Indri search engine" class="ltx_ref">8</a>]</cite>.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Results</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">First, we present results over the synthetic dataset in
+Table <a href="#S5.T3" title="Table 3 ‣ 5 Results ‣ Automatic Detection of Multilingual Dictionaries on the Web" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>. As our baseline, we simply query for the
+language name and the term <span class="ltx_text ltx_font_italic">dictionary</span> in the local language (e.g. <span class="ltx_text ltx_font_italic">English dictionary</span>, for English) in the given language.</p>
+</div>
+<div id="S5.T3" class="ltx_table"><span class="ltx_ERROR undefined ltx_centering">\smaller</span>
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">Lang</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">Dicts</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">MAP</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">Baseline</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_t">en</th>
+<th class="ltx_td ltx_align_center ltx_border_t">92</th>
+<td class="ltx_td ltx_align_center ltx_border_t">0.77</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.00</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">zh</th>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_phantom"><span style="visibility:hidden">0</span></span>7</th>
+<td class="ltx_td ltx_align_center">0.75</td>
+<td class="ltx_td ltx_align_center">0.00</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">es</th>
+<th class="ltx_td ltx_align_center">34</th>
+<td class="ltx_td ltx_align_center">0.98</td>
+<td class="ltx_td ltx_align_center">0.04</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">ja</th>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_phantom"><span style="visibility:hidden">0</span></span>5</th>
+<td class="ltx_td ltx_align_center">0.94</td>
+<td class="ltx_td ltx_align_center">0.00</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">de</th>
+<th class="ltx_td ltx_align_center">75</th>
+<td class="ltx_td ltx_align_center">0.97</td>
+<td class="ltx_td ltx_align_center">0.08</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">fr</th>
+<th class="ltx_td ltx_align_center">34</th>
+<td class="ltx_td ltx_align_center">0.84</td>
+<td class="ltx_td ltx_align_center">0.03</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">it</th>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_phantom"><span style="visibility:hidden">0</span></span>8</th>
+<td class="ltx_td ltx_align_center">0.95</td>
+<td class="ltx_td ltx_align_center">0.01</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">ar</th>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_phantom"><span style="visibility:hidden">0</span></span>3</th>
+<td class="ltx_td ltx_align_center">0.92</td>
+<td class="ltx_td ltx_align_center">0.00</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_smallcaps">Average:</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t">32.2</th>
+<td class="ltx_td ltx_align_center ltx_border_t">0.88</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.04</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 3: </span>Dictionary retrieval results over the synthetic dataset
+(“Dicts” = the number of dictionaries in the document collection for
+that language. </div>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">For languages that had bilingual dictionaries for training, the best
+results were obtained for Spanish, German, Italian and
+Arabic. Encouragingly, the results for languages with only Wikipedia
+documents (and no dictionaries) were largely comparable to those for
+languages with dictionaries, with Japanese achieving a MAP score
+comparable to the best results for languages with dictionary training
+data. The comparably low result for English is potentially affected by
+its prevalence both in the bilingual dictionaries in training
+(restricting the effective vocabulary size due to our <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m1" class="ltx_Math" alttext="L_{l}" display="inline"><msub><mi>L</mi><mi>l</mi></msub></math> filtering),
+and in the document collection. Recall also that our MAP scores are an
+underestimate of the true results, and some of the ClueWeb09 documents
+returned for our queries are potentially relevant documents (i.e. multilingual dictionaries including the language of interest). For all
+languages, the baseline results were below 0.1, and substantially lower
+than the results for our method.</p>
+</div>
+<div id="S5.p3" class="ltx_para">
+<p class="ltx_p">Looking next to the open web, we present in Table <a href="#S5.T4" title="Table 4 ‣ 5 Results ‣ Automatic Detection of Multilingual Dictionaries on the Web" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>
+results based on querying the Google search API with the 1000 longest
+queries for English paired with each of the other 7 target
+languages. Most queries returned no results; indeed, for the en-ar
+language pair, only 49/1000 queries returned documents. The results in
+Table <a href="#S5.T4" title="Table 4 ‣ 5 Results ‣ Automatic Detection of Multilingual Dictionaries on the Web" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> are based on manual evaluation of all documents
+returned for the first 50 queries, and determination of whether they
+were multilingual dictionaries containing the indicated languages.</p>
+</div>
+<div id="S5.p4" class="ltx_para">
+<p class="ltx_p">The baseline results are substantially higher than those for the
+synthetic dataset, almost certainly a direct result of the greater
+sophistication and optimisation of the Google search engine (including
+query log analysis, and link and anchor text analysis). Despite this,
+the results for our method are lower than those over the synthetic
+dataset, we suspect largely as a result of the style of queries we issue
+being so far removed from standard Google query patterns. Having said
+this, MAP scores of 0.32–0.92 suggest that the method is highly usable
+(i.e. at any given cutoff in the document ranking, an average of at
+least one in three documents is a genuine multilingual dictionary), and
+any non-dictionary documents returned by the method could easily be
+pruned by a lexicographer. Among the 7 language pairs, en-es, en-de,
+en-fr and en-it achieved the highest MAP scores. In terms of unique
+lexical resources found with 50 queries, the most successful language
+pairs were en-fr, en-de and en-it.</p>
+</div>
+<div id="S5.T4" class="ltx_table"><span class="ltx_ERROR undefined ltx_centering">\smaller</span>
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">Lang</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">Dicts</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">MAP</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">Baseline</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_t">zh</th>
+<th class="ltx_td ltx_align_center ltx_border_t">16</th>
+<td class="ltx_td ltx_align_center ltx_border_t">0.55</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.19</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">es</th>
+<th class="ltx_td ltx_align_center">17</th>
+<td class="ltx_td ltx_align_center">0.92</td>
+<td class="ltx_td ltx_align_center">0.13</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">ja</th>
+<th class="ltx_td ltx_align_center">13</th>
+<td class="ltx_td ltx_align_center">0.32</td>
+<td class="ltx_td ltx_align_center">0.04</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">de</th>
+<th class="ltx_td ltx_align_center">34</th>
+<td class="ltx_td ltx_align_center">0.77</td>
+<td class="ltx_td ltx_align_center">0.09</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">fr</th>
+<th class="ltx_td ltx_align_center">36</th>
+<td class="ltx_td ltx_align_center">0.77</td>
+<td class="ltx_td ltx_align_center">0.08</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">it</th>
+<th class="ltx_td ltx_align_center">23</th>
+<td class="ltx_td ltx_align_center">0.69</td>
+<td class="ltx_td ltx_align_center">0.11</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">ar</th>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_phantom"><span style="visibility:hidden">0</span></span>8</th>
+<td class="ltx_td ltx_align_center">0.39</td>
+<td class="ltx_td ltx_align_center">0.17</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_t"><span class="ltx_text ltx_font_smallcaps">Average:</span></th>
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_t">21.0</th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_t">0.63</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_t">0.12</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 4: </span>Dictionary retrieval results over the open web for dictionaries
+containing English and each of the indicated languages (“Dicts” = the
+number of unique multilingual dictionaries retrieved for that language). </div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Conclusions</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">We have described initial results for a method designed to automatically
+detect multilingual dictionaries on the web, and attained highly
+credible results over both a synthetic dataset and an experiment over
+the open web using a web search engine.</p>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p class="ltx_p">In future work, we hope to explore the ability of the method to detect
+domain-specific dictionaries (e.g. training over domain-specific
+dictionaries from other language pairs), and low-density languages where
+there are few dictionaries and Wikipedia articles to train the method on.</p>
+</div>
+<div id="S6.SSx1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection">Acknowledgements</h3>
+
+<div id="S6.SSx1.p1" class="ltx_para">
+<p class="ltx_p">We wish to thank the anonymous reviewers for their valuable comments,
+and the Panlex developers for assistance with the dictionaries and
+experimental design. This research was supported by funding from the
+Group of Eight and the Australian Research Council.</p>
+</div>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib25" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Agrawal, T. Imieliński and A. Swami</span><span class="ltx_text ltx_bib_year">(1993)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Mining association rules between sets of items in large databases</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">ACM SIGMOD Record</span> <span class="ltx_text ltx_bib_volume">22</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 207–216</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p1" title="3.1 Apriori-based query generation ‣ 3 Methodology ‣ Automatic Detection of Multilingual Dictionaries on the Web" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib19" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Baldwin, J. Pool and S. M. Colowick</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">PanLex and LEXTRACT: translating all words of all languages of the world</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Beijing, China</span>, <span class="ltx_text ltx_bib_pages"> pp. 37–40</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Motivation ‣ Automatic Detection of Multilingual Dictionaries on the Web" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib21" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Chen and J. Nie</span><span class="ltx_text ltx_bib_year">(2000)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Parallel web text mining for cross-language IR</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">College de France, France</span>, <span class="ltx_text ltx_bib_pages"> pp. 62–77</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Automatic Detection of Multilingual Dictionaries on the Web" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_misc"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">ClueWeb09</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The ClueWeb09 dataset</span>.
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note"><span class="ltx_ERROR undefined">\url</span>http://lemurproject.org/clueweb09/</span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.p1" title="4.1 Synthetic dataset ‣ 4 Experimental methodology ‣ Automatic Detection of Multilingual Dictionaries on the Web" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Finn, N. Kushmerick and B. Smyth</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Genre classification and domain transfer for information filtering</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Glasgow, UK</span>, <span class="ltx_text ltx_bib_pages"> pp. 353–362</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p5" title="2 Related Work ‣ Automatic Detection of Multilingual Dictionaries on the Web" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_misc"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Freedict</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Freedict dictionaries</span>.
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note"><span class="ltx_ERROR undefined">\url</span>http://www.freedict.com</span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p3" title="4 Experimental methodology ‣ Automatic Detection of Multilingual Dictionaries on the Web" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Fung</span><span class="ltx_text ltx_bib_year">(1998)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A statistical view on bilingual lexicon extraction: from parallel corpora to non-parallel corpora</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Langhorne, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 1–17</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related Work ‣ Automatic Detection of Multilingual Dictionaries on the Web" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_misc"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Indri</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Indri search engine</span>.
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note"><span class="ltx_ERROR undefined">\url</span>http://www.lemurproject.org/indri/</span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.p3" title="4.1 Synthetic dataset ‣ 4 Experimental methodology ‣ Automatic Detection of Multilingual Dictionaries on the Web" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Kamholz and J. Pool</span><span class="ltx_text ltx_bib_year">(to appear)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">PanLex: building a resource for panlingual lexical translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Reykjavik, Iceland</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Motivation ‣ Automatic Detection of Multilingual Dictionaries on the Web" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Laufer and L. Hadar</span><span class="ltx_text ltx_bib_year">(1997)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Assessing the effectiveness of monolingual, bilingual, and “bilingualised” dictionaries in the comprehension and production of new words</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">The Modern Language Journal</span> <span class="ltx_text ltx_bib_volume">81</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 189–196</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Motivation ‣ Automatic Detection of Multilingual Dictionaries on the Web" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib28" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Lui, J. H. Lau and T. Baldwin</span><span class="ltx_text ltx_bib_year">(2014)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatic detection and language identification of multilingual documents</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Transactions of the Association for Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">2</span> (<span class="ltx_text ltx_bib_number">Feb</span>), <span class="ltx_text ltx_bib_pages"> pp. 27–40</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Related Work ‣ Automatic Detection of Multilingual Dictionaries on the Web" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib14" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Matsuda and T. Fukushima</span><span class="ltx_text ltx_bib_year">(1999)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Task-oriented world wide web retrieval by document type classification</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Kansas City, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 109–113</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p5" title="2 Related Work ‣ Automatic Detection of Multilingual Dictionaries on the Web" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_misc"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">MeCab</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note"><span class="ltx_ERROR undefined">\url</span>http://mecab.googlecode.com</span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p3" title="4 Experimental methodology ‣ Automatic Detection of Multilingual Dictionaries on the Web" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib22" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">I. D. Melamed</span><span class="ltx_text ltx_bib_year">(1996)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatic construction of clean broad-coverage translation lexicons</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Montreal, Canada</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related Work ‣ Automatic Detection of Multilingual Dictionaries on the Web" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib16" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. S. Munteanu and D. Marcu</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Improving machine translation performance by exploiting non-parallel corpora</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">31</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 477–504</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Motivation ‣ Automatic Detection of Multilingual Dictionaries on the Web" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib23" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Nagata, T. Saito and K. Suzuki</span><span class="ltx_text ltx_bib_year">(2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Using the web as a bilingual dictionary</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Toulouse, France</span>, <span class="ltx_text ltx_bib_pages"> pp. 1–8</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related Work ‣ Automatic Detection of Multilingual Dictionaries on the Web" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib15" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Nie</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Cross-language information retrieval</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Morgan and Claypool Publishers</span>, <span class="ltx_text ltx_bib_place">San Rafael, USA</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Motivation ‣ Automatic Detection of Multilingual Dictionaries on the Web" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib29" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. M. Prager</span><span class="ltx_text ltx_bib_year">(1999)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Linguini: language identification for multilingual documents</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Maui, USA</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Related Work ‣ Automatic Detection of Multilingual Dictionaries on the Web" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Resnik and N. A. Smith</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The web as a parallel corpus</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">29</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 349–380</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Automatic Detection of Multilingual Dictionaries on the Web" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Soderland, C. Lim, Mausam, B. Qin, O. Etzioni and J. Pool</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Lemmatic machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Ottawa, Canada</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Motivation ‣ Automatic Detection of Multilingual Dictionaries on the Web" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Thieberger and A. L. Berez</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Linguistic data management</span>.
+</span>
+<span class="ltx_bibblock">in <span class="ltx_text ltx_bib_editor">N. Thieberger (Ed.)</span>, <span class="ltx_text ltx_bib_inbook">The Oxford Handbook of Linguistic Fieldwork</span>,
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Motivation ‣ Automatic Detection of Multilingual Dictionaries on the Web" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib17" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Tseng, P. Chang, G. Andrew, D. Jurafsky and C. Manning</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A conditional random field word segmenter for sighan bakeoff 2005</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">171</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p3" title="4 Experimental methodology ‣ Automatic Detection of Multilingual Dictionaries on the Web" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib30" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Yamaguchi and K. Tanaka-Ishii</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Text segmentation by language using minimum description length</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Jeju Island, Korea</span>, <span class="ltx_text ltx_bib_pages"> pp. 969–978</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Related Work ‣ Automatic Detection of Multilingual Dictionaries on the Web" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Yu and J. Tsujii</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Bilingual dictionary extraction from Wikipedia</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Ottawa, Canada</span>, <span class="ltx_text ltx_bib_pages"> pp. 379–386</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related Work ‣ Automatic Detection of Multilingual Dictionaries on the Web" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib27" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. M. zu Eissen and B. Stein</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Genre classification of web pages</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Ulm, Germany</span>, <span class="ltx_text ltx_bib_pages"> pp. 256–269</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p5" title="2 Related Work ‣ Automatic Detection of Multilingual Dictionaries on the Web" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 17:33:30 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

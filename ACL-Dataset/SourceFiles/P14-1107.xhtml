@@ -1,0 +1,994 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Are Two Heads Better than One? Crowdsourced Translation via a Two-Step Collaboration of Non-Professional Translators and Editors</title>
+<!--Generated on Tue Jun 10 18:41:45 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Are Two Heads Better than One? Crowdsourced Translation via a 
+<br class="ltx_break"/>Two-Step Collaboration of Non-Professional Translators and Editors</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Rui Yan, Mingkun Gao, Ellie Pavlick, and Chris Callison-Burch 
+<br class="ltx_break"/>Computer and Information Science Department, 
+<br class="ltx_break"/>University of Pennsylvania, Philadelphia, PA 19104, U.S.A.
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">ruiyan,gmingkun,epavlick</span>}<span class="ltx_text ltx_font_typewriter">@seas.upenn.edu, ccb@cis.upenn.edu</span>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Crowdsourcing is a viable mechanism for creating training data for machine translation. It provides a low cost, fast turn-around way of processing large volumes of data. However, when compared to professional translation, naive collection of translations from non-professionals yields low-quality results. Careful quality control is necessary for crowdsourcing to work well. In this paper, we examine the challenges of a two-step collaboration process with translation and post-editing by non-professionals. We develop graph-based ranking models that automatically select the best output from multiple redundant versions of translations and edits, and improves translation quality closer to professionals.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Statistical machine translation (SMT) systems are trained using bilingual sentence-aligned parallel corpora. Theoretically, SMT can be applied to any language pair, but in practice it produces the state-of-art results only for language pairs with ample training data, like English-Arabic, English-Chinese, French-English, etc. SMT gets stuck in a severe bottleneck for many minority or ‘low resource’ languages with insufficient data.
+This drastically limits which languages SMT can be successfully applied to.
+Because of this, collecting parallel corpora for minor languages has become an interesting research challenge. There are various options for creating training data for new language pairs. Past approaches have examined harvesting translated documents from the web <cite class="ltx_cite">[<a href="#bib.bib3" title="The web as a parallel corpus" class="ltx_ref">30</a>, <a href="#bib.bib6" title="Large scale parallel document mining for machine translation" class="ltx_ref">36</a>, <a href="#bib.bib41" title="Dirt cheap web-scale parallel text from the Common Crawl" class="ltx_ref">32</a>]</cite>, or discovering parallel fragments from comparable corpora <cite class="ltx_cite">[<a href="#bib.bib4" title="Improving machine translation performance by exploiting non-parallel corpora" class="ltx_ref">26</a>, <a href="#bib.bib42" title="On the use of comparable corpora to improve SMT performance" class="ltx_ref">1</a>, <a href="#bib.bib5" title="Extracting parallel sentences from comparable corpora using document level alignment" class="ltx_ref">31</a>]</cite>.
+Until relatively recently, little consideration has been given to creating parallel data from scratch. This is because the cost of hiring professional translators is prohibitively high. For instance, <cite class="ltx_cite">Germann (<a href="#bib.bib12" title="Building a statistical machine translation system from scratch: how much bang for the buck can we expect?" class="ltx_ref">2001</a>)</cite> hoped to hire professional translators to create a modest sized 100,000 word Tamil-English parallel corpus, but were stymied by the costs and the difficulty of finding good translators for a short-term commitment.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Recently, crowdsourcing has opened the possibility of translating large amounts of text at low cost using non-professional translators. Facebook localized its web site into different languages using volunteers <cite class="ltx_cite">[<a href="#bib.bib34" title="Facebook taps users to create translated versions of site" class="ltx_ref">35</a>]</cite>. DuoLingo turns translation into an educational game, and translates web content using its language learners <cite class="ltx_cite">[<a href="#bib.bib44" title="Duolingo: learn a language for free while helping to translate the web" class="ltx_ref">37</a>]</cite>.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">Rather than relying on volunteers or gamification, NLP research into crowdsourcing translation has focused on hiring workers on the Amazon Mechanical Turk (MTurk) platform <cite class="ltx_cite">[<a href="#bib.bib19" title="Fast, cheap, and creative: evaluating translation quality using amazon’s mechanical turk" class="ltx_ref">9</a>]</cite>. This setup presents unique challenges, since it typically involves non-professional translators whose language skills are varied, and since it sometimes involves participants who try to cheat to get the small financial reward <cite class="ltx_cite">[<a href="#bib.bib29" title="Crowdsourcing translation: professional quality from non-professionals" class="ltx_ref">43</a>]</cite>.
+A natural approach for trying to shore up the skills of weak bilinguals is to pair them with a native speaker of the target language to edit their translations.
+We review relevant research from NLP and human-computer interaction (HCI) on collaborative translation processes in Section <a href="#S2" title="2 Related work ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+To sort good translations from bad, researchers often solicit multiple, redundant translations and then build models to try to predict which translations are the best, or which translators tend to produce the highest quality translations.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">The contributions of this paper are:</p>
+<ul id="I1" class="ltx_itemize">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p">An analysis of the difficulties posed by a two-step collaboration between editors and translators in Mechanical Turk-style crowdsourcing environments. Editors vary in quality, and poor editing can be difficult to detect.</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p">A new graph-based algorithm for selecting the best translation among multiple translations of the same input. This method takes into account the collaborative relationship between the translators and the editors.</p>
+</div></li>
+</ul>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">In the HCI community, several researchers have proposed protocols for collaborative translation efforts <cite class="ltx_cite">[<a href="#bib.bib36" title="Designing protocols for collaborative translation" class="ltx_ref">25</a>, <a href="#bib.bib35" title="Collaborative translation by monolinguals with machine translators" class="ltx_ref">24</a>, <a href="#bib.bib31" title="Collaborative translation by monolingual users" class="ltx_ref">16</a>, <a href="#bib.bib32" title="Translation by iterative collaboration between monolingual users" class="ltx_ref">15</a>]</cite>. These have focused on an iterative collaboration between monolingual speakers of the two languages, facilitated with a machine translation system.
+These studies are similar to ours in that they rely on native speakers’ understanding of the target language to correct the disfluencies in poor translations. In our setup the poor translations are produced by bilingual individuals who are weak in the target language, and in their experiments the translations are the output of a machine translation system.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>A variety of HCI and NLP studies have confirmed the efficacy of monolingual or bilingual individuals post-editing of machine translation output <cite class="ltx_cite">[<a href="#bib.bib40" title="Linear B system description for the 2005 NIST MT evaluation exercise" class="ltx_ref">8</a>, <a href="#bib.bib38" title="Enabling monolingual translators: post-editing vs. options" class="ltx_ref">19</a>, <a href="#bib.bib37" title="The efficacy of human post-editing for language translation" class="ltx_ref">12</a>]</cite>. Past NLP work has also examined automatic post-editing<cite class="ltx_cite">[<a href="#bib.bib39" title="Automated postediting of documents" class="ltx_ref">18</a>]</cite>.</span></span></span></p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">Another significant difference is that the HCI studies assume cooperative participants. For instance, <cite class="ltx_cite">Hu<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib32" title="Translation by iterative collaboration between monolingual users" class="ltx_ref">2010</a>)</cite> recruited volunteers from the International Children’s Digital Library <cite class="ltx_cite">[<a href="#bib.bib46" title="The international children’s digital library: viewing digital books online" class="ltx_ref">13</a>]</cite> who were all well intentioned and participated out a sense of altruism and to build a good reputation among the other volunteer translators at <a href="childrenslibrary.org" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">childrenslibrary.org</span></a>.
+Our setup uses anonymous crowd workers hired on Mechanical Turk, whose motivation to participate is financial.
+<cite class="ltx_cite">Bernstein<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib30" title="Soylent: a word processor with a crowd inside" class="ltx_ref">2010</a>)</cite> characterized the problems with hiring editors via MTurk for a word processing application. Workers were either lazy (meaning they made only minimal edits) or overly zealous (meaning they made many unnecessary edits). <cite class="ltx_cite">Bernstein<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib30" title="Soylent: a word processor with a crowd inside" class="ltx_ref">2010</a>)</cite> addressed this problem with a three step find-fix-verify process. In the first step, workers click on one word or phrase that needed to be corrected. In the next step, a separate group of workers proposed corrections to problematic regions that had been identified by multiple workers in the first pass. In the final step, other workers would validate whether the proposed corrections were good.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">Most NLP research into crowdsourcing has focused on Mechanical Turk, following pioneering work by <cite class="ltx_cite">Snow<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib1" title="Cheap and fast—but is it good?: evaluating non-expert annotations for natural language tasks" class="ltx_ref">2008</a>)</cite> who showed that the platform was a viable way of collecting data for a wide variety of NLP tasks at low cost and in large volumes. They further showed that non-expert annotations are similar to expert annotations when many non-expert labelings for the same input are aggregated, through simple voting or through weighting votes based on how closely non-experts matched experts on a small amount of calibration data. MTurk has subsequently been widely adopted by the NLP community and used for an extensive range of speech and language applications <cite class="ltx_cite">[<a href="#bib.bib22" title="Creating speech and language data with Amazon’s Mechanical Turk" class="ltx_ref">7</a>]</cite>.</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p">Although hiring professional translators to create bilingual training data for machine translation systems has been deemed infeasible, Mechanical Turk has provided a low cost way of creating large volumes of translations <cite class="ltx_cite">[<a href="#bib.bib19" title="Fast, cheap, and creative: evaluating translation quality using amazon’s mechanical turk" class="ltx_ref">9</a>, <a href="#bib.bib20" title="Can crowds build parallel corpora for machine translation systems?" class="ltx_ref">3</a>]</cite>. For instance, <cite class="ltx_cite">Zbib<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib23" title="Machine translation of Arabic dialects" class="ltx_ref">2012</a>, <a href="#bib.bib24" title="Systematic comparison of professional and crowdsourced reference translations for machine translation" class="ltx_ref">2013</a>)</cite> translated 1.5 million words of Levine Arabic and Egyptian Arabic, and showed that a statistical translation system trained on the dialect data outperformed a system trained on 100 times more MSA data. <cite class="ltx_cite">Post<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib25" title="Constructing parallel corpora for six Indian languages via crowdsourcing" class="ltx_ref">2012</a>)</cite> used MTurk to create parallel corpora for six Indian languages for less than $0.01 per word. MTurk workers translated more than half a million words worth of Malayalam in less than a week. Several researchers have examined the use of active learning to further reduce the cost of translation <cite class="ltx_cite">[<a href="#bib.bib2" title="Active learning and crowd-sourcing for machine translation." class="ltx_ref">2</a>, <a href="#bib.bib21" title="Active learning and crowdsourcing for machine translation in low resource scenarios" class="ltx_ref">4</a>, <a href="#bib.bib26" title="Large-scale cost-focused active learning for statistical machine translation" class="ltx_ref">6</a>]</cite>. Crowdsourcing allowed real studies to be conducted whereas most past active learning were simulated. <cite class="ltx_cite">Pavlick<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib28" title="The language demographics of Amazon Mechanical Turk" class="ltx_ref">2014</a>)</cite> conducted a large-scale demographic study of the languages spoken by workers on MTurk by translating 10,000 words in each of 100 languages. <cite class="ltx_cite">Chen and Dolan (<a href="#bib.bib27" title="Building a persistent workforce on mechanical turk for multilingual data collection" class="ltx_ref">2012</a>)</cite> examined the steps necessary to build a persistent multilingual workforce on MTurk.</p>
+</div>
+<div id="S2.p5" class="ltx_para">
+<p class="ltx_p">This paper is most closely related to previous work by <cite class="ltx_cite">Zaidan and Callison-Burch (<a href="#bib.bib29" title="Crowdsourcing translation: professional quality from non-professionals" class="ltx_ref">2011</a>)</cite>, who showed that non-professional translators could approach the level of professional translators. They solicited multiple redundant translations from different Turkers for a collection of Urdu sentences that had been previously professionally translated by the Linguistics Data Consortium. They built a model to try to predict on a sentence-by-sentence and Turker-by-Turker which was the best translation or translator. They also hired US-based Turkers to edit the translations, since the translators were largely based in Pakistan and exhibited errors that are characteristic of speakers of English as a language. <cite class="ltx_cite">Zaidan and Callison-Burch (<a href="#bib.bib29" title="Crowdsourcing translation: professional quality from non-professionals" class="ltx_ref">2011</a>)</cite> observed only modest improvements when incorporating these edited translation into their model. We attempt to analyze why this is, and we proposed a new model to try to better leverage their data.</p>
+</div>
+<div id="S2.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Urdu translator:</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r ltx_border_t">
+<p class="ltx_p ltx_minipage ltx_align_middle" style="width:195.1pt;"><span class="ltx_text ltx_font_small">According to the territory’s people the pamphlets from the Taaliban had been read in the announcements in all the mosques of the Northern Wazeerastan.</span></p></td></tr>
+</tbody>
+</table>
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">English post-editor:</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r ltx_border_t">
+<p class="ltx_p ltx_minipage ltx_align_middle" style="width:195.1pt;"><span class="ltx_text ltx_font_small">According to locals, the pamphlet released by the Taliban was read out on the loudspeakers of all the mosques in North Waziristan.</span></p></td></tr>
+</tbody>
+</table>
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">LDC professional:</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r ltx_border_t">
+<p class="ltx_p ltx_minipage ltx_align_middle" style="width:195.1pt;"><span class="ltx_text ltx_font_small">According to the local people, the Taliban’s pamphlet was read over the loudspeakers of all mosques in North Waziristan.</span></p></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 1: </span>Different versions of translations.</div>
+</div>
+<div id="S2.p6" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite"/></p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Crowdsourcing Translation</h2>
+
+<div id="S3.SS0.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Setup</h4>
+
+<div id="S3.SS0.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">We conduct our experiments using the data collected by <cite class="ltx_cite">Zaidan and Callison-Burch (<a href="#bib.bib29" title="Crowdsourcing translation: professional quality from non-professionals" class="ltx_ref">2011</a>)</cite>. This data set consists 1,792 Urdu sentences from a variety of news and online sources, each paired with English translations provided by non-professional translators on Mechanical Turk.</p>
+</div>
+<div id="S3.SS0.SSS0.P1.p2" class="ltx_para">
+<p class="ltx_p">Each Urdu sentence was translated redundantly by 3 distinct translators, and each translation was edited by 3 separate (native English-speaking) editors to correct for grammatical and stylistic errors. In total, this gives us 12 non-professional English candidate sentences (3 unedited, 9 edited) per original Urdu sentence. 52 different Turkers took part in the translation task, each translating 138 sentences on average. In the editing task, 320 Turkers participated, averaging 56 sentences each. For comparison, the data also includes 4 different reference translations for each source sentence, produced by professional translators.</p>
+</div>
+<div id="S3.SS0.SSS0.P1.p3" class="ltx_para">
+<p class="ltx_p">Table <a href="#S2.T1" title="Table 1 ‣ 2 Related work ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> gives an example of an unedited translation, an edited translation, and a professional translation for the same sentence. The translations provided by translators on MTurk are generally done conscientiously, preserving the meaning of the source sentence, but typically contain simple mistakes like misspellings, typos, and awkward word choice. English-speaking editors, despite having no knowledge of the source language, are able to fix these errors. In this work, we show that the collaboration design of two heads– non-professional Urdu translators and non-professional English editors– yields better translated output than would either one working in isolation, and can better approximate the quality of professional translators.</p>
+</div>
+</div>
+<div id="S3.SS0.SSS0.P2" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Analysis</h4>
+
+<div id="S3.SS0.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">We know from inspection that translations seem to improve with editing (Table <a href="#S2.T1" title="Table 1 ‣ 2 Related work ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>). Given the data from MTurk, we explore whether this is the case in general: Do all translations improve with editing? To what extent does the individual translator and the individual editor effect the quality of the final sentence?</p>
+</div>
+<div id="S3.F1" class="ltx_figure"><img src="P14-1107/image001.png" id="S3.F1.g1" class="ltx_graphics ltx_centering" width="675" height="515" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Relationship between editor aggressiveness and effectiveness. Each point represents an editor/translation pair. Aggressiveness (x-axis) is measured as the TER between the pre-edit and post-edit version of the translation, and effectiveness (y-axis) is measured as the average amount by which the editing reduces the translation’s TER<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m2" class="ltx_Math" alttext="{}_{gold}" display="inline"><msub><mi/><mrow><mi>g</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math>. While many editors make only a few changes, those who make many changes can bring the translation substantially closer to professional quality.</div>
+</div>
+<div id="S3.F2" class="ltx_figure"><img src="P14-1107/image002.png" id="S3.F2.g1" class="ltx_graphics ltx_centering" width="677" height="846" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>Effect of editing on translations of varying quality. Rows reflect bins of editors, with the worse editors (those whose changes result in increased TER<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.m6" class="ltx_Math" alttext="{}_{gold}" display="inline"><msub><mi/><mrow><mi>g</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math>) on the top and the most effective editors (those whose changes result in the largest reduction in TER<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.m7" class="ltx_Math" alttext="{}_{gold}" display="inline"><msub><mi/><mrow><mi>g</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math>) on the bottom. Bars reflect bins of translations, with the highest TER<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.m8" class="ltx_Math" alttext="{}_{gold}" display="inline"><msub><mi/><mrow><mi>g</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math> translations on the left, and the lowest on the right. We can see from the consistently negative <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.m9" class="ltx_Math" alttext="\Delta" display="inline"><mi mathvariant="normal">Δ</mi></math> TER<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.m10" class="ltx_Math" alttext="{}_{gold}" display="inline"><msub><mi/><mrow><mi>g</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math> in the bottom row that good editors are able to improve both good and bad translations.</div>
+</div>
+<div id="S3.SS0.SSS0.P2.p2" class="ltx_para">
+<p class="ltx_p">We use <span class="ltx_text ltx_font_italic">translation edit rate</span> (TER) as a measure of translation similarity. TER represents the amount of change necessary to transform one sentence into another, so a low TER means the two sentences are very similar. To capture the quality (“professionalness”) of a translation, we take the average TER of the translation against each of our gold translations. That is, we define TER<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p2.m1" class="ltx_Math" alttext="{}_{gold}" display="inline"><msub><mi/><mrow><mi>g</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math> of translation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p2.m2" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math> as</p>
+</div>
+<div id="S3.SS0.SSS0.P2.p3" class="ltx_para">
+<table id="Sx1.EGx1" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S3.E1" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E1.m1" class="ltx_Math" alttext="\displaystyle TER_{gold}=\frac{1}{4}\sum\limits_{i=1}^{4}TER(gold_{i},t)" display="inline"><mrow><mrow><mi>T</mi><mo>⁢</mo><mi>E</mi><mo>⁢</mo><msub><mi>R</mi><mrow><mi>g</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>d</mi></mrow></msub></mrow><mo>=</mo><mrow><mstyle displaystyle="true"><mfrac><mn>1</mn><mn>4</mn></mfrac></mstyle><mo>⁢</mo><mrow><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mn>4</mn></munderover></mstyle><mrow><mi>T</mi><mo>⁢</mo><mi>E</mi><mo>⁢</mo><mi>R</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mi>g</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><msub><mi>d</mi><mi>i</mi></msub></mrow><mo>,</mo><mi>t</mi></mrow><mo>)</mo></mrow></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+</div>
+<div id="S3.SS0.SSS0.P2.p4" class="ltx_para">
+<p class="ltx_p">where a lower TER<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p4.m1" class="ltx_Math" alttext="{}_{gold}" display="inline"><msub><mi/><mrow><mi>g</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math> is indicative of a higher quality (more professional-sounding) translation.</p>
+</div>
+<div id="S3.SS0.SSS0.P2.p5" class="ltx_para">
+<p class="ltx_p">We first look at editors along two dimensions: their aggressiveness and their effectiveness. Some editors may be very aggressive (they make many changes to the original translation) but still be ineffective (they fail to bring the quality of the translation closer to that of a professional). We measure aggressiveness by looking at the TER between the pre- and post-edited versions of each editor’s translations; higher TER implies more aggressive editing. To measure effectiveness, we look at the change in TER<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p5.m1" class="ltx_Math" alttext="{}_{gold}" display="inline"><msub><mi/><mrow><mi>g</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math> that results from the editing; negative <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p5.m2" class="ltx_Math" alttext="\Delta" display="inline"><mi mathvariant="normal">Δ</mi></math>TER<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p5.m3" class="ltx_Math" alttext="{}_{gold}" display="inline"><msub><mi/><mrow><mi>g</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math> means the editor effectively improved the quality of the translation, while positive <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p5.m4" class="ltx_Math" alttext="\Delta" display="inline"><mi mathvariant="normal">Δ</mi></math>TER<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p5.m5" class="ltx_Math" alttext="{}_{gold}" display="inline"><msub><mi/><mrow><mi>g</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math> means the editing actually brought the translation further from our gold standard.</p>
+</div>
+<div id="S3.SS0.SSS0.P2.p6" class="ltx_para">
+<p class="ltx_p">Figure <a href="#S3.F1" title="Figure 1 ‣ Analysis ‣ 3 Crowdsourcing Translation ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> shows the relationship between these two qualities for individual editor/translation pairs. We see that while most translations require only a few edits, there are a large number of translations which improve substantially after heavy editing. This trend conforms to our intuition that editing is most useful when the translation has much room for improvement, and opens the question of whether good editors can offer improvements to translations of all qualities.</p>
+</div>
+<div id="S3.F3" class="ltx_figure"><img src="P14-1107/image003.png" id="S3.F3.g1" class="ltx_graphics ltx_centering" width="676" height="245" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 3: </span>Three alternative translations (left) and the edited versions of each (right). Each edit on the right was produced by a different editor. Order reflects the TER<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F3.m4" class="ltx_Math" alttext="{}_{gold}" display="inline"><msub><mi/><mrow><mi>g</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math> of each translation, with the lowest TER<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F3.m5" class="ltx_Math" alttext="{}_{gold}" display="inline"><msub><mi/><mrow><mi>g</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math> on the top. Some translators receive low TER<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F3.m6" class="ltx_Math" alttext="{}_{gold}" display="inline"><msub><mi/><mrow><mi>g</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math> scores due to superficial errors, which can be easily improved through editing. In the above example, the middle-ranked translation (green) becomes the best translation after being revised by a good editor.</div>
+</div>
+<div id="S3.SS0.SSS0.P2.p7" class="ltx_para">
+<p class="ltx_p">To address this question, we split our translations into 5 bins, based on their TER<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p7.m1" class="ltx_Math" alttext="{}_{gold}" display="inline"><msub><mi/><mrow><mi>g</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math>. We also split our editors into 5 bins, based on their effectiveness (i.e. the average amount by which their editing reduces TER<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS0.SSS0.P2.p7.m2" class="ltx_Math" alttext="{}_{gold}" display="inline"><msub><mi/><mrow><mi>g</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>d</mi></mrow></msub></math>). Figure <a href="#S3.F2" title="Figure 2 ‣ Analysis ‣ 3 Crowdsourcing Translation ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> shows the degree to which editors at each level are able to improve the translations from each bin. We see that good editors are able to make improvements to translations of all qualities, but that good editing has the greatest impact on lower quality translations. This result suggests that finding good editor/translator pairs, rather than good editors and good translators in isolation, should produce the best translations overall. Figure <a href="#S3.F3" title="Figure 3 ‣ Analysis ‣ 3 Crowdsourcing Translation ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> gives an example of how an initially medium-quality translation, when combined with good editing, produces a better result than the higher-quality translation paired with mediocre editing.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Problem Formulation</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">The problem definition of the crowdsourcing translation task is straightforward: given a set of candidate translations for a source sentence, we want to choose the best output translation.</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">This output translation is the result of the combined translation and editing stages. Therefore, our method operates over a heterogeneous network that includes translators and post-editors as well as the translated sentences that they produce. We frame the problem as follows. We form two graphs: the first graph (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m1" class="ltx_Math" alttext="G_{T}" display="inline"><msub><mi>G</mi><mi>T</mi></msub></math>) represents Turkers (translator/editor pairs) as nodes; the second graph (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m2" class="ltx_Math" alttext="G_{C}" display="inline"><msub><mi>G</mi><mi>C</mi></msub></math>) represents candidate translated and post-edited sentences (henceforth “candidates”) as nodes. These two graphs, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m3" class="ltx_Math" alttext="G_{T}" display="inline"><msub><mi>G</mi><mi>T</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m4" class="ltx_Math" alttext="G_{C}" display="inline"><msub><mi>G</mi><mi>C</mi></msub></math> are combined as subgraphs of a third graph (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m5" class="ltx_Math" alttext="G_{TC}" display="inline"><msub><mi>G</mi><mrow><mi>T</mi><mo>⁢</mo><mi>C</mi></mrow></msub></math>). Edges in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m6" class="ltx_Math" alttext="G_{TC}" display="inline"><msub><mi>G</mi><mrow><mi>T</mi><mo>⁢</mo><mi>C</mi></mrow></msub></math> connect author pairs (nodes in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m7" class="ltx_Math" alttext="G_{T}" display="inline"><msub><mi>G</mi><mi>T</mi></msub></math>) to the candidate that they produced (nodes in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m8" class="ltx_Math" alttext="G_{C}" display="inline"><msub><mi>G</mi><mi>C</mi></msub></math>). Together, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m9" class="ltx_Math" alttext="G_{T}" display="inline"><msub><mi>G</mi><mi>T</mi></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m10" class="ltx_Math" alttext="G_{C}" display="inline"><msub><mi>G</mi><mi>C</mi></msub></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m11" class="ltx_Math" alttext="G_{TC}" display="inline"><msub><mi>G</mi><mrow><mi>T</mi><mo>⁢</mo><mi>C</mi></mrow></msub></math> define a co-ranking problem <cite class="ltx_cite">[<a href="#bib.bib13" title="Tweet recommendation with graph co-ranking" class="ltx_ref">39</a>, <a href="#bib.bib17" title="Evolutionary timeline summarization: a balanced optimization framework via iterative substitution" class="ltx_ref">41</a>, <a href="#bib.bib14" title="Visualizing timelines: evolutionary summarization via iterative reinforcement between text and image streams" class="ltx_ref">40</a>]</cite> with linkage establishment <cite class="ltx_cite">[<a href="#bib.bib15" title="Timeline generation through evolutionary trans-temporal summarization" class="ltx_ref">38</a>, <a href="#bib.bib16" title="Hierarchical graph summarization: leveraging hybrid information through visible and invisible linkage" class="ltx_ref">42</a>]</cite>, which we define formally as follows.</p>
+</div>
+<div id="S4.p3" class="ltx_para">
+<p class="ltx_p">Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m1" class="ltx_Math" alttext="G" display="inline"><mi>G</mi></math> denote the heterogeneous graph with nodes <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m2" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math> and edges <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m3" class="ltx_Math" alttext="E" display="inline"><mi>E</mi></math>. Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m4" class="ltx_Math" alttext="G" display="inline"><mi>G</mi></math> = (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m5" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math>,<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m6" class="ltx_Math" alttext="E" display="inline"><mi>E</mi></math>) = (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m7" class="ltx_Math" alttext="V_{T},V_{C},E_{T},E_{C},E_{TC})" display="inline"><mrow><msub><mi>V</mi><mi>T</mi></msub><mo>,</mo><msub><mi>V</mi><mi>C</mi></msub><mo>,</mo><msub><mi>E</mi><mi>T</mi></msub><mo>,</mo><msub><mi>E</mi><mi>C</mi></msub><mo>,</mo><msub><mi>E</mi><mrow><mi>T</mi><mo>⁢</mo><mi>C</mi></mrow></msub><mo>)</mo></mrow></math>. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m8" class="ltx_Math" alttext="G" display="inline"><mi>G</mi></math> is divided into three subgraphs, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m9" class="ltx_Math" alttext="G_{T}" display="inline"><msub><mi>G</mi><mi>T</mi></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m10" class="ltx_Math" alttext="G_{C}" display="inline"><msub><mi>G</mi><mi>C</mi></msub></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m11" class="ltx_Math" alttext="G_{TC}" display="inline"><msub><mi>G</mi><mrow><mi>T</mi><mo>⁢</mo><mi>C</mi></mrow></msub></math>. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m12" class="ltx_Math" alttext="G_{C}" display="inline"><msub><mi>G</mi><mi>C</mi></msub></math> = (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m13" class="ltx_Math" alttext="V_{C},E_{C}" display="inline"><mrow><msub><mi>V</mi><mi>C</mi></msub><mo>,</mo><msub><mi>E</mi><mi>C</mi></msub></mrow></math>) is a weighted undirected graph representing the candidates and their lexical relationships to one another. Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m14" class="ltx_Math" alttext="V_{C}" display="inline"><msub><mi>V</mi><mi>C</mi></msub></math> denote a collection of translated and edited candidates, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m15" class="ltx_Math" alttext="E_{C}" display="inline"><msub><mi>E</mi><mi>C</mi></msub></math> the lexical similarity between the candidates (see Section <a href="#S4.SS3" title="4.3 Affinity Matrix Establishment ‣ 4 Problem Formulation ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a> for details). <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m16" class="ltx_Math" alttext="G_{T}" display="inline"><msub><mi>G</mi><mi>T</mi></msub></math> = (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m17" class="ltx_Math" alttext="V_{T},E_{T}" display="inline"><mrow><msub><mi>V</mi><mi>T</mi></msub><mo>,</mo><msub><mi>E</mi><mi>T</mi></msub></mrow></math>) is a weighted undirected graph representing collaborations between Turkers. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m18" class="ltx_Math" alttext="V_{T}" display="inline"><msub><mi>V</mi><mi>T</mi></msub></math> is the set of translator/editor pairs. Edges <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m19" class="ltx_Math" alttext="E_{T}" display="inline"><msub><mi>E</mi><mi>T</mi></msub></math> connect translator/editor pairs in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m20" class="ltx_Math" alttext="V_{T}" display="inline"><msub><mi>V</mi><mi>T</mi></msub></math> which share a translator and/or editor. Each collaboration (i.e. each node in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m21" class="ltx_Math" alttext="V_{T}" display="inline"><msub><mi>V</mi><mi>T</mi></msub></math>) produces a candidate (i.e. a node in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m22" class="ltx_Math" alttext="V_{C}" display="inline"><msub><mi>V</mi><mi>C</mi></msub></math>). <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m23" class="ltx_Math" alttext="G_{TC}=(V_{TC},E_{TC})" display="inline"><mrow><msub><mi>G</mi><mrow><mi>T</mi><mo>⁢</mo><mi>C</mi></mrow></msub><mo>=</mo><mrow><mo>(</mo><mrow><msub><mi>V</mi><mrow><mi>T</mi><mo>⁢</mo><mi>C</mi></mrow></msub><mo>,</mo><msub><mi>E</mi><mrow><mi>T</mi><mo>⁢</mo><mi>C</mi></mrow></msub></mrow><mo>)</mo></mrow></mrow></math> is an unweighted bipartite graph that ties <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m24" class="ltx_Math" alttext="G_{T}" display="inline"><msub><mi>G</mi><mi>T</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m25" class="ltx_Math" alttext="G_{C}" display="inline"><msub><mi>G</mi><mi>C</mi></msub></math> together and represents “authorship”. The graph <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m26" class="ltx_Math" alttext="G" display="inline"><mi>G</mi></math> consists of nodes <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m27" class="ltx_Math" alttext="V_{TC}" display="inline"><msub><mi>V</mi><mrow><mi>T</mi><mo>⁢</mo><mi>C</mi></mrow></msub></math> = <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m28" class="ltx_Math" alttext="V_{T}\cup V_{C}" display="inline"><mrow><msub><mi>V</mi><mi>T</mi></msub><mo>∪</mo><msub><mi>V</mi><mi>C</mi></msub></mrow></math> and edges <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m29" class="ltx_Math" alttext="E_{TC}" display="inline"><msub><mi>E</mi><mrow><mi>T</mi><mo>⁢</mo><mi>C</mi></mrow></msub></math> connecting each candidate with its authoring translator/post-editor pair. The three sub-networks (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m30" class="ltx_Math" alttext="G_{T}" display="inline"><msub><mi>G</mi><mi>T</mi></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m31" class="ltx_Math" alttext="G_{C}" display="inline"><msub><mi>G</mi><mi>C</mi></msub></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m32" class="ltx_Math" alttext="G_{TC}" display="inline"><msub><mi>G</mi><mrow><mi>T</mi><mo>⁢</mo><mi>C</mi></mrow></msub></math>) are illustrated in Figure <a href="#S4.F4" title="Figure 4 ‣ 4 Problem Formulation ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.</p>
+</div>
+<div id="S4.F4" class="ltx_figure"><img src="P14-1107/image004.png" id="S4.F4.g1" class="ltx_graphics ltx_centering" width="458" height="321" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 4: </span>2-step collaborative crowdsourcing translation model based on graph ranking framework including three sub-networks. The undirected links between users denotes <span class="ltx_text ltx_font_italic">translation-editing</span> collaboration. The undirected links between candidate translations indicate lexical similarity between candidates. A bipartite graph ties candidate and Turker networks together by authorship (to make the figure clearer, some linkage is omitted). A dashed circle indicates the group of candidate translations for a single source sentence to translate.</div>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Inter-Graph Ranking</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">The framework includes three random walks, one on <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m1" class="ltx_Math" alttext="G_{T}" display="inline"><msub><mi>G</mi><mi>T</mi></msub></math>, one on <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m2" class="ltx_Math" alttext="G_{C}" display="inline"><msub><mi>G</mi><mi>C</mi></msub></math> and one on <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m3" class="ltx_Math" alttext="G_{TC}" display="inline"><msub><mi>G</mi><mrow><mi>T</mi><mo>⁢</mo><mi>C</mi></mrow></msub></math>. A random walk on a graph is a Markov chain, its states being the vertices of the graph. It can be described by a stochastic square matrix, where the dimension is the number of vertices in the graph, and the entries describe the transition probabilities from one vertex to the next. The mutual reinforcement framework couples the two random walks on <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m4" class="ltx_Math" alttext="G_{T}" display="inline"><msub><mi>G</mi><mi>T</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m5" class="ltx_Math" alttext="G_{C}" display="inline"><msub><mi>G</mi><mi>C</mi></msub></math> that rank candidates and Turkers in isolation. The ranking method allows us to obtain a global ranking by taking into account the intra-/inter-component dependencies. In the following sections, we describe how we obtain the rankings on <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m6" class="ltx_Math" alttext="G_{T}" display="inline"><msub><mi>G</mi><mi>T</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m7" class="ltx_Math" alttext="G_{C}" display="inline"><msub><mi>G</mi><mi>C</mi></msub></math>, and then move on to discuss how the two are coupled.</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">Our algorithm aims to capture the following intuitions. A candidate is important if 1) it is similar to many of the other proposed candidates and 2) it is authored by better qualified translators and/or post-editors. Analogously, a translator/editor pair is believed to be better qualified if 1) the editor is collaborating with a good translator and vice versa and 2) the pair has authored important candidates. This ranking schema is actually a reinforced process across the heterogeneous graphs. We use two vectors <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m1" class="ltx_Math" alttext="\textbf{c}=[\pi(c)]_{|c|\times 1}" display="inline"><mrow><mtext>𝐜</mtext><mo>=</mo><msub><mrow><mo>[</mo><mrow><mi>π</mi><mo>⁢</mo><mrow><mo>(</mo><mi>c</mi><mo>)</mo></mrow></mrow><mo>]</mo></mrow><mrow><mrow><mo fence="true">|</mo><mi>c</mi><mo fence="true">|</mo></mrow><mo>×</mo><mn>1</mn></mrow></msub></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m2" class="ltx_Math" alttext="\textbf{t}=[\pi(t)]_{|t|\times 1}" display="inline"><mrow><mtext>𝐭</mtext><mo>=</mo><msub><mrow><mo>[</mo><mrow><mi>π</mi><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></mrow><mo>]</mo></mrow><mrow><mrow><mo fence="true">|</mo><mi>t</mi><mo fence="true">|</mo></mrow><mo>×</mo><mn>1</mn></mrow></msub></mrow></math> to denote the saliency scores <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m3" class="ltx_Math" alttext="\pi(.)" display="inline"><mrow><mi>π</mi><mrow><mo>(</mo><mo>.</mo><mo>)</mo></mrow></mrow></math> of candidates and Turker pairs. The above-mentioned intuitions can be formulated as follows:</p>
+</div>
+<div id="S4.SS1.p3" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p3.m1" class="ltx_Math" alttext="\bullet" display="inline"><mo>∙</mo></math> <span class="ltx_text ltx_font_bold">Homogeneity.</span> We use adjacency matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p3.m2" class="ltx_Math" alttext="[M]_{|\textbf{c}|\times|\textbf{c}|}" display="inline"><msub><mrow><mo>[</mo><mi>M</mi><mo>]</mo></mrow><mrow><mrow><mo fence="true">|</mo><mtext>𝐜</mtext><mo fence="true">|</mo></mrow><mo>×</mo><mrow><mo fence="true">|</mo><mtext>𝐜</mtext><mo fence="true">|</mo></mrow></mrow></msub></math> to describe the homogeneous affinity between candidates and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p3.m3" class="ltx_Math" alttext="[N]_{|\textbf{t}|\times|\textbf{t}|}" display="inline"><msub><mrow><mo>[</mo><mi>N</mi><mo>]</mo></mrow><mrow><mrow><mo fence="true">|</mo><mtext>𝐭</mtext><mo fence="true">|</mo></mrow><mo>×</mo><mrow><mo fence="true">|</mo><mtext>𝐭</mtext><mo fence="true">|</mo></mrow></mrow></msub></math> to describe the affinity between Turkers.</p>
+<table id="S4.E2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E2.m1" class="ltx_Math" alttext="\textbf{c}\propto{M}^{T}\textbf{c},\qquad\textbf{t}\propto{N}^{T}\textbf{t}" display="block"><mrow><mrow><mtext>𝐜</mtext><mo>∝</mo><mrow><msup><mi>M</mi><mi>T</mi></msup><mo>⁢</mo><mtext>𝐜</mtext></mrow></mrow><mo separator="true">,  </mo><mrow><mtext>𝐭</mtext><mo>∝</mo><mrow><msup><mi>N</mi><mi>T</mi></msup><mo>⁢</mo><mtext>𝐭</mtext></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+</div>
+<div id="S4.SS1.p4" class="ltx_para">
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m1" class="ltx_Math" alttext="c=|V_{C}|" display="inline"><mrow><mi>c</mi><mo>=</mo><mrow><mo fence="true">|</mo><msub><mi>V</mi><mi>C</mi></msub><mo fence="true">|</mo></mrow></mrow></math> is the number of vertices in the candidate graph and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m2" class="ltx_Math" alttext="t=|V_{T}|" display="inline"><mrow><mi>t</mi><mo>=</mo><mrow><mo fence="true">|</mo><msub><mi>V</mi><mi>T</mi></msub><mo fence="true">|</mo></mrow></mrow></math> is the number of vertices in the Turker graph. The adjacency matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m3" class="ltx_Math" alttext="[M]" display="inline"><mrow><mo>[</mo><mi>M</mi><mo>]</mo></mrow></math> denotes the transition probabilities between candidates, and analogously matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p4.m4" class="ltx_Math" alttext="[N]" display="inline"><mrow><mo>[</mo><mi>N</mi><mo>]</mo></mrow></math> denotes the affinity between Turker collaboration pairs.</p>
+</div>
+<div id="S4.SS1.p5" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p5.m1" class="ltx_Math" alttext="\bullet" display="inline"><mo>∙</mo></math> <span class="ltx_text ltx_font_bold">Heterogeneity.</span> We use an adjacency matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p5.m2" class="ltx_Math" alttext="[\hat{W}]_{|\textbf{c}|\times|\textbf{t}|}" display="inline"><msub><mrow><mo>[</mo><mover accent="true"><mi>W</mi><mo stretchy="false">^</mo></mover><mo>]</mo></mrow><mrow><mrow><mo fence="true">|</mo><mtext>𝐜</mtext><mo fence="true">|</mo></mrow><mo>×</mo><mrow><mo fence="true">|</mo><mtext>𝐭</mtext><mo fence="true">|</mo></mrow></mrow></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p5.m3" class="ltx_Math" alttext="[\bar{W}]_{|\textbf{t}|\times|\textbf{c}|}" display="inline"><msub><mrow><mo>[</mo><mover accent="true"><mi>W</mi><mo stretchy="false">¯</mo></mover><mo>]</mo></mrow><mrow><mrow><mo fence="true">|</mo><mtext>𝐭</mtext><mo fence="true">|</mo></mrow><mo>×</mo><mrow><mo fence="true">|</mo><mtext>𝐜</mtext><mo fence="true">|</mo></mrow></mrow></msub></math> to describe the authorship between the output candidate and the producer Turker pair from both of the candidate-to-Turker and Turker-to-candidate perspectives.</p>
+<table id="S4.E3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E3.m1" class="ltx_Math" alttext="\textbf{c}\propto\hat{W}^{T}\textbf{t},\qquad\textbf{t}\propto\bar{W}^{T}%&#10;\textbf{c}" display="block"><mrow><mrow><mtext>𝐜</mtext><mo>∝</mo><mrow><msup><mover accent="true"><mi>W</mi><mo stretchy="false">^</mo></mover><mi>T</mi></msup><mo>⁢</mo><mtext>𝐭</mtext></mrow></mrow><mo separator="true">,  </mo><mrow><mtext>𝐭</mtext><mo>∝</mo><mrow><msup><mover accent="true"><mi>W</mi><mo stretchy="false">¯</mo></mover><mi>T</mi></msup><mo>⁢</mo><mtext>𝐜</mtext></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+</table>
+</div>
+<div id="S4.SS1.p6" class="ltx_para">
+<p class="ltx_p">All affinity matrices will be defined in the next section. By fusing the above equations, we can have the following iterative calculation in matrix forms. For numerical computation of the saliency scores, the initial scores of all sentences and Turkers are set to 1 and the following two steps are alternated until convergence to select the best candidate.</p>
+</div>
+<div id="S4.SS1.p7" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Step 1</span>: compute the saliency scores of candidates, and then normalize using <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p7.m1" class="ltx_Math" alttext="\ell" display="inline"><mi mathvariant="normal">ℓ</mi></math>-1 norm.</p>
+<table id="S4.E4" class="ltx_equationgroup">
+
+<tr id="S4.E4X" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E4X.m2" class="ltx_Math" alttext="\displaystyle\textbf{c}^{(n)}" display="inline"><msup><mtext>𝐜</mtext><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E4X.m3" class="ltx_Math" alttext="\displaystyle=(1-\lambda){M}^{T}\textbf{c}^{(n-1)}+\lambda\hat{W}\textbf{t}^{(%&#10;n-1)}" display="inline"><mrow><mi/><mo>=</mo><mrow><mrow><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><mi>λ</mi></mrow><mo>)</mo></mrow><mo>⁢</mo><msup><mi>M</mi><mi>T</mi></msup><mo>⁢</mo><msup><mtext>𝐜</mtext><mrow><mo>(</mo><mrow><mi>n</mi><mo>-</mo><mn>1</mn></mrow><mo>)</mo></mrow></msup></mrow><mo>+</mo><mrow><mi>λ</mi><mo>⁢</mo><mover accent="true"><mi>W</mi><mo stretchy="false">^</mo></mover><mo>⁢</mo><msup><mtext>𝐭</mtext><mrow><mo>(</mo><mrow><mi>n</mi><mo>-</mo><mn>1</mn></mrow><mo>)</mo></mrow></msup></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="2" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equationgroup">(4)</span></td></tr>
+<tr id="S4.E4Xa" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E4Xa.m2" class="ltx_Math" alttext="\displaystyle\textbf{c}^{(n)}" display="inline"><msup><mtext>𝐜</mtext><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E4Xa.m3" class="ltx_Math" alttext="\displaystyle=\textbf{c}^{(n)}/||\textbf{c}^{(n)}||_{1}" display="inline"><mrow><mi/><mo>=</mo><mrow><msup><mtext>𝐜</mtext><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup><mo>/</mo><msub><mrow><mo fence="true">||</mo><msup><mtext>𝐜</mtext><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup><mo fence="true">||</mo></mrow><mn>1</mn></msub></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S4.SS1.p8" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Step 2</span>: compute the saliency scores of Turker pairs, and then normalize using <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p8.m1" class="ltx_Math" alttext="\ell" display="inline"><mi mathvariant="normal">ℓ</mi></math>-1 norm.</p>
+<table id="S4.E5" class="ltx_equationgroup">
+
+<tr id="S4.E5X" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E5X.m2" class="ltx_Math" alttext="\displaystyle\textbf{t}^{(n)}" display="inline"><msup><mtext>𝐭</mtext><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E5X.m3" class="ltx_Math" alttext="\displaystyle=(1-\lambda){N}^{T}\textbf{t}^{(n-1)}+\lambda\bar{W}\textbf{c}^{(%&#10;n-1)}" display="inline"><mrow><mi/><mo>=</mo><mrow><mrow><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><mi>λ</mi></mrow><mo>)</mo></mrow><mo>⁢</mo><msup><mi>N</mi><mi>T</mi></msup><mo>⁢</mo><msup><mtext>𝐭</mtext><mrow><mo>(</mo><mrow><mi>n</mi><mo>-</mo><mn>1</mn></mrow><mo>)</mo></mrow></msup></mrow><mo>+</mo><mrow><mi>λ</mi><mo>⁢</mo><mover accent="true"><mi>W</mi><mo stretchy="false">¯</mo></mover><mo>⁢</mo><msup><mtext>𝐜</mtext><mrow><mo>(</mo><mrow><mi>n</mi><mo>-</mo><mn>1</mn></mrow><mo>)</mo></mrow></msup></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="2" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equationgroup">(5)</span></td></tr>
+<tr id="S4.E5Xa" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E5Xa.m2" class="ltx_Math" alttext="\displaystyle\textbf{t}^{(n)}" display="inline"><msup><mtext>𝐭</mtext><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E5Xa.m3" class="ltx_Math" alttext="\displaystyle=\textbf{t}^{(n)}/||\textbf{t}^{(n)}||_{1}" display="inline"><mrow><mi/><mo>=</mo><mrow><msup><mtext>𝐭</mtext><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup><mo>/</mo><msub><mrow><mo fence="true">||</mo><msup><mtext>𝐭</mtext><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></msup><mo fence="true">||</mo></mrow><mn>1</mn></msub></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p8.m2" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math> specifies the relative contributions to the saliency score trade-off between the homogeneous affinity and the heterogeneous affinity. In order to guarantee the convergence of the iterative form, we must force the transition matrix to be stochastic and irreducible. To this end, we must make the <span class="ltx_text ltx_font_bold">c</span> and <span class="ltx_text ltx_font_bold">t</span> <span class="ltx_text ltx_font_italic">column stochastic</span> <cite class="ltx_cite">[<a href="#bib.bib11" title="Deeper inside pagerank" class="ltx_ref">20</a>]</cite>. <span class="ltx_text ltx_font_bold">c</span> and <span class="ltx_text ltx_font_bold">t</span> are therefore normalized after each iteration of Equation (4) and (5).</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Intra-Graph Ranking</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">The standard PageRank algorithm starts from an arbitrary node and randomly selects to either follow a random out-going edge (considering the weighted transition matrix) or to jump to a random node (treating all nodes with equal probability).</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">In a simple random walk, it is assumed that all nodes in the transitional matrix are equi-probable before the walk starts. Then <span class="ltx_text ltx_font_bold">c</span> and <span class="ltx_text ltx_font_bold">t</span> are calculated as:</p>
+<table id="S4.E6" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E6.m1" class="ltx_Math" alttext="\textbf{c}=\mu M^{T}\textbf{c}+(1-\mu)\frac{\textbf{1}}{|V_{C}|}" display="block"><mrow><mtext>𝐜</mtext><mo>=</mo><mrow><mrow><mi>μ</mi><mo>⁢</mo><msup><mi>M</mi><mi>T</mi></msup><mo>⁢</mo><mtext>𝐜</mtext></mrow><mo>+</mo><mrow><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><mi>μ</mi></mrow><mo>)</mo></mrow><mo>⁢</mo><mfrac><mtext>𝟏</mtext><mrow><mo fence="true">|</mo><msub><mi>V</mi><mi>C</mi></msub><mo fence="true">|</mo></mrow></mfrac></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(6)</span></td></tr>
+</table>
+</div>
+<div id="S4.SS2.p3" class="ltx_para">
+<p class="ltx_p">and</p>
+<table id="S4.E7" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E7.m1" class="ltx_Math" alttext="\textbf{t}=\mu N^{T}\textbf{t}+(1-\mu)\frac{\textbf{1}}{|V_{T}|}" display="block"><mrow><mtext>𝐭</mtext><mo>=</mo><mrow><mrow><mi>μ</mi><mo>⁢</mo><msup><mi>N</mi><mi>T</mi></msup><mo>⁢</mo><mtext>𝐭</mtext></mrow><mo>+</mo><mrow><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><mi>μ</mi></mrow><mo>)</mo></mrow><mo>⁢</mo><mfrac><mtext>𝟏</mtext><mrow><mo fence="true">|</mo><msub><mi>V</mi><mi>T</mi></msub><mo fence="true">|</mo></mrow></mfrac></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(7)</span></td></tr>
+</table>
+<p class="ltx_p">where <span class="ltx_text ltx_font_bold">1</span> is a vector with all elements equaling to 1 and the size is correspondent to the size of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m1" class="ltx_Math" alttext="V_{C}" display="inline"><msub><mi>V</mi><mi>C</mi></msub></math> or <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m2" class="ltx_Math" alttext="V_{T}" display="inline"><msub><mi>V</mi><mi>T</mi></msub></math>. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m3" class="ltx_Math" alttext="\mu" display="inline"><mi>μ</mi></math> is the damping factor usually set to 0.85, as in the PageRank algorithm.</p>
+</div>
+</div>
+<div id="S4.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.3 </span>Affinity Matrix Establishment</h3>
+
+<div id="S4.SS3.p1" class="ltx_para">
+<p class="ltx_p">We introduce the affinity matrix calculation, including homogeneous affinity (i.e., <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p1.m1" class="ltx_Math" alttext="{M},{N}" display="inline"><mrow><mi>M</mi><mo>,</mo><mi>N</mi></mrow></math>) and heterogeneous affinity (i.e., <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p1.m2" class="ltx_Math" alttext="\hat{W},\bar{W}" display="inline"><mrow><mover accent="true"><mi>W</mi><mo stretchy="false">^</mo></mover><mo>,</mo><mover accent="true"><mi>W</mi><mo stretchy="false">¯</mo></mover></mrow></math>).</p>
+</div>
+<div id="S4.SS3.p2" class="ltx_para">
+<p class="ltx_p">As discussed, we model the collection of candidates as a weighted undirected graph, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m1" class="ltx_Math" alttext="G_{C}" display="inline"><msub><mi>G</mi><mi>C</mi></msub></math>, in which nodes in the graph represent candidate sentences and edges represent lexical relatedness. We define an edge’s weight to be the cosine similarity between the candidates represented by the nodes that it connects. The adjacency matrix M describes such a graph, with each entry corresponding to the weight of an edge.</p>
+<table id="S4.E8" class="ltx_equationgroup">
+
+<tr id="S4.E8X" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E8X.m2" class="ltx_Math" alttext="\displaystyle\mathcal{F}" display="inline"><mi class="ltx_font_mathcaligraphic">ℱ</mi></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E8X.m3" class="ltx_Math" alttext="\displaystyle(c_{i},c_{j})=\frac{c_{i}\cdot c_{j}}{||c_{i}||||c_{j}||}" display="inline"><mrow><mrow><mo>(</mo><mrow><msub><mi>c</mi><mi>i</mi></msub><mo>,</mo><msub><mi>c</mi><mi>j</mi></msub></mrow><mo>)</mo></mrow><mo>=</mo><mstyle displaystyle="true"><mfrac><mrow><msub><mi>c</mi><mi>i</mi></msub><mo>⋅</mo><msub><mi>c</mi><mi>j</mi></msub></mrow><mrow><mrow><mo fence="true">||</mo><msub><mi>c</mi><mi>i</mi></msub><mo fence="true">||</mo></mrow><mo>⁢</mo><mrow><mo fence="true">||</mo><msub><mi>c</mi><mi>j</mi></msub><mo fence="true">||</mo></mrow></mrow></mfrac></mstyle></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="2" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equationgroup">(8)</span></td></tr>
+<tr id="S4.E8Xa" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E8Xa.m2" class="ltx_Math" alttext="\displaystyle M_{ij}=\frac{\mathcal{F}(c_{i},c_{j})}{\sum_{k}\mathcal{F}(c_{i}%&#10;,c_{k})}" display="inline"><mrow><msub><mi>M</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>=</mo><mstyle displaystyle="true"><mfrac><mrow><mi class="ltx_font_mathcaligraphic">ℱ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>c</mi><mi>i</mi></msub><mo>,</mo><msub><mi>c</mi><mi>j</mi></msub></mrow><mo>)</mo></mrow></mrow><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mi>k</mi></msub><mrow><mi class="ltx_font_mathcaligraphic">ℱ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>c</mi><mi>i</mi></msub><mo>,</mo><msub><mi>c</mi><mi>k</mi></msub></mrow><mo>)</mo></mrow></mrow></mrow></mfrac></mstyle></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m2" class="ltx_Math" alttext="\mathcal{F}(.)" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">ℱ</mi><mrow><mo>(</mo><mo>.</mo><mo>)</mo></mrow></mrow></math> is the cosine similarity and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m3" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math> is a term vector corresponding to a candidate. We treat a candidate as a short document and weight each term with <span class="ltx_text ltx_font_italic">tf.idf</span> <cite class="ltx_cite">[<a href="#bib.bib8" title="Introduction to information retrieval" class="ltx_ref">23</a>]</cite>, where <span class="ltx_text ltx_font_italic">tf</span> is the term frequency and <span class="ltx_text ltx_font_italic">idf</span> is the inverse document frequency.</p>
+</div>
+<div id="S4.SS3.p3" class="ltx_para">
+<p class="ltx_p">The Turker graph, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m1" class="ltx_Math" alttext="G_{T}" display="inline"><msub><mi>G</mi><mi>T</mi></msub></math>, is an undirected graph whose edges represent “collaboration.” Formally, let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m2" class="ltx_Math" alttext="t_{i}" display="inline"><msub><mi>t</mi><mi>i</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m3" class="ltx_Math" alttext="t_{j}" display="inline"><msub><mi>t</mi><mi>j</mi></msub></math> be two translator/editor pairs; we say that pair <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m4" class="ltx_Math" alttext="t_{i}" display="inline"><msub><mi>t</mi><mi>i</mi></msub></math> “collaborates with” pair <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m5" class="ltx_Math" alttext="t_{j}" display="inline"><msub><mi>t</mi><mi>j</mi></msub></math> (and therefore, there is an edge between <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m6" class="ltx_Math" alttext="t_{i}" display="inline"><msub><mi>t</mi><mi>i</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m7" class="ltx_Math" alttext="t_{j}" display="inline"><msub><mi>t</mi><mi>j</mi></msub></math>) if <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m8" class="ltx_Math" alttext="t_{i}" display="inline"><msub><mi>t</mi><mi>i</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m9" class="ltx_Math" alttext="t_{j}" display="inline"><msub><mi>t</mi><mi>j</mi></msub></math> share either a translator or an editor (or share both a translator and an editor). Let the function <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m10" class="ltx_Math" alttext="\mathcal{I}(t_{i},t_{j})" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">ℐ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>t</mi><mi>i</mi></msub><mo>,</mo><msub><mi>t</mi><mi>j</mi></msub></mrow><mo>)</mo></mrow></mrow></math> denote the number of “collaborations” (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m11" class="ltx_Math" alttext="\#col" display="inline"><mrow><mi mathvariant="normal">#</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>l</mi></mrow></math>) between <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m12" class="ltx_Math" alttext="t_{i}" display="inline"><msub><mi>t</mi><mi>i</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m13" class="ltx_Math" alttext="t_{j}" display="inline"><msub><mi>t</mi><mi>j</mi></msub></math>.</p>
+<table id="S4.E9" class="ltx_equationgroup">
+
+<tr id="S4.E9X" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E9X.m2" class="ltx_Math" alttext="\displaystyle\mathcal{I}(t_{i},t_{j})" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">ℐ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>t</mi><mi>i</mi></msub><mo>,</mo><msub><mi>t</mi><mi>j</mi></msub></mrow><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E9X.m3" class="ltx_Math" alttext="\displaystyle=\begin{cases}\#col&amp;(e_{ij}\in E_{T})\\&#10;0&amp;\text{otherwise}\end{cases}," display="inline"><mrow><mrow><mi/><mo>=</mo><mrow><mo>{</mo><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mrow><mi mathvariant="normal">#</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>l</mi></mrow></mtd><mtd columnalign="left"><mrow><mo>(</mo><mrow><msub><mi>e</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>∈</mo><msub><mi>E</mi><mi>T</mi></msub></mrow><mo>)</mo></mrow></mtd></mtr><mtr><mtd columnalign="left"><mn>0</mn></mtd><mtd columnalign="left"><mtext>otherwise</mtext></mtd></mtr></mtable></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equationgroup">(9)</span></td></tr>
+</table>
+</div>
+<div id="S4.SS3.p4" class="ltx_para">
+<p class="ltx_p">Then the adjacency matrix N is then defined as</p>
+</div>
+<div id="S4.SS3.p5" class="ltx_para">
+<table id="S4.E10" class="ltx_equationgroup">
+
+<tr id="S4.E10X" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E10X.m2" class="ltx_Math" alttext="\displaystyle N_{ij}" display="inline"><msub><mi>N</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E10X.m3" class="ltx_Math" alttext="\displaystyle=\frac{\mathcal{I}(t_{i},t_{j})}{\sum_{k}\mathcal{I}(t_{i},t_{k})}" display="inline"><mrow><mi/><mo>=</mo><mstyle displaystyle="true"><mfrac><mrow><mi class="ltx_font_mathcaligraphic">ℐ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>t</mi><mi>i</mi></msub><mo>,</mo><msub><mi>t</mi><mi>j</mi></msub></mrow><mo>)</mo></mrow></mrow><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mi>k</mi></msub><mrow><mi class="ltx_font_mathcaligraphic">ℐ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>t</mi><mi>i</mi></msub><mo>,</mo><msub><mi>t</mi><mi>k</mi></msub></mrow><mo>)</mo></mrow></mrow></mrow></mfrac></mstyle></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equationgroup">(10)</span></td></tr>
+</table>
+</div>
+<div id="S4.SS3.p6" class="ltx_para">
+<p class="ltx_p">In the bipartite candidate-Turker graph <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p6.m1" class="ltx_Math" alttext="G_{TC}" display="inline"><msub><mi>G</mi><mrow><mi>T</mi><mo>⁢</mo><mi>C</mi></mrow></msub></math>, the entry <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p6.m2" class="ltx_Math" alttext="E_{TC}(i,j)" display="inline"><mrow><msub><mi>E</mi><mrow><mi>T</mi><mo>⁢</mo><mi>C</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow><mo>)</mo></mrow></mrow></math> is an indicator function denoting whether the candidate <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p6.m3" class="ltx_Math" alttext="c_{i}" display="inline"><msub><mi>c</mi><mi>i</mi></msub></math> is generated by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p6.m4" class="ltx_Math" alttext="t_{j}" display="inline"><msub><mi>t</mi><mi>j</mi></msub></math>:</p>
+<table id="S4.E11" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E11.m1" class="ltx_Math" alttext="\mathcal{A}(c_{i},t_{j})=\begin{cases}1&amp;(e_{ij}\in E_{TC})\\&#10;0&amp;\text{otherwise}\end{cases}" display="block"><mrow><mrow><mi class="ltx_font_mathcaligraphic">𝒜</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>c</mi><mi>i</mi></msub><mo>,</mo><msub><mi>t</mi><mi>j</mi></msub></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mo>{</mo><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mn>1</mn></mtd><mtd columnalign="left"><mrow><mo>(</mo><mrow><msub><mi>e</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>∈</mo><msub><mi>E</mi><mrow><mi>T</mi><mo>⁢</mo><mi>C</mi></mrow></msub></mrow><mo>)</mo></mrow></mtd></mtr><mtr><mtd columnalign="left"><mn>0</mn></mtd><mtd columnalign="left"><mtext>otherwise</mtext></mtd></mtr></mtable></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(11)</span></td></tr>
+</table>
+</div>
+<div id="S4.SS3.p7" class="ltx_para">
+<p class="ltx_p">Through <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p7.m1" class="ltx_Math" alttext="E_{TC}" display="inline"><msub><mi>E</mi><mrow><mi>T</mi><mo>⁢</mo><mi>C</mi></mrow></msub></math> we define the weight matrices <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p7.m2" class="ltx_Math" alttext="\bar{W}_{ij}" display="inline"><msub><mover accent="true"><mi>W</mi><mo stretchy="false">¯</mo></mover><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p7.m3" class="ltx_Math" alttext="\hat{W}_{ij}" display="inline"><msub><mover accent="true"><mi>W</mi><mo stretchy="false">^</mo></mover><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub></math>, containing the conditional probabilities of transitions from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p7.m4" class="ltx_Math" alttext="c_{i}" display="inline"><msub><mi>c</mi><mi>i</mi></msub></math> to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p7.m5" class="ltx_Math" alttext="t_{j}" display="inline"><msub><mi>t</mi><mi>j</mi></msub></math> and vice versa:</p>
+<table id="S4.E12" class="ltx_equationgroup">
+
+<tr id="S4.E12X" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E12X.m2" class="ltx_Math" alttext="\displaystyle\bar{W}_{ij}=\frac{\mathcal{A}(c_{i},t_{j})}{\sum_{k}\mathcal{A}(%&#10;c_{i},t_{k})}," display="inline"><mrow><mrow><msub><mover accent="true"><mi>W</mi><mo stretchy="false">¯</mo></mover><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>=</mo><mstyle displaystyle="true"><mfrac><mrow><mi class="ltx_font_mathcaligraphic">𝒜</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>c</mi><mi>i</mi></msub><mo>,</mo><msub><mi>t</mi><mi>j</mi></msub></mrow><mo>)</mo></mrow></mrow><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mi>k</mi></msub><mrow><mi class="ltx_font_mathcaligraphic">𝒜</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>c</mi><mi>i</mi></msub><mo>,</mo><msub><mi>t</mi><mi>k</mi></msub></mrow><mo>)</mo></mrow></mrow></mrow></mfrac></mstyle></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="2" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equationgroup">(12)</span></td></tr>
+<tr id="S4.E12Xa" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E12Xa.m2" class="ltx_Math" alttext="\displaystyle\hat{W}_{ij}=\frac{\mathcal{A}(c_{i},t_{j})}{\sum_{k}\mathcal{A}(%&#10;c_{k},t_{j})}" display="inline"><mrow><msub><mover accent="true"><mi>W</mi><mo stretchy="false">^</mo></mover><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>=</mo><mstyle displaystyle="true"><mfrac><mrow><mi class="ltx_font_mathcaligraphic">𝒜</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>c</mi><mi>i</mi></msub><mo>,</mo><msub><mi>t</mi><mi>j</mi></msub></mrow><mo>)</mo></mrow></mrow><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mi>k</mi></msub><mrow><mi class="ltx_font_mathcaligraphic">𝒜</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>c</mi><mi>k</mi></msub><mo>,</mo><msub><mi>t</mi><mi>j</mi></msub></mrow><mo>)</mo></mrow></mrow></mrow></mfrac></mstyle></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Evaluation</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">We are interested in testing our random walk method, which incorporates information from both the candidate translations and from the Turkers. We want to test two versions of our proposed collaborative co-ranking method: 1) based on the unedited translations only and 2) based on the edited sentences after translator/editor collaborations.</p>
+</div>
+<div id="S5.SS3.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Metric</h4>
+
+<div id="S5.SS3.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">Since we have four professional translation sets, we can calculate the Bilingual Evaluation Understudy (BLEU) score <cite class="ltx_cite">[<a href="#bib.bib9" title="BLEU: a method for automatic evaluation of machine translation" class="ltx_ref">27</a>]</cite> for one professional translator (P1) using the other three (P2,3,4) as a reference set. We repeat the process four times, scoring each professional translator against the others, to calculate the expected range of professional quality translation. In the following sections, we evaluate each of our methods by calculating BLEU scores against the same four sets of three reference translations. Therefore, each number reported in our experimental results is an average of four numbers, corresponding to the four possible ways of choosing 3 of the 4 reference sets. This allows us to compare the BLEU score achieved by our methods against the BLEU scores achievable by professional translators.</p>
+</div>
+<div id="S5.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_t">Reference (Avg.)</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">42.51</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_t">Oracle (Seg-Trans)</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">44.93</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_t">Oracle (Seg-Trans+Edit)</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">48.44</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_t">Oracle (Turker-Trans)</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">38.66</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_t">Oracle (Turker-Trans+Edit)</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">39.16</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_tt">Random</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">30.52</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_t">Lowest TER</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">35.78</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_t">Graph Ranking (Trans)</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">38.88</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_rr ltx_border_t">Graph Ranking (Trans+Edit)</th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">41.43</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 2: </span>Overall BLEU performance for all methods (with and without post-editing). The highlighted result indicates the best performance, which is based on both candidate sentences and Turker information.</div>
+</div>
+</div>
+<div id="S5.SS3.SSS0.P2" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Baselines</h4>
+
+<div id="S5.SS3.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">As a naive baseline, we choose one candidate translation at random for each input Urdu sentence. To establish an upper bound for our methods, and to determine if there exist high-quality Turker translations at all, we compute four oracle scores. The first oracle operates at the segment level on the sentences produced by translators only: for each source segment, we choose from the translations the one that scores highest (in terms of BLEU) against the reference sentences. The second oracle is applied similarly, but chooses from the candidates produced by the collaboration of translator/post-editor pairs. The third oracle operates at the worker level: for each source segment, we choose from the translations the one provided by the worker whose translations (over all sentences) score the highest on average. The fourth oracle also operates at the worker level, but selects from sentences produced by translator/post-editor collaborations. These oracle methods represent ideal solutions under our scenario. We also examine two voting-inspired methods. The first method selects the translation with the minimum average TER <cite class="ltx_cite">[<a href="#bib.bib10" title="A study of translation edit rate with targeted human annotation" class="ltx_ref">33</a>]</cite> against the other translations; intuitively, this would represent the “consensus” translation. The second method selects the translation generated by the Turker who, on average, provides translations with the minimum average TER.</p>
+</div>
+</div>
+<div id="S5.SS3.SSS0.P3" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Results</h4>
+
+<div id="S5.SS3.SSS0.P3.p1" class="ltx_para">
+<p class="ltx_p">A summary of our results in given in Table <a href="#S5.T2" title="Table 2 ‣ Metric ‣ 5 Evaluation ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>. As expected, random selection yields bad performance, with a BLEU score of 30.52. The oracles indicate that there is usually an acceptable translation from the Turkers for any given sentence. Since the oracles select from a small group of only 4 translations per source segment, they are not overly optimistic, and rather reflect the true potential of the collected translations. On average, the reference translations give a score of 42.38. To put this in perspective, the output of a state-of-the-art machine translation system (the syntax-based variant of Joshua) achieves a score of 26.91, which is reported in <cite class="ltx_cite">[<a href="#bib.bib29" title="Crowdsourcing translation: professional quality from non-professionals" class="ltx_ref">43</a>]</cite>. The approach which selects the translations with the minimum average TER <cite class="ltx_cite">[<a href="#bib.bib10" title="A study of translation edit rate with targeted human annotation" class="ltx_ref">33</a>]</cite> against the other three translations (the “consensus” translation) achieves BLEU scores of 35.78.</p>
+</div>
+<div id="S5.SS3.SSS0.P3.p2" class="ltx_para">
+<p class="ltx_p">Using the raw translations without post-editing, our graph-based ranking method achieves a BLEU score of 38.89, compared to <cite class="ltx_cite">Zaidan and Callison-Burch (<a href="#bib.bib29" title="Crowdsourcing translation: professional quality from non-professionals" class="ltx_ref">2011</a>)</cite>’ s reported score of 28.13, which they achieved using a linear feature-based classification. Their linear classifier achieved a reported score of 39.06<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>Note that the data we used in our experiments are slightly different, by discarding nearly 100 NULL sentences in the raw data. We do not re-implement this baseline but report the results from the paper directly. According to our experiments, most of the results generated by baselines and oracles are very close to the previously reported values.</span></span></span> when combining information from both translators and editors. In contrast, our proposed graph-based ranking framework achieves a score of 41.43 when using the same information. This boost in BLEU score confirms our intuition that the hidden collaboration networks between candidate translations and transltor/editor pairs are indeed useful.</p>
+</div>
+</div>
+<div id="S5.SS3.SSS0.P4" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Parameter Tuning</h4>
+
+<div id="S5.F5" class="ltx_figure"><img src="P14-1107/image005.png" id="S5.F5.g1" class="ltx_graphics ltx_centering" width="323" height="252" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 5: </span>Effect of candidate-Turker coupling (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F5.m2" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math>) on BLEU score.</div>
+</div>
+<div id="S5.SS3.SSS0.P4.p1" class="ltx_para">
+<p class="ltx_p">There are two parameters in our experimental setups: <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.SSS0.P4.p1.m1" class="ltx_Math" alttext="\mu" display="inline"><mi>μ</mi></math> controls the probability of starting a new random walk and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.SSS0.P4.p1.m2" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math> controls the coupling between the candidate and Turker sub-graphs. We set the damping factor <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.SSS0.P4.p1.m3" class="ltx_Math" alttext="\mu" display="inline"><mi>μ</mi></math> to 0.85, following the standard PageRank paradigm. In order to determine a value for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.SSS0.P4.p1.m4" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math>, we used the average BLEU, computed against the professional reference translations, as a tuning metric. We experimented with values of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.SSS0.P4.p1.m5" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math> ranging from 0 to 1, with a step size of 0.05 (Figure <a href="#S5.F5" title="Figure 5 ‣ Parameter Tuning ‣ 5 Evaluation ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>). Small <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.SSS0.P4.p1.m6" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math> values place little emphasis on the candidate/Turker coupling, whereas larger values rely more heavily on the co-ranking. Overall, we observed better performance with values within the range of 0.05-0.15. This suggests that both sources of information– the candidate itself and its authors– are important for the crowdsourcing translation task. In all of our reported results, we used the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.SSS0.P4.p1.m7" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math> = 0.1.</p>
+</div>
+</div>
+<div id="S5.SS3.SSS0.P5" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Analysis</h4>
+
+<div id="S5.SS3.SSS0.P5.p1" class="ltx_para">
+<p class="ltx_p">We examine the relative contribution of each component of our approach on the overall performance. We first examine the centroid-based ranking on the candidate sub-graph (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.SSS0.P5.p1.m1" class="ltx_Math" alttext="G_{C}" display="inline"><msub><mi>G</mi><mi>C</mi></msub></math>) alone to see the effect of voting among translated sentences; we denote this strategy as <span class="ltx_text ltx_font_italic">plain ranking</span>. Then we incorporate the standard random walk on the Turker graph (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.SSS0.P5.p1.m2" class="ltx_Math" alttext="G_{T}" display="inline"><msub><mi>G</mi><mi>T</mi></msub></math>) to include the structural information but without yet including any collaboration information; that is, we incorporate information from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.SSS0.P5.p1.m3" class="ltx_Math" alttext="G_{T}" display="inline"><msub><mi>G</mi><mi>T</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.SSS0.P5.p1.m4" class="ltx_Math" alttext="G_{C}" display="inline"><msub><mi>G</mi><mi>C</mi></msub></math> without including edges linking the two together. The co-ranking paradigm is exactly the same as the framework described in Section 3.2, but with simplified structures.</p>
+</div>
+<div id="S5.SS3.SSS0.P5.p2" class="ltx_para">
+<p class="ltx_p">Finally, we examine the two-step collaboration based candidate-Turker graph using several variations on edge establishment. As before, the nodes are the translator/post-editor working pairs. We investigate three settings in which 1) edges connect two nodes when they share only a translator, 2) edges connect two nodes when they share only a post-editor, and 3) edges connect two nodes when they share either a translator or a post-editor. These results are summarized in Table <a href="#S5.T3" title="Table 3 ‣ Analysis ‣ 5 Evaluation ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.</p>
+</div>
+<div id="S5.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_t">Plain ranking</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">38.89</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_tt">w/o collaboration</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">38.88</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_tt">Shared translator</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">41.38</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_t">Shared post-editor</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">41.29</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_rr ltx_border_t">Shared Turker</th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">41.43</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 3: </span>Variations of all component settings.</div>
+</div>
+<div id="S5.SS3.SSS0.P5.p3" class="ltx_para">
+<p class="ltx_p">Interestingly, we observe that when modeling the linkage between the collaboration pairs, connecting Turker pairs which share either a translator or the post-editor achieves better performance than connecting pairs that share only translators or connecting pairs which share only editors. This result supports the intuition that a denser collaboration matrix will help propagate saliency to good translators/post-editors and hence provides better predictions for candidate quality.</p>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Conclusion</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">We have proposed an algorithm for using a two-step collaboration between non-professional translators and post-editors to obtain professional-quality translations. Our method, based on a co-ranking model, selects the best crowdsourced translation from a set of candidates, and is capable of selecting translations which near professional quality.</p>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p class="ltx_p">Crowdsourcing can play a pivotal role in future efforts to create parallel translation datasets. In addition to its benefits of cost and scalability, crowdsourcing provides access to languages that currently fall outside the scope of statistical machine translation research. In future work on crowdsourced translation, further benefits in quality improvement and cost reduction could stem from 1) building ground truth data sets based on high-quality Turkers’ translations and 2) identifying when sufficient data has been collected for a given input, to avoid soliciting unnecessary redundant translations.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgements</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">This material is based on research sponsored by a DARPA Computer Science Study Panel phase 3 award entitled “Crowdsourcing Translation” (contract D12PC00368). The views and conclusions contained in this publication are those of the authors and should not be interpreted as representing official policies or endorsements by DARPA or the U.S. Government. This research was supported by the Johns Hopkins University Human Language Technology Center of Excellence and through gifts from Microsoft, Google and Facebook.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib42" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Abdul-Rauf and H. Schwenk</span><span class="ltx_text ltx_bib_year">(2009-03)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">On the use of comparable corpora to improve SMT performance</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 16–23</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/E09-1003" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">V. Ambati, S. Vogel and J. G. Carbonell</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Active learning and crowd-sourcing for machine translation.</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">11</span>, <span class="ltx_text ltx_bib_pages"> pp. 2169–2174</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Related work ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">V. Ambati and S. Vogel</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Can crowds build parallel corpora for machine translation systems?</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Related work ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib21" class="ltx_bibitem ltx_bib_thesis"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">V. Ambati</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Active learning and crowdsourcing for machine translation in low resource scenarios</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_type">Ph.D. Thesis</span>, <span class="ltx_text ltx_bib_publisher">Language Technologies Institute, School of Computer Science, Carnegie Mellon University</span>, <span class="ltx_text ltx_bib_place">Pittsburgh, PA</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.lti.cs.cmu.edu/research/thesis/2011/vamshi_ambati.pdf" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Related work ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib30" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. S. Bernstein, G. Little, R. C. Miller, B. Hartmann, M. S. Ackerman, D. R. Karger, D. Crowell and K. Panovich</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Soylent: a word processor with a crowd inside</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related work ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib26" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Bloodgood and C. Callison-Burch</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Large-scale cost-focused active learning for statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P10-1088" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Related work ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib22" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Callison-Burch and M. Dredze</span><span class="ltx_text ltx_bib_year">(2010-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Creating speech and language data with Amazon’s Mechanical Turk</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1–12</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W10-0701" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related work ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib40" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Callison-Burch</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Linear B system description for the 2005 NIST MT evaluation exercise</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related work ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib19" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Callison-Burch</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Fast, cheap, and creative: evaluating translation quality using amazon’s mechanical turk</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place"/>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p4" title="2 Related work ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib27" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. L. Chen and W. B. Dolan</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Building a persistent workforce on mechanical turk for multilingual data collection</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://research.microsoft.com/pubs/192029/chen.hcomp11.pdf" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Related work ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">U. Germann</span><span class="ltx_text ltx_bib_year">(2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Building a statistical machine translation system from scratch: how much bang for the buck can we expect?</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">DMMT ’01</span>, <span class="ltx_text ltx_bib_pages"> pp. 1–8</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dx.doi.org/10.3115/1118037.1118046" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.3115/1118037.1118046" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib37" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Green, J. Heer and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The efficacy of human post-editing for language translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">CHI ’13</span>, <span class="ltx_text ltx_bib_pages"> pp. 439–448</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-4503-1899-0</span>,
+<a href="http://doi.acm.org/10.1145/2470654.2470718" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1145/2470654.2470718" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related work ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib46" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. P. Hourcade, B. B. Bederson, A. Druin, A. Rose, A. Farber and Y. Takayama</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The international children’s digital library: viewing digital books online</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Interacting with Computers</span> <span class="ltx_text ltx_bib_volume">15</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 151–167</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related work ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib33" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Hu, B. B. Bederson, P. Resnik and Y. Kronrod</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">MonoTrans2: a new human computation system to support monolingual translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">CHI ’11</span>, <span class="ltx_text ltx_bib_pages"> pp. 1133–1136</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://doi.acm.org/10.1145/1978942.1979111" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span></li>
+<li id="bib.bib32" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Hu, B. B. Bederson and P. Resnik</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Translation by iterative collaboration between monolingual users</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related work ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.p2" title="2 Related work ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib31" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Hu</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Collaborative translation by monolingual users</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">CHI EA ’09</span>, <span class="ltx_text ltx_bib_pages"> pp. 3105–3108</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://doi.acm.org/10.1145/1520340.1520438" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related work ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib43" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Kay</span><span class="ltx_text ltx_bib_year">(1998-01)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The proper place of men and machines in language translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Machine Translation</span> <span class="ltx_text ltx_bib_volume">12</span> (<span class="ltx_text ltx_bib_number">1/2</span>), <span class="ltx_text ltx_bib_pages"> pp. 3–23</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text issn ltx_bib_external">ISSN 0922-6567</span>,
+<a href="http://dx.doi.org/10.1023/A:1007911416676" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1023/A:1007911416676" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span></li>
+<li id="bib.bib39" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Knight and I. Chander</span><span class="ltx_text ltx_bib_year">(1994)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automated postediting of documents</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related work ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib38" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Koehn</span><span class="ltx_text ltx_bib_year">(2010-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Enabling monolingual translators: post-editing vs. options</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 537–545</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/N10-1078" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related work ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. N. Langville and C. D. Meyer</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Deeper inside pagerank</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Internet Mathematics</span> <span class="ltx_text ltx_bib_volume">1</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 335–380</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.p8" title="4.1 Inter-Graph Ranking ‣ 4 Problem Formulation ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib45" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Z. Li, C. Callison-Burch, C. Dyer, J. Ganitkevitch, A. Irvine, S. Khudanpur, L. Schwartz, W. Thornton, Z. Wang, J. Weese and O. Zaidan</span><span class="ltx_text ltx_bib_year">(2010-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Joshua 2.0: a toolkit for parsing-based machine translation with syntax, semirings, discriminative training and other goodies</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 133–137</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W10-1718" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Louis and A. Nenkova</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">What makes writing great? first experiments on article quality prediction in the science journalism domain</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Transactions of Association for Computational Linguistics</span>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. D. Manning, P. Raghavan and H. Schütze</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Introduction to information retrieval</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">1</span>,  <span class="ltx_text ltx_bib_publisher">Cambridge University Press Cambridge</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS3.p2" title="4.3 Affinity Matrix Establishment ‣ 4 Problem Formulation ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+<li id="bib.bib35" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Morita and T. Ishida</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Collaborative translation by monolinguals with machine translators</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">IUI ’09</span>, <span class="ltx_text ltx_bib_pages"> pp. 361–366</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-60558-168-2</span>,
+<a href="http://doi.acm.org/10.1145/1502650.1502701" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1145/1502650.1502701" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related work ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib36" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Morita and T. Ishida</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Designing protocols for collaborative translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 17–32</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.ai.soc.i.kyoto-u.ac.jp/publications/09/morita-prima-09.pdf" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related work ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. S. Munteanu and D. Marcu</span><span class="ltx_text ltx_bib_year">(2005-12)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Improving machine translation performance by exploiting non-parallel corpora</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Comput. Linguist.</span> <span class="ltx_text ltx_bib_volume">31</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 477–504</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text issn ltx_bib_external">ISSN 0891-2017</span>,
+<a href="http://dx.doi.org/10.1162/089120105775299168" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1162/089120105775299168" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Papineni, S. Roukos, T. Ward and W. Zhu</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">BLEU: a method for automatic evaluation of machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">ACL ’02</span>, <span class="ltx_text ltx_bib_pages"> pp. 311–318</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dx.doi.org/10.3115/1073083.1073135" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.3115/1073083.1073135" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS3.SSS0.P1.p1" title="Metric ‣ 5 Evaluation ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib28" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[28]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Pavlick, M. Post, A. Irvine, D. Kachaev and C. Callison-Burch</span><span class="ltx_text ltx_bib_year">(2014)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The language demographics of Amazon Mechanical Turk</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Transactions of the Association for Computational Linguistics (TACL)</span> <span class="ltx_text ltx_bib_volume">2</span> (<span class="ltx_text ltx_bib_number">Feb</span>), <span class="ltx_text ltx_bib_pages"> pp. 79–92</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.transacl.org/wp-content/uploads/2014/02/42.pdf" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Related work ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib25" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[29]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Post, C. Callison-Burch and M. Osborne</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Constructing parallel corpora for six Indian languages via crowdsourcing</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W12-3152" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Related work ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[30]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Resnik and N. A. Smith</span><span class="ltx_text ltx_bib_year">(2003-09)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The web as a parallel corpus</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">29</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 349–380</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text issn ltx_bib_external">ISSN 0891-2017</span>,
+<a href="http://dx.doi.org/10.1162/089120103322711578" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1162/089120103322711578" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[31]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. R. Smith, C. Quirk and K. Toutanova</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Extracting parallel sentences from comparable corpora using document level alignment</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 403–411</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 1-932432-65-5</span>,
+<a href="http://dl.acm.org/citation.cfm?id=1857999.1858062" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib41" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[32]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Smith, H. Saint-Amand, M. Plamada, P. Koehn, C. Callison-Burch and A. Lopez</span><span class="ltx_text ltx_bib_year">(2013-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Dirt cheap web-scale parallel text from the Common Crawl</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://cis.upenn.edu/~ccb/publications/bitexts-from-common-crawl.pdf" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[33]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Snover, B. Dorr, R. Schwartz, L. Micciulla and J. Makhoul</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A study of translation edit rate with targeted human annotation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 223–231</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS3.SSS0.P2.p1" title="Baselines ‣ 5 Evaluation ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>,
+<a href="#S5.SS3.SSS0.P3.p1" title="Results ‣ 5 Evaluation ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[34]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Snow, B. O’Connor, D. Jurafsky and A. Y. Ng</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Cheap and fast—but is it good?: evaluating non-expert annotations for natural language tasks</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">EMNLP ’08</span>, <span class="ltx_text ltx_bib_pages"> pp. 254–263</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dl.acm.org/citation.cfm?id=1613715.1613751" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related work ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib34" class="ltx_bibitem ltx_bib_website"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[35]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">TechCrunch</span><span class="ltx_text ltx_bib_year">(2008-01)</span><span class="ltx_text ltx_bib_type">(Website)</span>
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://techcrunch.com/2008/01/21/facebook-taps-users-to-create-translated-versions-of-site/" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[36]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Uszkoreit, J. M. Ponte, A. C. Popat and M. Dubiner</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Large scale parallel document mining for machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">COLING ’10</span>, <span class="ltx_text ltx_bib_pages"> pp. 1101–1109</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dl.acm.org/citation.cfm?id=1873781.1873905" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib44" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[37]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. von Ahn</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Duolingo: learn a language for free while helping to translate the web</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">IUI ’13</span>, <span class="ltx_text ltx_bib_pages"> pp. 1–2</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-4503-1965-2</span>,
+<a href="http://doi.acm.org/10.1145/2449396.2449398" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1145/2449396.2449398" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib15" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[38]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Yan, L. Kong, C. Huang, X. Wan, X. Li and Y. Zhang</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Timeline generation through evolutionary trans-temporal summarization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">EMNLP ’11</span>, <span class="ltx_text ltx_bib_pages"> pp. 433–443</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-937284-11-4</span>,
+<a href="http://dl.acm.org/citation.cfm?id=2145432.2145483" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p2" title="4 Problem Formulation ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[39]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Yan, M. Lapata and X. Li</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Tweet recommendation with graph co-ranking</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">ACL ’12</span>, <span class="ltx_text ltx_bib_pages"> pp. 516–525</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dl.acm.org/citation.cfm?id=2390524.2390597" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p2" title="4 Problem Formulation ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib14" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[40]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Yan, X. Wan, M. Lapata, W. X. Zhao, P. Cheng and X. Li</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Visualizing timelines: evolutionary summarization via iterative reinforcement between text and image streams</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">CIKM ’12</span>, <span class="ltx_text ltx_bib_pages"> pp. 275–284</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-4503-1156-4</span>,
+<a href="http://doi.acm.org/10.1145/2396761.2396799" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1145/2396761.2396799" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p2" title="4 Problem Formulation ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib17" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[41]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Yan, X. Wan, J. Otterbacher, L. Kong, X. Li and Y. Zhang</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Evolutionary timeline summarization: a balanced optimization framework via iterative substitution</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">SIGIR ’11</span>, <span class="ltx_text ltx_bib_pages"> pp. 745–754</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-4503-0757-4</span>,
+<a href="http://doi.acm.org/10.1145/2009916.2010016" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1145/2009916.2010016" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p2" title="4 Problem Formulation ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib16" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[42]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Yan, Z. Yuan, X. Wan, Y. Zhang and X. Li</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Hierarchical graph summarization: leveraging hybrid information through visible and invisible linkage</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_inbook">PAKDD’12</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 97–108</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p2" title="4 Problem Formulation ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib29" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[43]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">O. F. Zaidan and C. Callison-Burch</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Crowdsourcing translation: professional quality from non-professionals</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1220–1229</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P11-1122" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p5" title="2 Related work ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS0.SSS0.P1.p1" title="Setup ‣ 3 Crowdsourcing Translation ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S5.SS3.SSS0.P3.p1" title="Results ‣ 5 Evaluation ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>,
+<a href="#S5.SS3.SSS0.P3.p2" title="Results ‣ 5 Evaluation ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib23" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[44]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Zbib, E. Malchiodi, J. Devlin, D. Stallard, S. Matsoukas, R. Schwartz, J. Makhoul, O. F. Zaidan and C. Callison-Burch</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Machine translation of Arabic dialects</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://aclweb.org/anthology-new/N/N12/N12-1006.pdf" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Related work ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[45]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Zbib, G. Markiewicz, S. Matsoukas, R. Schwartz and J. Makhoul</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Systematic comparison of professional and crowdsourced reference translations for machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Atlanta, Georgia</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/N13-1069" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Related work ‣ Are Two Heads Better than One? Crowdsourced Translation via a  Two-Step Collaboration of Non-Professional Translators and Editors" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[46]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">X. W. Zhao, Y. Guo, R. Yan, Y. He and X. Li</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Timeline generation with social attention</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">SIGIR ’13</span>, <span class="ltx_text ltx_bib_pages"> pp. 1061–1064</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-4503-2034-4</span>,
+<a href="http://doi.acm.org/10.1145/2484028.2484103" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1145/2484028.2484103" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 18:41:45 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

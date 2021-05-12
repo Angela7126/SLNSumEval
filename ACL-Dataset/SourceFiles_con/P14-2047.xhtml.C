@@ -1,0 +1,433 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Assessing the Discourse Factors that Influence the Quality of Machine Translation.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_abstract">
+      <h6 class="ltx_title ltx_title_abstract">
+       Abstract
+      </h6>
+      <p class="ltx_p">
+       We present a study of aspects of discourse structure — specifically discourse devices used to organize information in a sentence — that significantly impact the quality of machine translation. Our analysis is based on manual evaluations of translations of news from Chinese and Arabic to English.
+We find that there is a particularly strong mismatch in the notion of what constitutes a sentence in Chinese and English, which occurs often and is associated with significant degradation in translation quality.
+Also related to lower translation quality is the need to employ multiple explicit discourse connectives (
+       because, but
+       , etc.), as well as the presence of ambiguous discourse connectives
+in the English translation.
+Furthermore, the mismatches between discourse expressions across languages significantly impact translation quality.
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        In this study we examine how the use of discourse devices to organize information in a sentence — and the mismatch in their usage across languages — influence machine translation (MT) quality. The goal is to identify discourse processing tasks with high potential for improving translation systems.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        Historically MT researchers have focused their attention on the mismatch of linear realization of syntactic arguments
+        [5, 4]
+        ,
+lexico-morphological mismatch
+        [14, 6]
+        and word polysemy
+        [1, 2]
+        .
+Discourse structure has largely been considered irrelevant to MT, mostly due to the assumption that discourse analysis is needed to interpret multi-sentential text while statistical MT systems are trained to translate a single sentence in one language into a single sentence in another.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        However, discourse devices are at play in the organization of information into complex sentences. The mere definition of sentence may differ across languages. Chinese for example is anecdotally known to allow for very long sentences
+which at times require the use of multiple English sentences to express the same content and preserve grammaticality. Similarly discourse connectives like
+        because, but, since
+        and
+        while
+        often relate information expressed in simple sentential clauses. There are a number of possible complications in translating these connectives: they may be ambiguous between possible senses, e.g., English
+        while
+        is ambiguous between
+        comparison
+        and
+        temporal
+        ;
+explicit discourse connectives may be translated into implicit discourse relations or translated in morphology rather than lexical items
+        [13, 12]
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        In our work, we quantify the relationship between information packaging, discourse devices, and translation quality.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Data and experiment settings
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        We examine the quality of translations to English from Chinese and Arabic using Human-targeted Translation Edit Rates (HTER)
+        [18]
+        , which roughly captures the minimal number of edits necessary to transform the system output into an acceptable English translation of the source sentence.
+By comparing MT output with post-edited references, HTER provides more reliable estimates of translation quality than using translated references, especially at the segment level.
+The data for the analysis is drawn from an extended set of newswire reports in the 2008/2010 NIST Metrics for Machine Translation GALE Evaluation set
+        . For Chinese, there are 305 sentences (segments) translated to English by three different translation systems. For Arabic, there are 363 Arabic sentences (segments) translated by two systems.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p2">
+       <p class="ltx_p">
+        The presence of discourse devices is analyzed only on the English side:
+the reference, the system hypothesis and its edited translation.
+Discourse connectives and their senses are identified using existing tools developed for English.
+Beyond its practical limitations, analyzing the reference interestingly reflects the choices made by the human translator: whether to choose to use a discourse connective, or to insert one to make an implicit relation on the source side explicit on the target side.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p3">
+       <p class="ltx_p">
+        We first conduct analysis of variance (ANOVA) with HTER as dependent variable and the discourse factors
+as independent variables, and systems as subjects. We examine within-subject significance in each ANOVA model. For discourse factors that are significant at the 95% confidence level or higher according to the ANOVA analysis, we provide detailed breakdown of the system HTER for each value of the discourse factor.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p4">
+       <p class="ltx_p">
+        In this paper we do not compare the performance of individual systems,
+but instead seek to understand if a discourse phenomena is problematic across systems.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Sentence length and HTER
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        The presence of complex discourse structure is likely to be associated with longer sentences. It stands to reason that long sentences will be harder to process automatically and this reasoning has motivated the first approaches to text simplification
+        [3]
+        . So before turning to the analysis of discourse phenomena, we examine the correlation between translation quality and sentence length. A strong correlation between the two would call for revival of interest in text simplification where syntactically complex sentences are transformed into several shorter sentences as a preprocessing step.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p2">
+       <p class="ltx_p">
+        We find however that no strong relationship exists between the two, as shown by the correlation coefficients between HTER values and the number of words in each segment in Table
+        1
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p3">
+       <p class="ltx_p">
+        Next we examine if sentence–discourse divergence between languages and the presence of (ambiguous) discourse connectives would be more indicative of the expected translation quality.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       When a sentence becomes discourse
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        Some languages allow more information to be packed into a single sentence than is possible in another language, making single-sentence translations cumbersome and often ungrammatical.
+Chinese is known for sentences of this kind; for example, the usage of punctuation is very different in Chinese in the sense that a comma can sometimes function as a full stop in English, motivating a series of disambiguation tasks
+        [7, 20, 19]
+        . Special handling of long Chinese sentences were also shown to improve machine translation
+        [8, 21]
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p2">
+       <p class="ltx_p">
+        To investigate the prevalence of sentences in the source language (Chinese and Arabic in our case) that do not confirm to the notion of sentence in the target language (English for the purposes of this study), we separate the translation segments in the source language into two classes:
+a source sentence is considered 1-1 if the reference translation consists of exactly one sentence, and 1-many if the reference contains more than one sentence.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p3">
+       <p class="ltx_p">
+        For Chinese, 26.2% of the source segments are 1-many. These sentences tend to be much longer than average
+(36.6% of all words in all reference translations are part of such segments).
+For Arabic, the numbers are 15.2% and 26.3%, respectively. Below is an example of a 1-many Chinese segment, along with the human reference and its translation by one of the systems:
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p4">
+       <p class="ltx_p">
+        UTF8gbsn
+[source] ä¿è­¦æ¹å®£ç§°ï¼Erinysæä¸éè¦ç«äºå¯¹æRISCï¼å©ç¹ç»´å¹´ç§çåæåè§é¢çäººå¢ææ²ä¼ä¸åäººé½æ¯ä»äºè¿äºè¡ä¸ã
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p5">
+       <p class="ltx_p">
+        [ref] Russian police claim that Erinys has an important competitor RISC. The last people Litvinenko saw while he was alive, Lugovoi and his friends, were all engaged in these industries.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p6">
+       <p class="ltx_p">
+        [sys] Russian police have claimed that a major competitor, Litvinenko his last meeting with friends are engaged in these industries.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p7">
+       <p class="ltx_p">
+        We conducted ANOVA on HTER, separately for each language, with type of segment (1-1 or 1-many) as the independent variable and systems treated as subjects. The test revealed that there is a significant difference in translation quality between 1-1 and 1-many segments for Chinese but not for Arabic.
+For the Chinese to English systems we further ran a Wilcoxon rank sum test to identify the statistical significance in performance for individual systems. For two of the three systems the difference is significant, as shown in Table
+        2
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p8">
+       <p class="ltx_p">
+        We have now established that 1-many segments in Chinese to English translation are highly prevalent and their translations are of consistently lower quality compared to 1-1 segments. This finding suggests a cross language discourse analysis task of identifying Chinese sentences that cannot be translated into single English sentences.
+This task may be related to existing efforts in comma disambiguation in Chinese
+        [7, 20, 19]
+        but the relationship between the two problems needs to be clarified in follow up work. Once 1-many segments are identified, source-side text simplification techniques may be developed
+        [17]
+        to improve translation quality.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Explicit discourse relations
+      </h2>
+      <div class="ltx_para" id="S5.p1">
+       <p class="ltx_p">
+        Explicit discourse relations such as
+        comparison, contingency
+        or
+        temporal
+        are signaled by an explicit connective, i.e.,
+        however
+        or
+        because
+        . The Penn Discourse Treebank (PDTB)
+        [16]
+        provides annotations for the arguments and relation senses of one hundred pre-selected discourse connectives over the news portion of the Penn Treebank corpus
+        [11]
+        . Based on the PDTB, accurate systems for explicit discourse relation identification
+have been developed
+        [15, 10]
+        . The accuracy of these systems is 94% or higher, close to human performance on the task.
+Here we study the influence of explicit discourse relations on machine translation quality and their interaction with 1-1 and 1-many segments.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S5.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.1
+        </span>
+        Number of connectives
+       </h3>
+       <div class="ltx_para" id="S5.SS1.p1">
+        <p class="ltx_p">
+         We identify discourse connectives and their senses (
+         temporal, comparison, contingency
+         or
+         expansion
+         ) in each reference segment using the system in
+         Pitler and Nenkova (2009)
+         .
+We compare the translation quality obtained on segments with reference translation containing no discourse connective, exactly one discourse connective and more than one discourse connective.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p2">
+        <p class="ltx_p">
+         The ANOVA indicates that the number of connectives is not a significant factor for Arabic translation, but significantly impacts Chinese translation quality. A closer inspection using Wilcoxon rank sum tests
+reveals that the difference in translation quality is statistically significant only between the groups of segments with no connective vs. those with more than one connective. Additionally, we ran Wilcoxon rank sum test over 1-1 and 1-many segments individually and find that the presence of discourse connectives is associated with worse quality only in the latter case.
+Effects above are illustrated in Table
+         3
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.2
+        </span>
+        Ambiguity of connectives
+       </h3>
+       <div class="ltx_para" id="S5.SS2.p1">
+        <p class="ltx_p">
+         A number of discourse connectives are ambiguous with respect to the discourse relation they convey. For example,
+         while
+         can signal either
+         comparison
+         or
+         temporal
+         relations and
+         since
+         can signal either
+         contingency
+         or
+         temporal
+         . In translation this becomes a problem when the ambiguity is present in one language but not in the other. In such cases the sense in source ought to be disambiguated before translation.
+Here we compare the translation quality of segments which contain ambiguous discourse connectives in the reference translation to
+those that do not. This analysis gives lower bound on the translation quality degradation associated with discourse phenomena as it does not capture problems arising from connective ambiguity on the source side.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p2">
+        <p class="ltx_p">
+         We base our classification of discourse connectives into ambiguous or not according to the distribution of their senses in the PDTB. We call a connective ambiguous if its most frequent sense among
+         comparison, contingency, expansion, temporal
+         accounts for less than 80% of occurrence of that connective in the PDTB. Nineteen connectives meet this criterion of ambiguity.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p3">
+        <p class="ltx_p">
+         In the ANOVA tests for each language, we compared the quality of segments which contained an ambiguous connective in the reference with those that do not, with systems treated as subjects.
+For Arabic the presence of ambiguous connective did not yield a statistically significant difference. The difference however was highly significant for Chinese, as shown in Table
+         4
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p4">
+        <p class="ltx_p">
+         The finding that discourse connective ambiguity is associated with change in translation quality for Chinese but not for Arabic is rather interesting. It appears that the language pair in translation impacts the expected gains from discourse analysis on translation.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.3
+        </span>
+        Relation senses
+       </h3>
+       <div class="ltx_para" id="S5.SS3.p1">
+        <p class="ltx_p">
+         Here we study whether discourse relations of specific senses pose more difficulties on translations than others and whether there are interactions between senses.
+In the ANOVA analysis we used a binary factor for each of the four possible senses. For example, we compare the translation quality of segments that contain
+         comparison
+         relations in the reference translation with those that do not.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS3.p2">
+        <p class="ltx_p">
+         The relation sense makes a significant difference in translation quality for Chinese but not for Arabic. For Chinese specifically sentences that express
+         contingency
+         relations have worse quality translations than sentences that do not express
+         contingency
+         . One explanation for this tendency may be that
+         contingency
+         in Chinese contains more ambiguity with other relations such as
+         temporal
+         , as tense is expressed lexically in Chinese (no morphological tense marking on verbs). Finally, the interaction between
+         comparison
+         and
+         temporal
+         is significant for both languages.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS3.p3">
+        <p class="ltx_p">
+         Table
+         5
+         shows the effect of relation sense on HTER values for Chinese.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S6">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        6
+       </span>
+       Human edits of discourse connectives
+      </h2>
+      <div class="ltx_para" id="S6.p1">
+       <p class="ltx_p">
+        A relation expressed implicitly without a connective in one language may need to be explicit in another. Moreover, the expressions themselves are used differently; for example, the paired connective
+        UTF8gbsn“è½ç¶…ä½æ¯” (despite…but) in Chinese should not be translated into two redundant connectives in English. It is also possible that the source language contains an explicit discourse connective which is not translated in the target language, as has been quantitatively studied recently by
+        Meyer and Webber (2013)
+        . An example from our dataset is shown below:
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p2">
+       <p class="ltx_p">
+        UTF8gbsn
+[source] è¿æäºäººå¯å°å¤§å­¦çæ¸¸æä¸ä¸æ·±é ï¼èåè¢«èè¯·ä¸ºå¤§æ¸¸æååçææ¯é¡¾é®ç­ã
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p3">
+       <p class="ltx_p">
+        [ref] Still some others can receive further professional game training in universities and later(Temporal) be employed as technical consultants by large game manufacturers, etc.
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p4">
+       <p class="ltx_p">
+        [sys] Some people may go to the university games professional education, which is appointed as the big game manufacturers such as technical advisers.
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p5">
+       <p class="ltx_p">
+        [edited] Some people may go to university to receive professional game education, and later(Temporal) be appointed by the big game manufacturers as technical advisers.
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p6">
+       <p class="ltx_p">
+        The system fails to translate the discourse connective
+        UTF8gbsn“èå” (later), leading to a probable misinterpretation between receiving education and being appointed as technical advisors.
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p7">
+       <p class="ltx_p">
+        Due to the lack of reliable tools and resources, we approximate mismatches between discourse expressions in the source and MT output using discourse-related edits.
+We identify explicit discourse connectives and their senses in the system translation and the human edited version of that translation.
+Then we consider the following mutually exclusive possibilities:
+        (i)
+        there are no discourse connectives in either the system output or the edit;
+        (ii)
+        the system output and its edited version contain exactly the same discourse connectives with the same senses;
+        (iii)
+        there is a discourse connective present in the system output but not in the edit or vice versa. In the ANOVA we use a factor with three levels corresponding to the three cases described above. The factor is significant for both Chinese and Arabic.
+In both languages, the mismatch case
+        (iii)
+        involves significantly higher HTER than either case
+        (i)
+        or
+        (ii)
+        .
+The human edit rate in the mismatch class is on average four points greater than that in the other classes.
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p8">
+       <p class="ltx_p">
+        Obviously, the mismatch in implicit/explicit expression of discourse relation is related to the first problem we studied, i.e., if the source segment is translated into one or multiple sentences in English,
+since discourse relations between adjacent sentences are more often implicit (than intra-sentence ones).
+For this reason we performed a Wilcoxon rank sum test for the translation quality of segments with discourse mismatch conditioned on whether the segment was 1-1 or 1-many.
+For both languages a significant difference was found for 1-1 sentences but not 1-many.
+Table
+        6
+        shows
+the proportion of data in each of the conditioned classes and the average HTER for sentences from the mismatch case
+        (iii)
+        where a discourse connective was edited and the others (no such edits). Translation quality degrades significantly for all systems for the mismatch case, over all data as well as 1-1 segments.
+       </p>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

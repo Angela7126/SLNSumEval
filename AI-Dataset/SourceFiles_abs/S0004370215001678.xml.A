@@ -1,0 +1,437 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    SATenstein: Automatically building local search SAT solvers from components.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      In Mary Shelley's classic novel Frankenstein; or, The Modern Prometheus, a brilliant scientist, Victor Frankenstein, set out to create a perfect human being by combining scavenged human body parts. We pursue a similar idea: scavenging components from existing high-performance algorithms for a given problem and combining them to build new high-performance algorithms. Our idea is inspired by the fact that many new solvers are created by augmenting an existing algorithm with a mechanism found in a different algorithm (see, e.g., [33], [53]) or by combining components of different algorithms (see, e.g., [62]). Unlike Victor Frankenstein's creation, we propose to use an automated construction process that enables us to optimize performance with minimal human effort.
+     </paragraph>
+     <paragraph>
+      Traditionally, high-performance heuristic algorithms are designed through an iterative, manual process in which most design choices are fixed at development time, usually based on preliminary experimentation, leaving only a small number of parameters exposed to the user. In contrast, we propose a new approach to heuristic algorithm design in which the designer fixes as few design choices as possible, instead exposing all promising design choices as parameters. This approach removes from the algorithm designer the burden of making early design decisions without knowing how different algorithm components will interact on problem distributions of interest. Instead, it encourages the designer to consider many alternative designs, drawing from known solvers as well as novel mechanisms. Of course, such flexible, highly parameterized algorithms must be instantiated appropriately to achieve good performance on a given instance set. With the availability of advanced automated parameter configurators and cheap computational resources, finding a good parameter configuration from a huge parameter space becomes practical (see, e.g., [40], [9], [13]). Of course, we are not the first to propose building algorithms by using automated methods to search a large design space. Rather, our work can be seen as part of a general and growing trend, fueled by an increasing demand for high-performance solvers for difficult combinatorial problems in practical applications, by the desire to reduce the human effort required for building such algorithms, and by an ever-increasing availability of cheap computing power that can be harnessed for automating parts of the algorithm design process (see also [34]). There are many examples of work along these lines [25], [56], [12], [79], [20], [18], [60], [77], [57], [21].
+     </paragraph>
+     <paragraph>
+      Although our general approach is not specifically tailored to a particular domain, in this work we address the challenge of constructing stochastic local search (SLS) algorithms for the propositional satisfiability problem (SAT): an NP-complete problem of great interest to the scientific and industrial communities alike. SLS-based solvers are important because they have exhibited consistently dominant performance for several families of SAT instances; they also play an important role in state-of-the-art portfolio-based automated algorithm selection methods for SAT [79]. Substantial research and engineering effort has been expended in building SLS algorithms for SAT since the late 1980s (see, e.g., [67], [33], [62]), with new solvers being introduced every year.
+     </paragraph>
+     <paragraph>
+      We leveraged this rich literature (discussed in detail later) to design SATenstein-LS. This algorithm draws mechanisms from 25 high-performance SLS SAT solvers and also incorporates many novel strategies. The resulting design space contains a total of {a mathematical formula}2.01×1014 candidate solvers, and includes most existing, state-of-the-art SLS SAT solvers that have been proposed in the literature. We demonstrate experimentally that our new, automatically-constructed solvers dramatically outperform the best SLS-based SAT solvers currently available (with the default parameter configurations manually tuned by their authors) on six well-known SAT instance distributions, ranging from hard random 3-SAT instances to SAT-encoded factoring and software verification problems. In most cases, our new solvers also significantly outperform the best SLS-based SAT solvers even when we automatically tune the originally exposed parameters of every one of these incumbent solvers. Because SLS-based SAT solvers are the best known methods for solving most of our benchmark distributions, our new solvers represent a substantial advance in the state of the art for solving the respective sub-classes of SAT. On one of the two instance families for which this is not the case—SAT-encoded number factoring problems—our new solvers narrow the gap between the performance of the best SLS algorithms and the best DPLL-based solvers.
+     </paragraph>
+     <paragraph>
+      This paper{sup:2} is organized as follows. Section 2 discusses related work; we describe the design and implementation of SATenstein-LS in Section 3. We then describe the setup we used for empirically evaluating SATenstein-LS (Section 4) and present the results from our experiments (Section 5). Section 6 presents some general conclusions and an outlook on future work.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Related work
+     </section-title>
+     <paragraph>
+      The propositional satisfiability problem (SAT) asks, for a given propositional formula F, whether there exists a complete assignment of truth values to the variables of F under which F evaluates to true (see, e.g., [8]). F is called satisfiable if there exists at least one such assignment and unsatisfiable otherwise. A SAT instance is usually represented in conjunctive normal form (CNF), i.e., as a conjunction of disjunctions of literals, where each literal is a propositional variable or the negation of variables. Each disjunction of literals is called a clause. In this case, the goal for a SAT solver is to find a variable assignment that satisfies all clauses of a given CNF formula or to prove that no such assignment exists.
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       Local-search SAT solvers
+      </section-title>
+      <paragraph>
+       Over the past decades, considerable research and engineering effort has been invested into designing and optimizing algorithms for SAT. State-of-the-art SAT solvers include tree-search algorithms (see, e.g., [69], [28], [7], [16], [2], [30]), local search algorithms (see, e.g., [42], [61], [50], [64], [62], [11]) and resolution-based preprocessors (see, e.g., [70], [15], [3]). Every year, competitions are held, in which new state-of-the-art solvers emerge. The trend of continuing performance improvement in SAT competitions suggests that there is room for even further enhancements of current solver technology.
+      </paragraph>
+      <paragraph>
+       Stochastic local search (SLS) algorithms represent the state of the art in solving certain types of SAT instances and have been the subject of an intense and sustained interest since the early 1990s (see, e.g., [67], [76]). A typical SLS algorithm for SAT consists of an initialization phase and a local search phase. In the initialization phase, all variables are assigned truth values. At each step of the local search phase, the truth value of a single, heuristically chosen variable is changed. Exceptions include SLS solvers based on evolutionary algorithms (e.g., [47]) that maintain a population of candidate solutions and use recombination techniques. The search process is terminated when either a satisfying assignment is found or a given bound on the runtime or run length is reached or exceeded. Almost all SLS algorithms for SAT are incomplete, i.e., they cannot establish the unsatisfiability of a given formula.
+      </paragraph>
+      <paragraph>
+       The vast majority of existing SLS-based SAT solvers can be grouped into four broad categories: GSAT-based [67], WalkSAT-based [66], dynamic local search algorithms [42], [71], and G{sup:2}WSAT variants [50]. Almost all of the recent high-performance SLS SAT solvers are based on WalkSAT, dynamic local search, or G{sup:2}WSAT. SATenstein-LS thus draws deeply on these families of solvers, which we discuss in more detail in Section 3. GSAT-based algorithms are mostly of historical importance, but ideas that originated in GSAT remain important in more modern solvers. Partly for that reason, we briefly describe its architecture here.
+      </paragraph>
+      <paragraph>
+       At each step, GSAT evaluates each variable using a scoring function, then flips the variable with the highest score. The score of a variable is determined from two quantities, MakeCount and BreakCount. The MakeCount of a variable with respect to an assignment is the number of previously unsatisfied clauses that will be satisfied if the variable is flipped. Similarly, the BreakCount of a variable with respect to an assignment is the number of previously satisfied clauses that will be unsatisfied if the variable is flipped. The scoring function of GSAT is MakeCount – BreakCount.
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       UBCSAT
+      </section-title>
+      <paragraph>
+       UBCSAT [74] is an SLS solver implementation and experimentation environment for SAT. It provides implementations of many existing high-performance SLS algorithms from the literature. These implementations generally match or exceed the efficiency of the respective implementations made available by the original authors. UBCSAT implementations have therefore been widely used as reference implementations for many well-known local search algorithms (see, e.g., [64], [46]). In addition, UBCSAT also provides a rich interface that includes numerous statistical and reporting features facilitating empirical analysis of SLS algorithms.
+      </paragraph>
+      <paragraph>
+       Many existing SLS algorithms for SAT share common components and data structures. The general design of UBCSAT allows for the reuse and extension of such common components and mechanisms. This made UBCSAT an ideal environment for the implementation of SATenstein-LS (described below). However, UBCSAT and SATenstein-LS are quite different at a conceptual level. UBCSAT implements many well-known solvers in a stand-alone fashion; it does not provide for the creation of new solvers by combining existing solver components.
+      </paragraph>
+     </section>
+     <section label="2.3">
+      <section-title>
+       Automated algorithm design
+      </section-title>
+      <paragraph>
+       There is a large body of literature in AI and related areas that deals with automated methods for building heuristic algorithms. This includes work on automatic algorithm configuration (see, e.g., [25], [56]), algorithm selection (see, e.g., [48], [12], [79], [78]), parallel portfolios (see, e.g., [24], [20]), and, to some extent, genetic programming (see, e.g., [18], [19], [60]), hyper-heuristics (see, e.g., [54]), autonomous search (see, e,g., [27]), and algorithm synthesis (see, e.g., [77], [57], [21]). In what follows, we restrict our discussion to research efforts that are related particularly closely to our approach.
+      </paragraph>
+      <section label="2.3.1">
+       <section-title>
+        Automated construction of algorithms
+       </section-title>
+       <paragraph>
+        Here we consider three closely related lines of previous work in more detail, contrasting them with our own. First, Minton [56] used meta-level theories to produce distribution-specific versions of generic heuristics, and then found the most useful combination of these heuristics by evaluating their performance on a small set of test instances. He focused on producing distribution-specific versions of candidate heuristics and only considered at most 100 possible heuristics. The performance of the resulting algorithms was comparable to that of algorithms designed by a skilled programmer, but not an expert. In contrast, our work lays out a generalized, highly parameterized framework that can be instantiated to yield many trillions of distinct candidate solvers. We achieved performance exceeding the current state of the art on most of the instance distributions we considered.
+       </paragraph>
+       <paragraph>
+        Second, Gratch and Dejong [25] presented a system that starts with a STRIPS-like planner and augments it by incrementally adding search control rules. In contrast, SATenstein does not augment an existing solver; rather, our goal is to design a method for automatically building new solvers by combining components from as many existing solvers as possible.
+       </paragraph>
+       <paragraph>
+        Finally, and most closely related to our work, Fukunaga's [18], [19] genetic programming approach has a similar goal to our own: the automated construction of local search heuristics for SAT. Fukunaga considered a potentially unbounded design space, based only on GSAT-based and WalkSAT-based SLS algorithms up to the year 2000. His candidate variable selection mechanisms were evaluated on uniform random 3-SAT and graph coloring instances with at most 250 variables. While Fukunaga's approach could in principle be used to obtain high-performance solvers for specific types of SAT instances, to the best of our knowledge, this potential has never been realized; the best automatically-constructed solvers obtained by Fukunaga only achieved a performance level similar to that of the best WalkSAT variants available in 2000, based on an evaluation on moderately-sized SAT instances. In contrast, as mentioned above, we consider a huge but bounded combinatorial space of algorithms, based on components taken from two dozen of the best SLS algorithms for SAT currently available, and we employ an off-the-shelf, general-purpose algorithm configuration procedure to search this space. The solvers thus obtained perform substantially better than current state-of-the-art SLS-based SAT solvers on a broad range of challenging SAT instances with up to 4978 variables.
+       </paragraph>
+      </section>
+      <section label="2.3.2">
+       <section-title>
+        Automated algorithm configuration
+       </section-title>
+       <paragraph>
+        Recently, considerable attention has been paid to the problem of automated algorithm configuration. F-Race [9], [4], [10] uses a non-parametric statistical test to iteratively filter out configurations that are significantly worse than others (“racing”), continuing until a cutoff time is reached and only a small number of good configurations are left. ParamILS [40], [39] is a model-free method based on iterated local search and with a “challenge incumbent” procedure somewhat akin to racing. GGA [1] is a model-free method based on a genetic algorithm. Finally, SMAC [37] performs sequential model-based optimization, iterating between fitting models and using them to make choices about which configurations to investigate. The experiments in this paper make use of ParamILS; this method offers the advantages of scalability to large parameter spaces, stability, and previous success in applications (see, e.g., [36], [13]). However, in principle, SATenstein-LS could be configured using any state-of-the-art algorithm configuration procedure.
+       </paragraph>
+      </section>
+      <section label="2.3.3">
+       <section-title>
+        Programming by optimization
+       </section-title>
+       <paragraph>
+        SATenstein advocates designing new solvers by inducing a single parameterized solver from distinct examples in the literature, and then searching this parameter space automatically [45]. This approach is an example of—and indeed was part of the inspiration for—a design philosophy we call Programming by Optimization (PbO) [35]. In general, PbO means seeking and exposing design choices during a development process, and then automatically finding instantiations of these choices that optimize performance in a given use context. SATenstein-LS can be seen as an example of PbO in which the algorithm design space has been obtained by unifying a large number of local search schemes for SAT into a tightly integrated, highly parametric algorithm framework. However, the PbO philosophy goes further and is ultimately more general: it emphasizes encouraging developers to identify and expose design choices as parameters, rather than merely recovering parameters from existing, fully implemented examples. Because of its emphasis on changing the software development process, the PbO paradigm is also supported by programming language extensions that allow parameters and design choices to be exposed quickly and transparently (for further details, see www.prog-by-opt.net).
+       </paragraph>
+      </section>
+      <section label="2.3.4">
+       <section-title>
+        Algorithm selection and SATzilla
+       </section-title>
+       <paragraph>
+        To address a potential source of confusion, we contrast SATenstein with our similarly-named—but rather different—previous work on SATzilla. For a given problem instance or problem distribution, we often have to solve an “algorithm selection problem” [65]: which algorithm(s) should be run in order to minimize some performance objective, such as expected runtime? Different machine learning techniques can be applied to solve this problem (see, e.g., [49], [26], [12], [79], [44], [43]). SATzilla[59], [79] instantiates such an approach, using predictive models to select among a portfolio of existing algorithms on a per-instance basis. In contrast, SATenstein is an approach for automatically building solvers from components, yielding a huge candidate set of solvers, most of which have never been studied before. Indeed, the two approaches are complementary: methods like SATzilla can take advantage of solvers obtained using the automated design approach pursued in this work. In fact, SATzilla2009_R and 3S, which both performed extremely well in the random category of the 2009 and 2012 SAT Competitions (each winning a gold medal for random SAT+UNSAT), both make use of multiple SATenstein-LS solvers [80], [43]. Indeed, the synergy between SATenstein and SATzilla runs even deeper: an approach dubbed Hydra[78] automatically builds portfolio-based algorithm selectors, based only on a single, highly parameterized algorithm such as SATenstein. Experiments show that Hydra outperformed SATzilla based on 17 state-of-the-art SLS solvers, even when restricted only to multiple different instantiations of SATenstein-LS.
+       </paragraph>
+      </section>
+      <section label="2.3.5">
+       <section-title>
+        Further related work
+       </section-title>
+       <paragraph>
+        Frankenstein was also used as a metaphor for algorithm design in work by Montes de Oca et al. [58], where a Particle Swarm Optimization (PSO) algorithm is created by combining algorithm components drawn from existing high-performance PSO algorithms. These component designs were hand-picked by the algorithm designer; in contrast, we specify a combinatorial design space from which we use an automated algorithm configurator to find a good design for a given problem distribution. Frankenstein's PSO can thus be seen an example of manual algorithm design, whereas our goal is to automate the algorithm-building process.
+       </paragraph>
+       <paragraph>
+        Existing work on algorithm synthesis is mostly focused on automatically generating algorithms that satisfy a given formal specification or that solve a specific problem from a large and diverse domain (see, e.g., [77], [57], [21]). In contrast, like other research that falls under the PbO umbrella [35], our work is focused on finding an efficient solver from a huge space of candidate solvers that are all guaranteed to be correct by construction.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      SATenstein-LS
+     </section-title>
+     <paragraph>
+      SATenstein-LS is a highly parameterized, stochastic local search (SLS) SAT solver that not only draws components from several high-performance SLS-based SAT solvers, but also incorporates several novel mechanisms. SATenstein-LS can be configured to instantiate dozens of well-known SLS solvers, along with many trillions of others that have never been studied before. In this section, we present a high-level outline of SATenstein-LS and explain the functionality of the major building blocks used in our design. We also give a detailed description of the parameters exposed by SATenstein-LS.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Design
+      </section-title>
+      <paragraph>
+       As discussed in Section 2.1, most SLS algorithms for SAT fall into one of four broad categories: GSAT-based, WalkSAT-based, dynamic local search, and G{sup:2}WSAT variants. Since no recent, state-of-the-art SLS solver is GSAT-based, we constructed SATenstein-LS by drawing components from algorithms belonging to the three remaining categories.
+      </paragraph>
+      <paragraph>
+       As shown in the high-level algorithm outline (Procedure SATenstein-LS), SATenstein-LS is comprised of five major building blocks, B1–B5. Any instantiation of SATenstein-LS follows the same high-level structure:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        Optionally execute B1, which performs search diversification.
+       </list-item>
+       <list-item label="2.">
+        Execute either B2, B3 or B4, thus performing a WalkSAT-based, dynamic local search or G{sup:2}WSAT-based procedure, respectively.
+       </list-item>
+       <list-item label="3.">
+        Optionally execute B5 to update data structures such as promising list, clause penalties, dynamically adaptable parameters or tabu attributes.
+       </list-item>
+      </list>
+      <paragraph>
+       Each of our building blocks consists of one or more components (listed in Table 2); some of these components are shared across different building blocks. Each component is configurable by one or more parameters. Out of 42 parameters overall, 6 of SATenstein-LS's parameters are integer-valued (listed in Table 11), 19 are categorical (listed in Table 12), and 17 are real-valued (listed in Table 13). All of these parameters are exposed on the command line so that they can be optimized using an automatic configurator. After fixing the domains of integer- and real-valued parameters to between 3 and 16 values each (as we did in our experiments, reported later) the total number of valid SATenstein-LS instantiations was {a mathematical formula}2.01×1014.
+      </paragraph>
+      <paragraph>
+       We now give a high-level description of each of the building blocks. In particular, we provide detailed descriptions of SATenstein-LS's three key building blocks, B2, B3 and B4, which map to three broad categories of SLS-based SAT solvers.
+      </paragraph>
+      <section label="3.1.1">
+       Block B1
+       <paragraph>
+        B1 is constructed using the SelectClause(), DiversificationStrategy() and DiversificationProbability() components. SelectClause() is configured by one categorical parameter and, depending on its value, either selects an unsatisfied clause uniformly at random or selects a clause with probability proportional to its clause penalty [74]. Component diversificationStrategy() can be configured by a categorical parameter to do any of the following with probability diversificationProbability(): flip the least recently flipped variable [50]; flip the least frequently flipped variable [64]; flip the variable with minimum variable weight [64]; or flip a randomly selected variable [33].
+       </paragraph>
+      </section>
+      <section label="3.1.2">
+       Block B2 (WalkSAT-based algorithms)
+       <paragraph>
+        Block B2 instantiates WalkSAT-based algorithms, which—unlike GSAT or its variants—select in each step a single unsatisfied clause (typically uniformly at random from the set of all currently unsatisfied clauses), and consider only the variables appearing therein as candidates for flipping; the variable to be flipped is chosen using a heuristic. WalkSAT/SKC[66], one of the earliest and most prominent algorithms from this family, uses a scoring function that only depends on BreakCount (see Section 2.1) for variable selection.
+       </paragraph>
+       <paragraph>
+        As previously described in the context of B1, component SelectClause() is used to select an unsatisfiable clause c. The SelectHeuristic() component selects a variable from c for flipping. Depending on a categorical parameter, SelectHeuristic() can instantiate any of the thirteen well-known WalkSAT-based heuristics, notably including Novelty variants, VW1 and VW2. Table 3 lists these heuristics and related continuous parameters. We also extended the Novelty variants with an optional “flat move” mechanism, as found in the selection strategy in gNovelty{sup:+}[71], [62].
+       </paragraph>
+       <paragraph>
+        WalkSAT/Tabu[55] is an extension of WalkSAT/SKC that forbids variables that have been flipped within the last t steps from being flipped again, where t is a parameter called the tabu tenure. If all variables in all unsatisfied clauses are tabu, then the tabu list is ignored. Tabu variants of WalkSAT algorithms can be configured in SATenstein-LS by setting the categorical parameter performTabuSearch.
+       </paragraph>
+       <paragraph>
+        Novelty[55] and its variants are also very prominent WalkSAT algorithms. Novelty scores the variables in the selected clause using the same scoring function as GSAT. If the variable with the highest score is not the most-recently-flipped variable within the clause, then it is deterministically selected for flipping. Otherwise, it is selected with probability ({a mathematical formula}1−p), where p is a parameter called the noise setting (with probability p, the second-best variable is selected). To prevent search stagnation, Novelty has been augmented with a probabilistic conflict-directed random walk mechanism, leading to the Novelty{sup:+} algorithm [32]. Later Novelty variants (e.g., adaptNovelty{sup:+}; [33]) also use a dynamic mechanism for changing the noise parameter during the search process; this mechanism has since been extended to many other SLS-based SAT solvers (e.g., [53]) and can be instantiated in SATenstein-LS by setting the parameter useAdaptiveMechanism to 1 (for further details, see, Table 12).
+       </paragraph>
+      </section>
+      <section label="3.1.3">
+       Block B3 (dynamic local search algorithms)
+       <paragraph>
+        Block B3 instantiates dynamic local search algorithms. The most prominent feature of dynamic local search (DLS) algorithms is the use of penalties (or weights) associated with the clauses of the given CNF formula. DLS algorithms typically use a GSAT-like variable selection mechanism, but calculate scores taking clause penalties into account, reflecting the perceived importance of satisfying each clause. At each step, penalties associated with unsatisfied clauses are increased (additively [71] or multiplicatively [42]); this enables the local search process to escape from local minima of the objective function defined by the sum of the penalties of unsatisfied clauses. In order to ensure that the penalty values do not increase unboundedly and to appropriately emphasize recent search history, occasional smoothing steps are performed to reduce penalties.
+       </paragraph>
+       <paragraph>
+        In SATenstein-LS, the task of pruning the set of variables based on clause weights is accomplished by the selectSet() component. selectSet() first considers the set of variables that occur in any unsatisfied clause and associates with each such variable v a score, which depends on the clause weights of each clause that changes satisfiability status when v is flipped. After scoring the variables, selectSet() returns all variables with maximal score. Our implementation of this component incorporates three different scoring functions, including those due to McAllester et al. [55], Selman et al. [66], and a novel, greedier variant that only considers the number of previously unsatisfied clauses that are satisfied by a variable flip. The tieBreaking() component selects a variable from the maximum-scoring set according to the same strategies used by the diversificationStrategy() component.
+       </paragraph>
+      </section>
+      <section label="3.1.4">
+       Block B4 (G{sup:2}WSAT variants)
+       <paragraph>
+        Block B4 instantiates G{sup:2}WSAT-based algorithms that combine key features of the GSAT and WalkSAT architectures and use a data structure promising list containing promising decreasing variables. (The definition of a promising decreasing variable is somewhat technical; interested readers should refer to Appendix A.) Like GSAT, G{sup:2}WSAT has a deterministic greedy component that looks at the promising list first. If this list contains at least one variable (promising decreasing variable), G{sup:2}WSAT deterministically selects the variable with the best score for flipping, breaking ties in favor of the least recently flipped variable. If the promising list is empty, the stochastic component of G{sup:2}WSAT is employed, a Novelty variant that belongs to the WalkSAT architecture.
+       </paragraph>
+       <paragraph>
+        In SATenstein-LS, selection of promising variable is performed by the selectFromPromisingList() component. For this component, in addition to two existing strategies found in the G{sup:2}WSAT literature (see, e.g., [50], [53]), we added nine novel strategies based on variable selection heuristics from other solvers. These, to the best of our knowledge, have never been used before in the context of promising variable selection for G{sup:2}WSAT-based algorithms. For example, in previous work, variable selection mechanisms used in Novelty variants were only applied to variables of unsatisfiable clauses, not to promising lists. Table 1 lists the eleven possible strategies for selectFromPromisingList. If promising list is empty, B4 behaves exactly as B2, which instantiates WalkSAT-based algorithms.
+       </paragraph>
+       <paragraph>
+        Except for G{sup:2}WSAT[50], all G{sup:2}WSAT variants use the reactive mechanism found in adaptNovelty{sup:+}[32]. gNovelty+[62], the winner of the 2007 SAT Competition in the random satisfiable category, also uses clause penalties and a smoothing mechanism found in dynamic local search algorithms [71] which can be activated in SATenstein-LS by setting the categorical parameter useClausePenalty to 1. As already mentioned in the context of B2, the reactive mechanism for is activated by setting the categorical parameter useAdaptiveMechanism to 1.
+       </paragraph>
+      </section>
+      <section label="3.1.5">
+       Block B5
+       <paragraph>
+        Block B5 updates data structures required by the previously mentioned mechanisms, (e.g., dynamic local search) after a variable has been flipped. Performing these updates in an efficient manner is of crucial importance for the performance of many SLS algorithms. As the SATenstein-LS framework supports the combination of mechanisms from many different SLS algorithms, each depending on different data structures, the implementation of the update() function was technically quite challenging.
+       </paragraph>
+      </section>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Implementation and validation
+      </section-title>
+      <paragraph>
+       As already mentioned, SATenstein-LS is built on top of UBCSAT [74]. UBCSAT makes use of a trigger-based architecture that facilitates the reuse of existing mechanisms. While designing and implementing SATenstein-LS, we not only studied existing SLS algorithms, as presented in the literature, but we also analyzed the SAT competition submissions of such algorithms. We found that the published pseudocode of VW2[64] differed from its 2005 SAT Competition version, which includes a reactive mechanism; we included both versions in SATenstein-LS's implementation. We also found that in the SAT competition implementation of gNovelty{sup:+}, Novelty used a PAWS-like [71] “flat move” mechanism. We implemented this alternate version of Novelty in SATenstein-LS and exposed a categorical parameter to choose between the two implementations. While examining the implementations of various SLS solvers, we noticed that certain key data structures were implemented in different ways. In particular, different G{sup:2}WSAT variants use different realizations of the update scheme of promising list. We included all these update schemes in SATenstein-LS and declared parameter updateSchemePromList to select between them.
+      </paragraph>
+      <paragraph>
+       Since SATenstein-LS is quite complex, we took great care in validating its implementations of existing SLS-based SAT solvers. We compared our SATenstein-LS implementation with ten well-known algorithms' reference implementations (specifically, every algorithm listed in Table 5 except for Ranov), measuring running times as the number of variable flips.{sup:3} These ten algorithms span G{sup:2}WSAT-based, WalkSAT-based, and dynamic local search procedures, and also make use of all the prominent SLS solver mechanisms discussed earlier. Our validation results showed that in every case, reference solvers and their SATenstein-LS implementations have the same run-length distributions on a small set of 10 validation instances chosen from block world and software verification, based on a Kolmogorov–Smirnov test (5000 runs per solver–instance pair with significance threshold 0.05).
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Experimental setup
+     </section-title>
+     <paragraph>
+      In order to study the effectiveness of our proposed approach for algorithm design, we configured SATenstein-LS on training sets from various distributions of SAT instances and compared the performance of the SATenstein-LS solvers thus obtained against that of several existing high-performance SAT solvers on disjoint test sets.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Instance distributions
+      </section-title>
+      <paragraph>
+       We considered six sets of well-known benchmark instances for SAT (see Table 4). These six distributions can be grouped into three broad categories: industrial (CBMC(SE), FAC), handmade (QCP, SW-GCP), and random (R3SAT, HGEN). Because SLS algorithms are unable to prove unsatisfiability, we constructed our benchmark sets to include only satisfiable instances.
+      </paragraph>
+      <paragraph>
+       The instance generators for HGEN and FAC only produce satisfiable instances. For each of these two distributions, we generated 2000 instances with the generator settings shown in Table 4. For the remaining distributions, we filtered out unsatisfiable instances using complete solvers. For QCP, we generated 23 000 instances around the solubility phase transition, using the parameters suggested by Gomes and Selman [23]. We first filtered out unsatisfiable instances and then chose 2000 satisfiable instances uniformly at random. For SW-GCP, we generated 20 000 instances following [22] and then drew a sample of 2000 satisfiable instances uniformly at random from this set. For R3SAT, we generated a set of 1000 instances with 600 variables and a clauses-to-variables ratio of 4.26. We identified 521 satisfiable instances using complete solvers, then chose 500 of these uniformly at random. Finally, we used the CBMC generator to create 611 SAT-encoded software verification instances based on a binary search algorithm with different array sizes and loop-unwinding values. We preprocessed these instances using SatELite [17], identifying 604 of them as satisfiable and the remaining 7 as unsatisfiable.
+      </paragraph>
+      <paragraph>
+       Finally, we randomly split each of the six instances sets thus obtained into training and test sets of equal size.
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Configuration protocol
+      </section-title>
+      <paragraph>
+       In order to perform automatic algorithm configuration, we first had to quantify performance using an objective function. Consistent with most previous work on SLS algorithms for SAT, we chose to focus on mean runtime. In order to deal with runs that had to be terminated at a given cutoff time, following Hutter et al., [39], we used a variant of mean runtime known as PAR-10, defined as the average runtime over a given set of runs, where timed-out runs are counted as 10 times the given cutoff time. Unless explicitly stated otherwise, all runtimes reported in this article were measured using PAR-10 over the respective set of instances.
+      </paragraph>
+      <paragraph>
+       To perform automated configuration, we used the FocusedILS procedure from the ParamILS framework, version 2.3 [41]. We chose this method because it has been demonstrated to operate effectively on many extremely large, discrete parameter spaces (see, e.g., [40], [38], [72], [63]), and because it supports conditional parameters (discussed below). FocusedILS takes as input a parameterized algorithm (the so-called target algorithm), a specification of domains and (optionally) conditions for all parameters, a set of training instances, and an evaluation metric. It outputs a parameter configuration of the target algorithm that approximately minimizes the given evaluation metric.
+      </paragraph>
+      <paragraph>
+       As just mentioned, FocusedILS supports conditional parameters, which are important to SATenstein-LS. For example, condition {a mathematical formula}A|B=b means that A is activated if B take the value b. When more than one such condition is given for the same parameter A, these are interpreted as being connected by logical ‘and’. For example, the two conditions, {a mathematical formula}A|B=b and {a mathematical formula}A|C=c, are interpreted as {a mathematical formula}A|(B=b)∧(C=c). Some parameters in SATenstein-LS can be activated in more than one way. While this cannot be directly specified in the input to FocusedILS, we can express such disjunctive conditions using dummy parameters, as illustrated in the following example. Consider an algorithm S with four parameters, {a mathematical formula}{A,B,C,D}, and where A is activated if {a mathematical formula}B=b or {a mathematical formula}C=c, while D is activated if {a mathematical formula}A=a. As it is impossible to express the condition {a mathematical formula}A|(B=b)∨(C=c) directly in the input to FocusedILS, we introduce two dummy parameters, {a mathematical formula}A⁎ and {a mathematical formula}D⁎. Using these additional parameters, the given conditions can be expressed as {a mathematical formula}A|B=b; {a mathematical formula}A⁎|C=c; {a mathematical formula}A⁎|B≠b; {a mathematical formula}D|A=a; {a mathematical formula}D⁎|A⁎=a. Since only one of {a mathematical formula}(A,A⁎)/{a mathematical formula}(D,D⁎) is activated, we can simply map {a mathematical formula}A⁎ to A and {a mathematical formula}D⁎ to D when instantiating S with a parameter configuration found by FocusedILS.
+      </paragraph>
+      <paragraph>
+       We used a cutoff time of 5 CPU seconds for each target algorithm run, and allotted 7 days to each run of FocusedILS; we note that, while 5 CPU seconds is unrealistically short for assessing the performance of SAT solvers, using short cutoff times during configuration is important for the efficiency of the configuration process and typically works well, as demonstrated by our SATenstein-LS results. Since ParamILS cannot operate directly on continuous parameters, each continuous parameter was discretized into sets containing between 3 and 16 values that we considered reasonable (see Table 11). Except for a small number of cases (e.g., the parameters s,c) for which we used the same discrete domains as mentioned in the publication first describing it [64]), we selected these values using a regular grid over a range of values that appeared reasonable. For each integer parameter, we specified 4 to 10 values, always including the known defaults (see Table 13). In all cases, these choices included the parameter values required to cover the default configurations of the solvers whose components were integrated into SATenstein-LS's design space. Categorical parameters and their respective domains are listed in Table 12. As mentioned before, based on this discretization, SATenstein-LS's parameter configuration space consists of {a mathematical formula}2.01×1014 distinct configurations.
+      </paragraph>
+      <paragraph>
+       Since the performance of FocusedILS can vary significantly depending on the order in which instances appear in the training set, we ran FocusedILS 20 times on the training set, using different, randomly determined instance orderings for each run. From the 20 parameter configurations obtained from FocusedILS for each instance distribution D, we selected the parameter configuration with the best penalized average runtime on the training set. We then evaluated this configuration on the test set. For a given distribution D, we refer to the corresponding instantiation of a solver S as S[D].
+      </paragraph>
+     </section>
+     <section label="4.3">
+      <section-title>
+       Solvers used for performance comparison
+      </section-title>
+      <paragraph>
+       For each instance distribution D, we compared the performance of SATenstein-LS[D] against that of 11 high-performance SLS-based SAT solvers on the respective test set. We included every SLS algorithm that won a medal in any category of a SAT competitions between 2002 and 2007, because those algorithms are all part of the SATenstein-LS design space.
+      </paragraph>
+      <paragraph>
+       Although dynamic local search (DLS) algorithms have not won medals in recent SAT competitions, we also included three prominent, high-performing DLS algorithms for two reasons. First, some of them represented the state of the art when introduced (e.g., SAPS[42]) and still offer competitive performance on many instances. Second, techniques used in these algorithms have been incorporated into other recent high-performance SLS algorithms. For example, the additive clause weighting scheme used in PAWS is also used in the 2007 SAT Competition winner gNovelty{sup:+}[62]. We call these algorithms challengers and list them in Table 5. In order to demonstrate the full performance potential of these solvers, we also tuned the parameters for all parameterized challengers using the same configuration procedure and protocol as for SATenstein-LS, including the same choices of discrete values for continuous and integer parameters.
+      </paragraph>
+      <paragraph>
+       SATenstein-LS can be instantiated such that it emulates all 11 challenger algorithms (except for preprocessing components used in Ranov, AG2p, AG2plus, and AG20). However, in some cases, the original implementations of these algorithms are more efficient—on our data, by at most a factor of two on average per instance set—mostly, because SATenstein-LS's generality rules out some data structure optimizations.
+      </paragraph>
+      <paragraph>
+       Thus, we based all of our experimental comparisons on the original algorithm implementations, as submitted to the respective SAT Competitions. The exceptions are PAWS, whose implementation within UBCSAT is almost identical to the original in terms of runtime, as well as SAPS, RSAPS, and ANOV, whose UBCSAT implementations are those used in the competitions. All of our comparisons on the test set are based on running each solver 25 times per instance, with a per-run cutoff of 600 CPU seconds.
+      </paragraph>
+      <paragraph>
+       Our goal was to improve the state of the art in SAT solving. Thus, although the design space of SATenstein-LS consists solely of SLS solvers, we have also compared its performance to that of high-performance complete solvers (listed in Table 6). Unlike SLS solvers, these complete solvers are deterministic. Thus, for every instance in each distribution, we ran each complete solver once with a per-run cutoff of 600 CPU seconds.
+      </paragraph>
+     </section>
+     <section label="4.4">
+      <section-title>
+       Execution environment
+      </section-title>
+      <paragraph>
+       We carried out our experiments on a cluster of 55 machines each equipped with dual 3.2 GHz Intel Xeon CPUs with 2 MB cache and 2 GB RAM, running OpenSuSE Linux 11.1. Our computer cluster was managed by a distributed resource manager, Sun Grid Engine (version 6.0). Runtimes for all algorithms (including FocusedILS) were measured as CPU time on these reference machines. Each run of any solver only used one CPU.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Results
+     </section-title>
+     <paragraph>
+      We now present the results of performance comparisons between SATenstein-LS and the 11 challenger SLS solvers (listed in Table 5), configured versions of these challengers, and two complete solvers for each of our benchmark distributions (listed in Table 6). Although in our configuration experiments, we optimized SATenstein-LS for penalized average runtime (PAR-10), we also examine its performance in terms of other performance metrics, such as median runtime and percentage of instances solved within the given cutoff time.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Comparison with challengers
+      </section-title>
+      <paragraph>
+       For every one of our six benchmark distributions, we were able to find a SATenstein-LS configuration that outperformed all 11 challengers. Our results are summarized in Table 7.
+      </paragraph>
+      <paragraph>
+       In terms of penalized average runtime, the performance metric we explicitly optimized using ParamILS (with a cutoff time of 5 CPU seconds rather than the 600 CPU seconds used here for testing, as explained in Section 5.2), our SATenstein-LS solvers achieved better performance than every challenger on every distribution. For QCP, HGEN, and CBMC(SE), SATenstein-LS achieved a PAR-10 that was orders of magnitude better than the respective best challengers. For SW-GCP, R3SAT, and FAC, there was substantial, but less dramatic improvement. The modest improvement in R3SAT was not very surprising (Fig. 1: Left); R3SAT is a well-known SAT distribution on which SLS solvers have been evaluated and optimized for decades. Conversely, on a new benchmark distribution, CBMC(SE), where DPLL solvers represent the state of the art, SATenstein-LS solvers performed markedly better than every SLS-based challenger. We were surprised to see the amount of improvement we obtained for HGEN, a hard random SAT distribution very similar to R3SAT, and QCP, a widely-known SAT distribution. We noticed that on HGEN, some older solvers such as SAPS and PAWS performed much better than more recent medal winners such as GNOV and AG20. Also, for QCP, a somewhat older algorithm, ANOV, turned out to be the best challenger. These observations led us to believe that the strong performance of SATenstein-LS was partly due to the fact that the past seven years of SLS SAT solver development have not taken these types of distributions into account and have not yielded across-the-board improvements in SLS solver performance.
+      </paragraph>
+      <paragraph>
+       We also evaluated the performance of SATenstein-LS solvers using two other performance metrics: median-of-median runtime and percentage of solved instances. If a solver finishes most of the runs on most instances, the capped runs will not affect its median-of-median performance, and hence the metric does not need a way of accounting for the cost of capped runs. (When the median of medians is a capped run, we say that the metric is undefined.) Table 7 shows that, although the SATenstein-LS solvers were obtained by optimizing for PAR-10, they still outperformed every challenger in every distribution except for R3SAT, in which the challengers achieved slightly better performance than SATenstein-LS. Finally, we measured the percentage of instances on which the median runtime was below the cutoff used for capping runs. According to this measure, SATenstein-LS either equaled or beat every challenger, since it solved 100% of the instances in every benchmark set. In contrast, only 4 challengers managed to solve more than 50% of instances in every test set. Overall, SATenstein-LS solvers scored well on these measures for which its performance had not been explicitly optimized.
+      </paragraph>
+      <paragraph>
+       The relative performance of the challengers varied significantly across different distributions. For example, the three dynamic local search solvers (SAPS, PAWS, and RSAPS) performed substantially better than the other challengers on factoring instances (FAC). However, on SW-GCP, their relative performance was weak. Similarly, GNOV (the 2007 SAT Competition winner in the random satisfiable category) performed very poorly on our two industrial benchmark distributions, CBMC(SE) and FAC, but solved SW-GCP and HGEN instances quite efficiently.{sup:4} This suggests that different distributions are most efficiently solved by rather different solvers. We are thus encouraged that our automatic algorithm construction process was able to find good configurations for each distribution.
+      </paragraph>
+      <paragraph>
+       So far, we have discussed performance metrics that describe aggregate performance over the entire test set. One might wonder if SATenstein-LS's strong performance is due its ability to solve relatively few instances very efficiently, while performing poorly on others. We found that this is typically not the case and barring one distribution, R3SAT (detailed analysis can be found in Appendix C), although even in R3SAT SATenstein-LS[R3SAT] solved the harder instance more efficiently than PAWS, the best challenger.
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Comparison with automatically configured versions of challengers
+      </section-title>
+      <paragraph>
+       The fact that SATenstein-LS solvers achieved significantly better performance than all 11 challengers with default parameter configurations (i.e., those selected by their designers) admits two possible explanations. First, it could be due to the fact that SATenstein-LS's (vast) design space includes useful new configurations that combine solver components in novel ways. Second, the performance gains may have been achieved simply by better configuring existing SLS algorithms within their existing, and quite small, design spaces. To determine which of these two hypotheses holds, we compared SATenstein-LS solvers against challengers configured for optimized performance on our benchmark sets, using the same automated configuration procedure and protocol.
+      </paragraph>
+      <paragraph>
+       Table 8 summarizes the performance of our SATenstein-LS solvers, the best default challengers, and the best automatically configured challengers (for further details on individual challenger's performance, see, Table 15), and shows that our first hypothesis, the performance gain of SATenstein-LS is indeed a result of its significantly richer design space than that of the challengers, is true. For QCP, HGEN and CBMC(SE), the SATenstein-LS solvers still significantly outperformed the best configured challengers. For R3SAT and SWGCP, the performance difference was small, but still above 10%. The only benchmark where the best configured challenger outperformed SATenstein-LS was FAC. On closely examining the SATenstein-LS[FAC] configuration, we found that SATenstein-LS[FAC] was very similar to the best configured challenger, SAPS[FAC].
+      </paragraph>
+      <paragraph>
+       Overall, these experimental results provide evidence in favor of our first hypothesis: the good performance of SATenstein-LS solvers is due to combining components gleaned from existing high-performance algorithms in novel ways.
+      </paragraph>
+     </section>
+     <section label="5.3">
+      <section-title>
+       Comparison with complete solvers
+      </section-title>
+      <paragraph>
+       Table 9 compares the performance of SATenstein-LS solvers and four prominent complete SAT solvers (two for each distribution). For four out of our six benchmark distributions, SATenstein-LS solvers comprehensively outperformed the complete solvers. For the other two industrial distributions (FAC and CBMC(SE)), the performance of the selected complete solvers was much better than that of either the SATenstein-LS solvers and any of our other local search solvers. The success of DPLL-based complete solvers on industrial instances is not surprising; it is widely believed to be due their ability to take advantage of instance structure (by means of unit propagation and clause learning). Our results confirm that state-of-the-art local search solvers cannot compete with state-of-the-art DPLL solvers on industrial instances. However, SATenstein-LS solvers have made significant progress in closing the gap. For example, for CBMC(SE), state-of-the-art complete solvers were five orders of magnitude better than the next-best SLS challenger, VW. SATenstein-LS reduced the performance gap to three orders of magnitude. We also obtained some modest improvements (a factor of 1.51) for FAC.
+      </paragraph>
+     </section>
+     <section label="5.4">
+      <section-title>
+       Configurations found
+      </section-title>
+      <paragraph>
+       To better understand the automatically-constructed SATenstein-LS solvers, we compared their automatically selected design choices to the design of the existing SLS solvers for SAT (the full active parameter configurations of the six SATenstein-LS solvers can be found in Table 16). SATenstein-LS[QCP] uses building blocks 1, 2, and 5. Recall that block 1 is used for performing search diversification, and block 5 is used to update data structures, tabu attributes and clause penalties. In block 2, which is used to instantiate a solver belonging to the WalkSAT architecture, the heuristic is based on {a mathematical formula}Novelty++′, and in block 1, diversification flips the least-frequently-flipped variable from an UNSAT clause. SATenstein-LS[SW-GCP] is similar to SATenstein-LS[QCP] but does not use block 1. In block 2, the heuristic is based on Novelty++ as used within G2. SATenstein-LS[R3SAT] uses blocks 1, 3 and 5; it is closest to SAPS, but performs search diversification. A tabu list with length 3 is used to exclude some variables from the search neighborhood. Recall that block 3 is used to instantiate dynamic local search algorithms. SATenstein-LS[HGEN] uses blocks 1, 2, and 5. It is similar to SATenstein-LS[QCP] but uses a heuristic based on VW1 as well as a tabu list of length 3. SATenstein-LS[FAC] uses blocks 3 and 5; its instantiation closely resembles that of SAPS, but differs in the way in which variable scores are computed. SATenstein-LS[CBMC(SE)] uses blocks 1, 3, and 5; it computes variable scores using -BreakCount and employs a search diversification strategy similar to that of VW.
+      </paragraph>
+      <paragraph>
+       Interestingly, none of the six SATenstein-LS configurations we found uses a promising list (block 4), a technique integrated into many recent SAT Competition winners. This indicates that many interesting designs that could compete with existing high-performance solvers still remain unexplored in SLS design space. In addition, we found that all SATenstein-LS configurations differ from existing SLS algorithms (except for SATenstein[FAC], whose configuration and performance is similar to SAPS). This underscores the importance of an automated approach, since manually finding such good configurations from a huge design space is very difficult.
+      </paragraph>
+     </section>
+     <section label="5.5">
+      Augmenting SATenstein-LS
+      <paragraph>
+       We now demonstrate that SATenstein-LS can be extended with strategies found in newer SLS-based SAT solvers and present results for an augmented version of SATenstein-LS (dubbed SATenstein-LS2.0), in which we integrated a Novelty variant found in the recent high-performance SAT algorithm, Sattime[51]. In addition to Sattime, we considered two additional solvers, Sparrow[5] and Captain Jack[72], for performance comparisons. We chose Sparrow, because we were curious to explore how SATenstein-LS compares with a more recent high-performance SLS-based SAT solver some of whose components are not present in SATenstein-LS's design space. Captain Jack is another high-performance SLS-based SAT solver with several components not included in SATenstein-LS. Furthermore, like SATenstein-LS, Captain Jack was conceived as a highly parameterized SAT solver that draws inspiration from multiple algorithms; however, its design space is smaller and more limited conceptually than that of SATenstein-LS, which unifies a broader range of local search techniques and mechanisms.
+      </paragraph>
+      <paragraph>
+       Tompkins et al. [72] described nine configurations of Captain Jack, optimized for different sets of SAT instances. In light of limited computational resources, since it was unclear which of these would perform best on any of our instance distributions, we first performed a single run of each of these configurations for all instances in each of our benchmark sets. Next, we performed 24 additional runs per instance using the configuration with the best PAR-10 score (ties were broken randomly), resulting in 25 independent runs per instance for that configuration. The implementations of Sparrow and Sattime used in our experiments were those submitted to the 2011 SAT Competition 2011.
+      </paragraph>
+      <paragraph>
+       Table 10 compares the performance of SATenstein-LS2.0 on our six benchmark distributions. Detailed descriptions of the six SATenstein-LS2.0 solvers can be found in Appendix E. We use the same notation as Tompkins et al. [72] for the Captain Jack configuration optimized for each distribution. On all distributions, in terms of PAR-10 score, SATenstein-LS2.0 outperformed both Sparrow and Sattime. However, although slightly inferior in terms of median-of-median runtime, Captain Jack outperformed SATenstein-LS2.0 on CBMC(SE) in terms of PAR-10 score. This result is not too surprising, since Captain Jack draws components from VE-Sampler[73], which, at the time it was introduced, represented a substantial improvement in the state of the art for local search techniques on these kinds of instances. In future work, SATenstein-LS2.0 could be further augmented with these components, and thus very likely achieve even better performance.
+      </paragraph>
+      <paragraph>
+       Overall, our results clearly indicate that SATenstein-LS can be augmented with components from more recent SLS-based SAT solvers, and doing so achieves performance comparing favorably even with newer high-performance algorithms.
+      </paragraph>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Conclusions and future work
+     </section-title>
+     <paragraph>
+      We have proposed a new approach for designing heuristic algorithms based on (1) a framework that can flexibly combine components drawn from existing high-performance solvers, and (2) a powerful algorithm configuration procedure for finding instantiations that perform well on given sets of instances. We have demonstrated the effectiveness of our approach by automatically constructing high-performance stochastic local search solvers for SAT. We have shown that these automatically constructed SAT solvers outperform existing state-of-the-art solvers with manually and automatically optimized configurations on a range of widely studied distributions of SAT instances.
+     </paragraph>
+     <paragraph>
+      Our original inspiration comes from Mary Shelley's classic novel, Frankenstein. One important methodological difference is that we use automated methods for selecting components for our monster instead of picking them by hand. The outcomes are quite different. Unlike the tragic figure of Dr. Frankenstein, whose monstrous creature haunted him enough to quench forever his ambitions to create a ‘perfect’ human, we feel encouraged to unleash not only our new solvers, but also the full power of our automated solver-building process onto other classes of SAT benchmarks. Like Dr. Frankenstein, we find our creations somewhat monstrous, recognizing that the SATenstein solvers do not always represent the most elegant designs. Thus, desirable lines of future work include techniques for understanding the importance of different parameters to achieving strong performance on a given benchmark; the extension of our solver framework with preprocessors; and the investigation of algorithm configuration procedures other than ParamILS in the context of our approach. Encouraged by the results achieved on SLS algorithms for SAT, we believe that the general approach behind SATenstein-LS is equally applicable to non-SLS-based solvers and to other combinatorial problems. Finally, we encourage members of the SAT community to apply SATenstein-LS to their own instance distributions, and to extend SATenstein-LS with their own heuristics. Source code and documentation for our SATenstein-LS framework are freely available at http://www.cs.ubc.ca/labs/beta/Projects/SATenstein.
+     </paragraph>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     <section-title>
+      Definitions
+     </section-title>
+     <paragraph label="Definition 1">
+      Promising Decreasing Variable: A variable x is said to be decreasing with respect to an assignment A if its GSAT-score is positive, i.e., if flipping it causes a net decrease in the number of unsatisfied clauses. A promising decreasing variable is defined as follows:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       For the initial random assignment A, all decreasing variables with respect to A are promising.
+      </list-item>
+      <list-item label="2.">
+       Let x and y be two different variables where x is not decreasing with respect to A. If, after y is flipped, x becomes decreasing with respect to the new assignment A', then x is a promising decreasing variable with respect to A'.
+      </list-item>
+      <list-item label="3.">
+       As long as a promising decreasing variable is decreasing, it remains promising with respect to subsequent assignments in local search.
+      </list-item>
+     </list>
+    </section>
+    <section label="Appendix B">
+     <section-title>
+      SATenstein-LS parameters
+     </section-title>
+     <paragraph>
+      This section lists all SATenstein-LS parameters along with a short description on each parameter's function, when it is active, and the values we considered for our tuning experiments. Table 11, Table 12, Table 13 list the integer, categorical and continuous parameters of SATenstein-LS, respectively.
+     </paragraph>
+    </section>
+    <section label="Appendix C">
+     <section-title>
+      Per-instance performance comparison with challengers
+     </section-title>
+     <paragraph>
+      Table 14 summarizes the performance of each SATenstein-LS solver compared to each challenger on a per-instance basis and shows that SATenstein-LS's superior aggregate performance over challengers is not a result of better performance on few harder instances and worse or equal performance on the rest. Except for R3SAT, SATenstein-LS solvers outperformed the respective best challengers for each distribution on a per-instance basis. R3SAT was an exception: PAWS outperformed SATenstein-LS[R3SAT] most frequently (77.2%), but still achieved a lower PAR-10 score, indicating that SATenstein-LS[R3SAT] achieved dramatically better performance than PAWS on a relatively small number of hard instances.
+     </paragraph>
+    </section>
+    <section label="Appendix D">
+     <section-title>
+      Performance comparison with configured challengers
+     </section-title>
+     <paragraph>
+      Table 15 summarizes the performance of configured challengers, and Fig. 2 shows the PAR-10 ratios of SATenstein-LS solvers over the default and configured challengers. Compared to challengers with default configurations (see Table 7), the specifically optimized versions of the challenger solvers often achieved significantly better performance, reducing their performance gaps to SATenstein-LS solvers. For example, automatic configuration of G2 led to a speedup of 5 orders of magnitude in terms of PAR-10 on SWGCP and solved 100% of the instances in that benchmark set within a 600 second cutoff (vs. 31% for G2 default). However, it is worth noting that the configured challengers sometimes also exhibited worse performance than the default configurations (in the worst case, VW[SWGCP] was 2.58 times slower than VW default in terms of PAR-10 with a cutoff of 600 CPU seconds). This was caused by the short cutoff time used during the configuration process, as motivated in Section 5.2; had we used the same 5 CPU second cutoff time for computing PAR-10 (recall that we used a cutoff time of 5 CPU seconds for every ParamILS tuning experiment, and we always computed the PAR-10 of the test performance based on a cutoff of 600 CPU seconds), the configured challengers would have always outperformed the default versions.
+     </paragraph>
+     <paragraph>
+      Examining benchmark distributions individually and ranging over our 8 challengers, we observed average and median speedups over default configurations of 396 and 3.58 (for QCP), 15 900 and 3240 (for SWGCP), 5.84 and 2.74 (for R3SAT), 1.23 and 1.01 (HGEN), 15.4 and 1.61 (FAC), 6.61 and 2.00 (CBMC(SE)). We were surprised to observe only small speedups for all challengers on HGEN. Considering challengers individually and ranging over our 6 benchmark distributions, average and median PAR-10 improvement was 15.0 and 1.85 (for ANOV), 13 200 and 3.84 (for G2), 1.74 and 1.05 (for GNOV), 1070 and 0.98 (for PAWS), 1.33 and 1.03 (for RANOV), 4870 and 6.85 (for RSAPS), 2080 and 12.3 (for SAPS), 539 and 16.6 (for VW). RANOV showed the smallest performance improvement as a result of automated configuration across all benchmarks; this is likely due to RANOV's small parameter space (it has only one parameter).
+     </paragraph>
+    </section>
+    <section label="Appendix E">
+     SATenstein-LS parameter configurations found
+     <paragraph>
+      Table 16, Table 17 present the SATenstein-LS and SATenstein-LS2.0 parameter configurations found for each distribution considered in this paper; we omit inactive parameters. In what follows, we describe these parameter configurations in detail.
+     </paragraph>
+     <paragraph>
+      SATenstein-LS2.0[QCP] uses building blocks 1, 2, and 5. Recall that block 1 is used for performing search diversification, and block 5 is used to update data structures, tabu attributes and clause penalties. In block 2, which is used to instantiate a solver belonging to the WalkSAT architecture, the heuristic is based on R-Novelty, and in block 1, diversification flips the least-frequently-flipped variable from an UNSAT clause. This configuration is the same as SATenstein-LS[QCP] at the block level but differs in the employed heuristic and search diversification strategy. SATenstein-LS2.0[SW-GCP] is similar to SATenstein-LS2.0[QCP], but flips the least-recently-flipped variable in block 1 and uses a different heuristic (Novelty). Among the challengers, SATenstein-LS2.0[SW-GCP] is closest to RANOV. The main difference to SATenstein-LS[SW-GCP] is that SATenstein-LS[SW-GCP] did not use block 1. Unlike SATenstein-LS[R3SAT], SATenstein-LS2.0[R3SAT] does not use any search diversification and only uses blocks 3 (used to instantiate dynamic local search algorithms) and 5, but both configurations are closest to SAPS. SATenstein-LS2.0[HGEN] uses blocks 1, 2, and 5. It is similar to SATenstein-LS2.0[QCP] but uses a heuristic based on VW1 as well as a tabu list of length 3 and mainly differs from SATenstein-LS[HGEN] in the search diversification strategy. SATenstein-LS2.0[FAC] is also very similar to SATenstein-LS[FAC] with a different tie-breaking scheme. SATenstein-LS2.0[CBMC(SE)] uses blocks 2, and 5 and is closest to VW, a WalkSAT algorithm. This configuration is very different from what we found in SATenstein-LS[CBMC(SE)], which is a dynamic local search algorithm.
+     </paragraph>
+     <paragraph>
+      To summarize, we found that in most cases, the augmented solver found configurations that were similar but not identical to their SATenstein-LS counterparts. This indicates that the distributions we studied give rise to local search design spaces having “good regions” in which multiple, related configurations can perform well. The key exception was the case of CBMC(SE): here, we observed a substantial difference between the augmented solver configuration and SATenstein-LS[CBMC(SE)], underscoring the richness of the design space.
+     </paragraph>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

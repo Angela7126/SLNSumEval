@@ -1,0 +1,1496 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Information Extraction over Structured Data:Question Answering with Freebase</title>
+<!--Generated on Wed Jun 11 19:00:40 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Information Extraction over Structured Data:
+<br class="ltx_break"/>Question Answering with Freebase</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Xuchen Yao 
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Benjamin Van Durme
+<br class="ltx_break"/>Human Language Technology Center of Excellence 
+<br class="ltx_break"/>Center for Language and Speech Processing 
+<br class="ltx_break"/>Johns Hopkins University
+<br class="ltx_break"/>Baltimore, MD, USA
+
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Answering natural language questions using the Freebase knowledge
+base has recently been explored as a platform for advancing the
+state of the art in open domain semantic parsing. Those efforts map
+questions to sophisticated meaning representations that are then
+attempted to be matched against viable answer candidates in the
+knowledge base. Here we show that relatively modest information
+extraction techniques, when paired with a web-scale corpus, can
+outperform these sophisticated approaches by roughly 34% relative
+gain.</p>
+</div><span class="ltx_ERROR undefined">\setlist</span>
+<div id="p1" class="ltx_para">
+<p class="ltx_p">[0]leftmargin=*,itemindent=0em,itemsep=-2pt,topsep=0pt</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Question answering (QA) from a knowledge base (KB) has a long history
+within natural language processing, going back to the 1960s and 1970s,
+with systems such as <span class="ltx_text ltx_font_typewriter">Baseball</span> <cite class="ltx_cite">[<a href="#bib.bib31" title="Baseball: an automatic question-answerer" class="ltx_ref">16</a>]</cite> and <span class="ltx_text ltx_font_typewriter">Lunar</span> <cite class="ltx_cite">[<a href="#bib.bib95" title="Lunar rocks in natural english: explorations in natural language question answering" class="ltx_ref">38</a>]</cite>. These systems were limited to
+closed-domains due to a lack of knowledge resources, computing power,
+and ability to robustly understand natural language. With the recent
+growth in KBs such as <span class="ltx_text ltx_font_typewriter">DBPedia</span> <cite class="ltx_cite">[<a href="#bib.bib3" title="DBPedia: A nucleus for a web of open data" class="ltx_ref">1</a>]</cite>, <span class="ltx_text ltx_font_typewriter">Freebase</span> <cite class="ltx_cite">[<a href="#bib.bib8" title="Freebase: a collaboratively created graph database for structuring human knowledge" class="ltx_ref">4</a>]</cite> and <span class="ltx_text ltx_font_typewriter">Yago2</span> <cite class="ltx_cite">[<a href="#bib.bib36" title="Yago2: exploring and querying world knowledge in time, space, context, and many languages" class="ltx_ref">18</a>]</cite>, it has become more practical to
+consider answering questions across wider domains, with commercial
+systems including <span class="ltx_text ltx_font_typewriter">Google Now</span>, based on Google’s <span class="ltx_text ltx_font_typewriter">Knowledge
+Graph</span>, and <span class="ltx_text ltx_font_typewriter">Facebook Graph Search</span>, based on social network
+connections.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">The AI community has tended to approach this problem with a focus on
+first understanding the intent of the question, via shallow or deep
+forms of semantic parsing (c.f. §<a href="#S3" title="3 Background ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> for a
+discussion). Typically questions are converted into some meaning
+representation (e.g., the lambda calculus), then mapped to database
+queries. Performance is thus bounded by the accuracy of the original
+semantic parsing, and the well-formedness of resultant database
+queries.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>As an example, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m1" class="ltx_Math" alttext="50\%" display="inline"><mrow><mn>50</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> of errors of the CCG-backed
+<cite class="ltx_cite">[<a href="#bib.bib42" title="Scaling Semantic Parsers with On-the-fly Ontology Matching" class="ltx_ref">24</a>]</cite> system were contributed by parsing or
+structural matching failure.</span></span></span></p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">The Information Extraction (IE) community approaches QA differently:
+first performing relatively coarse information retrieval as a way to
+triage the set of possible answer candidates, and only then attempting
+to perform deeper analysis.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">Researchers in semantic parsing have recently explored QA over
+Freebase as a way of moving beyond closed domains such as GeoQuery
+<cite class="ltx_cite">[<a href="#bib.bib103" title="Using multiple clause constructors in inductive logic programming for semantic parsing" class="ltx_ref">35</a>]</cite>. While making semantic parsing more robust is a
+laudable goal, here we provide a more rigorous IE baseline against
+which those efforts should be compared: we show that “traditional”
+IE methodology can significantly outperform prior state-of-the-art as
+reported in the semantic parsing literature, with a relative gain of
+ 34% <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p4.m1" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math> as compared to <cite class="ltx_cite">Berant<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib4" title="Semantic Parsing on Freebase from Question-Answer Pairs" class="ltx_ref">2013</a>)</cite>.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Approach</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">We will view a KB as an interlinked collection of “topics”. When
+given a question about one or several topics, we can select a “view”
+of the KB concerning only involved topics, then inspect every related
+node within a few hops of relations to the topic node in order to
+extract the answer. We call such a view a <em class="ltx_emph">topic graph</em>
+and assume answers can be found within the graph.
+We aim to maximally automate the answer extraction process,
+by massively combining discriminative features for both the question
+and the topic graph. With a high performance learner we have found
+that a system with millions of features can be trained within hours,
+leading to intuitive, human interpretable features. For example, we
+learn that given a question concerning <span class="ltx_text ltx_font_sansserif">money</span>, such as:
+<span class="ltx_text ltx_font_sansserif">what money is used in ukraine</span>, the expected answer type is
+likely <span class="ltx_text ltx_font_sansserif">currency</span>. We formalize this approach in
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m1" class="ltx_Math" alttext="\S" display="inline"><mi mathvariant="normal">§</mi></math><a href="#S4" title="4 Graph Features ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">One challenge for natural language querying against a KB is the
+relative informality of queries as compared to the grammar of a KB.
+For example, for the question: <span class="ltx_text ltx_font_sansserif">who cheated on celebrity A</span>,
+answers can be retrieved via the Freebase relation
+<span class="ltx_text ltx_font_sansserif">celebrity.infidelity.participant</span>, but the
+connection between the phrase <span class="ltx_text ltx_font_sansserif">cheated on</span> and the formal KB
+relation is not explicit. To alleviate this problem, the best attempt so far is to map
+from <span class="ltx_text ltx_font_typewriter">ReVerb</span> <cite class="ltx_cite">[<a href="#bib.bib24" title="Identifying relations for open information extraction" class="ltx_ref">10</a>]</cite> predicate-argument triples to
+Freebase relation triples <cite class="ltx_cite">[<a href="#bib.bib11" title="Large-scale semantic parsing via schema matching and lexicon extension" class="ltx_ref">6</a>, <a href="#bib.bib4" title="Semantic Parsing on Freebase from Question-Answer Pairs" class="ltx_ref">2</a>]</cite>.
+Note that to boost precision, <span class="ltx_text ltx_font_typewriter">ReVerb</span> has already pruned down less
+frequent or credible triples, yielding not as much coverage as its
+text source, <span class="ltx_text ltx_font_typewriter">ClueWeb</span>. Here we instead directly mine relation mappings
+from <span class="ltx_text ltx_font_typewriter">ClueWeb</span> and show that both direct relation mapping precision and
+indirect QA <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m1" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math> improve by a large margin. Details in
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m2" class="ltx_Math" alttext="\S" display="inline"><mi mathvariant="normal">§</mi></math><a href="#S5" title="5 Relation Mapping ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">Finally, we tested our system, <span class="ltx_text ltx_font_sansserif">jacana-freebase</span>,<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup><a href="https://code.google.com/p/jacana" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">https://code.google.com/p/jacana</span></a></span></span></span>
+on a realistic dataset generously
+contributed by <cite class="ltx_cite">Berant<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib4" title="Semantic Parsing on Freebase from Question-Answer Pairs" class="ltx_ref">2013</a>)</cite>, who collected thousands
+of commonly asked questions by crawling the <span class="ltx_text ltx_font_typewriter">Google Suggest</span>
+service. Our method achieves state-of-the-art performance
+with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m1" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math> at <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m2" class="ltx_Math" alttext="42.0\%" display="inline"><mrow><mn>42.0</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math>, a <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m3" class="ltx_Math" alttext="34\%" display="inline"><mrow><mn>34</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> relative increase
+from the previous <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m4" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math> of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m5" class="ltx_Math" alttext="31.4\%" display="inline"><mrow><mn>31.4</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math>.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Background</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">QA from a KB faces two prominent challenges: model and data. The model
+challenge involves finding the best meaning representation for the
+question, converting it into a query and executing the query on the
+KB. Most work approaches this via the bridge of various intermediate
+representations, including combinatory categorial grammar
+(Zettlemoyer and Collins, 2005, 2007, 2009; Kwiatkowski et al., 2010, 2011, 2013),
+synchronous context-free grammars <cite class="ltx_cite">[<a href="#bib.bib94" title="Learning synchronous grammars for semantic parsing with lambda calculus" class="ltx_ref">37</a>]</cite>, dependency
+trees <cite class="ltx_cite">[<a href="#bib.bib48" title="Learning Dependency-Based Compositional Semantics" class="ltx_ref">27</a>, <a href="#bib.bib4" title="Semantic Parsing on Freebase from Question-Answer Pairs" class="ltx_ref">2</a>]</cite>, string kernels
+<cite class="ltx_cite">[<a href="#bib.bib39" title="Using string-kernels for learning semantic parsers" class="ltx_ref">20</a>, <a href="#bib.bib13" title="Learning to Interpret Natural Language Navigation Instructions from Observations" class="ltx_ref">7</a>]</cite>, and tree transducers
+<cite class="ltx_cite">[<a href="#bib.bib38" title="Semantic parsing with bayesian tree transducers" class="ltx_ref">19</a>]</cite>. These works successfully showed their
+effectiveness in QA, despite the fact that most of them require
+hand-labeled logic annotations. More recent research started to
+minimize this direct supervision by using latent meaning
+representations <cite class="ltx_cite">[<a href="#bib.bib4" title="Semantic Parsing on Freebase from Question-Answer Pairs" class="ltx_ref">2</a>, <a href="#bib.bib42" title="Scaling Semantic Parsers with On-the-fly Ontology Matching" class="ltx_ref">24</a>]</cite> or distant
+supervision <cite class="ltx_cite">[<a href="#bib.bib41" title="Weakly supervised training of semantic parsers" class="ltx_ref">23</a>]</cite>.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite"/></p>
+</div>
+<div id="S3.p3" class="ltx_para">
+<p class="ltx_p">We instead attack the problem of QA from a KB from an IE
+perspective: we learn directly the pattern of QA pairs, represented by
+the dependency parse of questions and the Freebase structure of answer
+candidates, without the use of intermediate, general purpose
+meaning representations.</p>
+</div>
+<div id="S3.p4" class="ltx_para">
+<p class="ltx_p">The data challenge is more formally framed as ontology or (textual)
+schema matching
+<cite class="ltx_cite">[<a href="#bib.bib35" title="Ontological promiscuity" class="ltx_ref">17</a>, <a href="#bib.bib67" title="A survey of approaches to automatic schema matching" class="ltx_ref">33</a>, <a href="#bib.bib23" title="Ontology matching" class="ltx_ref">9</a>]</cite>:
+matching structure of two ontologies/databases or (in extension)
+mapping between KB relations and NL text. In terms of the latter,
+<cite class="ltx_cite">Cai and Yates (<a href="#bib.bib11" title="Large-scale semantic parsing via schema matching and lexicon extension" class="ltx_ref">2013</a>)</cite> and <cite class="ltx_cite">Berant<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib4" title="Semantic Parsing on Freebase from Question-Answer Pairs" class="ltx_ref">2013</a>)</cite> applied
+pattern matching and relation intersection between Freebase relations
+and predicate-argument triples from the <span class="ltx_text ltx_font_typewriter">ReVerb</span> OpenIE system
+<cite class="ltx_cite">[<a href="#bib.bib24" title="Identifying relations for open information extraction" class="ltx_ref">10</a>]</cite>. <cite class="ltx_cite">Kwiatkowski<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib42" title="Scaling Semantic Parsers with On-the-fly Ontology Matching" class="ltx_ref">2013</a>)</cite> expanded their
+CCG lexicon with Wiktionary word tags towards more domain
+independence. <cite class="ltx_cite">Fader<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib25" title="Paraphrase-Driven Learning for Open Question Answering" class="ltx_ref">2013</a>)</cite> learned question paraphrases from
+aligning multiple questions with the same answers generated by
+<span class="ltx_text ltx_font_typewriter">WikiAnswers</span>. The key factor to their success is to have a huge text
+source. Our work pushes the data challenge to the limit by mining
+directly from <span class="ltx_text ltx_font_typewriter">ClueWeb</span>, a 5TB collection of web data.</p>
+</div>
+<div id="S3.p5" class="ltx_para">
+<p class="ltx_p">Finally, the KB community has developed other means for QA without
+semantic parsing <cite class="ltx_cite">[<a href="#bib.bib50" title="Aqualog: an ontology-portable question answering system for the semantic web" class="ltx_ref">29</a>, <a href="#bib.bib28" title="Question answering from structured knowledge sources" class="ltx_ref">12</a>, <a href="#bib.bib83" title="Template-based question answering over RDF data" class="ltx_ref">36</a>, <a href="#bib.bib97" title="Natural language questions for the web of data" class="ltx_ref">39</a>, <a href="#bib.bib72" title="Question answering on interlinked data" class="ltx_ref">34</a>]</cite>.
+Most of these work executed SPARQL queries on interlinked data represented
+by RDF (Resource Description Framework) triples, or simply performed
+triple matching. Heuristics and manual templates were also commonly
+used <cite class="ltx_cite">[<a href="#bib.bib104" title="Finding needles in the haystack: search and candidate generation" class="ltx_ref">8</a>]</cite>. We propose instead to learn discriminative features from the
+data with shallow question analysis. The final system captures intuitive
+patterns of QA pairs automatically.</p>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Graph Features</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">Our model is inspired by an intuition on how everyday people search
+for answers. If you asked someone: <span class="ltx_text ltx_font_sansserif">what is the name of justin
+bieber brother</span>,<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>All examples used in this paper come from the training data
+crawled from <span class="ltx_text ltx_font_typewriter">Google Suggest</span>. They are lowercased and some
+contain typos.</span></span></span> and gave them access to Freebase, that person might first determine
+that the question is about <span class="ltx_text ltx_font_sansserif">Justin Bieber</span> (or his brother), go
+to Justin Bieber’s Freebase page, and search for his brother’s
+name. Unfortunately Freebase does not contain an exact relation called
+<span class="ltx_text ltx_font_sansserif">brother</span>, but instead <span class="ltx_text ltx_font_sansserif">sibling</span>. Thus further
+inference (i.e., brother <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m1" class="ltx_Math" alttext="\leftrightarrow" display="inline"><mo>↔</mo></math> male sibling) has to be
+made. In the following we describe how we represent this process.</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Question Graph</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">In answering our example query a person might take into consideration
+multiple constraints. With regards to the question, we know we are
+looking for the name of a person based on the following:</p>
+<ul id="I1" class="ltx_itemize">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p">the dependency relation <span class="ltx_text ltx_font_sansserif">nsubj(what, name)</span> and
+<span class="ltx_text ltx_font_sansserif">prep_of(name, brother)</span> indicates that the question seeks
+the information of a name;<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>We use the Stanford collapsed
+dependency form.</span></span></span></p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p">the dependency relation <span class="ltx_text ltx_font_sansserif">prep_of(name, brother)</span> indicates
+that the name is about a brother (but we do not know whether it is
+a person name yet);</p>
+</div></li>
+<li id="I1.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i3.p1" class="ltx_para">
+<p class="ltx_p">the dependency relation <span class="ltx_text ltx_font_sansserif">nn(brother, bieber)</span> and the facts
+that, (i) Bieber is a person and (ii) a person’s brother should also
+be a person, indicate that the name is about a person.</p>
+</div></li>
+</ul>
+<p class="ltx_p">This motivates the design of dependency-based features. We show one example in Figure <a href="#S4.F1" title="Figure 1 ‣ 4.1 Question Graph ‣ 4 Graph Features ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>(a), left side.
+The following linguistic information is of interest:</p>
+<ul id="I2" class="ltx_itemize">
+<li id="I2.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i1.p1" class="ltx_para">
+<p class="ltx_p">question word (<em class="ltx_emph">qword</em>), such as <span class="ltx_text ltx_font_sansserif">what/who/how many</span>. We
+use a list of 9 common qwords. <span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup>who, when, what, where, how, which, why, whom, whose.</span></span></span></p>
+</div></li>
+<li id="I2.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i2.p1" class="ltx_para">
+<p class="ltx_p">question focus (<em class="ltx_emph">qfocus</em>), a cue of expected answer types, such
+as <span class="ltx_text ltx_font_sansserif">name/money/time</span>. We keep our analysis simple and do not
+use a question classifier, but simply extract the noun dependent of qword as qfocus.</p>
+</div></li>
+<li id="I2.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i3.p1" class="ltx_para">
+<p class="ltx_p">question verb (<em class="ltx_emph">qverb</em>), such as <span class="ltx_text ltx_font_sansserif">is/play/take</span>,
+extracted from the main verb of the question. Question
+verbs are also good hints of answer types. For instance, <span class="ltx_text ltx_font_sansserif">play</span> is likely to be followed by an instrument, a movie or a
+sports team.</p>
+</div></li>
+<li id="I2.i4" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i4.p1" class="ltx_para">
+<p class="ltx_p">question topic (<em class="ltx_emph">qtopic</em>). The topic of the question helps us
+find relevant Freebase pages. We simply apply a named entity recognizer
+to find the question topic. Note that there can be more than one topic in the question.</p>
+</div></li>
+</ul>
+<p class="ltx_p">Then we convert the dependency parse into a more generic question
+graph, in the following steps:</p>
+<ol id="I3" class="ltx_enumerate">
+<li id="I3.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">1.</span> 
+<div id="I3.i1.p1" class="ltx_para">
+<p class="ltx_p">if a node was tagged with a question feature, then replace this node
+with its question feature, e.g., what <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i1.p1.m1" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math> qword=what;</p>
+</div></li>
+<li id="I3.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">2.</span> 
+<div id="I3.i2.p1" class="ltx_para">
+<p class="ltx_p">(special case) if a qtopic node was tagged as a named entity, then
+replace this node with its its named entity form, e.g., bieber <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i2.p1.m1" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math>
+qtopic=person;</p>
+</div></li>
+<li id="I3.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">3.</span> 
+<div id="I3.i3.p1" class="ltx_para">
+<p class="ltx_p">drop any leaf node that is a determiner, preposition or punctuation.</p>
+</div></li>
+</ol>
+<p class="ltx_p">The converted graph is shown in Figure <a href="#S4.F1" title="Figure 1 ‣ 4.1 Question Graph ‣ 4 Graph Features ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>(a),
+right side. We call this a <em class="ltx_emph">question feature graph</em>, with every
+node and relation a potential feature for this question. Then features
+are extracted in the following form: with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m1" class="ltx_Math" alttext="s" display="inline"><mi>s</mi></math> the source and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m2" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math> the
+target node, for every edge <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m3" class="ltx_Math" alttext="e(s,t)" display="inline"><mrow><mi>e</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>s</mi><mo>,</mo><mi>t</mi></mrow><mo>)</mo></mrow></mrow></math> in the graph, extract <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m4" class="ltx_Math" alttext="s" display="inline"><mi>s</mi></math>,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m5" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m6" class="ltx_Math" alttext="s\mid t" display="inline"><mrow><mi>s</mi><mo>∣</mo><mi>t</mi></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m7" class="ltx_Math" alttext="s\mid e\mid t" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mrow><mo fence="true">∣</mo><mi>e</mi><mo fence="true">∣</mo></mrow><mo>⁢</mo><mi>t</mi></mrow></math> as features. For the edge,
+<span class="ltx_text ltx_font_sansserif">prep_of(qfocus=name, brother)</span>, this would mean the following
+features: <span class="ltx_text ltx_font_sansserif">qfocus=name</span>, <span class="ltx_text ltx_font_sansserif">brother</span>,
+<span class="ltx_text ltx_font_sansserif">qfocus=name<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m8" class="ltx_Math" alttext="\mid" display="inline"><mo mathvariant="normal">∣</mo></math>brother</span>, and <span class="ltx_text ltx_font_sansserif">qfocus=name<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m9" class="ltx_Math" alttext="\mid" display="inline"><mo mathvariant="normal">∣</mo></math>prep_of<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m10" class="ltx_Math" alttext="\mid" display="inline"><mo mathvariant="normal">∣</mo></math>brother</span>.</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">We show with examples why these features make sense later in
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m1" class="ltx_Math" alttext="\S" display="inline"><mi mathvariant="normal">§</mi></math><a href="#S6" title="6 Experiments ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> Table <a href="#S6.T6" title="Table 6 ‣ Discussion ‣ 6 Experiments ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>. Furthermore,
+the reason that we have kept some lexical features, such as
+<span class="ltx_text ltx_font_sansserif">brother</span>, is that we hope to learn from training a high
+correlation between <span class="ltx_text ltx_font_sansserif">brother</span> and some Freebase relations and properties
+(such as <span class="ltx_text ltx_font_sansserif">sibling</span> and <span class="ltx_text ltx_font_sansserif">male</span>) if we do not possess an
+external resource to help us identify such a correlation.</p>
+</div>
+<div id="S4.F1" class="ltx_figure ltx_align_center"><span class="ltx_ERROR undefined">\subfloat</span>
+<p class="ltx_p">[Dependence parse with annotated question features in dashed boxes
+(left) and converted feature graph (right) with only relevant and
+general information about the original question kept. Note that the left
+is a real but incorrect parse.]
+<img src="P14-1090/image001.png" id="S4.F1.g1" class="ltx_graphics ltx_centering ltx_centering" width="607" height="304" alt=""/></p><span class="ltx_ERROR undefined">\subfloat</span>
+<p class="ltx_p">[A view of Freebase graph on the <span class="ltx_text ltx_font_sansserif ltx_align_center">Justin Bieber</span> topic with
+nodes in solid boxes and properties in dashed boxes. The hatching
+node, <span class="ltx_text ltx_font_sansserif ltx_align_center">Jaxon Bieber</span>, is the answer. Freebase uses a dummy
+parent node for a list of nodes with the same relation.]
+<img src="P14-1090/image002.png" id="S4.F1.g2" class="ltx_graphics ltx_centering ltx_centering" width="539" height="362" alt=""/></p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Dependency parse and excerpted Freebase
+topic graph on the question <span class="ltx_text ltx_font_sansserif">what is the name of justin bieber
+brother</span>.</div>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Freebase Topic Graph</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">Given a topic, we selectively roll out the Freebase graph by choosing
+those nodes within a few hops of relationship to the <em class="ltx_emph">topic
+node</em>, and form a <em class="ltx_emph">topic graph</em>. Besides incoming and/or outgoing relationships, nodes also
+have <em class="ltx_emph">properties</em>: a string that describes the attribute of a
+node, for instance, node type, gender or height (for a person). One
+major difference between relations and properties is that both
+arguments of a relation are nodes, while only one argument of a
+property is a node, the other a string. Arguments of relations are
+usually interconnected, e.g., <span class="ltx_text ltx_font_sansserif">London</span> can be the
+<span class="ltx_text ltx_font_sansserif">place_of_birth</span> for <span class="ltx_text ltx_font_sansserif">Justin Bieber</span>, or
+<span class="ltx_text ltx_font_sansserif">capital_of</span> the <span class="ltx_text ltx_font_sansserif">UK</span>. Arguments of properties are
+attributes that are only “attached” to certain nodes and have
+no outgoing edges. Figure
+<a href="#S4.F1" title="Figure 1 ‣ 4.1 Question Graph ‣ 4 Graph Features ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>(b) shows an example.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">Both relationship and property of a node are important to identifying
+the answer. They connect the nodes with the question and describe
+some unique characteristics. For instance, without the properties
+<span class="ltx_text ltx_font_sansserif">type:person</span> and <span class="ltx_text ltx_font_sansserif">gender:male</span>, we would not have known
+the node <span class="ltx_text ltx_font_sansserif">Jaxon Bieber</span> represents a male person. These properties,
+along with the <span class="ltx_text ltx_font_sansserif">sibling</span> relationship to the topic node, are
+important cues for answering the question. Thus for the Freebase graph,
+we use relations (with directions) and properties as features for
+each node.</p>
+</div>
+<div id="S4.SS2.p3" class="ltx_para">
+<p class="ltx_p">Additionally, we have analyzed how Freebase relations map back to
+the question. Some of the mapping can be simply detected as paraphrasing
+or lexical overlap. For example, the <span class="ltx_text ltx_font_sansserif">person.parents</span> relationship
+helps answering questions about parenthood. However, most Freebase
+relations are framed in a way that is not commonly addressed in natural
+language questions. For instance, for common celebrity gossip questions
+like <span class="ltx_text ltx_font_sansserif">who cheated on celebrity A</span>, it is hard for a
+system to find the Freebase relation <span class="ltx_text ltx_font_sansserif">celebrity.infidelity.participant</span>
+as the target relation if it had not observed this pattern in training.</p>
+</div>
+<div id="S4.SS2.p4" class="ltx_para">
+<p class="ltx_p">Thus assuming there is an alignment model that is able to tell how
+likely one relation maps to the original question, we add extra alignment-based
+features for the incoming and outgoing relation of each node. Specifically,
+for each relation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m1" class="ltx_Math" alttext="rel" display="inline"><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>l</mi></mrow></math> in a topic graph, we compute <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m2" class="ltx_Math" alttext="P(rel\mid question)" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><mi>r</mi><mi>e</mi><mi>l</mi><mo>∣</mo><mi>q</mi><mi>u</mi><mi>e</mi><mi>s</mi><mi>t</mi><mi>i</mi><mi>o</mi><mi>n</mi><mo>)</mo></mrow></mrow></math>
+to rank the relations. Finally the ranking (e.g.,
+top 1/2/5/10/100 and beyond) of each relation is used as features
+instead of a pure probability. We describe such an alignment model
+in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p4.m3" class="ltx_Math" alttext="\S" display="inline"><mi mathvariant="normal">§</mi></math> <a href="#S5" title="5 Relation Mapping ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.</p>
+</div>
+</div>
+<div id="S4.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.3 </span>Feature Production</h3>
+
+<div id="S4.SS3.p1" class="ltx_para">
+<p class="ltx_p">We combine question features and Freebase features (per node) by doing
+a pairwise concatenation. In this way we hope to capture the association
+between question patterns and answer nodes. For instance, in a loglinear
+model setting, we expect to learn a high feature weight for features
+like:</p>
+</div>
+<div id="S4.SS3.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_sansserif">qfocus=money<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m1" class="ltx_Math" alttext="|" display="inline"><mo mathvariant="normal">|</mo></math>node_type=currency</span></p>
+</div>
+<div id="S4.SS3.p3" class="ltx_para">
+<p class="ltx_p">and a very low weight for:</p>
+</div>
+<div id="S4.SS3.p4" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_sansserif">qfocus=money<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p4.m1" class="ltx_Math" alttext="|" display="inline"><mo mathvariant="normal">|</mo></math>node_type=person</span>.</p>
+</div>
+<div id="S4.SS3.p5" class="ltx_para">
+<p class="ltx_p">This combination greatly enlarges the total number of features, but owing to
+progress in large-scale machine learning such feature spaces are
+less of a concern than they once were (concrete numbers in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p5.m1" class="ltx_Math" alttext="\S" display="inline"><mi mathvariant="normal">§</mi></math> <a href="#S6" title="6 Experiments ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>
+Model Tuning).</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Relation Mapping</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">In this section we describe a “translation” table
+between Freebase relations and NL words was built.</p>
+</div>
+<div id="S5.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.1 </span>Formula</h3>
+
+<div id="S5.SS1.p1" class="ltx_para">
+<p class="ltx_p">The objective is to find the most likely relation a question prompts.
+For instance, for the question <span class="ltx_text ltx_font_sansserif">who is the father of King George
+VI</span>, the most likely relation we look for is <span class="ltx_text ltx_font_sansserif">people.person.parents</span>.
+To put it more formally, given a question <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p1.m1" class="ltx_Math" alttext="Q" display="inline"><mi>Q</mi></math> of a word vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p1.m2" class="ltx_Math" alttext="\mathbf{w}" display="inline"><mi>𝐰</mi></math>,
+we want to find out the relation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p1.m3" class="ltx_Math" alttext="R" display="inline"><mi>R</mi></math> that maximizes the probability
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p1.m4" class="ltx_Math" alttext="P(R\mid Q)" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><mi>R</mi><mo>∣</mo><mi>Q</mi><mo>)</mo></mrow></mrow></math>.</p>
+</div>
+<div id="S5.SS1.p2" class="ltx_para">
+<p class="ltx_p">More interestingly, for the question <span class="ltx_text ltx_font_sansserif">who is the father of
+the Periodic Table</span>, the actual relation that encodes its original
+meaning is <span class="ltx_text ltx_font_sansserif">law.invention.inventor</span>, rather than <span class="ltx_text ltx_font_sansserif">people.person.parents</span>.
+This simple example points out that <em class="ltx_emph">every</em> part of the question
+could change what the question inquires eventually. Thus we need to
+count for <em class="ltx_emph">each</em> word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p2.m1" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p2.m2" class="ltx_Math" alttext="Q" display="inline"><mi>Q</mi></math>. Due to the bias and incompleteness
+of any data source, we approximate the true probability of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p2.m3" class="ltx_Math" alttext="P" display="inline"><mi>P</mi></math> with
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p2.m4" class="ltx_Math" alttext="\tilde{P}" display="inline"><mover accent="true"><mi>P</mi><mo stretchy="false">~</mo></mover></math> under our specific model. For the simplicity of computation,
+we assume conditional independence between words and apply Naive Bayes:</p>
+</div>
+<div id="S5.SS1.p3" class="ltx_para">
+<table id="S7.EGx1" class="ltx_equationgroup ltx_eqn_eqnarray">
+
+<tr id="S5.Ex3" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.Ex1.m1" class="ltx_Math" alttext="\displaystyle\tilde{P}(R\mid Q)" display="inline"><mrow><mover accent="true"><mi>P</mi><mo stretchy="false">~</mo></mover><mrow><mo>(</mo><mi>R</mi><mo>∣</mo><mi>Q</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.Ex1.m2" class="ltx_Math" alttext="\displaystyle\propto" display="inline"><mo>∝</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.Ex1.m3" class="ltx_Math" alttext="\displaystyle\tilde{P}(Q\mid R)\tilde{P}(R)" display="inline"><mrow><mover accent="true"><mi>P</mi><mo stretchy="false">~</mo></mover><mrow><mo>(</mo><mi>Q</mi><mo>∣</mo><mi>R</mi><mo>)</mo></mrow><mover accent="true"><mi>P</mi><mo stretchy="false">~</mo></mover><mrow><mo>(</mo><mi>R</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr class="ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.Ex2.m2" class="ltx_Math" alttext="\displaystyle\approx" display="inline"><mo>≈</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.Ex2.m3" class="ltx_Math" alttext="\displaystyle\tilde{P}(\mathbf{w}\mid R)\tilde{P}(R)" display="inline"><mrow><mover accent="true"><mi>P</mi><mo stretchy="false">~</mo></mover><mrow><mo>(</mo><mi>𝐰</mi><mo>∣</mo><mi>R</mi><mo>)</mo></mrow><mover accent="true"><mi>P</mi><mo stretchy="false">~</mo></mover><mrow><mo>(</mo><mi>R</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr class="ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.Ex3.m2" class="ltx_Math" alttext="\displaystyle\approx" display="inline"><mo>≈</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.Ex3.m3" class="ltx_Math" alttext="\displaystyle\prod_{w}\tilde{P}(w\mid R)\tilde{P}(R)" display="inline"><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∏</mo><mi>w</mi></munder></mstyle><mover accent="true"><mi>P</mi><mo stretchy="false">~</mo></mover><mrow><mo>(</mo><mi>w</mi><mo>∣</mo><mi>R</mi><mo>)</mo></mrow><mover accent="true"><mi>P</mi><mo stretchy="false">~</mo></mover><mrow><mo>(</mo><mi>R</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S5.SS1.p4" class="ltx_para">
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p4.m1" class="ltx_Math" alttext="\tilde{P}(R)" display="inline"><mrow><mover accent="true"><mi>P</mi><mo stretchy="false">~</mo></mover><mo>⁢</mo><mrow><mo>(</mo><mi>R</mi><mo>)</mo></mrow></mrow></math> is the prior probability of a relation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p4.m2" class="ltx_Math" alttext="R" display="inline"><mi>R</mi></math> and
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p4.m3" class="ltx_Math" alttext="\tilde{P}(w\mid R)" display="inline"><mrow><mover accent="true"><mi>P</mi><mo stretchy="false">~</mo></mover><mrow><mo>(</mo><mi>w</mi><mo>∣</mo><mi>R</mi><mo>)</mo></mrow></mrow></math> is the conditional probability of word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p4.m4" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math>
+given <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p4.m5" class="ltx_Math" alttext="R" display="inline"><mi>R</mi></math>.</p>
+</div>
+<div id="S5.SS1.p5" class="ltx_para">
+<p class="ltx_p">It is possible that we do not observe a certain relation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p5.m1" class="ltx_Math" alttext="R" display="inline"><mi>R</mi></math> when
+computing the above equation. In this case we back off to the “sub-relations”:
+a relation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p5.m2" class="ltx_Math" alttext="R" display="inline"><mi>R</mi></math> is a concatenation of a series of sub-relations <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p5.m3" class="ltx_Math" alttext="R=\mathbf{r}=r_{1}.r_{2}.r_{3}.\dots" display="inline"><mrow><mrow><mi>R</mi><mo>=</mo><mi>𝐫</mi><mo>=</mo><msub><mi>r</mi><mn>1</mn></msub></mrow><mo separator="true">.</mo><msub><mi>r</mi><mn>2</mn></msub><mo separator="true">.</mo><msub><mi>r</mi><mn>3</mn></msub><mo separator="true">.</mo><mi mathvariant="normal">…</mi></mrow></math>.
+For instance, the sub-relations of <span class="ltx_text ltx_font_sansserif">people.person.parents</span>
+are <span class="ltx_text ltx_font_sansserif">people</span>, <span class="ltx_text ltx_font_sansserif">person</span>, and <span class="ltx_text ltx_font_sansserif">parents</span>. Again,
+we assume conditional independence between sub-relations and apply
+Naive Bayes:</p>
+</div>
+<div id="S5.SS1.p6" class="ltx_para">
+<table id="S7.EGx2" class="ltx_equationgroup ltx_eqn_eqnarray">
+
+<tr id="S5.Ex7" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.Ex4.m1" class="ltx_Math" alttext="\displaystyle\tilde{P}_{\text{backoff}}(R\mid Q)" display="inline"><mrow><msub><mover accent="true"><mi>P</mi><mo stretchy="false">~</mo></mover><mtext>backoff</mtext></msub><mrow><mo>(</mo><mi>R</mi><mo>∣</mo><mi>Q</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.Ex4.m2" class="ltx_Math" alttext="\displaystyle\approx" display="inline"><mo>≈</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.Ex4.m3" class="ltx_Math" alttext="\displaystyle\tilde{P}(\mathbf{r}\mid Q)" display="inline"><mrow><mover accent="true"><mi>P</mi><mo stretchy="false">~</mo></mover><mrow><mo>(</mo><mi>𝐫</mi><mo>∣</mo><mi>Q</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr class="ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.Ex5.m2" class="ltx_Math" alttext="\displaystyle\approx" display="inline"><mo>≈</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.Ex5.m3" class="ltx_Math" alttext="\displaystyle\prod_{r}\tilde{P}(r\mid Q)" display="inline"><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∏</mo><mi>r</mi></munder></mstyle><mover accent="true"><mi>P</mi><mo stretchy="false">~</mo></mover><mrow><mo>(</mo><mi>r</mi><mo>∣</mo><mi>Q</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr class="ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.Ex6.m2" class="ltx_Math" alttext="\displaystyle\propto" display="inline"><mo>∝</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.Ex6.m3" class="ltx_Math" alttext="\displaystyle\prod_{r}\tilde{P}(Q\mid r)\tilde{P}(r)" display="inline"><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∏</mo><mi>r</mi></munder></mstyle><mover accent="true"><mi>P</mi><mo stretchy="false">~</mo></mover><mrow><mo>(</mo><mi>Q</mi><mo>∣</mo><mi>r</mi><mo>)</mo></mrow><mover accent="true"><mi>P</mi><mo stretchy="false">~</mo></mover><mrow><mo>(</mo><mi>r</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr class="ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.Ex7.m2" class="ltx_Math" alttext="\displaystyle\approx" display="inline"><mo>≈</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.Ex7.m3" class="ltx_Math" alttext="\displaystyle\prod_{r}\prod_{w}\tilde{P}(w\mid r)\tilde{P}(r)" display="inline"><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∏</mo><mi>r</mi></munder></mstyle><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∏</mo><mi>w</mi></munder></mstyle><mover accent="true"><mi>P</mi><mo stretchy="false">~</mo></mover><mrow><mo>(</mo><mi>w</mi><mo>∣</mo><mi>r</mi><mo>)</mo></mrow><mover accent="true"><mi>P</mi><mo stretchy="false">~</mo></mover><mrow><mo>(</mo><mi>r</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S5.SS1.p7" class="ltx_para">
+<p class="ltx_p">One other reason that we estimated <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p7.m1" class="ltx_Math" alttext="\tilde{P}(w\mid r)" display="inline"><mrow><mover accent="true"><mi>P</mi><mo stretchy="false">~</mo></mover><mrow><mo>(</mo><mi>w</mi><mo>∣</mo><mi>r</mi><mo>)</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p7.m2" class="ltx_Math" alttext="\tilde{P}(r)" display="inline"><mrow><mover accent="true"><mi>P</mi><mo stretchy="false">~</mo></mover><mo>⁢</mo><mrow><mo>(</mo><mi>r</mi><mo>)</mo></mrow></mrow></math>
+for sub-relations is that Freebase relations share some common structures in between
+them. For instance, both <span class="ltx_text ltx_font_sansserif">people.person.parents</span> and <span class="ltx_text ltx_font_sansserif">fictional_universe.fictional_character.parents</span>
+indicate the parent relationship but the latter is much less commonly
+annotated. We hope that the shared sub-relation, <span class="ltx_text ltx_font_sansserif">parents</span>,
+can help better estimate for the less annotated. Note that the
+backoff model would have a much smaller value than the original,
+due to double multiplication <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p7.m3" class="ltx_Math" alttext="\prod_{r}\prod_{w}" display="inline"><mrow><msub><mo largeop="true" symmetric="true">∏</mo><mi>r</mi></msub><msub><mo largeop="true" symmetric="true">∏</mo><mi>w</mi></msub></mrow></math>. In practice we
+normalize it by the sub-relations size to keep it at the same scale
+with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p7.m4" class="ltx_Math" alttext="\tilde{P}(R\mid Q)" display="inline"><mrow><mover accent="true"><mi>P</mi><mo stretchy="false">~</mo></mover><mrow><mo>(</mo><mi>R</mi><mo>∣</mo><mi>Q</mi><mo>)</mo></mrow></mrow></math>.</p>
+</div>
+<div id="S5.SS1.p8" class="ltx_para">
+<p class="ltx_p">Finally, to estimate the prior and conditional probability, we need
+a massive data collection.</p>
+</div>
+</div>
+<div id="S5.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.2 </span>Steps</h3>
+
+<div id="S5.SS2.p1" class="ltx_para">
+<p class="ltx_p">The ClueWeb09<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">6</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">6</sup><a href="http://lemurproject.org/clueweb09/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://lemurproject.org/clueweb09/</span></a></span></span></span> dataset is a collection of 1 billion webpages (5TB compressed in
+raw <span class="ltx_text ltx_font_smallcaps">html</span>) in 10 languages by Carnegie Mellon University in
+2009. FACC1, the Freebase Annotation of the ClueWeb Corpus version
+1 <cite class="ltx_cite">[<a href="#bib.bib11a" title="FACC1: Freebase annotation of ClueWeb corpora, Version 1 (Release date 2013-06-26, Format version 1, Correction level 0)" class="ltx_ref">15</a>]</cite>, contains index and offset of
+Freebase entities within the English portion of ClueWeb. Out of all
+500 million English documents, 340 million were automatically annotated
+with at least one entity, with an average of 15 entity mentions per
+document. The precision and recall of annotation were estimated at
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m1" class="ltx_Math" alttext="80-85\%" display="inline"><mrow><mn>80</mn><mo>-</mo><mrow><mn>85</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m2" class="ltx_Math" alttext="70-85\%" display="inline"><mrow><mn>70</mn><mo>-</mo><mrow><mn>85</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></mrow></math> <cite class="ltx_cite">[<a href="#bib.bib105" title="11 billion clues in 800 million documents: a web research corpus annotated with freebase concepts" class="ltx_ref">32</a>]</cite>.</p>
+</div>
+<div id="S5.SS2.p2" class="ltx_para">
+<p class="ltx_p">Given these two resources, for each binary Freebase relation, we can
+find a collection of sentences each of which contains both of its
+arguments, then simply learn how words in these sentences are associated
+with this relation, i.e., <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m1" class="ltx_Math" alttext="\tilde{P}(w\mid R)" display="inline"><mrow><mover accent="true"><mi>P</mi><mo stretchy="false">~</mo></mover><mrow><mo>(</mo><mi>w</mi><mo>∣</mo><mi>R</mi><mo>)</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m2" class="ltx_Math" alttext="\tilde{P}(w\mid r)" display="inline"><mrow><mover accent="true"><mi>P</mi><mo stretchy="false">~</mo></mover><mrow><mo>(</mo><mi>w</mi><mo>∣</mo><mi>r</mi><mo>)</mo></mrow></mrow></math>.
+By counting how many times each relation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m3" class="ltx_Math" alttext="R" display="inline"><mi>R</mi></math> was annotated, we can
+estimate <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m4" class="ltx_Math" alttext="\tilde{P}(R)" display="inline"><mrow><mover accent="true"><mi>P</mi><mo stretchy="false">~</mo></mover><mo>⁢</mo><mrow><mo>(</mo><mi>R</mi><mo>)</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m5" class="ltx_Math" alttext="\tilde{P}(r)" display="inline"><mrow><mover accent="true"><mi>P</mi><mo stretchy="false">~</mo></mover><mo>⁢</mo><mrow><mo>(</mo><mi>r</mi><mo>)</mo></mrow></mrow></math>. The learning task can
+be framed in the following short steps:</p>
+<ol id="I4" class="ltx_enumerate">
+<li id="I4.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">1.</span> 
+<div id="I4.i1.p1" class="ltx_para">
+<p class="ltx_p">We split each <span class="ltx_text ltx_font_smallcaps">html</span> document by sentences <cite class="ltx_cite">[<a href="#bib.bib18" title="Unsupervised multilingual sentence boundary detection" class="ltx_ref">21</a>]</cite>
+using NLTK <cite class="ltx_cite">[<a href="#bib.bib4a" title="NLTK: The Natural Language Toolkit" class="ltx_ref">3</a>]</cite> and extracted those with
+at least two Freebase entities which has at least one direct established
+relation according to Freebase.</p>
+</div></li>
+<li id="I4.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">2.</span> 
+<div id="I4.i2.p1" class="ltx_para">
+<p class="ltx_p">The extraction formed two parallel corpora, one with
+“relation - sentence” pairs (for estimating <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i2.p1.m1" class="ltx_Math" alttext="\tilde{P}(w\mid R)" display="inline"><mrow><mover accent="true"><mi>P</mi><mo stretchy="false">~</mo></mover><mrow><mo>(</mo><mi>w</mi><mo>∣</mo><mi>R</mi><mo>)</mo></mrow></mrow></math> and
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i2.p1.m2" class="ltx_Math" alttext="\tilde{P}(R)" display="inline"><mrow><mover accent="true"><mi>P</mi><mo stretchy="false">~</mo></mover><mo>⁢</mo><mrow><mo>(</mo><mi>R</mi><mo>)</mo></mrow></mrow></math>) and the other with “subrelations - sentence” pairs
+(for <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i2.p1.m3" class="ltx_Math" alttext="\tilde{P}(w\mid r)" display="inline"><mrow><mover accent="true"><mi>P</mi><mo stretchy="false">~</mo></mover><mrow><mo>(</mo><mi>w</mi><mo>∣</mo><mi>r</mi><mo>)</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i2.p1.m4" class="ltx_Math" alttext="\tilde{P}(r)" display="inline"><mrow><mover accent="true"><mi>P</mi><mo stretchy="false">~</mo></mover><mo>⁢</mo><mrow><mo>(</mo><mi>r</mi><mo>)</mo></mrow></mrow></math>). Each corpus
+has 1.2 billion pairs.</p>
+</div></li>
+<li id="I4.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">3.</span> 
+<div id="I4.i3.p1" class="ltx_para">
+<p class="ltx_p">The tricky part was to align these 1.2 billion pairs. Since the relations
+on one side of these pairs are not <em class="ltx_emph">natural</em> sentences, we ran
+the most simple IBM alignment Model 1 <cite class="ltx_cite">[<a href="#bib.bib6" title="The mathematics of statistical machine translation: parameter estimation" class="ltx_ref">5</a>]</cite>
+to estimate the translation probability with GIZA++ <cite class="ltx_cite">[<a href="#bib.bib25a" title="A systematic comparison of various statistical alignment models" class="ltx_ref">30</a>]</cite>.
+To speed up, the 1.2 billion pairs were split into 100 even chunks.
+We ran 5 iterations of EM on each one and finally aligned the 1.2
+billion pairs from both directions. To symmetrize the alignment, common
+MT heuristics <span class="ltx_text ltx_font_smallcaps">intersection</span>, <span class="ltx_text ltx_font_smallcaps">union</span>, <span class="ltx_text ltx_font_smallcaps">grow-diag-final</span>,
+and <span class="ltx_text ltx_font_smallcaps">grow-diag-final-and</span> <cite class="ltx_cite">[<a href="#bib.bib21" title="Statistical machine translation" class="ltx_ref">22</a>]</cite> were separately
+applied and evaluated later.</p>
+</div></li>
+<li id="I4.i4" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">4.</span> 
+<div id="I4.i4.p1" class="ltx_para">
+<p class="ltx_p">Treating the aligned pairs as <em class="ltx_emph">observation</em>, the co-occurrence
+matrix between aligning relations and words was computed. There were
+10,484 relations and sub-relations in all, and we kept the top 20,000
+words.</p>
+</div></li>
+<li id="I4.i5" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">5.</span> 
+<div id="I4.i5.p1" class="ltx_para">
+<p class="ltx_p">From the co-occurrence matrix we computed <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i5.p1.m1" class="ltx_Math" alttext="\tilde{P}(w\mid R)" display="inline"><mrow><mover accent="true"><mi>P</mi><mo stretchy="false">~</mo></mover><mrow><mo>(</mo><mi>w</mi><mo>∣</mo><mi>R</mi><mo>)</mo></mrow></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i5.p1.m2" class="ltx_Math" alttext="\tilde{P}(R)" display="inline"><mrow><mover accent="true"><mi>P</mi><mo stretchy="false">~</mo></mover><mo>⁢</mo><mrow><mo>(</mo><mi>R</mi><mo>)</mo></mrow></mrow></math>,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i5.p1.m3" class="ltx_Math" alttext="\tilde{P}(w\mid r)" display="inline"><mrow><mover accent="true"><mi>P</mi><mo stretchy="false">~</mo></mover><mrow><mo>(</mo><mi>w</mi><mo>∣</mo><mi>r</mi><mo>)</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i5.p1.m4" class="ltx_Math" alttext="\tilde{P}(r)" display="inline"><mrow><mover accent="true"><mi>P</mi><mo stretchy="false">~</mo></mover><mo>⁢</mo><mrow><mo>(</mo><mi>r</mi><mo>)</mo></mrow></mrow></math>.</p>
+</div></li>
+</ol>
+</div>
+<div id="S5.T1" class="ltx_table">
+<table class="ltx_tabular ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td"/>
+<th class="ltx_td"/>
+<th class="ltx_td"/>
+<th class="ltx_td"/>
+<th class="ltx_td"/>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_tt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m1" class="ltx_Math" alttext="\mathbf{0}" display="inline"><mn>𝟎</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m2" class="ltx_Math" alttext="\mathbf{\leq 10}" display="inline"><mrow><mi/><mo>≤</mo><mn>𝟏𝟎</mn></mrow></math></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m3" class="ltx_Math" alttext="\mathbf{\leq 10^{2}}" display="inline"><mrow><mi/><mo>≤</mo><msup><mn>𝟏𝟎</mn><mn>𝟐</mn></msup></mrow></math></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m4" class="ltx_Math" alttext="\mathbf{\leq 10^{3}}" display="inline"><mrow><mi/><mo>≤</mo><msup><mn>𝟏𝟎</mn><mn>𝟑</mn></msup></mrow></math></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m5" class="ltx_Math" alttext="\mathbf{\leq 10^{4}}" display="inline"><mrow><mi/><mo>≤</mo><msup><mn>𝟏𝟎</mn><mn>𝟒</mn></msup></mrow></math></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T1.m6" class="ltx_Math" alttext="\mathbf{&gt;10^{4}}" display="inline"><mrow><mi/><mo>&gt;</mo><msup><mn>𝟏𝟎</mn><mn>𝟒</mn></msup></mrow></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">7.0%</td>
+<td class="ltx_td ltx_align_center">0.7%</td>
+<td class="ltx_td ltx_align_center">1.2%</td>
+<td class="ltx_td ltx_align_center">0.4%</td>
+<td class="ltx_td ltx_align_center">1.3%</td>
+<td class="ltx_td ltx_align_center">89.5%</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span>Percentage of answer relations
+(the incoming relation connected to the answer node) with
+respect to how many sentences we learned this relation from in
+CluewebMapping. For instance, the first column says there are 7%
+of answer relations for which we cannot find a mapping (so we had to use
+the backoff probability estimation); the last column says there are
+89.5% of answer relations that we were able to learn the mapping
+between this relation and text based on more than 10 thousand relation-sentence
+pairs. The total number of answer relations is 7886.</div>
+</div>
+<div id="S5.SS2.p3" class="ltx_para">
+<p class="ltx_p">Hand-checking the learned probabilities shows both success, failure
+and some bias. For instance, for the <span class="ltx_text ltx_font_sansserif">film.actor.film</span> relation
+(mapping from film names to actor names), the top words given by
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p3.m1" class="ltx_Math" alttext="\tilde{P}(w\mid R)" display="inline"><mrow><mover accent="true"><mi>P</mi><mo stretchy="false">~</mo></mover><mrow><mo>(</mo><mi>w</mi><mo>∣</mo><mi>R</mi><mo>)</mo></mrow></mrow></math> are <span class="ltx_text ltx_font_sansserif">won</span>, <span class="ltx_text ltx_font_sansserif">star</span>, <span class="ltx_text ltx_font_sansserif">among</span>,
+<span class="ltx_text ltx_font_sansserif">show</span>. For the <span class="ltx_text ltx_font_sansserif">film.film.directed_by</span> relation, some
+important stop words that could indicate this relation, such as
+<span class="ltx_text ltx_font_sansserif">by</span> and <span class="ltx_text ltx_font_sansserif">with</span>, rank directly after <span class="ltx_text ltx_font_sansserif">director</span>
+and <span class="ltx_text ltx_font_sansserif">direct</span>. However, due to significant popular interest in
+certain news categories, and the resultant catering by websites to
+those information desires, then for example we also learned a heavily
+correlated connection between <span class="ltx_text ltx_font_sansserif">Jennifer Aniston</span> and
+<span class="ltx_text ltx_font_sansserif">celebrity.infidelity.victim</span>, and between some other
+you-know-who names and <span class="ltx_text ltx_font_sansserif">celebrity.infidelity.participant</span>.</p>
+</div>
+<div id="S5.SS2.p4" class="ltx_para">
+<p class="ltx_p">We next formally evaluate how the learned mapping help predict relations
+from words.</p>
+</div>
+</div>
+<div id="S5.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.3 </span>Evaluation</h3>
+
+<div id="S5.SS3.p1" class="ltx_para">
+<p class="ltx_p">Both ClueWeb and its Freebase annotation has a bias. Thus we were
+firstly interested in the coverage of mined relation mappings. As
+a comparison, we used a dataset of relation mapping contributed by
+<cite class="ltx_cite">Berant<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib4" title="Semantic Parsing on Freebase from Question-Answer Pairs" class="ltx_ref">2013</a>)</cite> and <cite class="ltx_cite">Lin and Etzioni (<a href="#bib.bib18a" title="Entity Linking at Web Scale" class="ltx_ref">2012</a>)</cite>. The idea is
+very similar: they intersected Freebase relations with predicates
+in (arg1, predicate, arg2) triples extracted from <span class="ltx_text ltx_font_typewriter">ReVerb</span> to learn
+the mapping between Freebase relations and triple predicates. Note
+the scale difference: although <span class="ltx_text ltx_font_typewriter">ReVerb</span> was also extracted from ClueWeb09,
+there were only 15 million triples to intersect with the relations,
+while we had 1.2 billion alignment pairs. We call this dataset <span class="ltx_text ltx_font_bold">ReverbMapping</span>
+and ours <span class="ltx_text ltx_font_bold">CluewebMapping</span>.</p>
+</div>
+<div id="S5.SS3.p2" class="ltx_para">
+<p class="ltx_p">The evaluation dataset, W<span class="ltx_text ltx_font_smallcaps">eb</span>Q<span class="ltx_text ltx_font_smallcaps">uestions</span>, was also contributed by <cite class="ltx_cite">Berant<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib4" title="Semantic Parsing on Freebase from Question-Answer Pairs" class="ltx_ref">2013</a>)</cite>.
+It contains 3778 training and 2032 test questions collected
+from the Google Suggest service. All questions were annotated with
+answers from Freebase. Some questions have more than one answer,
+such as <span class="ltx_text ltx_font_sansserif">what to see near sedona arizona?</span>.</p>
+</div>
+<div id="S5.SS3.p3" class="ltx_para">
+<p class="ltx_p">We evaluated on the training set in two aspects:
+coverage and prediction performance. We define <em class="ltx_emph">answer node</em> as
+the node that is the answer and <em class="ltx_emph">answer relation</em> as the relation
+from the answer node to its direct parent. Then we computed how much and
+how well the answer relation was triggered by ReverbMapping and CluewebMapping. Thus
+for the question, <span class="ltx_text ltx_font_sansserif">who is the father of King George VI</span>, we ask
+two questions: does the mapping, 1. (coverage) contain the answer
+relation <span class="ltx_text ltx_font_sansserif">people.person.parents</span>? 2. (precision) predict the
+answer relation from the question?</p>
+</div>
+<div id="S5.SS3.p4" class="ltx_para">
+<p class="ltx_p">Table <a href="#S5.T1" title="Table 1 ‣ 5.2 Steps ‣ 5 Relation Mapping ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> shows the coverage of CluewebMapping,
+which covers <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p4.m1" class="ltx_Math" alttext="93.0\%" display="inline"><mrow><mn>93.0</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> of all answer relations. Among them, we were
+able to learn the rule mapping using more than 10 thousand relation-sentence
+pairs for <em class="ltx_emph">each</em> of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p4.m2" class="ltx_Math" alttext="89.5\%" display="inline"><mrow><mn>89.5</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> of all answer relations. In
+contrast, ReverbMapping covers <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p4.m3" class="ltx_Math" alttext="89.7\%" display="inline"><mrow><mn>89.7</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> of the answer relations.</p>
+</div>
+<div id="S5.SS3.p5" class="ltx_para">
+<p class="ltx_p">Next we evaluated the prediction performance, using the evaluation
+metrics of information retrieval. For each question, we extracted
+all relations in its corresponding topic graph, and ranked each relation
+with whether it is the answer relation. For instance, for the
+previous example question, we want to rank the relation <span class="ltx_text ltx_font_sansserif">people.person.parents</span>
+as number 1. We computed standard MAP (Mean Average Precision) and
+MRR (Mean Reciprocal Rank), shown in Table <a href="#S5.T2" title="Table 2 ‣ 5.3 Evaluation ‣ 5 Relation Mapping ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>(a).
+As a simple baseline, “word overlap” counts the overlap between
+relations and the question. CluewebMapping ranks each relation by
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p5.m1" class="ltx_Math" alttext="\tilde{P}(R\mid Q)" display="inline"><mrow><mover accent="true"><mi>P</mi><mo stretchy="false">~</mo></mover><mrow><mo>(</mo><mi>R</mi><mo>∣</mo><mi>Q</mi><mo>)</mo></mrow></mrow></math>. ReverbMapping does the same, except that we
+took a uniform distribution on <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p5.m2" class="ltx_Math" alttext="\tilde{P}(w\mid R)" display="inline"><mrow><mover accent="true"><mi>P</mi><mo stretchy="false">~</mo></mover><mrow><mo>(</mo><mi>w</mi><mo>∣</mo><mi>R</mi><mo>)</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p5.m3" class="ltx_Math" alttext="\tilde{P}(R)" display="inline"><mrow><mover accent="true"><mi>P</mi><mo stretchy="false">~</mo></mover><mo>⁢</mo><mrow><mo>(</mo><mi>R</mi><mo>)</mo></mrow></mrow></math>
+since the contributed dataset did not include co-occurrence counts
+to estimate these probabilities.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">7</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">7</sup>The way we used ReverbMapping
+was not how <cite class="ltx_cite">Berant<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib4" title="Semantic Parsing on Freebase from Question-Answer Pairs" class="ltx_ref">2013</a>)</cite> originally used it: they employed
+a discriminative log-linear model to judge relations and that might yield
+better performance. As a fair comparison, ranking of CluewebMapping under uniform
+distribution is also included in Table <a href="#S5.T2" title="Table 2 ‣ 5.3 Evaluation ‣ 5 Relation Mapping ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>(a).</span></span></span>
+Note that the median rank from CluewebMapping
+is only 12, indicating that half of all answer relations are ranked in the
+top 12.</p>
+</div>
+<div id="S5.SS3.p6" class="ltx_para">
+<p class="ltx_p">Table <a href="#S5.T2" title="Table 2 ‣ 5.3 Evaluation ‣ 5 Relation Mapping ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>(b) further shows the percentage of
+answer relations with respect to their ranking. CluewebMapping
+successfully ranked <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p6.m1" class="ltx_Math" alttext="19\%" display="inline"><mrow><mn>19</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> of answer relations as top 1. A sample of
+these includes <span class="ltx_text ltx_font_sansserif">person.place_of_birth</span>,
+<span class="ltx_text ltx_font_sansserif">location.containedby</span>, <span class="ltx_text ltx_font_sansserif">country.currency_used</span>,
+<span class="ltx_text ltx_font_sansserif">regular_tv_appearance.actor</span>, etc. These percentage numbers
+are good clue for feature design: for instance, we may be confident in
+a relation if it is ranked top 5 or 10 by CluewebMapping.</p>
+</div>
+<div id="S5.SS3.p7" class="ltx_para">
+<p class="ltx_p">To conclude, we found that CluewebMapping provides satisfying coverage
+on the 3778 training questions: only <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p7.m1" class="ltx_Math" alttext="7\%" display="inline"><mrow><mn>7</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> were missing, despite the
+biased nature of web data. Also, CluewebMapping gives reasonably good
+precision on its prediction, despite the noisy nature of web data.
+We move on to fully evaluate the final QA <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p7.m2" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math>.</p>
+</div>
+<div id="S5.T2" class="ltx_table"><span class="ltx_ERROR undefined">\subfloat</span>
+<p class="ltx_p">[Ranking on answer relations. Best result on CluewebMapping was under
+the <span class="ltx_text ltx_font_smallcaps">grow-diag-final-and</span> heuristics (row 3) when symmetrizing
+alignment from both directions. The last row shows ranking of CluewebMapping
+under uniform distribution (assuming counting on words and relations is not known).]
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td"/>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_footnote">Median Rank</span></th>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_footnote">MAP</span></th>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_footnote">MRR</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_footnote">word overlap</span></th>
+<th class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_footnote">471</span></th>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_footnote">0.0380</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_footnote">0.0590</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">ReverbMapping</span></th>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">60</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">0.0691</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">0.0829</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_footnote">CluewebMapping</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_footnote">12</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_footnote">0.2074</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_footnote">0.2900</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">with uniform dist.</span></th>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">61</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">0.0544</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">0.0561</span></td></tr>
+</tbody>
+</table></p><span class="ltx_ERROR undefined">\subfloat</span>
+<p class="ltx_p">[Percentage of answer relations w.r.t. ranking number (header). w.o.: word overlap;
+R.M.: ReverbMapping; C.M.: CluewebMapping.]
+<table class="ltx_tabular ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td"/>
+<th class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m1" class="ltx_Math" alttext="\mathbf{1}" display="inline"><mn>𝟏</mn></math></th>
+<th class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m2" class="ltx_Math" alttext="\mathbf{\leq 5}" display="inline"><mrow><mi/><mo>≤</mo><mn>𝟓</mn></mrow></math></th>
+<th class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m3" class="ltx_Math" alttext="\mathbf{\leq 10}" display="inline"><mrow><mi/><mo>≤</mo><mn>𝟏𝟎</mn></mrow></math></th>
+<th class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m4" class="ltx_Math" alttext="\mathbf{\leq 50}" display="inline"><mrow><mi/><mo>≤</mo><mn>𝟓𝟎</mn></mrow></math></th>
+<th class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m5" class="ltx_Math" alttext="\mathbf{\leq 100}" display="inline"><mrow><mi/><mo>≤</mo><mn>𝟏𝟎𝟎</mn></mrow></math></th>
+<th class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T2.m6" class="ltx_Math" alttext="\mathbf{&gt;100}" display="inline"><mrow><mi/><mo>&gt;</mo><mn>𝟏𝟎𝟎</mn></mrow></math></th></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_footnote">w. o.</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_footnote">3.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_footnote">4.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_footnote">2.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_footnote">3.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_footnote">4.1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_footnote">81.3</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">R.M.</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">2.6</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">9.1</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">8.6</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">26.0</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">13.0</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">40.7</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">C.M.</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">19.0</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">19.9</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">8.9</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">22.3</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">7.5</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">22.4</span></td></tr>
+</tbody>
+</table></p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 2: </span>Evaluation on answer relation ranking
+prediction on 3778 training questions.</div>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Experiments</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">We evaluate the final <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p1.m1" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math> in this section. The
+system of comparison is that of <cite class="ltx_cite">Berant<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib4" title="Semantic Parsing on Freebase from Question-Answer Pairs" class="ltx_ref">2013</a>)</cite>.</p>
+</div>
+<div id="S6.SS3.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Data</h4>
+
+<div id="S6.SS3.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">We re-used W<span class="ltx_text ltx_font_smallcaps">eb</span>Q<span class="ltx_text ltx_font_smallcaps">uestions</span>, a dataset collected by <cite class="ltx_cite">Berant<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib4" title="Semantic Parsing on Freebase from Question-Answer Pairs" class="ltx_ref">2013</a>)</cite>.
+It contains <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS3.SSS0.P1.p1.m1" class="ltx_Math" alttext="5810" display="inline"><mn>5810</mn></math> questions crawled from the Google Suggest service,
+with answers annotated on Amazon Mechanical Turk. All questions contain
+at least one answer from Freebase. This dataset has been split by
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS3.SSS0.P1.p1.m2" class="ltx_Math" alttext="65\%/35\%" display="inline"><mrow><mrow><mrow><mn>65</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow><mo>/</mo><mn>35</mn></mrow><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> into <span class="ltx_text ltx_font_smallcaps">train-all</span> and <span class="ltx_text ltx_font_smallcaps">test</span>. We further randomly
+divided <span class="ltx_text ltx_font_smallcaps">train-all</span> by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS3.SSS0.P1.p1.m3" class="ltx_Math" alttext="80\%/20\%" display="inline"><mrow><mrow><mrow><mn>80</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow><mo>/</mo><mn>20</mn></mrow><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> to a smaller <span class="ltx_text ltx_font_smallcaps">train</span>
+and development set <span class="ltx_text ltx_font_smallcaps">dev</span>. Note that our <span class="ltx_text ltx_font_smallcaps">dev</span> set is different
+from that of <cite class="ltx_cite">Berant<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib4" title="Semantic Parsing on Freebase from Question-Answer Pairs" class="ltx_ref">2013</a>)</cite>, but the final result on
+<span class="ltx_text ltx_font_smallcaps">test</span> is directly comparable. Results are reported in terms
+of macro <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS3.SSS0.P1.p1.m4" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math> with partial credit (following <cite class="ltx_cite">Berant<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib4" title="Semantic Parsing on Freebase from Question-Answer Pairs" class="ltx_ref">2013</a>)</cite>)
+if a predicted answer list does not have a perfect match with all
+gold answers, as a lot of questions in W<span class="ltx_text ltx_font_smallcaps">eb</span>Q<span class="ltx_text ltx_font_smallcaps">uestions</span>
+contain more than one answer.</p>
+</div>
+</div>
+<div id="S6.SS3.SSS0.P2" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Search</h4>
+
+<div id="S6.SS3.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">With an Information Retrieval (IR) front-end, we need to locate the
+exact Freebase topic node a question is about. For this purpose we
+used the Freebase Search API <cite class="ltx_cite">[<a href="#bib.bib107" title="Freebase Search API" class="ltx_ref">13</a>]</cite>.All named entities <span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">8</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">8</sup>When no named entities are detected, we fall back
+to noun phrases.</span></span></span> in a question were sent to this API, which returned
+a ranked list of relevant topics. We also evaluated how well the search
+API served the IR purpose. W<span class="ltx_text ltx_font_smallcaps">eb</span>Q<span class="ltx_text ltx_font_smallcaps">uestions</span> not only has
+answers annotated, but also which Freebase topic nodes the answers
+come from.
+Thus we evaluated the ranking of retrieval with the gold
+standard annotation on <span class="ltx_text ltx_font_smallcaps">train-all</span>, shown in Table <a href="#S6.T3" title="Table 3 ‣ Search ‣ 6 Experiments ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+The top 2 results of the Search API contain gold standard topics for
+more than <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS3.SSS0.P2.p1.m1" class="ltx_Math" alttext="90\%" display="inline"><mrow><mn>90</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> of the questions and the top 10 results contain
+more than <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS3.SSS0.P2.p1.m2" class="ltx_Math" alttext="95\%" display="inline"><mrow><mn>95</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math>. We took this as a “good enough” IR front-end
+and used it on <span class="ltx_text ltx_font_smallcaps">test</span>.</p>
+</div>
+<div id="S6.SS3.SSS0.P2.p2" class="ltx_para">
+<p class="ltx_p">Once a topic is obtained we query the Freebase Topic API <cite class="ltx_cite">[<a href="#bib.bib106" title="Freebase Topic API" class="ltx_ref">14</a>]</cite>
+to retrieve all relevant information, resulting in a topic graph.
+The API returns almost identical information as displayed via a
+web browser to a user viewing this topic. Given that turkers
+annotated answers based on the topic page via a browser, this supports
+the assumption that the same answer would be located in the topic
+graph, which is then passed to the QA engine for feature
+extraction and classification.</p>
+</div>
+<div id="S6.T3" class="ltx_table ltx_align_center">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_bold">top</span></th>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_bold">1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_bold">2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_bold">3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_bold">5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_bold">10</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">#</th>
+<td class="ltx_td ltx_align_center">3263</td>
+<td class="ltx_td ltx_align_center">3456</td>
+<td class="ltx_td ltx_align_center">3532</td>
+<td class="ltx_td ltx_align_center">3574</td>
+<td class="ltx_td ltx_align_center">3604</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center">%</th>
+<td class="ltx_td ltx_align_center">86.4</td>
+<td class="ltx_td ltx_align_center">91.5</td>
+<td class="ltx_td ltx_align_center">93.5</td>
+<td class="ltx_td ltx_align_center">94.6</td>
+<td class="ltx_td ltx_align_center">95.4</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 3: </span>Evaluation on the Freebase Search
+API: how many questions’ top <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m2" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> retrieved results contain the gold
+standard topic. Total number of questions is 3778 (size of <span class="ltx_text ltx_font_smallcaps">train-all</span>).
+There were only 5 questions with no retrieved results.</div>
+</div>
+<div id="S6.T4" class="ltx_table ltx_align_center">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td"/>
+<th class="ltx_td"/>
+<th class="ltx_td"/>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_tt"/>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_bold">P</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_bold">R</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m1" class="ltx_Math" alttext="\mathbf{F_{1}}" display="inline"><msub><mi>𝐅</mi><mn>𝟏</mn></msub></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">basic</td>
+<td class="ltx_td ltx_align_center">57.3</td>
+<td class="ltx_td ltx_align_center">30.1</td>
+<td class="ltx_td ltx_align_center">39.5</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">+ word overlap</td>
+<td class="ltx_td ltx_align_center">56.0</td>
+<td class="ltx_td ltx_align_center">31.4</td>
+<td class="ltx_td ltx_align_center">40.2</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">+ CluewebMapping</td>
+<td class="ltx_td ltx_align_center">59.9</td>
+<td class="ltx_td ltx_align_center">35.4</td>
+<td class="ltx_td ltx_align_center">44.5</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">+both</td>
+<td class="ltx_td ltx_align_center">59.0</td>
+<td class="ltx_td ltx_align_center">35.4</td>
+<td class="ltx_td ltx_align_center">44.3</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 4: </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m3" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math> on <span class="ltx_text ltx_font_smallcaps">dev</span> with different feature
+settings.</div>
+</div>
+</div>
+<div id="S6.SS3.SSS0.P3" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Model Tuning</h4>
+
+<div id="S6.SS3.SSS0.P3.p1" class="ltx_para">
+<p class="ltx_p">We treat QA on Freebase as a binary classification task: for each node
+in the topic graph, we extract features and judge whether it is the answer
+node. Every question was processed by the Stanford CoreNLP
+suite with the caseless model. Then the question features (§<a href="#S4.SS1" title="4.1 Question Graph ‣ 4 Graph Features ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>)
+and node features (§<a href="#S4.SS2" title="4.2 Freebase Topic Graph ‣ 4 Graph Features ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>) were combined
+(§<a href="#S4.SS3" title="4.3 Feature Production ‣ 4 Graph Features ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>) for each node. The learning
+problem is challenging: for about <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS3.SSS0.P3.p1.m1" class="ltx_Math" alttext="3000" display="inline"><mn>3000</mn></math> questions in <span class="ltx_text ltx_font_smallcaps">train</span>,
+there are 3 million nodes (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS3.SSS0.P3.p1.m2" class="ltx_Math" alttext="1000" display="inline"><mn>1000</mn></math> nodes per topic graph),
+and 7 million feature types. We employed a high-performance machine
+learning tool, <span class="ltx_text ltx_font_typewriter">Classias</span> <cite class="ltx_cite">[<a href="#bib.bib25b" title="Classias: a collection of machine-learning algorithms for classification" class="ltx_ref">31</a>]</cite>. Training usually took around
+4 hours. We experimented with various discriminative learners on <span class="ltx_text ltx_font_smallcaps">dev</span>,
+including logistic regression, perceptron and SVM, and found L1 regularized
+logistic regression to give the best result. The L1 regularization encourages
+sparse features by driving feature weights towards zero, which was
+ideal for the over-generated feature space. After training, we had
+around <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS3.SSS0.P3.p1.m3" class="ltx_Math" alttext="30" display="inline"><mn>30</mn></math> thousand features with non-zero weights, a <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS3.SSS0.P3.p1.m4" class="ltx_Math" alttext="200" display="inline"><mn>200</mn></math> fold
+reduction from the original features.</p>
+</div>
+<div id="S6.SS3.SSS0.P3.p2" class="ltx_para">
+<p class="ltx_p">Also, we did an ablation test on <span class="ltx_text ltx_font_smallcaps">dev</span> about how additional
+features on the mapping between Freebase relations and the original
+questions help, with three feature settings: 1) “basic” features
+include feature productions read off from the feature graph (Figure
+<a href="#S4.F1" title="Figure 1 ‣ 4.1 Question Graph ‣ 4 Graph Features ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>); 2) “+ word overlap” adds additional
+features on whether sub-relations have overlap with the question; and
+3) “+ CluewebMapping” adds the ranking of relation prediction given
+the question according to CluewebMapping. Table <a href="#S6.T4" title="Table 4 ‣ Search ‣ 6 Experiments ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>
+shows that the additional CluewebMapping features improved overall
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS3.SSS0.P3.p2.m1" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math> by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS3.SSS0.P3.p2.m2" class="ltx_Math" alttext="5\%" display="inline"><mrow><mn>5</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math>, a <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS3.SSS0.P3.p2.m3" class="ltx_Math" alttext="13\%" display="inline"><mrow><mn>13</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> relative improvement: a remarkable gain
+given that the model already learned a strong correlation between
+question types and answer types (explained more in discussion and Table
+<a href="#S6.T6" title="Table 6 ‣ Discussion ‣ 6 Experiments ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> later).</p>
+</div>
+<div id="S6.SS3.SSS0.P3.p3" class="ltx_para">
+<p class="ltx_p">Finally, the ratio of positive vs. negative examples affect final
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS3.SSS0.P3.p3.m1" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math>: the more positive examples, the lower the precision and
+the higher the recall. Under the original setting, this ratio was
+about <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS3.SSS0.P3.p3.m2" class="ltx_Math" alttext="1:275" display="inline"><mrow><mn>1</mn><mo>:</mo><mn>275</mn></mrow></math>. This produced precision around <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS3.SSS0.P3.p3.m3" class="ltx_Math" alttext="60\%" display="inline"><mrow><mn>60</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> and recall
+around <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS3.SSS0.P3.p3.m4" class="ltx_Math" alttext="35\%" display="inline"><mrow><mn>35</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> (c.f. Table <a href="#S6.T4" title="Table 4 ‣ Search ‣ 6 Experiments ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>). To optimize for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS3.SSS0.P3.p3.m5" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math>,
+we down-sampled the negative examples to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS3.SSS0.P3.p3.m6" class="ltx_Math" alttext="20\%" display="inline"><mrow><mn>20</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math>, i.e., a new ratio
+of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS3.SSS0.P3.p3.m7" class="ltx_Math" alttext="1:55" display="inline"><mrow><mn>1</mn><mo>:</mo><mn>55</mn></mrow></math>. This boosted the final <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS3.SSS0.P3.p3.m8" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math> on <span class="ltx_text ltx_font_smallcaps">dev</span> to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS3.SSS0.P3.p3.m9" class="ltx_Math" alttext="48\%" display="inline"><mrow><mn>48</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math>.
+We report the final <span class="ltx_text ltx_font_smallcaps">test</span> result under this down-sampled training.
+In practice the precision/recall balance can be adjusted by the positive/negative
+ratio.</p>
+</div>
+<div id="S6.T5" class="ltx_table ltx_align_center">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td"/>
+<th class="ltx_td"/>
+<th class="ltx_td"/>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_tt"/>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_bold">P</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_bold">R</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T5.m1" class="ltx_Math" alttext="\mathbf{F_{1}}" display="inline"><msub><mi>𝐅</mi><mn>𝟏</mn></msub></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">Gold Retrieval</td>
+<td class="ltx_td ltx_align_center">45.4</td>
+<td class="ltx_td ltx_align_center">52.2</td>
+<td class="ltx_td ltx_align_center">48.6</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center">Freebase Search API</td>
+<td class="ltx_td ltx_align_center">38.8</td>
+<td class="ltx_td ltx_align_center">45.8</td>
+<td class="ltx_td ltx_align_center">42.0</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center"><cite class="ltx_cite">Berant<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib4" title="Semantic Parsing on Freebase from Question-Answer Pairs" class="ltx_ref">2013</a>)</cite></td>
+<td class="ltx_td ltx_align_center">-</td>
+<td class="ltx_td ltx_align_center">-</td>
+<td class="ltx_td ltx_align_center">31.4</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 5: </span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T5.m4" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math> on <span class="ltx_text ltx_font_smallcaps">test</span> with Gold Retrieval
+and Freebase Search API as the IR front end. <cite class="ltx_cite">Berant<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib4" title="Semantic Parsing on Freebase from Question-Answer Pairs" class="ltx_ref">2013</a>)</cite>
+actually reported <em class="ltx_emph">accuracy</em> on this dataset. However, since their
+system predicted answers for almost every question (p.c.), it is roughly
+that precision=recall=<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T5.m5" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math>=accuracy for them.</div>
+</div>
+</div>
+<div id="S6.SS3.SSS0.P4" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Test Results</h4>
+
+<div id="S6.SS3.SSS0.P4.p1" class="ltx_para">
+<p class="ltx_p">Table <a href="#S6.T5" title="Table 5 ‣ Model Tuning ‣ 6 Experiments ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> gives the final <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS3.SSS0.P4.p1.m1" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math> on <span class="ltx_text ltx_font_smallcaps">test</span>.
+“Gold Retrieval” always ranked the correct topic node top 1, a
+perfect IR front-end assumption. In a more realistic scenario, we had
+already evaluated that the Freebase Search API returned the correct topic
+node <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS3.SSS0.P4.p1.m2" class="ltx_Math" alttext="95\%" display="inline"><mrow><mn>95</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> of the time in its top 10 results (c.f. Table
+<a href="#S6.T3" title="Table 3 ‣ Search ‣ 6 Experiments ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>), thus we also tested on the top 10
+results returned by the Search API. To keep things simple, we did not
+perform answer voting, but simply extracted answers from the first
+(ranked by the Search API) topic node with predicted answer(s)
+found. The final <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS3.SSS0.P4.p1.m3" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math> of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS3.SSS0.P4.p1.m4" class="ltx_Math" alttext="42.0\%" display="inline"><mrow><mn>42.0</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> gives a relative improvement over
+previous best result <cite class="ltx_cite">[<a href="#bib.bib4" title="Semantic Parsing on Freebase from Question-Answer Pairs" class="ltx_ref">2</a>]</cite> of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS3.SSS0.P4.p1.m5" class="ltx_Math" alttext="31.4\%" display="inline"><mrow><mn>31.4</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> by one third.</p>
+</div>
+<div id="S6.SS3.SSS0.P4.p2" class="ltx_para">
+<p class="ltx_p">One question of interest is whether our system, aided by the massive
+web data, can be fairly compared to the semantic parsing approaches
+(note that <cite class="ltx_cite">Berant<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib4" title="Semantic Parsing on Freebase from Question-Answer Pairs" class="ltx_ref">2013</a>)</cite> also used ClueWeb indirectly
+through <span class="ltx_text ltx_font_typewriter">ReVerb</span>). Thus we took out the word overlapping and CluewebMapping
+based features, and the new <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS3.SSS0.P4.p2.m1" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math> on <span class="ltx_text ltx_font_smallcaps">test</span> was <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS3.SSS0.P4.p2.m2" class="ltx_Math" alttext="36.9\%" display="inline"><mrow><mn>36.9</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math>.</p>
+</div>
+<div id="S6.SS3.SSS0.P4.p3" class="ltx_para">
+<p class="ltx_p">The other question of interest is that whether our system has acquired
+some level of “machine intelligence”: how much does it know what the question
+inquires? We discuss it below through feature and error analysis.</p>
+</div>
+</div>
+<div id="S6.SS3.SSS0.P5" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Discussion</h4>
+
+<div id="S6.SS3.SSS0.P5.p1" class="ltx_para">
+<p class="ltx_p">The combination between questions and Freebase nodes captures some
+real gist of QA pattern typing, shown in Table <a href="#S6.T6" title="Table 6 ‣ Discussion ‣ 6 Experiments ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>
+with sampled features and weights. Our system learned, for instance,
+when the question asks for geographic adjacency information
+(<span class="ltx_text ltx_font_sansserif">qverb=border</span>), the correct answer relation
+to look for is <span class="ltx_text ltx_font_sansserif">location.adjoins</span>. Detailed comparison
+with the output from <cite class="ltx_cite">Berant<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib4" title="Semantic Parsing on Freebase from Question-Answer Pairs" class="ltx_ref">2013</a>)</cite> is a work in progress
+and will be presented in a follow-up report.</p>
+</div>
+<div id="S6.T6" class="ltx_table">
+<table class="ltx_tabular ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td"/>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_bold">wgt.</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_bold">feature</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">5.56</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">qfocus=money<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T6.m1" class="ltx_Math" alttext="|" display="inline"><mo mathsize="normal" stretchy="false">|</mo></math>type=Currency</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">5.35</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">qverb=die<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T6.m2" class="ltx_Math" alttext="|" display="inline"><mo mathsize="normal" stretchy="false">|</mo></math>type=Cause_Of_Death</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">5.11</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">qword=when<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T6.m3" class="ltx_Math" alttext="|" display="inline"><mo mathsize="normal" stretchy="false">|</mo></math>type=datetime</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">4.56</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">qverb=border<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T6.m4" class="ltx_Math" alttext="|" display="inline"><mo mathsize="normal" stretchy="false">|</mo></math>rel=location.adjoins</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">3.90</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">qword=why<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T6.m5" class="ltx_Math" alttext="|" display="inline"><mo mathsize="normal" stretchy="false">|</mo></math>incoming_relation_rank=top_3</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">2.94</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">qverb=go<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T6.m6" class="ltx_Math" alttext="|" display="inline"><mo mathsize="normal" stretchy="false">|</mo></math>qtopic=location<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T6.m7" class="ltx_Math" alttext="|" display="inline"><mo mathsize="normal" stretchy="false">|</mo></math>type=Tourist_attraction</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">-3.94</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">qtopic=location<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T6.m8" class="ltx_Math" alttext="|" display="inline"><mo mathsize="normal" stretchy="false">|</mo></math>rel=location.imports_exports.date</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">-2.93</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">qtopic=person<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T6.m9" class="ltx_Math" alttext="|" display="inline"><mo mathsize="normal" stretchy="false">|</mo></math>rel=education.end_date</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 6: </span>A sample of the top 50 most positive/negative
+features. Features are production between question and node
+features (c.f. Figure <a href="#S4.F1" title="Figure 1 ‣ 4.1 Question Graph ‣ 4 Graph Features ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>).</div>
+</div>
+</div>
+</div>
+<div id="S7" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">7 </span>Conclusion</h2>
+
+<div id="S7.p1" class="ltx_para">
+<p class="ltx_p">We proposed an automatic method for Question Answering from structured
+data source (Freebase). Our approach associates question features with
+answer patterns described by Freebase and has achieved
+state-of-the-art results on a balanced and realistic QA corpus. To
+compensate for the problem of domain mismatch or overfitting, we
+exploited ClueWeb, mined mappings between KB relations and natural
+language text, and showed that it helped both relation prediction and
+answer extraction. Our method employs relatively lightweight machinery
+but has good performance. We hope that this result establishes a new
+baseline against which semantic parsing researchers can measure their
+progress towards deeper language understanding and answering of human
+questions.</p>
+</div>
+<div id="S7.SS3.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Acknowledgments</h4>
+
+<div id="S7.SS3.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">We thank the Allen Institute for Artificial Intelligence for funding this work.
+We are also grateful to Jonathan Berant, Tom Kwiatkowski,
+Qingqing Cai, Adam Lopez, Chris Callison-Burch and Peter Clark
+for helpful discussion and to the reviewers for insightful comments.</p>
+</div>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Auer, C. Bizer, G. Kobilarov, J. Lehmann, R. Cyganiak and Z. Ives</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">DBPedia: A nucleus for a web of open data</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_inbook">The semantic web</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 722–735</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Berant, A. Chou, R. Frostig and P. Liang</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Semantic Parsing on Freebase from Question-Answer Pairs</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p2" title="2 Approach ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.p3" title="2 Approach ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.p1" title="3 Background ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S3.p4" title="3 Background ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S5.SS3.p1" title="5.3 Evaluation ‣ 5 Relation Mapping ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.3</span></a>,
+<a href="#S5.SS3.p2" title="5.3 Evaluation ‣ 5 Relation Mapping ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.3</span></a>,
+<a href="#S5.SS3.p5" title="5.3 Evaluation ‣ 5 Relation Mapping ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.3</span></a>,
+<a href="#S6.SS3.SSS0.P1.p1" title="Data ‣ 6 Experiments ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>,
+<a href="#S6.SS3.SSS0.P4.p1" title="Test Results ‣ 6 Experiments ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>,
+<a href="#S6.SS3.SSS0.P4.p2" title="Test Results ‣ 6 Experiments ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>,
+<a href="#S6.SS3.SSS0.P5.p1" title="Discussion ‣ 6 Experiments ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>,
+<a href="#S6.T5" title="Table 5 ‣ Model Tuning ‣ 6 Experiments ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>,
+<a href="#S6.p1" title="6 Experiments ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib4a" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Bird and E. Loper</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">NLTK: The Natural Language Toolkit</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I4.i1.p1" title="1. ‣ 5.2 Steps ‣ 5 Relation Mapping ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1.</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Bollacker, C. Evans, P. Paritosh, T. Sturge and J. Taylor</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Freebase: a collaboratively created graph database for structuring human knowledge</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1247–1250</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. F. Brown, V. J. D. Pietra, S. A. D. Pietra and R. L. Mercer</span><span class="ltx_text ltx_bib_year">(1993)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The mathematics of statistical machine translation: parameter estimation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational linguistics</span> <span class="ltx_text ltx_bib_volume">19</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 263–311</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I4.i3.p1" title="3. ‣ 5.2 Steps ‣ 5 Relation Mapping ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Q. Cai and A. Yates</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Large-scale semantic parsing via schema matching and lexicon extension</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Approach ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.p4" title="3 Background ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. L. Chen and R. J. Mooney</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning to Interpret Natural Language Navigation Instructions from Observations</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">2</span>, <span class="ltx_text ltx_bib_pages"> pp. 1–2</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p1" title="3 Background ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib104" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Chu-Carroll, J. Fan, B. K. Boguraev, D. Carmel, D. Sheinwald and C. Welty</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Finding needles in the haystack: search and candidate generation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">IBM Journal of Research and Development</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p5" title="3 Background ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib23" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Euzenat and P. Shvaiko</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Ontology matching</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Springer</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p4" title="3 Background ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Fader, S. Soderland and O. Etzioni</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Identifying relations for open information extraction</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Approach ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.p4" title="3 Background ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib25" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Fader, L. Zettlemoyer and O. Etzioni</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Paraphrase-Driven Learning for Open Question Answering</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p4" title="3 Background ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib28" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Frank, H. Krieger, F. Xu, H. Uszkoreit, B. Crysmann, B. Jörg and U. Schäfer</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Question answering from structured knowledge sources</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Applied Logic</span> <span class="ltx_text ltx_bib_volume">5</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 20–48</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p5" title="3 Background ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib107" class="ltx_bibitem ltx_bib_website"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Freebase</span><span class="ltx_text ltx_bib_year">(2013)</span><span class="ltx_text ltx_bib_type">(Website)</span>
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note">https://developers.google.com/freebase/v1/search-overview</span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS3.SSS0.P2.p1" title="Search ‣ 6 Experiments ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib106" class="ltx_bibitem ltx_bib_website"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Freebase</span><span class="ltx_text ltx_bib_year">(2013)</span><span class="ltx_text ltx_bib_type">(Website)</span>
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note">https://developers.google.com/freebase/v1/topic-overview</span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS3.SSS0.P2.p2" title="Search ‣ 6 Experiments ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib11a" class="ltx_bibitem ltx_bib_misc"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Gabrilovich, M. Ringgaard and A. Subramanya</span><span class="ltx_text ltx_bib_year">(2013-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">FACC1: Freebase annotation of ClueWeb corpora, Version 1 (Release date 2013-06-26, Format version 1, Correction level 0)</span>.
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note">http://lemurproject.org/clueweb09/FACC1/</span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS2.p1" title="5.2 Steps ‣ 5 Relation Mapping ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>.
+</span></li>
+<li id="bib.bib31" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. F. Green Jr, A. K. Wolf, C. Chomsky and K. Laughery</span><span class="ltx_text ltx_bib_year">(1961)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Baseball: an automatic question-answerer</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 219–224</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib35" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. R. Hobbs</span><span class="ltx_text ltx_bib_year">(1985)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Ontological promiscuity</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p4" title="3 Background ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib36" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Hoffart, F. M. Suchanek, K. Berberich, E. Lewis-Kelham, G. De Melo and G. Weikum</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Yago2: exploring and querying world knowledge in time, space, context, and many languages</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 229–232</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib38" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. K. Jones, M. Johnson and S. Goldwater</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Semantic parsing with bayesian tree transducers</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p1" title="3 Background ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib39" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. J. Kate and R. J. Mooney</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Using string-kernels for learning semantic parsers</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p1" title="3 Background ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Kiss and J. Strunk</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Unsupervised multilingual sentence boundary detection</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">32</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 485–525</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I4.i1.p1" title="1. ‣ 5.2 Steps ‣ 5 Relation Mapping ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1.</span></a>.
+</span></li>
+<li id="bib.bib21" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Koehn</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Cambridge University Press</span>, <span class="ltx_text ltx_bib_place">New York, NY, USA</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I4.i3.p1" title="3. ‣ 5.2 Steps ‣ 5 Relation Mapping ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.</span></a>.
+</span></li>
+<li id="bib.bib41" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Krishnamurthy and T. M. Mitchell</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Weakly supervised training of semantic parsers</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p1" title="3 Background ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib42" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Kwiatkowski, E. Choi, Y. Artzi and L. Zettlemoyer</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Scaling Semantic Parsers with On-the-fly Ontology Matching</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.p1" title="3 Background ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S3.p2" title="3 Background ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S3.p4" title="3 Background ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib44" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Kwiatkowski, L. Zettlemoyer, S. Goldwater and M. Steedman</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Inducing probabilistic CCG grammars from logical form with higher-order unification</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1223–1233</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p2" title="3 Background ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib43" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Kwiatkowski, L. Zettlemoyer, S. Goldwater and M. Steedman</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Lexical generalization in CCG grammar induction for semantic parsing</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p2" title="3 Background ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib48" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Liang, M. I. Jordan and D. Klein</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning Dependency-Based Compositional Semantics</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p1" title="3 Background ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib18a" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[28]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Lin and O. Etzioni</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Entity Linking at Web Scale</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 84–88</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS3.p1" title="5.3 Evaluation ‣ 5 Relation Mapping ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.3</span></a>.
+</span></li>
+<li id="bib.bib50" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[29]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">V. Lopez, M. Pasin and E. Motta</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Aqualog: an ontology-portable question answering system for the semantic web</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_inbook">The Semantic Web: Research and Applications</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 546–562</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p5" title="3 Background ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib25a" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[30]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. J. Och and H. Ney</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A systematic comparison of various statistical alignment models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational linguistics</span> <span class="ltx_text ltx_bib_volume">29</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 19–51</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I4.i3.p1" title="3. ‣ 5.2 Steps ‣ 5 Relation Mapping ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.</span></a>.
+</span></li>
+<li id="bib.bib25b" class="ltx_bibitem ltx_bib_misc"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[31]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Okazaki</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Classias: a collection of machine-learning algorithms for classification</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.chokkan.org/software/classias/" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS3.SSS0.P3.p1" title="Model Tuning ‣ 6 Experiments ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib105" class="ltx_bibitem ltx_bib_misc"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[32]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Orr, A. Subramanya, E. Gabrilovich and M. Ringgaard</span><span class="ltx_text ltx_bib_year">(2013-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">11 billion clues in 800 million documents: a web research corpus annotated with freebase concepts</span>.
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note">http://googleresearch.blogspot.com/2013/07/11-billion-clues-in-800-million.html</span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS2.p1" title="5.2 Steps ‣ 5 Relation Mapping ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>.
+</span></li>
+<li id="bib.bib67" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[33]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Rahm and P. A. Bernstein</span><span class="ltx_text ltx_bib_year">(2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A survey of approaches to automatic schema matching</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">the VLDB Journal</span> <span class="ltx_text ltx_bib_volume">10</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 334–350</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p4" title="3 Background ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib72" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[34]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Shekarpour, A. Ngonga Ngomo and S. Auer</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Question answering on interlinked data</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p5" title="3 Background ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib103" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[35]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. R. Tang and R. J. Mooney</span><span class="ltx_text ltx_bib_year">(2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Using multiple clause constructors in inductive logic programming for semantic parsing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_inbook">Machine Learning: ECML 2001</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 466–477</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib83" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[36]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Unger, L. Bühmann, J. Lehmann, A. Ngonga Ngomo, D. Gerber and P. Cimiano</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Template-based question answering over RDF data</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p5" title="3 Background ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib94" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[37]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. W. Wong and R. J. Mooney</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning synchronous grammars for semantic parsing with lambda calculus</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p1" title="3 Background ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib95" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[38]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">W. A. Woods</span><span class="ltx_text ltx_bib_year">(1977)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Lunar rocks in natural english: explorations in natural language question answering</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Linguistic structures processing</span> <span class="ltx_text ltx_bib_volume">5</span>, <span class="ltx_text ltx_bib_pages"> pp. 521–569</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib97" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[39]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Yahya, K. Berberich, S. Elbassuoni, M. Ramanath, V. Tresp and G. Weikum</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Natural language questions for the web of data</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p5" title="3 Background ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib101" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[40]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. S. Zettlemoyer and M. Collins</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning to map sentences to logical form: Structured classification with probabilistic categorial grammars</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Uncertainty in Artificial Intelligence (UAI)</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p2" title="3 Background ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib100" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[41]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. S. Zettlemoyer and M. Collins</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Online learning of relaxed CCG grammars for parsing to logical form</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p2" title="3 Background ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib99" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[42]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. S. Zettlemoyer and M. Collins</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning context-dependent mappings from sentences to logical form</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p2" title="3 Background ‣ Information Extraction over Structured Data: Question Answering with Freebase" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 19:00:40 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

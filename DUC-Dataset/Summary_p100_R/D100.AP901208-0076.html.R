@@ -1,0 +1,11 @@
+<html>
+<head>
+<meta name="TextLength" content="SENT_NUM:4, WORD_NUM:104">
+</head>
+<body bgcolor="white">
+<a href="#0" id="0">A spokesman for the Lennon family said Ms. Ono and the couple's son, Sean, were in Europe and would spend the anniversary privately.</a>
+<a href="#1" id="1">Dozens of fans of rock legend and former Beatle John Lennon gathered in the snow on a windy Saturday for a ceremony marking the 10th anniversary of his death.</a>
+<a href="#2" id="2">Many friends and followers of Lennon were present, including Father Tom McKenzie, immortalized as Father MacKenzie in The Beatles' l966 hit song ``Eleanor Rigby.''</a>
+<a href="#3" id="3">On Friday, a small group of invited guests had gathered at Liverpool's Beatles Museum to watch Mrs. Gavin unveil a plaque marking the 10th anniversary of Lennon's death.</a>
+</body>
+</html>

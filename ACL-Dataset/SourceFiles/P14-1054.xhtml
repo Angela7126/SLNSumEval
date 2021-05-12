@@ -1,0 +1,705 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Omni-word Feature and Soft Constraintfor Chinese Relation Extraction</title>
+<!--Generated on Tue Jun 10 17:57:18 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Omni-word Feature and Soft Constraint
+<br class="ltx_break"/>for Chinese Relation Extraction</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Yanping Chen<math xmlns="http://www.w3.org/1998/Math/MathML" id="m1" class="ltx_Math" alttext="{}^{\dagger}" display="inline"><msup><mi/><mo>†</mo></msup></math> 
+<br class="ltx_break"/>&amp;Qinghua Zheng<math xmlns="http://www.w3.org/1998/Math/MathML" id="m2" class="ltx_Math" alttext="{}^{\dagger}" display="inline"><msup><mi/><mo>†</mo></msup></math>
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m3" class="ltx_Math" alttext="{}^{\dagger}" display="inline"><msup><mi/><mo>†</mo></msup></math>MOEKLINNS Lab, Department of Computer Science and Technology 
+<br class="ltx_break"/>Xi’an Jiaotong University, China
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">ypench@gmail.com, qhzheng@mail.xjtu.edu.cn
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m4" class="ltx_Math" alttext="{}^{\ddagger}" display="inline"><msup><mi/><mo mathvariant="normal">‡</mo></msup></math></span>Amazon.com, Inc.
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">wzhan@amazon.com</span> 
+<br class="ltx_break"/>&amp;Wei Zhang<math xmlns="http://www.w3.org/1998/Math/MathML" id="m5" class="ltx_Math" alttext="{}^{\ddagger}" display="inline"><msup><mi/><mo>‡</mo></msup></math>
+<br class="ltx_break"/>
+<br class="ltx_break"/>
+<br class="ltx_break"/>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Chinese is an ancient hieroglyphic. It is inattentive to structure. Therefore, segmenting and parsing Chinese are more difficult and less accurate. In this paper, we propose an Omni-word feature and a soft constraint method for Chinese relation extraction. The Omni-word feature uses every potential word in a sentence as lexicon feature, reducing errors caused by word segmentation. In order to utilize the structure information of a relation instance, we discuss how soft constraint can be used to capture the local dependency. Both Omni-word feature and soft constraint make a better use of sentence information and minimize the influences caused by Chinese word segmentation and parsing. We test these methods on the ACE 2005 RDC Chinese corpus. The results show a significant improvement in Chinese relation extraction, outperforming other methods in F-score by 10% in 6 relation types and 15% in 18 relation subtypes.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Information Extraction (IE) aims at extracting syntactic or semantic units with concrete concepts or linguistic functions <cite class="ltx_cite">[]</cite>. Instead of dealing with the whole documents, focusing on designated information, most of the IE systems extract named entities, relations, quantifiers or events from sentences.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">The relation recognition task is to find the relationships between two entities. Successful recognition of relation implies correctly detecting both the relation arguments and relation type. Although this task has received extensive research. The performance of relation extraction is still unsatisfactory with a F-score of 67.5% for English (23 subtypes) <cite class="ltx_cite">[]</cite>. Chinese relation extraction also faces a weak performance having F-score about 66.6% in 18 subtypes <cite class="ltx_cite">[]</cite>.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">The difficulty of Chinese IE is that Chinese words are written next to each other without delimiter in between. Lacking of orthographic word makes Chinese word segmentation difficult. In Chinese, a single sentence often has several segmentation paths leading to the segmentation ambiguity problem <cite class="ltx_cite">[]</cite>. The lack of delimiter also causes the Out-of-Vocabulary problem (OOV, also known as <span class="ltx_text ltx_font_italic">new word detection</span>) <cite class="ltx_cite">[]</cite>. These problems are worsened by the fact that Chinese has a large number of characters and words. Currently, the state-of-the-art Chinese OOV recognition system has performance about 75% in recall <cite class="ltx_cite">[]</cite>. The errors caused by segmentation and OOV will accumulate and propagate to subsequent processing (e.g. part-of-speech (POS) tagging or parsing).</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">Therefore, the Chinese relation extraction is more difficult. According to our survey, compared to the same work in English, the Chinese relation extraction researches make less significant progress.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">Based on the characteristics of Chinese, in this paper, an Omni-word feature and a soft constraint method are proposed for Chinese relation extraction. We apply these approaches in a maximum entropy based system to extract relations from the ACE 2005 corpus. Experimental results show that our method has made a significant improvement.</p>
+</div>
+<div id="S1.p6" class="ltx_para">
+<p class="ltx_p">The contributions of this paper include</p>
+<ol id="I1" class="ltx_enumerate">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">1.</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p">Propose a novel Omni-word feature for Chinese relation extraction. Unlike the traditional segmentation based method, which is a partition of the sentence, the Omni-word feature uses every potential word in a sentence as lexicon feature.</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">2.</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p">Aiming at the Chinese inattentive structure, we utilize the soft constraint to capture the local dependency in a relation instance. Four constraint conditions are proposed to generate combined features to capture the local dependency and maximize the classification determination.</p>
+</div></li>
+</ol>
+</div>
+<div id="S1.p7" class="ltx_para">
+<p class="ltx_p">The rest of this paper is organized as follows. Section <a href="#S2" title="2 Related Work ‣ Omni-word Feature and Soft Constraint for Chinese Relation Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> introduces the related work. The Omni-word feature and soft constrain are proposed in Section <a href="#S3" title="3 Feature Construction ‣ Omni-word Feature and Soft Constraint for Chinese Relation Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>. We give the experimental results in Section <a href="#S3.SS2" title="3.2 Soft Constraint ‣ 3 Feature Construction ‣ Omni-word Feature and Soft Constraint for Chinese Relation Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a> and analyze the performance in Section <a href="#S4" title="4 Discussion ‣ Omni-word Feature and Soft Constraint for Chinese Relation Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>. Conclusions are given in Section <a href="#S5" title="5 Conclusion ‣ Omni-word Feature and Soft Constraint for Chinese Relation Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related Work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">There are two paradigms extracting the relationship between two entities: the Open Relation Extraction (ORE) and the Traditional Relation Extraction (TRE) <cite class="ltx_cite">[]</cite>.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">Based on massive and heterogeneous corpora, the ORE systems deal with millions or billions of documents. Even strict filtrations or constrains are employed to filter the redundancy information, they often generate tens of thousands of relations dynamically <cite class="ltx_cite">[]</cite>. The practicability of ORE systems depends on the adequateness of information in a big corpus <cite class="ltx_cite">[]</cite>. Most of the ORE systems utilize weak supervision knowledge to guide the extracting process, such as: Databases <cite class="ltx_cite">[]</cite>, Wikipedia <cite class="ltx_cite">[]</cite>, Regular expression <cite class="ltx_cite">[]</cite>, Ontology <cite class="ltx_cite">[]</cite> or Knowledge Base extracted automatically from Internet <cite class="ltx_cite">[]</cite>. However, when iteratively coping with large heterogeneous data, the ORE systems suffer from the “semantic drift” problem, caused by error accumulation <cite class="ltx_cite">[]</cite>. Agichtein, Carlson and Fader et al. <cite class="ltx_cite">[]</cite> propose syntactic and semantic constraints to prevent this deficiency. The soft constraints, proposed in this paper, are combined features like these syntactic or semantic constraints, which will be discussed in Section <a href="#S3.SS2" title="3.2 Soft Constraint ‣ 3 Feature Construction ‣ Omni-word Feature and Soft Constraint for Chinese Relation Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">The TRE paradigm takes hand-tagged examples as input, extracting predefined relation types <cite class="ltx_cite">[]</cite>. The TRE systems use techniques such as: Rules (Regulars, Patterns and Propositions) <cite class="ltx_cite">[]</cite>, Kernel method <cite class="ltx_cite">[]</cite>, Belief network <cite class="ltx_cite">[]</cite>, Linear programming <cite class="ltx_cite">[]</cite>, Maximum entropy <cite class="ltx_cite">[]</cite> or SVM <cite class="ltx_cite">[]</cite>. Compared to the ORE systems, the TRE systems have a robust performance. Disadvantages of the TRE systems are that the manually annotated corpus is required, which is time-consuming and costly in human labor. And migrating between different applications is difficult. However, the TRE systems are evaluable and comparable. Different systems running on the same corpus can be evaluated appropriately.</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p">In the field of Chinese relation extraction, Liu et al. <cite class="ltx_cite">[]</cite> proposed a convolution tree kernel. Combining with external semantic resources, a better performance was achieved. Che et al. <cite class="ltx_cite">[]</cite> introduced a feature based method, which utilized lexicon information around entities and was evaluated on Winnow and SVM classifiers. Li and Zhang et al. <cite class="ltx_cite">[]</cite> explored the position feature between two entities. For each type of these relations, a SVM was trained and tested independently. Based on <span class="ltx_text ltx_font_italic">Deep Belief Network</span>, Chen et al. <cite class="ltx_cite">[]</cite> proposed a model handling the high dimensional feature space. In addition, there are mixed models. For example, Lin et al. <cite class="ltx_cite">[]</cite> employed a model, combining both the feature based and the tree kernel based methods.</p>
+</div>
+<div id="S2.p5" class="ltx_para">
+<p class="ltx_p">Despite the popularity of kernel based method, Huang et al. <cite class="ltx_cite">[]</cite> experimented with different kernel methods and inferred that simply migrating from English kernel methods can result in a bad performance in Chinese relation extraction. Chen and Li et al. <cite class="ltx_cite">[]</cite> also pointed out that, due to the inaccuracy of Chinese word segmentation and parsing, the tree kernel based approach is inappropriate for Chinese relation extraction. The reason of the tree kernel based approach not achieve the same level of accuracy as that from English may be that segmenting and parsing Chinese are more difficult and less accurate than processing English.</p>
+</div>
+<div id="S2.p6" class="ltx_para">
+<p class="ltx_p">In our research, we proposed an Omni-word feature and a soft constraint method. Both approaches are based on the Chinese characteristics. Therefore, better performance is expected. In the following, we introduce the feature construction, which discusses the proposed two approaches.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Feature Construction</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">In this section, the employed candidate features are discussed. And four constraint conditions are proposed to transform the candidate features into combined features. The soft constraint is the method to generate the combine features<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>If without ambiguity, we also use the terminology of “soft constraint” denoting features generated by the employed constraint conditions.</span></span></span>.</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Candidate Feature Set</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">In the ACE corpus, an <span class="ltx_text ltx_font_italic">entity</span> is an object or set of objects in the world. An <span class="ltx_text ltx_font_italic">entity mention</span> is a reference to an entity. The entity mention is annotated with its full <span class="ltx_text ltx_font_italic">extent</span> and its <span class="ltx_text ltx_font_italic">head</span>, referred to as the <span class="ltx_text ltx_font_italic">extend mention</span> and the <span class="ltx_text ltx_font_italic">head mention</span> respectively. The extent mention includes both the head and its modifiers. Each <span class="ltx_text ltx_font_italic">relation</span> has two entities as arguments: Arg-1 and Arg-2, referred to as E1 and E2. A <span class="ltx_text ltx_font_italic">relation mention</span> (or instance) is the embodiment of a relation. It is referred by the sentence (or clause) in which the relation is located in. In our work, we focus on the detection and recognition of relation mention.</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">Relation identification is handled as a classification problem. Entity-related information (e.g. head noun, entity type, subtype, CLASS, LDCTYPE, etc.) are supposed to be known and provided by the corpus. In our experiment, the entity type, subtype and the head noun are used.</p>
+</div>
+<div id="S3.SS1.p3" class="ltx_para">
+<p class="ltx_p">All the employed features are simply classified into five categories: <span class="ltx_text ltx_font_italic">Entity Type and Subtype</span>, <span class="ltx_text ltx_font_italic">Head Noun</span>, <span class="ltx_text ltx_font_italic">Position Feature</span>, <span class="ltx_text ltx_font_italic">POS Tag</span> and <span class="ltx_text ltx_font_italic">Omni-word Feature</span>. The first four are widely used. The last one is proposed in this paper and is discussed in detail.</p>
+</div>
+<div id="S3.SS1.p4" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Entity Type and Subtype</span>: In ACE 2005 RDC Chinese corpus, there are 7 entity types (Person, Organization, GPE, Location, Facility, Weapon and Vehicle) and 44 subtypes (e.g. Group, Government, Continent, etc.).</p>
+</div>
+<div id="S3.SS1.p5" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Head Noun</span>: The head noun (or head mention) of entity mention is manually annotated. This feature is useful and widely used.</p>
+</div>
+<div id="S3.SS1.p6" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Position Feature</span>: The position structure between two entity mentions (extend mentions). Because the entity mentions can be nested, two entity mentions may have four coarse structures: “E1 is before E2”, “E1 is after E2”, “E1 nests in E2” and “E2 nests in E1”, encoded as: ‘<code class="ltx_verbatim ltx_font_typewriter">E1_B_E2</code>’, ‘<code class="ltx_verbatim ltx_font_typewriter">E1_A_E2</code>’, ‘<code class="ltx_verbatim ltx_font_typewriter">E1_N_E2</code>’ and ‘<code class="ltx_verbatim ltx_font_typewriter">E2_N_E1</code>’.</p>
+</div>
+<div id="S3.SS1.p7" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">POS Tag</span>: In our model, we use only the adjacent entity POS tags, which lie in two sides of the entity mention. These POS tags are labelled by the ICTCLAS package<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup><a href="http://ictclas.org/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://ictclas.org/</span></a></span></span></span>. The POS tags are not used independently. It is encoded by combining the POS tag with the adjacent entity mention information. For example ‘<code class="ltx_verbatim ltx_font_typewriter">E1_Right_n</code>’ means that the right side of the first entity is a noun (“n”).</p>
+</div>
+<div id="S3.SS1.p8" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Omni-word Feature</span>: The notion of “word” in Chinese is vague and has never played a role in the Chinese philological tradition <cite class="ltx_cite">[]</cite>. Some Chinese segmentation performance has been reported precision scores above 95% <cite class="ltx_cite">[]</cite>. However, for the same sentence, even native peoples in China often disagree on word boundaries <cite class="ltx_cite">[]</cite>. Sproat et al. <cite class="ltx_cite">[]</cite> has showed that there is a consistence of 75% on the segmentation among different native Chinese speakers. The word-formation of Chinese also implies that the meanings of a compound word are made up, usually, by the meanings of words that contained in it <cite class="ltx_cite">[]</cite>. So, fragments of phrase are also informative.</p>
+</div>
+<div id="S3.SS1.p9" class="ltx_para">
+<p class="ltx_p">Because high precision can be received by using simple lexical features <cite class="ltx_cite">[]</cite>. Making better use of such information is beneficial. In consideration of the Chinese characteristics, we use <span class="ltx_text ltx_font_italic">every potential word in a relation mention</span> as the lexical features.
+<span class="ltx_ERROR undefined">{CJK}</span>UTF8gbsn
+For example, relation mention ‘å°åå¤§å®æ£®æå¬å­’ (Taipei Daan Forest Park) has a ”PART-WHOLE” relation type. The traditional segmentation method may generate four lexical features {‘å°å’, ‘å¤§å®’, ‘æ£®æ’, ‘å¬å­’}, which is a partition of the relation mention. On the other hand, the Omni-word feature denoting all the possible words in the relation mention may generate features as:</p>
+<ol id="I2" class="ltx_enumerate">
+<li id="I2.ix1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate"/> 
+<div id="I2.ix1.p1" class="ltx_para">
+<p class="ltx_p">{‘å°’, ‘å’, ‘å¤§’, ‘å®’, ‘æ£®’, ‘æ’, ‘å¬’, ‘å­’, ‘å°å’, ‘å¤§å®’, ‘æ£®æ’, ‘å¬å­’, ‘æ£®æå¬å­’, ‘å¤§å®æ£®æå¬å­’}<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>The generated Omni-word features dependent on the employed lexicon.</span></span></span></p>
+</div></li>
+</ol>
+<p class="ltx_p">Most of these features are nested or overlapped mutually. So, the traditional character-based or word-based feature is only a subset of the Omni-word feature. To extract the Omni-word feature, only a lexicon is required, then scan the sentence to collect every word.</p>
+</div>
+<div id="S3.SS1.p10" class="ltx_para">
+<p class="ltx_p">Because the number of lexicon entry determines the dimension of the feature space, performance of Omni-word feature is influenced by the lexicon being employed. In this paper, we generate the lexicon by merging two lexicons. The first lexicon is obtained by segmenting every relation instance using the ICTCLAS package, collecting very word produced by ICTCLAS. Because the ICTCLAS package was trained on annotated corpus containing many meaningful lexicon entries. We expect this lexicon to improve the performance. The second lexicon is <span class="ltx_text ltx_font_italic">the Lexicon Common Words in Contemporary Chinese<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup><span class="ltx_text ltx_font_upright">Published by </span>Ministry of Education of the People’s Republic of China<span class="ltx_text ltx_font_upright"> in 2008, containing 56,008 entries.</span></span></span></span></span>.</p>
+</div>
+<div id="S3.SS1.p11" class="ltx_para">
+<p class="ltx_p">Despite the Omni-word can be seen as a subset of n-Gram feature. It is not the same as the n-Gram feature. N-Gram features are more fragmented. In most of the instances, the n-Gram features have no semantic meanings attached to them, thus have varied distributions. Furthermore, for a single Chinese word, occurrences of 4 characters are frequent. Even 7 or more characters are not rare. Because Chinese has plenty of characters<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup>Currently, at least 13000 characters are used by native Chinese people. <span class="ltx_text ltx_font_italic">Modern Chinese Dictionary</span>: <a href="http://www.cp.com.cn/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://www.cp.com.cn/</span></a></span></span></span>, when the corpus becoming larger, the n-Gram (n¿4) method is difficult to be adopted. On the other hand, the Omni-word can avoid these problems and take advantages of Chinese characteristics (the word-formation and the ambiguity of word segmentation).</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Soft Constraint</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">The structure information (or dependent information) of relation instance is critical for recognition. However, even in English, “deeper” analysis (e.g. logical syntactic relations or predicate-argument structure) may suffer from a worse performance caused by inaccurate chunking or parsing. Hence, the local dependency contexts around the relation arguments are more helpful <cite class="ltx_cite">[]</cite>. Zhang et al. <cite class="ltx_cite">[]</cite> also showed that Path-enclosed Tree (PT) achieves the best performance in the kernel based relation extraction. In this field, the tree kernel based method commonly uses the parse tree to capture the structure information <cite class="ltx_cite">[]</cite>. On the other hand, the feature based method usually uses the combined feature to capture such structure information <cite class="ltx_cite">[]</cite>.</p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p">In the open relation extraction domain, syntactic and semantic constraints are widely employed to prevent the “semantic drift” problem. Such constraints can also be seen as structural constraint. Most of these constraints are hard constraints. Any relation instance violating these constraints (or below a predefined threshold) will be abandoned. For example, Agichtein and Gravano <cite class="ltx_cite">[]</cite> generates patterns according to a <span class="ltx_text ltx_font_italic">confidence threshold</span> (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m1" class="ltx_Math" alttext="\tau_{t}" display="inline"><msub><mi>τ</mi><mi>t</mi></msub></math>). Fader et al. <cite class="ltx_cite">[]</cite> utilizes a <span class="ltx_text ltx_font_italic">confidence function</span>. And Carlson et al. <cite class="ltx_cite">[]</cite> filters candidate instances and patterns using the number of times they co-occurs.</p>
+</div>
+<div id="S3.SS2.p3" class="ltx_para">
+<p class="ltx_p">Deleting of relation instances is acceptable for open relation extraction because it always deals with a big data set. But it’s not suitable for traditional relation extraction, and will result in a low recall. Utilizing the notion of combined feature <cite class="ltx_cite">[]</cite>, we replace the hard constraint by the soft constraint. Each soft constraint (combined feature) has a parameter trained by the classifier indicating the discrimination ability it has. No subjective or priori judgement is adopted to delete any potential determinative constraint (except for the reason of dimensionality reduction).</p>
+</div>
+<div id="S3.SS2.p4" class="ltx_para">
+<p class="ltx_p">Most of the researches make use of the combined feature, but rarely analyze the influence of the approaches we combine them. In this paper, we use the soft constraint to model the local dependency. It is a subset of the combined feature, generated by four constraint conditions: <span class="ltx_text ltx_font_italic">singleton</span>, <span class="ltx_text ltx_font_italic">position sensitive</span>, <span class="ltx_text ltx_font_italic">bin sensitive </span> and <span class="ltx_text ltx_font_italic">semantic pair </span>. For every employed candidate feature, an appropriate constraint condition is selected to combine them with additional information to maximize the classification determination.</p>
+</div><span class="ltx_ERROR undefined">{CJK}</span>
+<div id="S3.SS2.p5" class="ltx_para">
+<p class="ltx_p">UTF8gbsn
+<span class="ltx_text ltx_font_bold">Singleton</span>: A feature is employed as a singleton feature when it is used without combining with any information. In our experiments, only the <span class="ltx_text ltx_font_italic">position feature</span> is used as singleton feature.</p>
+</div>
+<div id="S3.SS2.p6" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Position Sensitive</span>: A position sensitive feature has a label indicating which entity mention it depends on. In our experiment, the <span class="ltx_text ltx_font_italic">Head noun</span> and <span class="ltx_text ltx_font_italic">POS Tag</span> are utilized as position sensitive features, which has been introduced in Section <a href="#S3.SS1" title="3.1 Candidate Feature Set ‣ 3 Feature Construction ‣ Omni-word Feature and Soft Constraint for Chinese Relation Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>. For example, ‘<code class="ltx_verbatim ltx_font_typewriter">å°å_E1</code>’ means that the head noun ‘<code class="ltx_verbatim ltx_font_typewriter">å°å</code>’ depend on the first entity mention.</p>
+</div>
+<div id="S3.SS2.p7" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Semantic Pair</span>: Semantic pair is generated by combining two semantic units. Two kinds of semantic pair are employed. Those are generated by combining two entity types or two entity subtypes into a semantic pair. For example, ‘<code class="ltx_verbatim ltx_font_typewriter">Person_Location</code>’ denotes that the type of the first relation argument is a “Person” (entity type) and the second is a “Location” (entity type). Semantic pair can capture both the semantic and structure information in a relation mention.</p>
+</div>
+<div id="S3.SS2.p8" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Bin Sensitive</span>: In our study, <span class="ltx_text ltx_font_italic">Omni-word feature</span> is not added as “bag of words”. To use the Omni-word feature, we segment each relation mention by two entity mentions. Together with the two entity mentions, we get five parts: “FIRST”, “MIDDLE”, “END”, “E1” and “E2” (or less, if the two entity mentions are nested). Each part is taken as an independent bin. A flag is used to distinguish them. For example, ‘<code class="ltx_verbatim ltx_font_typewriter">å°å_Bin_F</code>’, ‘<code class="ltx_verbatim ltx_font_typewriter">å°å_Bin_E1</code>’ and ‘<code class="ltx_verbatim ltx_font_typewriter">å°å_Bin_E</code>’ mean that the lexicon entry ‘<code class="ltx_verbatim ltx_font_typewriter">å°å</code>’ appears in three bins: the FIRST bin, the first entity mention (E1) bin and the END bin. They will be used as three independent features.</p>
+</div>
+<div id="S3.SS2.p9" class="ltx_para">
+<p class="ltx_p">To sum up, among the five candidate feature sets, the position feature is used as a singleton feature. Both head noun and POS tag are position sensitive. Entity types and subtypes are employed as semantic pair. Only Omni-word feature is bin sensitive. In the following experiments, focusing on Chinese relation extraction, we will analyze the performance of candidate feature sets and study the influence of the constraint conditions.</p>
+</div>
+<div id="S3.SS2.p10" class="ltx_para">
+<p class="ltx_p">sectionExperiments</p>
+</div>
+<div id="S3.SS2.p11" class="ltx_para">
+<p class="ltx_p">In this section, methodologies of the Omni-word feature and the soft constraint are tested. Then they are compared with the state-of-the-art methods.</p>
+</div>
+</div>
+<div id="S3.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.3 </span>Settings and Results</h3>
+
+<div id="S3.SS3.p1" class="ltx_para">
+<p class="ltx_p">We use the ACE 2005 RDC Chinese corpus, which was collected from newswires, broadcasts and weblogs, containing 633 documents with 6 major relation types and 18 subtypes. There are 8,023 relations and 9,317 relation mentions. After deleting 5 documents containing wrong annotations<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">6</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">6</sup>DAVYZW_{20041230.1024, 20050110.1403, 20050111.1514, 20050127.1720, 20050201.1538}.</span></span></span>, we keep 9,244 relation mentions as positive instances.</p>
+</div><span class="ltx_ERROR undefined">{CJK}</span>
+<div id="S3.SS3.p2" class="ltx_para">
+<p class="ltx_p">UTF8gbsn
+To get the negative instances, each document is segmented into sentences<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">7</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">7</sup>The five punctuations are used as sentence boundaries: Period (ã), Question mark (ï¼), Exclamatory mark (ï¼), Semicolon (ï¼) and Comma (ï¼).</span></span></span>. Those sentences that do not contain any entity mention pair are deleted. For each of the remained sentences, we iteratively extract every entity mention pair as the arguments of relation instances for predicting. For example, suppose a sentence has three entity mentions: A,B and C. Because the relation arguments are order sensitive, six entity mention pairs can be generated: [A,B], [A,C], [B,C], [B,A], [C,A] and [C,B]. After discarding the entity mention pairs that were used as positive instances, we generated 93,283 negative relation instances labelled as “OTHER”. Then, we have 7 relation types and 19 subtypes.</p>
+</div>
+<div id="S3.SS3.p3" class="ltx_para">
+<p class="ltx_p">A maximum entropy multi-class classifier is trained and tested on the generated relation instances. We adopt the five-fold cross validation for training and testing. Because we are interested in the 6 annotated major relation types and the 18 subtypes, we average the results of five runs on the 6 positive relation types (and 18 subtypes) as the final performance. F-score is computed by</p>
+</div>
+<div id="S3.SS3.p4" class="ltx_para">
+<table id="S3.Ex1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex1.m1" class="ltx_Math" alttext="\frac{2\times(Precision\times Recall)}{Precision+Recall}" display="block"><mfrac><mrow><mn>2</mn><mo>×</mo><mrow><mo>(</mo><mrow><mrow><mrow><mi>P</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>n</mi></mrow><mo>×</mo><mi>R</mi></mrow><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>l</mi></mrow><mo>)</mo></mrow></mrow><mrow><mrow><mi>P</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>n</mi></mrow><mo>+</mo><mrow><mi>R</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>l</mi></mrow></mrow></mfrac></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">To implement the maximum entropy model, the toolkit provided by Le <cite class="ltx_cite">[]</cite> is employed. The iteration is set to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p4.m1" class="ltx_Math" alttext="30" display="inline"><mn>30</mn></math>.</p>
+</div>
+<div id="S3.SS3.p5" class="ltx_para">
+<p class="ltx_p">Five candidate feature sets are employed to generate the combined features. The <span class="ltx_text ltx_font_italic">entity type and subtype</span>, <span class="ltx_text ltx_font_italic">head noun</span>, <span class="ltx_text ltx_font_italic">position feature</span> are referred to as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p5.m1" class="ltx_Math" alttext="\mathcal{F}_{thp}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">ℱ</mi><mrow><mi>t</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mi>p</mi></mrow></msub></math><span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">8</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">8</sup>“thp” is an acronym of “<span class="ltx_text ltx_font_bold">t</span>ype, <span class="ltx_text ltx_font_bold">h</span>ead, <span class="ltx_text ltx_font_bold">p</span>osition”. Features in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p5.m2" class="ltx_Math" alttext="\mathcal{F}_{thp}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">ℱ</mi><mrow><mi>t</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mi>p</mi></mrow></msub></math> are the candidate features combined with the corresponding constraint conditions. The following <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p5.m3" class="ltx_Math" alttext="\mathcal{F}_{pos}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">ℱ</mi><mrow><mi>p</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>s</mi></mrow></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p5.m4" class="ltx_Math" alttext="\mathcal{F}_{ow}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">ℱ</mi><mrow><mi>o</mi><mo>⁢</mo><mi>w</mi></mrow></msub></math> are the same.</span></span></span>. The POS tags are referred to as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p5.m5" class="ltx_Math" alttext="\mathcal{F}_{pos}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">ℱ</mi><mrow><mi>p</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>s</mi></mrow></msub></math>. The Omni-word feature set is denoted by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p5.m6" class="ltx_Math" alttext="\mathcal{F}_{ow}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">ℱ</mi><mrow><mi>o</mi><mo>⁢</mo><mi>w</mi></mrow></msub></math>.</p>
+</div>
+<div id="S3.SS3.p6" class="ltx_para">
+<p class="ltx_p">Table <a href="#S3.T1" title="Table 1 ‣ 3.3 Settings and Results ‣ 3 Feature Construction ‣ Omni-word Feature and Soft Constraint for Chinese Relation Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> gives the performance of our system on the 6 types and 18 subtypes. Note that, in this paper, bare numbers and numbers in the parentheses represent the results of the 6 types and the 18 subtypes respectively.</p>
+</div>
+<div id="S3.T1" class="ltx_table">
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 1: </span>Performance on Type (Subtype)</div>
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Features</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:28.5pt;" width="28.5pt"><span class="ltx_text ltx_font_bold">P</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:28.5pt;" width="28.5pt"><span class="ltx_text ltx_font_bold">R</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:28.5pt;" width="28.5pt"><span class="ltx_text ltx_font_bold">F</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:79.7pt;" rowspan="2" width="79.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m1" class="ltx_Math" alttext="\mathcal{F}_{thp}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">ℱ</mi><mrow><mi>t</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mi>p</mi></mrow></msub></math></th>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:28.5pt;" width="28.5pt">61.51</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:28.5pt;" width="28.5pt">48.85</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:28.5pt;" width="28.5pt">54.46</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:28.5pt;" width="28.5pt">(52.92)</td>
+<td class="ltx_td ltx_align_justify" style="width:28.5pt;" width="28.5pt">(36.92)</td>
+<td class="ltx_td ltx_align_justify" style="width:28.5pt;" width="28.5pt">(43.49)</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:79.7pt;" rowspan="2" width="79.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m2" class="ltx_Math" alttext="\mathcal{F}_{ow}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">ℱ</mi><mrow><mi>o</mi><mo>⁢</mo><mi>w</mi></mrow></msub></math></th>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:28.5pt;" width="28.5pt">80.16</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:28.5pt;" width="28.5pt">75.45</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:28.5pt;" width="28.5pt">77.74</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:28.5pt;" width="28.5pt">(66.98)</td>
+<td class="ltx_td ltx_align_justify" style="width:28.5pt;" width="28.5pt">(54.85)</td>
+<td class="ltx_td ltx_align_justify" style="width:28.5pt;" width="28.5pt">(60.31)</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:79.7pt;" rowspan="2" width="79.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m3" class="ltx_Math" alttext="\mathcal{F}_{thp}\cup\mathcal{F}_{pos}" display="inline"><mrow><msub><mi class="ltx_font_mathcaligraphic">ℱ</mi><mrow><mi>t</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mi>p</mi></mrow></msub><mo>∪</mo><msub><mi class="ltx_font_mathcaligraphic">ℱ</mi><mrow><mi>p</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>s</mi></mrow></msub></mrow></math></th>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:28.5pt;" width="28.5pt">83.93</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:28.5pt;" width="28.5pt">77.81</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:28.5pt;" width="28.5pt">80.76</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:28.5pt;" width="28.5pt">(69.83)</td>
+<td class="ltx_td ltx_align_justify" style="width:28.5pt;" width="28.5pt">(61.63)</td>
+<td class="ltx_td ltx_align_justify" style="width:28.5pt;" width="28.5pt">(65.47)</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:79.7pt;" rowspan="2" width="79.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m4" class="ltx_Math" alttext="\mathcal{F}_{thp}\cup\mathcal{F}_{ow}" display="inline"><mrow><msub><mi class="ltx_font_mathcaligraphic">ℱ</mi><mrow><mi>t</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mi>p</mi></mrow></msub><mo>∪</mo><msub><mi class="ltx_font_mathcaligraphic">ℱ</mi><mrow><mi>o</mi><mo>⁢</mo><mi>w</mi></mrow></msub></mrow></math></th>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:28.5pt;" width="28.5pt">92.40</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:28.5pt;" width="28.5pt">88.37</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:28.5pt;" width="28.5pt">90.34</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:28.5pt;" width="28.5pt">(81.94)</td>
+<td class="ltx_td ltx_align_justify" style="width:28.5pt;" width="28.5pt">(70.69)</td>
+<td class="ltx_td ltx_align_justify" style="width:28.5pt;" width="28.5pt">(75.90)</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_b ltx_border_r ltx_border_t" style="width:79.7pt;" rowspan="2" width="79.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m5" class="ltx_Math" alttext="\mathcal{F}_{thp}\cup\mathcal{F}_{pos}\cup\mathcal{F}_{ow}" display="inline"><mrow><msub><mi class="ltx_font_mathcaligraphic">ℱ</mi><mrow><mi>t</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mi>p</mi></mrow></msub><mo>∪</mo><msub><mi class="ltx_font_mathcaligraphic">ℱ</mi><mrow><mi>p</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>s</mi></mrow></msub><mo>∪</mo><msub><mi class="ltx_font_mathcaligraphic">ℱ</mi><mrow><mi>o</mi><mo>⁢</mo><mi>w</mi></mrow></msub></mrow></math></th>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:28.5pt;" width="28.5pt">92.26</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:28.5pt;" width="28.5pt">88.51</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:28.5pt;" width="28.5pt">90.35</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_b" style="width:28.5pt;" width="28.5pt">(80.52)</td>
+<td class="ltx_td ltx_align_justify ltx_border_b" style="width:28.5pt;" width="28.5pt">(70.96)</td>
+<td class="ltx_td ltx_align_justify ltx_border_b" style="width:28.5pt;" width="28.5pt">(75.44)</td></tr>
+</tbody>
+</table>
+</div>
+<div id="S3.SS3.p7" class="ltx_para">
+<p class="ltx_p">In Row 1, because <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p7.m1" class="ltx_Math" alttext="\mathcal{F}_{thp}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">ℱ</mi><mrow><mi>t</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mi>p</mi></mrow></msub></math> are features directly obtained from annotated corpus, we take this performance as our referential performance. In Row 2, with only the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p7.m2" class="ltx_Math" alttext="\mathcal{F}_{ow}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">ℱ</mi><mrow><mi>o</mi><mo>⁢</mo><mi>w</mi></mrow></msub></math> feature, the F-score already reaches 77.74% in 6 types and 60.31% in 18 subtypes. The last row shows that adding the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p7.m3" class="ltx_Math" alttext="\mathcal{F}_{pos}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">ℱ</mi><mrow><mi>p</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>s</mi></mrow></msub></math> almost has no effect on the performance when both the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p7.m4" class="ltx_Math" alttext="\mathcal{F}_{thp}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">ℱ</mi><mrow><mi>t</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mi>p</mi></mrow></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p7.m5" class="ltx_Math" alttext="\mathcal{F}_{ow}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">ℱ</mi><mrow><mi>o</mi><mo>⁢</mo><mi>w</mi></mrow></msub></math> are in use. The results show that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p7.m6" class="ltx_Math" alttext="\mathcal{F}_{ow}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">ℱ</mi><mrow><mi>o</mi><mo>⁢</mo><mi>w</mi></mrow></msub></math> is effective for Chinese relation extraction.</p>
+</div>
+<div id="S3.SS3.p8" class="ltx_para">
+<p class="ltx_p">The superiorities of Owni-word feature depend on three reasons. First, the specificity of Chinese word-formation indicates that the subphrases of Chinese word (or phrase) are also informative. Second, most of relation instances have limited context. The Owni-word feature, utilizing every possible word in them, is a better way to capture more information. Third, the entity mentions are manually annotated. They can precisely segment the relation instance into corresponding bins. Segmentation of bins bears the sentence structure information. Therefore, the Owni-word feature with bin information can make a better use of both the syntactic information and the local dependency.</p>
+</div>
+</div>
+<div id="S3.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.4 </span>Comparison</h3>
+
+<div id="S3.SS4.p1" class="ltx_para">
+<p class="ltx_p">Various systems were proposed for Chinese relation extraction. We mainly focus on systems trained and tested on the ACE corpus. Table <a href="#S3.T2" title="Table 2 ‣ 3.4 Comparison ‣ 3 Feature Construction ‣ Omni-word Feature and Soft Constraint for Chinese Relation Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> lists three systems.</p>
+</div>
+<div id="S3.T2" class="ltx_table">
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 2: </span>Survey of Other Systems</div>
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">System</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:29.9pt;" width="29.9pt"><span class="ltx_text ltx_font_bold">P</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:29.9pt;" width="29.9pt"><span class="ltx_text ltx_font_bold">R</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:29.9pt;" width="29.9pt"><span class="ltx_text ltx_font_bold">F</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:79.7pt;" width="79.7pt">Che et al. <cite class="ltx_cite">[]</cite></th>
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:29.9pt;" width="29.9pt">76.13</th>
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:29.9pt;" width="29.9pt">70.18</th>
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:29.9pt;" width="29.9pt">73.27</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:79.7pt;" rowspan="2" width="79.7pt">Zhang et al. <cite class="ltx_cite">[]</cite></th>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:29.9pt;" width="29.9pt">80.71</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:29.9pt;" width="29.9pt">62.48</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:29.9pt;" width="29.9pt">70.43</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:29.9pt;" width="29.9pt">(77.75)</td>
+<td class="ltx_td ltx_align_justify" style="width:29.9pt;" width="29.9pt">(60.20)</td>
+<td class="ltx_td ltx_align_justify" style="width:29.9pt;" width="29.9pt">(67.86)</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_b ltx_border_r ltx_border_t" style="width:79.7pt;" rowspan="2" width="79.7pt">Liu et al. <cite class="ltx_cite">[]</cite></th>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:29.9pt;" width="29.9pt">81.1</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:29.9pt;" width="29.9pt">61.0</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:29.9pt;" width="29.9pt">69.0</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_b" style="width:29.9pt;" width="29.9pt">(79.1)</td>
+<td class="ltx_td ltx_align_justify ltx_border_b" style="width:29.9pt;" width="29.9pt">(57.5)</td>
+<td class="ltx_td ltx_align_justify ltx_border_b" style="width:29.9pt;" width="29.9pt">(66.6)</td></tr>
+</tbody>
+</table>
+</div>
+<div id="S3.T3" class="ltx_table">
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 3: </span>Comparing With the State-of-the-Art Methods</div>
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">System</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:184.9pt;" width="184.9pt"><span class="ltx_text ltx_font_bold">Feature Set</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:28.5pt;" width="28.5pt"><span class="ltx_text ltx_font_bold">P</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:28.5pt;" width="28.5pt"><span class="ltx_text ltx_font_bold">R</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:28.5pt;" width="28.5pt"><span class="ltx_text ltx_font_bold">F</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:91.0pt;" rowspan="2" width="91.0pt"><cite class="ltx_cite">[]</cite></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:184.9pt;" rowspan="2" width="184.9pt"><span class="ltx_text ltx_align_center">Ei.Type, Ei.Subtype, Order, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m1" class="ltx_Math" alttext="Word_{Ei\mathbin{\ooalign{\raisebox{0.1pt}{$\scriptstyle+$}\cr\smash{\raisebox%&#10;{-0.6pt}{$\scriptstyle-$}}\cr}}1}" display="inline"><mrow><mi>W</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><msub><mi>d</mi><mrow><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mo>+</mo></mtd></mtr><mtr><mtd columnalign="left"><mo>-</mo></mtd></mtr></mtable><mo>⁡</mo><mrow><mrow><mi>E</mi><mo>⁢</mo><mi>i</mi></mrow><mo separator="true">, </mo><mn>1</mn></mrow></mrow></msub></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m2" class="ltx_Math" alttext="Word_{Ei\mathbin{\ooalign{\raisebox{0.1pt}{$\scriptstyle+$}\cr\smash{\raisebox%&#10;{-0.6pt}{$\scriptstyle-$}}\cr}}2}" display="inline"><mrow><mi>W</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><msub><mi>d</mi><mrow><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mo>+</mo></mtd></mtr><mtr><mtd columnalign="left"><mo>-</mo></mtd></mtr></mtable><mo>⁡</mo><mrow><mrow><mi>E</mi><mo>⁢</mo><mi>i</mi></mrow><mo separator="true">, </mo><mn>2</mn></mrow></mrow></msub></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m3" class="ltx_Math" alttext="POS_{Ei\mathbin{\ooalign{\raisebox{0.1pt}{$\scriptstyle+$}\cr\smash{\raisebox{%&#10;-0.6pt}{$\scriptstyle-$}}\cr}}1}" display="inline"><mrow><mi>P</mi><mo>⁢</mo><mi>O</mi><mo>⁢</mo><msub><mi>S</mi><mrow><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mo>+</mo></mtd></mtr><mtr><mtd columnalign="left"><mo>-</mo></mtd></mtr></mtable><mo>⁡</mo><mrow><mrow><mi>E</mi><mo>⁢</mo><mi>i</mi></mrow><mo separator="true">, </mo><mn>1</mn></mrow></mrow></msub></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m4" class="ltx_Math" alttext="POS_{Ei\mathbin{\ooalign{\raisebox{0.1pt}{$\scriptstyle+$}\cr\smash{\raisebox{%&#10;-0.6pt}{$\scriptstyle-$}}\cr}}2}" display="inline"><mrow><mi>P</mi><mo>⁢</mo><mi>O</mi><mo>⁢</mo><msub><mi>S</mi><mrow><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mo>+</mo></mtd></mtr><mtr><mtd columnalign="left"><mo>-</mo></mtd></mtr></mtable><mo>⁡</mo><mrow><mrow><mi>E</mi><mo>⁢</mo><mi>i</mi></mrow><mo separator="true">, </mo><mn>2</mn></mrow></mrow></msub></mrow></math></span></td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:28.5pt;" width="28.5pt">84.81</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:28.5pt;" width="28.5pt">75.69</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:28.5pt;" width="28.5pt">79.99</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:28.5pt;" width="28.5pt">(64.89)</td>
+<td class="ltx_td ltx_align_justify" style="width:28.5pt;" width="28.5pt">(52.99)</td>
+<td class="ltx_td ltx_align_justify" style="width:28.5pt;" width="28.5pt">(58.34)</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:91.0pt;" rowspan="2" width="91.0pt"><cite class="ltx_cite">[]</cite></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:184.9pt;" rowspan="2" width="184.9pt"><span class="ltx_text ltx_align_center">Ei.Type, Ei.Subtype, 9 Position Feature, Uni-Gram, Bi-Gram</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:28.5pt;" width="28.5pt">79.56</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:28.5pt;" width="28.5pt">72.99</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:28.5pt;" width="28.5pt">76.13</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:28.5pt;" width="28.5pt">(66.78)</td>
+<td class="ltx_td ltx_align_justify" style="width:28.5pt;" width="28.5pt">(54.56)</td>
+<td class="ltx_td ltx_align_justify" style="width:28.5pt;" width="28.5pt">(60.06)</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r ltx_border_t" style="width:91.0pt;" rowspan="2" width="91.0pt">Ours</td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r ltx_border_t" style="width:184.9pt;" rowspan="2" width="184.9pt"><span class="ltx_text ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m5" class="ltx_centering" alttext="\mathcal{F}_{thp}\cup\mathcal{F}_{pos}\cup\mathcal{F}_{ow}" display="inline"><mrow><msub><mi class="ltx_font_mathcaligraphic">ℱ</mi><mrow><mi>t</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mi>p</mi></mrow></msub><mo>∪</mo><msub><mi class="ltx_font_mathcaligraphic">ℱ</mi><mrow><mi>p</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>s</mi></mrow></msub><mo>∪</mo><msub><mi class="ltx_font_mathcaligraphic">ℱ</mi><mrow><mi>o</mi><mo>⁢</mo><mi>w</mi></mrow></msub></mrow></math></span></td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:28.5pt;" width="28.5pt">92.26</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:28.5pt;" width="28.5pt">88.51</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:28.5pt;" width="28.5pt">90.35</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_b" style="width:28.5pt;" width="28.5pt">(80.52)</td>
+<td class="ltx_td ltx_align_justify ltx_border_b" style="width:28.5pt;" width="28.5pt">(70.96)</td>
+<td class="ltx_td ltx_align_justify ltx_border_b" style="width:28.5pt;" width="28.5pt">(75.44)</td></tr>
+</tbody>
+</table>
+</div>
+<div id="S3.SS4.p2" class="ltx_para">
+<p class="ltx_p">Che et al. <cite class="ltx_cite">[]</cite> was implemented on the ACE 2004 corpus, with 2/3 data for training and 1/3 for testing. The performance was reported on 7 relation types: 6 major relation types and the none relation (or negative instance). Zhang et al. <cite class="ltx_cite">[]</cite> was based on the ACE 2005 corpus with 75% data for training and 25% for testing. Performances about the 7 types and 19 subtypes were given. Both of them are feature based methods. Liu et al. <cite class="ltx_cite">[]</cite> is a kernel based method evaluated on the ACE 2005 corpus. The five-fold cross validation was used and declared the performances on 6 relation types and 18 subtypes.</p>
+</div>
+<div id="S3.SS4.p3" class="ltx_para">
+<p class="ltx_p">The data preprocessing makes differences from our experiments to others. In order to give a better comparison with the state-of-the-art methods, based on our experiment settings and data, we implement the two feature based methods proposed by Che et al. <cite class="ltx_cite">[]</cite> and Zhang et al. <cite class="ltx_cite">[]</cite> in Table <a href="#S3.T2" title="Table 2 ‣ 3.4 Comparison ‣ 3 Feature Construction ‣ Omni-word Feature and Soft Constraint for Chinese Relation Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>. The results are shown in Table <a href="#S3.T3" title="Table 3 ‣ 3.4 Comparison ‣ 3 Feature Construction ‣ Omni-word Feature and Soft Constraint for Chinese Relation Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.</p>
+</div>
+<div id="S3.SS4.p4" class="ltx_para">
+<p class="ltx_p">In Table <a href="#S3.T3" title="Table 3 ‣ 3.4 Comparison ‣ 3 Feature Construction ‣ Omni-word Feature and Soft Constraint for Chinese Relation Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>, Ei (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p4.m1" class="ltx_Math" alttext="i\in{1,2}" display="inline"><mrow><mi>i</mi><mo>∈</mo><mrow><mn>1</mn><mo>,</mo><mn>2</mn></mrow></mrow></math>) represents entity mention. “Order” in Che et al. <cite class="ltx_cite">[]</cite> denotes the position structure of entity mention pair. Four types of order are employed (the same as ours). <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p4.m2" class="ltx_Math" alttext="Word_{Ei\mathbin{\ooalign{\raisebox{0.1pt}{$\scriptstyle+$}\cr\smash{\raisebox%&#10;{-0.6pt}{$\scriptstyle-$}}\cr}}k}" display="inline"><mrow><mi>W</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><msub><mi>d</mi><mrow><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mo>+</mo></mtd></mtr><mtr><mtd columnalign="left"><mo>-</mo></mtd></mtr></mtable><mo>⁡</mo><mrow><mrow><mi>E</mi><mo>⁢</mo><mi>i</mi></mrow><mo separator="true">, </mo><mi>k</mi></mrow></mrow></msub></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p4.m3" class="ltx_Math" alttext="POS_{Ei\mathbin{\ooalign{\raisebox{0.1pt}{$\scriptstyle+$}\cr\smash{\raisebox{%&#10;-0.6pt}{$\scriptstyle-$}}\cr}}k}" display="inline"><mrow><mi>P</mi><mo>⁢</mo><mi>O</mi><mo>⁢</mo><msub><mi>S</mi><mrow><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mo>+</mo></mtd></mtr><mtr><mtd columnalign="left"><mo>-</mo></mtd></mtr></mtable><mo>⁡</mo><mrow><mrow><mi>E</mi><mo>⁢</mo><mi>i</mi></mrow><mo separator="true">, </mo><mi>k</mi></mrow></mrow></msub></mrow></math> are the words and POS of Ei, “<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p4.m4" class="ltx_Math" alttext="\mathbin{\ooalign{\raisebox{0.1pt}{$\textstyle+$}\cr\smash{\raisebox{-0.6pt}{$%&#10;\textstyle-$}}\cr}}k" display="inline"><mrow><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mo>+</mo></mtd></mtr><mtr><mtd columnalign="left"><mo>-</mo></mtd></mtr></mtable><mo>⁡</mo><mi>k</mi></mrow></math>” means that it is the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p4.m5" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>th word (of POS) after (+) or before (-) the corresponding entity mention. In this paper, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p4.m6" class="ltx_Math" alttext="k=1" display="inline"><mrow><mi>k</mi><mo>=</mo><mn>1</mn></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p4.m7" class="ltx_Math" alttext="k=2" display="inline"><mrow><mi>k</mi><mo>=</mo><mn>2</mn></mrow></math> were set.</p>
+</div>
+<div id="S3.SS4.p5" class="ltx_para">
+<p class="ltx_p">In Row 2, the “Uni-Gram” represents the Uni-gram features of internal and external character sequences. Internal character sequences are the four entity extend and head mentions. Five kinds of external character sequences are used: one In-Between character sequence between E1 and E2 and four character sequences around E1 and E2 in a given window size w_s. The w_s is set to 4. The “Bi-Gram” is the 2-gram feature of internal and external character sequences. Instead of the 4 position structures, the 9 position structures are used. Please refer to Zhang et al. <cite class="ltx_cite">[]</cite> for the details of these 9 position structures.</p>
+</div>
+<div id="S3.SS4.p6" class="ltx_para">
+<p class="ltx_p">In Table <a href="#S3.T3" title="Table 3 ‣ 3.4 Comparison ‣ 3 Feature Construction ‣ Omni-word Feature and Soft Constraint for Chinese Relation Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>, it is shown that our system outperforms other systems, in F-score, by 10% on 6 relation types and by 15% on 18 subtypes.</p>
+</div>
+<div id="S3.SS4.p7" class="ltx_para">
+<p class="ltx_p">For researchers who are interested in our work, the source code of our system and our implementations of Che et al. <cite class="ltx_cite">[]</cite> and Zhang et al. <cite class="ltx_cite">[]</cite> are available at <a href="https://github.com/YPench/CRDC" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">https://github.com/YPench/CRDC</span></a>.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Discussion</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">In this section, we analyze the influences of employed feature sets and constraint conditions on the performances.</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">Most papers in relation extraction try to augment the number of employed features. In our experiment, we found that this does not always guarantee the best performance, despite the classifier being adopted is claimed to control these features independently. Because features may interact mutually in an indirect way, even with the same feature set, different constraint conditions can have significant influences on the final performance.</p>
+</div>
+<div id="S4.p3" class="ltx_para">
+<p class="ltx_p">In Section <a href="#S3" title="3 Feature Construction ‣ Omni-word Feature and Soft Constraint for Chinese Relation Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>, we introduced five candidate feature sets. Instead of using them as independent features, we combined them with additional information. We proposed four constraint conditions to generate the soft constraint features. In Table <a href="#S4.T4" title="Table 4 ‣ 4 Discussion ‣ Omni-word Feature and Soft Constraint for Chinese Relation Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>, the performances of candidate features are compared when different constraint conditions was employed.</p>
+</div>
+<div id="S4.T4" class="ltx_table">
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 4: </span>Influence of Feature Set</div>
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:17.1pt;" width="17.1pt"><span class="ltx_text ltx_font_bold">No.</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:56.9pt;" width="56.9pt"><span class="ltx_text ltx_font_bold">Feature</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Constraint Condition</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">Par</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:31.3pt;" width="31.3pt"><span class="ltx_text ltx_font_bold">P</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:31.3pt;" width="31.3pt"><span class="ltx_text ltx_font_bold">R</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:31.3pt;" width="31.3pt"><span class="ltx_text ltx_font_bold">F</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">I</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:17.1pt;" rowspan="2" width="17.1pt"><span class="ltx_text ltx_align_center">1</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:56.9pt;" rowspan="6" width="56.9pt"><span class="ltx_text ltx_align_center">entity CLASS and LDCTYPE</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:108.1pt;" rowspan="2" width="108.1pt">(1)/as singleton</td>
+<td class="ltx_td ltx_align_right ltx_border_t">21,112</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:31.3pt;" width="31.3pt">60.29</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:31.3pt;" width="31.3pt">42.82</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:31.3pt;" width="31.3pt">50.07</td>
+<td class="ltx_td ltx_align_right ltx_border_t">-4.39</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right">21,910</td>
+<td class="ltx_td ltx_align_justify" style="width:31.3pt;" width="31.3pt">(41.70)</td>
+<td class="ltx_td ltx_align_justify" style="width:31.3pt;" width="31.3pt">(25.18)</td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:31.3pt;" width="31.3pt">(31.40)</td>
+<td class="ltx_td ltx_align_right">-12.09</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:17.1pt;" rowspan="2" width="17.1pt"><span class="ltx_text ltx_align_center">2</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:108.1pt;" rowspan="2" width="108.1pt">(1)/combined with positional Info</td>
+<td class="ltx_td ltx_align_right ltx_border_t">21,159</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:31.3pt;" width="31.3pt">63.02</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:31.3pt;" width="31.3pt">44.47</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:31.3pt;" width="31.3pt">52.15</td>
+<td class="ltx_td ltx_align_right ltx_border_t">-2.31</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right">22,013</td>
+<td class="ltx_td ltx_align_justify" style="width:31.3pt;" width="31.3pt">(41.61)</td>
+<td class="ltx_td ltx_align_justify" style="width:31.3pt;" width="31.3pt">(26.31)</td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:31.3pt;" width="31.3pt">(32.24)</td>
+<td class="ltx_td ltx_align_right">-11.25</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:17.1pt;" rowspan="2" width="17.1pt"><span class="ltx_text ltx_align_center">3</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:108.1pt;" rowspan="2" width="108.1pt">(1)/as semantic pair</td>
+<td class="ltx_td ltx_align_right ltx_border_t">21,207</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:31.3pt;" width="31.3pt">63.35</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:31.3pt;" width="31.3pt">47.67</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:31.3pt;" width="31.3pt">54.40</td>
+<td class="ltx_td ltx_align_right ltx_border_t">-0.06</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right">22,068</td>
+<td class="ltx_td ltx_align_justify" style="width:31.3pt;" width="31.3pt">(42.98)</td>
+<td class="ltx_td ltx_align_justify" style="width:31.3pt;" width="31.3pt">(31.34)</td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:31.3pt;" width="31.3pt">(36.25)</td>
+<td class="ltx_td ltx_align_right">-7.24</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_tt ltx_border_t" style="width:17.1pt;" rowspan="2" width="17.1pt"><span class="ltx_text ltx_align_center">4</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_tt" style="width:56.9pt;" rowspan="6" width="56.9pt"><span class="ltx_text ltx_align_center">Type, Subtype semantic pair</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_tt ltx_border_t" style="width:108.1pt;" rowspan="2" width="108.1pt">(1)/as singleton</td>
+<td class="ltx_td ltx_align_right ltx_border_tt ltx_border_t">19,390</td>
+<td class="ltx_td ltx_align_justify ltx_border_tt ltx_border_t" style="width:31.3pt;" width="31.3pt">51.37</td>
+<td class="ltx_td ltx_align_justify ltx_border_tt ltx_border_t" style="width:31.3pt;" width="31.3pt">29.16</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_tt ltx_border_t" style="width:31.3pt;" width="31.3pt">37.20</td>
+<td class="ltx_td ltx_align_right ltx_border_tt ltx_border_t">-17.26</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right">147,435</td>
+<td class="ltx_td ltx_align_justify" style="width:31.3pt;" width="31.3pt">(32.8)</td>
+<td class="ltx_td ltx_align_justify" style="width:31.3pt;" width="31.3pt">(18.97)</td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:31.3pt;" width="31.3pt">(24.06)</td>
+<td class="ltx_td ltx_align_right">-19.43</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:17.1pt;" rowspan="2" width="17.1pt"><span class="ltx_text ltx_align_center">5</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:108.1pt;" rowspan="2" width="108.1pt">(1)/combined with positional info</td>
+<td class="ltx_td ltx_align_right ltx_border_t">19,524</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:31.3pt;" width="31.3pt">61.77</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:31.3pt;" width="31.3pt">43.67</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:31.3pt;" width="31.3pt">51.17</td>
+<td class="ltx_td ltx_align_right ltx_border_t">-3.29</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right">20,297</td>
+<td class="ltx_td ltx_align_justify" style="width:31.3pt;" width="31.3pt">(41.13)</td>
+<td class="ltx_td ltx_align_justify" style="width:31.3pt;" width="31.3pt">(26.83)</td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:31.3pt;" width="31.3pt">(32.47)</td>
+<td class="ltx_td ltx_align_right">-11.02</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:17.1pt;" rowspan="2" width="17.1pt"><span class="ltx_text ltx_align_center">6</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:108.1pt;" rowspan="2" width="108.1pt">(5)/as singleton</td>
+<td class="ltx_td ltx_align_right ltx_border_t">105,865</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:31.3pt;" width="31.3pt">91.39</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:31.3pt;" width="31.3pt">87.92</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:31.3pt;" width="31.3pt">89.62</td>
+<td class="ltx_td ltx_align_right ltx_border_t">-0.73</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right">121,218</td>
+<td class="ltx_td ltx_align_justify" style="width:31.3pt;" width="31.3pt">(79.32)</td>
+<td class="ltx_td ltx_align_justify" style="width:31.3pt;" width="31.3pt">(68.73)</td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:31.3pt;" width="31.3pt">(73.65)</td>
+<td class="ltx_td ltx_align_right">-1.79</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_tt ltx_border_t" style="width:17.1pt;" rowspan="2" width="17.1pt"><span class="ltx_text ltx_align_center">7</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_tt" style="width:56.9pt;" rowspan="6" width="56.9pt"><span class="ltx_text ltx_align_center">head noun</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_tt ltx_border_t" style="width:108.1pt;" rowspan="2" width="108.1pt">(3)/as singleton</td>
+<td class="ltx_td ltx_align_right ltx_border_tt ltx_border_t">21,450</td>
+<td class="ltx_td ltx_align_justify ltx_border_tt ltx_border_t" style="width:31.3pt;" width="31.3pt">85.66</td>
+<td class="ltx_td ltx_align_justify ltx_border_tt ltx_border_t" style="width:31.3pt;" width="31.3pt">75.74</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_tt ltx_border_t" style="width:31.3pt;" width="31.3pt">80.40</td>
+<td class="ltx_td ltx_align_right ltx_border_tt ltx_border_t">-0.36</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right">22,409</td>
+<td class="ltx_td ltx_align_justify" style="width:31.3pt;" width="31.3pt">(64.38)</td>
+<td class="ltx_td ltx_align_justify" style="width:31.3pt;" width="31.3pt">(57.14)</td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:31.3pt;" width="31.3pt">(60.55)</td>
+<td class="ltx_td ltx_align_right">-0.34</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:17.1pt;" rowspan="2" width="17.1pt"><span class="ltx_text ltx_align_center">8</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:108.1pt;" rowspan="2" width="108.1pt">(3)/as semantic pair</td>
+<td class="ltx_td ltx_align_right ltx_border_t">77,333</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:31.3pt;" width="31.3pt">83.05</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:31.3pt;" width="31.3pt">73.14</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:31.3pt;" width="31.3pt">77.78</td>
+<td class="ltx_td ltx_align_right ltx_border_t">-2.54</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right">77,947</td>
+<td class="ltx_td ltx_align_justify" style="width:31.3pt;" width="31.3pt">(59.70)</td>
+<td class="ltx_td ltx_align_justify" style="width:31.3pt;" width="31.3pt">(51.70)</td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:31.3pt;" width="31.3pt">(55.41)</td>
+<td class="ltx_td ltx_align_right">-5.48</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:17.1pt;" rowspan="2" width="17.1pt"><span class="ltx_text ltx_align_center">9</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:108.1pt;" rowspan="2" width="108.1pt">(5)/as singleton</td>
+<td class="ltx_td ltx_align_right ltx_border_t">100,963</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:31.3pt;" width="31.3pt">92.50</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:31.3pt;" width="31.3pt">88.90</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:31.3pt;" width="31.3pt">90.66</td>
+<td class="ltx_td ltx_align_right ltx_border_t">+0.31</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right">115,499</td>
+<td class="ltx_td ltx_align_justify" style="width:31.3pt;" width="31.3pt">(82.63)</td>
+<td class="ltx_td ltx_align_justify" style="width:31.3pt;" width="31.3pt">(71.67)</td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:31.3pt;" width="31.3pt">(76.76)</td>
+<td class="ltx_td ltx_align_right">+1.32</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_tt ltx_border_t" style="width:17.1pt;" rowspan="2" width="17.1pt"><span class="ltx_text ltx_align_center">10</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_tt" style="width:56.9pt;" rowspan="6" width="56.9pt"><span class="ltx_text ltx_align_center">adjacent entity POS tag</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_tt ltx_border_t" style="width:108.1pt;" rowspan="2" width="108.1pt">(3)/as singleton</td>
+<td class="ltx_td ltx_align_right ltx_border_tt ltx_border_t">21,450</td>
+<td class="ltx_td ltx_align_justify ltx_border_tt ltx_border_t" style="width:31.3pt;" width="31.3pt">72.66</td>
+<td class="ltx_td ltx_align_justify ltx_border_tt ltx_border_t" style="width:31.3pt;" width="31.3pt">61.16</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_tt ltx_border_t" style="width:31.3pt;" width="31.3pt">66.41</td>
+<td class="ltx_td ltx_align_right ltx_border_tt ltx_border_t">-13.91</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right">22,409</td>
+<td class="ltx_td ltx_align_justify" style="width:31.3pt;" width="31.3pt">(62.42)</td>
+<td class="ltx_td ltx_align_justify" style="width:31.3pt;" width="31.3pt">(45.69)</td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:31.3pt;" width="31.3pt">(52.76)</td>
+<td class="ltx_td ltx_align_right">-8.13</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:17.1pt;" rowspan="2" width="17.1pt"><span class="ltx_text ltx_align_center">11</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:108.1pt;" rowspan="2" width="108.1pt">(3)/combined with entity type</td>
+<td class="ltx_td ltx_align_right ltx_border_t">22,151</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:31.3pt;" width="31.3pt">80.66</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:31.3pt;" width="31.3pt">71.67</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:31.3pt;" width="31.3pt">75.90</td>
+<td class="ltx_td ltx_align_right ltx_border_t">-4.42</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right">23,357</td>
+<td class="ltx_td ltx_align_justify" style="width:31.3pt;" width="31.3pt">(63.41)</td>
+<td class="ltx_td ltx_align_justify" style="width:31.3pt;" width="31.3pt">(53.16)</td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:31.3pt;" width="31.3pt">(57.83)</td>
+<td class="ltx_td ltx_align_right">-3.06</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:17.1pt;" rowspan="2" width="17.1pt"><span class="ltx_text ltx_align_center">12</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:108.1pt;" rowspan="2" width="108.1pt">(5)/as singleton</td>
+<td class="ltx_td ltx_align_right ltx_border_t">106,931</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:31.3pt;" width="31.3pt">92.50</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:31.3pt;" width="31.3pt">88.66</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:31.3pt;" width="31.3pt">90.54</td>
+<td class="ltx_td ltx_align_right ltx_border_t">+0.19</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right">121,194</td>
+<td class="ltx_td ltx_align_justify" style="width:31.3pt;" width="31.3pt">(82.04)</td>
+<td class="ltx_td ltx_align_justify" style="width:31.3pt;" width="31.3pt">(71.36)</td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:31.3pt;" width="31.3pt">(76.33)</td>
+<td class="ltx_td ltx_align_right">+0.89</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_tt ltx_border_t" style="width:17.1pt;" rowspan="2" width="17.1pt"><span class="ltx_text ltx_align_center">13</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r ltx_border_tt" style="width:56.9pt;" rowspan="8" width="56.9pt"><span class="ltx_text ltx_align_center">Omni-word feature</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_tt ltx_border_t" style="width:108.1pt;" rowspan="2" width="108.1pt">(2)/<span class="ltx_text ltx_font_italic">By-Segmentation</span>  as singleton</td>
+<td class="ltx_td ltx_align_right ltx_border_tt ltx_border_t">36,916</td>
+<td class="ltx_td ltx_align_justify ltx_border_tt ltx_border_t" style="width:31.3pt;" width="31.3pt">67.19</td>
+<td class="ltx_td ltx_align_justify ltx_border_tt ltx_border_t" style="width:31.3pt;" width="31.3pt">60.12</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_tt ltx_border_t" style="width:31.3pt;" width="31.3pt">63.46</td>
+<td class="ltx_td ltx_align_right ltx_border_tt ltx_border_t">-14.28</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right">41,652</td>
+<td class="ltx_td ltx_align_justify" style="width:31.3pt;" width="31.3pt">(55.85)</td>
+<td class="ltx_td ltx_align_justify" style="width:31.3pt;" width="31.3pt">(44.50)</td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:31.3pt;" width="31.3pt">(49.54)</td>
+<td class="ltx_td ltx_align_right">-10.77</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:17.1pt;" rowspan="2" width="17.1pt"><span class="ltx_text ltx_align_center">14</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:108.1pt;" rowspan="2" width="108.1pt">(2)/<span class="ltx_text ltx_font_italic">By-Segmentation</span> with bins</td>
+<td class="ltx_td ltx_align_right ltx_border_t">79,430</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:31.3pt;" width="31.3pt">71.12</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:31.3pt;" width="31.3pt">66.90</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:31.3pt;" width="31.3pt">68.95</td>
+<td class="ltx_td ltx_align_right ltx_border_t">-8.79</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right">84,715</td>
+<td class="ltx_td ltx_align_justify" style="width:31.3pt;" width="31.3pt">(54.76)</td>
+<td class="ltx_td ltx_align_justify" style="width:31.3pt;" width="31.3pt">(43.50)</td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:31.3pt;" width="31.3pt">(48.48)</td>
+<td class="ltx_td ltx_align_right">-11.83</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:17.1pt;" rowspan="2" width="17.1pt"><span class="ltx_text ltx_align_center">15</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:108.1pt;" rowspan="2" width="108.1pt">(2)/<span class="ltx_text ltx_font_italic">By-Omni-word</span> as singleton</td>
+<td class="ltx_td ltx_align_right ltx_border_t">47,428</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:31.3pt;" width="31.3pt">69.67</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:31.3pt;" width="31.3pt">63.77</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:31.3pt;" width="31.3pt">66.59</td>
+<td class="ltx_td ltx_align_right ltx_border_t">-11.15</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right">57,702</td>
+<td class="ltx_td ltx_align_justify" style="width:31.3pt;" width="31.3pt">(54.85)</td>
+<td class="ltx_td ltx_align_justify" style="width:31.3pt;" width="31.3pt">(48.84)</td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:31.3pt;" width="31.3pt">(51.67)</td>
+<td class="ltx_td ltx_align_right">-8.64</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_bb ltx_border_r ltx_border_t" style="width:17.1pt;" rowspan="2" width="17.1pt"><span class="ltx_text ltx_align_center">16</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_bb ltx_border_r ltx_border_t" style="width:108.1pt;" rowspan="2" width="108.1pt">(5)/as singleton</td>
+<td class="ltx_td ltx_align_right ltx_border_t">57,321</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:31.3pt;" width="31.3pt">91.43</td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:31.3pt;" width="31.3pt">86.37</td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:31.3pt;" width="31.3pt">88.83</td>
+<td class="ltx_td ltx_align_right ltx_border_t">-1.52</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right ltx_border_bb">67,722</td>
+<td class="ltx_td ltx_align_justify ltx_border_bb" style="width:31.3pt;" width="31.3pt">(76.43)</td>
+<td class="ltx_td ltx_align_justify ltx_border_bb" style="width:31.3pt;" width="31.3pt">(69.57)</td>
+<td class="ltx_td ltx_align_justify ltx_border_bb ltx_border_r" style="width:31.3pt;" width="31.3pt">(72.84)</td>
+<td class="ltx_td ltx_align_right ltx_border_bb">-2.60</td></tr>
+</tbody>
+</table>
+</div>
+<div id="S4.p4" class="ltx_para">
+<p class="ltx_p">In Column 3 of Table <a href="#S4.T4" title="Table 4 ‣ 4 Discussion ‣ Omni-word Feature and Soft Constraint for Chinese Relation Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> (<span class="ltx_text ltx_font_bold">Constraint Condition</span>), (1), (2), (3), (4) and (5) stand for the referential feature sets<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">9</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">9</sup>(1), (2), (3), (4) and (5) denote <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p4.m1" class="ltx_Math" alttext="\mathcal{F}_{thp}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">ℱ</mi><mrow><mi>t</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mi>p</mi></mrow></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p4.m2" class="ltx_Math" alttext="\mathcal{F}_{ow}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">ℱ</mi><mrow><mi>o</mi><mo>⁢</mo><mi>w</mi></mrow></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p4.m3" class="ltx_Math" alttext="\mathcal{F}_{thp}\cup\mathcal{F}_{pos}" display="inline"><mrow><msub><mi class="ltx_font_mathcaligraphic">ℱ</mi><mrow><mi>t</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mi>p</mi></mrow></msub><mo>∪</mo><msub><mi class="ltx_font_mathcaligraphic">ℱ</mi><mrow><mi>p</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>s</mi></mrow></msub></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p4.m4" class="ltx_Math" alttext="\mathcal{F}_{thp}\cup\mathcal{F}_{ow}" display="inline"><mrow><msub><mi class="ltx_font_mathcaligraphic">ℱ</mi><mrow><mi>t</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mi>p</mi></mrow></msub><mo>∪</mo><msub><mi class="ltx_font_mathcaligraphic">ℱ</mi><mrow><mi>o</mi><mo>⁢</mo><mi>w</mi></mrow></msub></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p4.m5" class="ltx_Math" alttext="\mathcal{F}_{thp}\cup\mathcal{F}_{pos}\cup\mathcal{F}_{ow}" display="inline"><mrow><msub><mi class="ltx_font_mathcaligraphic">ℱ</mi><mrow><mi>t</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mi>p</mi></mrow></msub><mo>∪</mo><msub><mi class="ltx_font_mathcaligraphic">ℱ</mi><mrow><mi>p</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>s</mi></mrow></msub><mo>∪</mo><msub><mi class="ltx_font_mathcaligraphic">ℱ</mi><mrow><mi>o</mi><mo>⁢</mo><mi>w</mi></mrow></msub></mrow></math> respectively.</span></span></span> in Table <a href="#S3.T1" title="Table 1 ‣ 3.3 Settings and Results ‣ 3 Feature Construction ‣ Omni-word Feature and Soft Constraint for Chinese Relation Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>. Symbol “/” means that the corresponding candidate features in the referential feature set are substituted by the new constraint condition. <span class="ltx_text ltx_font_bold">Par</span> in Column 4 is the number of parameters in the trained maximum entropy model, which indicate the model complexity. <span class="ltx_text ltx_font_bold">I</span> in Column 5 is the influence on performance. “-” and “+” mean that the performance is decreased or increased.</p>
+</div>
+<div id="S4.p5" class="ltx_para">
+<p class="ltx_p">The first observation is that the combined features are more powerful than used as <span class="ltx_text ltx_font_italic">singletons</span>. Model parameters are increased by the combined features. Increasing of parameters projects the relation extraction problem into a higher dimensional space, making the decision boundaries become more flexible.</p>
+</div>
+<div id="S4.p6" class="ltx_para">
+<p class="ltx_p">The named entities in the ACE corpus are also annotated with the CLASS and LDCTYPE labels. Zhou et al. <cite class="ltx_cite">[]</cite> has shown that these labels can result in a weaker performance. Row 1, 2 and 3 show that, no matter how they are used, the performances decrease obviously. The reason of the performance degradation may be caused by the problem of over-fitting or data sparseness.</p>
+</div>
+<div id="S4.p7" class="ltx_para">
+<p class="ltx_p">At most of the time, increase of model parameters can result in a better performance. Except in Row 8 and Row 11, when two <span class="ltx_text ltx_font_italic">head nouns </span> of entity pair were combined as <span class="ltx_text ltx_font_italic">semantic pair</span> and when <span class="ltx_text ltx_font_italic">POS tag</span> were combined with the entity type, the performances are decreased. There are 7356 head nouns in the training set. Combining two head nouns may increase the feature space by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p7.m1" class="ltx_Math" alttext="7356\times(7356-1)" display="inline"><mrow><mn>7356</mn><mo>×</mo><mrow><mo>(</mo><mrow><mn>7356</mn><mo>-</mo><mn>1</mn></mrow><mo>)</mo></mrow></mrow></math>. Such a large feature space makes the occurrence of features close to a random distribution, leading to a worse data sparseness.</p>
+</div>
+<div id="S4.p8" class="ltx_para">
+<p class="ltx_p">In Row 4, 10 and 13, these features are used as <span class="ltx_text ltx_font_italic">singleton</span>, the performance degrades considerably. This means that, the missing of sentence structure information on the employed features can lead to a bad performance.</p>
+</div>
+<div id="S4.p9" class="ltx_para">
+<p class="ltx_p">Row 9 and 12 show an interesting result. Comparing the reference set (5) with the reference set (3), the <span class="ltx_text ltx_font_italic">Head noun</span> and <span class="ltx_text ltx_font_italic">adjacent entity POS tag</span> get a better performance when used as <span class="ltx_text ltx_font_italic">singletons</span>. These results reflect the interactions between different features. Discussion of this issue is beyond this paper’s scope. In this paper, for a better demonstration of the constraint condition, we still use the <span class="ltx_text ltx_font_italic">Position Sensitive</span> as the default setting to use the <span class="ltx_text ltx_font_italic">Head noun</span> and the <span class="ltx_text ltx_font_italic">adjacent entity POS tag</span>.</p>
+</div>
+<div id="S4.p10" class="ltx_para">
+<p class="ltx_p">Row 13 and 14 compare the <span class="ltx_text ltx_font_italic">Omni-word feature</span> (<span class="ltx_text ltx_font_italic">By-Omni-word</span>) with the traditional segmentation based feature (<span class="ltx_text ltx_font_italic">By-Segmentation</span>). <span class="ltx_text ltx_font_italic">By-Segmentation</span> denotes the traditional segmentation based feature set generated by a segmentation tool, collecting every output of relation mention. In this place, the ICTCLAS package is adopted too.</p>
+</div>
+<div id="S4.p11" class="ltx_para">
+<p class="ltx_p">Conventionally, if a sentence is perfectly segmented, <span class="ltx_text ltx_font_italic">By-Segmentation</span> is straightforward and effective. But, our experiment shows different observations. Row 13 and 14 show that the <span class="ltx_text ltx_font_italic">Omni-word</span> method outperforms the traditional method. Especially, when the <span class="ltx_text ltx_font_italic">bin </span> information is used (Row 15), the performance of <span class="ltx_text ltx_font_italic">Omni-word feature</span> increases considerably.</p>
+</div>
+<div id="S4.p12" class="ltx_para">
+<p class="ltx_p">Row 14 shows that, compared with the traditional method, the Omni-word feature improves the performance by about 8.79% in 6 relation types and 11.83% in 18 subtypes in F-core. Such improvement may reside in the three reasons discussed in Section <a href="#S3.SS3" title="3.3 Settings and Results ‣ 3 Feature Construction ‣ Omni-word Feature and Soft Constraint for Chinese Relation Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>.</p>
+</div>
+<div id="S4.p13" class="ltx_para">
+<p class="ltx_p">In short, from Table <a href="#S4.T4" title="Table 4 ‣ 4 Discussion ‣ Omni-word Feature and Soft Constraint for Chinese Relation Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> we have seen that the <span class="ltx_text ltx_font_italic">entity type and subtype</span> maximize the performance when used as <span class="ltx_text ltx_font_italic">semantic pair</span>. <span class="ltx_text ltx_font_italic">Head noun</span> and <span class="ltx_text ltx_font_italic">adjacent entity POS tag</span> are employed to combine with positional information. <span class="ltx_text ltx_font_italic">Omni-word feature</span> with bins information can increase the performance considerably. Our model (in Section <a href="#S3.SS3" title="3.3 Settings and Results ‣ 3 Feature Construction ‣ Omni-word Feature and Soft Constraint for Chinese Relation Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>) uses these settings. This insures that the performances of the candidate features are optimized.</p>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Conclusion</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">In this paper, We proposed a novel Omni-word feature taking advantages of Chinese sub-phrases. We also introduced the soft constraint method for Chinese relation recognition. The soft constraint utilizes four constraint conditions to catch the structure information in a relation instance. Both the Omni-word feature and soft constrain make better use of information a sentence has, and minimize the deficiency caused by Chinese segmentation and parsing.</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">The size of the employed lexicon determines the dimension of the feature space. The first impression is that more lexicon entries result in more power. However, more lexicon entries also increase the computational complexity and bring in noises. In our future work, we will study this issue. The notion of soft constraints can also be extended to include more patterns, rules, regexes or syntactic constraints that have been used for information extraction. The usability of these strategies is also left for future work.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">The research was supported in part by NSF of China (91118005, 91218301, 61221063); 863 Program of China (2012AA011003); Cheung Kong Scholar’s Program; Pillar Program of NST (2012BAH16F02); Ministry of Education of China Humanities and Social Sciences Project (12YJC880117); The Ministry of Education Innovation Research Team (IRT13035).</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 17:57:18 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

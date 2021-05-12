@@ -1,0 +1,813 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Geometric backtracking for combined task and motion planning in robotic systems.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Planning for robotic systems requires the combined use of several kinds of reasoning, in particular causal reasoning and geometric reasoning. This paper addresses how to combine these forms of reasoning. Consider the following example. The humanoid robot Justin (Fig. 1) is given the task to put two cups on the red tray. Justin is equipped with a task planner, and the planner generates a plan consisting of four actions: pick up first cup, put down first cup on tray, pick up second cup, put down second cup on tray. This plan is then put to execution: Justin selects the first action, calls a motion planner to find a suitable collision-free motion path, follows it, and then goes to the next action. Unfortunately, when executing the first put-down action, the motion planner decides to put the cup at the center of the tray. When Justin tries to put down the second cup, it finds no valid path because there is no sufficiently large free space left on the tray. Plan execution fails. What is worse, recovering from this failure might be impractical, since it involves undoing previous actions to redo them differently — said differently, it involves backtracking in the physical world.
+     </paragraph>
+     <paragraph>
+      The reason for this failure was that the task planner did not take geometry into account. If it had, it might have detected that the plan could fail depending on the placement of the first cup. Even better, it might have been able to select, at planning time, a position for the first cup which left enough space for the second cup. Abstracting from the geometric details is customary in AI planning, but it may lead to problems such as the one above when planning the actions of a robotic system. This paper describes a hybrid planner that reasons both at the task level and at the geometric level.
+     </paragraph>
+     <section label="1.1">
+      <section-title>
+       Experimental platforms
+      </section-title>
+      <paragraph>
+       Throughout this paper, we use Rollin' Justin, or simply Justin, as our main test-bed. The robot Justin has been developed at the institute of Robotics and Mechatronics at the German Aerospace Center (DLR) in Oberpfaffenhofen. This is one of the most advanced humanoid research robots, equipped with two arms with four-fingered hands, a head with stereo vision, and a base with four wheels mounted on extensible legs. The upper body of Justin has 43 degrees of freedom (DOF): 7 for each arm, 12 for each hand, 3 for the torso and two for the neck [1]. Like other complex robotic systems, Justin was until recently dedicated to performing only tasks involving pre-specified objects and action sequences, at least at an abstract level. The work reported in this paper originated in the European FP7-project GeRT,{sup:1} aimed among other things at providing Justin with general task planning capabilities. Not surprisingly, one of our first findings when trying to apply existing AI planning techniques to a complex platform such as Justin, was that task planning and motion planning cannot be done independently, lest the robot find itself in situations such as the one in the vignette above. Combining task and motion planning is a challenging issue, and it is the object of growing interest in the AI and the robotics fields — see next section.
+      </paragraph>
+      <paragraph>
+       Justin is an excellent platform to study the intricacies of combining task and motion planning. However, the approach presented in this paper is not limited to table-top manipulation, and it may be applied to more mundane domains such as transportation and logistics. Consider a warehouse where an autonomous forklift truck controlled by an automated planner must move pallets around. Space and kinematic constraints must be taken into account carefully at planning time: if not, the truck may encounter execution failures similar to the ones above, and may have to perform unnecessary back and forth maneuvers to recover from these. For example, suppose that the truck is to move two pallets to a shipping area. If the shipping area can only fit two pallets and is close to walls, it is crucial that the pose of the first pallet is chosen such that (i) there is enough space left for the second pallet and (ii) the forklift can reach the pose for undocking to the second pallet. In this paper, we apply our hybrid planner to a warehouse domain, and we show how it deals with problems like the one above. Our warehouse testbed is simulated, but it is inspired by a real-world industrial scenario. Fig. 2 shows an image from this scenario involving an autonomous Linde forklift equipped with computing and sensing resources.
+      </paragraph>
+     </section>
+     <section label="1.2">
+      <section-title>
+       Contributions
+      </section-title>
+      <paragraph>
+       In this paper, we present a combined task–motion planning system which combines search on the task planning level with search on the motion planning level. The key idea is to use two levels of backtracking: action backtracking to reconsider what actions to perform, and geometric backtracking to reconsider how to perform those actions on the geometric level. Through this combined search, we can address the problem in the opening scenario by finding at planning time a better pose for the first object when we detect that there is insufficient space to place the second one. The combined task–motion search space may grow extremely large, so we study several ways to manage this complexity.
+      </paragraph>
+      <paragraph>
+       Compared to the existing work, this paper makes four important contributions:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        we identify geometric backtracking as one key issue in the combination of task and motion planning;
+       </list-item>
+       <list-item label="•">
+        we present a combined task–motion planning algorithm that implements geometric backtracking;
+       </list-item>
+       <list-item label="•">
+        we leverage heuristics to explore the combined search space more effectively; and
+       </list-item>
+       <list-item label="•">
+        we show the use of geometric constraints to reduce the search effort by pruning geometrically infeasible parts of the search space.
+       </list-item>
+      </list>
+      <paragraph>
+       The first two points were first introduced by Karlsson et al. in a workshop paper [2]. The last point was introduced by Lagriffoul et al. [3] and thoroughly evaluated on predefined action sequences [4]. The present paper extends the latter work by combining this constraint-based approach with a task planner. The four points mentioned above are elaborated to a much greater extent, and for the first time a formal description of a planning process that includes search at the symbolic level and search at the geometric level (geometric backtracking) is given. This paper also contributes an extensive experimental evaluation. None of the experiments presented here has been reported before.
+      </paragraph>
+      <paragraph>
+       In order to evaluate our planner, the proposed heuristics, and our constraint propagation method, we report experiments performed both on the real Justin robot and on a simulator. We also report a series of experiments where our planner is used to plan the operation of an autonomous forklift truck in a warehouse, in the context of the Swedish project SAUNA.{sup:2} The purpose of the latter experiments is to show that geometric bactracking is also relevant in problems that are apparently simpler such as 2D navigation and object transportation. These experiments show that our proposed approach is effective also in those domains. Finally, we use the warehouse scenario to perform an empirical comparison of our approach to alternative approaches.
+      </paragraph>
+      <paragraph>
+       The rest of the paper is organized as follows. Section 2 gives some background about task and motion planning, presents related work in the combination of the two, and explains how our approach fits into that context. It also defines the central notion of geometric backtracking. In Section 3, we give a more formal presentation of task and motion planning, and we present our algorithm for combined task and motion planning. Section 4 presents an algorithm for informed geometric backtracking, and also proposes different criteria for selecting what actions to backtrack over. Section 5 introduces a complementary constraint-based approach that aims at reducing the geometric sampling space for actions. Sections 6 and 7 present extensive empirical evaluations of our backtracking methods, and Section 8 demonstrates how the planner is used on the real Justin. In Section 9, we present a second domain involving an autonomous forklift transporting pallets, which is used to compare our approach to approaches with limited or no geometric backtracking. Finally, Sections 10 and 11 discuss the main results, outline directions for future work, and conclude.
+      </paragraph>
+     </section>
+    </section>
+    <section label="2">
+     <section-title>
+      Background
+     </section-title>
+     <section label="2.1">
+      <section-title>
+       Task and motion planning
+      </section-title>
+      <paragraph>
+       Task planning and robotics have a long history together. The very first automated task planner, STRIPS, was developed for a mobile robot called Shakey at the Stanford Research Institute in the late 60's and early 70's [6], [7]. Planning in AI has progressed enormously since then. Hybrid forms of reasoning combining task planning with temporal reasoning or resource management have been developed for robotic applications (e.g., [8], [9]); however, there is limited use of task planning combined with motion planning on real deployed robots.
+      </paragraph>
+      <paragraph>
+       There is a large body of work on task planning which represents the world in symbolic and logical terms [10]. Typically, the state of the world is represented in terms of a set of propositions, such as {a mathematical formula}grasps(left-hand,cup) or {a mathematical formula}in(robot,room5). When an action is applied, some propositions are removed from the world state and some are added to it. Task planning representations provide good support for causal reasoning at a fairly abstract level. Goals and tasks can be specified abstractly, such as {a mathematical formula}on(cup1,tray2) or {a mathematical formula}prepare-tea(cup1), rather than in terms of coordinates and angles. Such representations are insufficient for modeling the kinematic and geometric properties of the robot and its environment. When planning for a complex robot such as Justin, one must take into account the kinematic constraints of the robot, its geometric shape, how it can grasp different objects, and the presence of obstacles.
+      </paragraph>
+      <paragraph>
+       In order to address issues about geometry and kinematics, there is a large body of work in motion planning [11]. These algorithms plan in continuous state spaces, and utilize kinematic (or even dynamic) models of the robotic system as well as geometric models of obstacles. However, a motion planning algorithm alone cannot determine how to decompose a complex and abstractly specified task into target poses for itself and for specific objects. For instance, it cannot determine that in order to prepare a cup of ice tea, one needs to hold the water jug above the glass and pour. A motion planner is not able to decide whether a particular movement is instrumental in solving a complex and abstractly specified task or not. It is incapable of the kind of means-end reasoning that a task planner excels at. Hence, what robotic systems such as Justin and autonomous forklifts need is a combination of task and motion planning.
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Combined task and motion planning
+      </section-title>
+      <paragraph>
+       Combining a task planning procedure and a motion planning algorithm entails combining the search of the two algorithms. This in turn requires us to combine their respective representations, into hybrid states consisting of a symbolic component and a geometric component – see Fig. 3. Thus, when checking the preconditions of an action, one can refer to both the symbolic component and the geometric component. When evaluating the effects, one can update both components. For instance, whether there is tea in a given cup can be represented symbolically as contains(cup1,tea), whereas whether a robot can reach the cup with its left hand without colliding with other objects can be computed from the geometric state by invoking a motion planner.
+      </paragraph>
+      <paragraph>
+       How to combine the search is not a trivial issue, though, as there might be strong dependencies between different actions on both the symbolic level and the geometric level. On the symbolic level, the task planner can backtrack. On the geometric level, when for instance computing a motion for an action, the motion planner can explore alternative paths. However, geometric decisions are not always local to actions: a choice of how to perform an action at the geometric level may also have consequences for a later action, and in the worst case render the later action inapplicable.
+      </paragraph>
+      <paragraph>
+       Geometric backtracking was identified by Karlsson and colleagues [2] as a central issue in hybrid planning. Geometric backtracking is the process of revisiting geometric choices in previous actions in order to be able to apply the action presently under consideration. For instance, if the task is to place two cups on a small tray (as in the initial scenario), the first cup may be placed in the middle of the tray, leaving insufficient space for the second cup. The planner will sample poses on the tray for the second cup, but will not find any that work. When the action to place the second cup is found to be inapplicable, the planner needs to go back to the first place action and reconsider where the first cup is to be placed. Thus, the planner will sample alternative poses for the first cup, and for each such pose sample poses for the second cup, until a viable combination is found or a limit is reached.
+      </paragraph>
+      <paragraph>
+       However, the difficulty does not stop there. If putting two cups on a tray is part of a larger task, there might be many other actions which in principle could constitute geometric backtracking points. Many of these actions may be completely irrelevant to the present action; for instance, they may involve manipulating objects at the other side of the table. Including those actions in the backtracking would induce a large computational cost for very little gain. This raises the question of how to select what actions to use as backtrack points. Therefore, in this paper, we make an effort to provide methods for informed geometric backtracking.
+      </paragraph>
+     </section>
+     <section label="2.3">
+      <section-title>
+       Related work on combining task and motion planning
+      </section-title>
+      <paragraph>
+       Approaches to combining task and motion planning in the literature can roughly be divided into three categories, defined in terms of how the task and motion planning components relate to each other.
+      </paragraph>
+      <paragraph>
+       Motion planning guided by task planning. In these approaches, motion planning is primary, and task planning secondary. The planners mainly work on a motion planning problem, but there is also a symbolic representation of the domain which can be used to structure the motion planning problem and determine where to direct the search. These approaches include aSyMov [12] and SamplSGD [13]. I-TMP [14] should also be mentioned here, although it strictly speaking does not involve a task planning algorithm but is given a task graph which represents a set of potential plans. These approaches address motion planning problems involving a number of movable objects and/or multiple robots and/or a robot with many links. Such motion planning problems have high-dimensional configuration spaces. In order to reduce that dimensionality, the problem is divided into tasks or actions corresponding to lower-dimensional subproblems. Such an action can for instance be to move one single object to a specific position while all other objects remain in position. The role of the task planner is to determine what actions/subproblems are to be explored. For instance, aSyMov only invokes the task planner as a heuristic for selecting actions. Each action then becomes a motion planning problem, from the region in the configuration space where the preconditions hold to the region where the effects hold. aSyMov alternates between extending the roadmaps of already included actions, and adding new actions and starting on new roadmaps.
+      </paragraph>
+      <paragraph>
+       Task planning querying motion planning. In these approaches, a task plan is generated, and some of the actions involve motion planning problems which are solved by dedicated motion planners or other geometric reasoners. Each motion planning problem is solved immediately, when the action is applied by the task planner. These approaches include Guitton and Farges [15], Alili et al. [16], SAHTN [17], semantic attachments [18], [19], [20], the Knowledge of Volumes approach [21], Hierarchical Planning in the Now (HPN) [22], [23], and HTN–GTP [24], [25]. Typically, specific logical formulas in the preconditions and/or effects invoke calls to a motion planner. For instance, the semantic attachments represent a general approach to invoking external solvers. A logical formula such as (check-transit ?x ?y ?g) in a precondition may invoke a call to a motion planner. Information about the current robot's configuration is encoded in the states of the task planner by terms {a mathematical formula}q1…qn, and the transformation matrix for the pose of object o is encoded by terms {a mathematical formula}p0(o)…p11(o). The semantic attachments approach is basically an extension of PDDL (an object-oriented version also exists [26]). It has been applied to combined task and motion planning with the Temporal Fast Downward planner [27] as a task planner. All backtracking occurs on the task planning level.
+      </paragraph>
+      <paragraph>
+       HPN [22], [23] is a greedy hierarchical approach: the planner plans at different levels of abstraction, and a regressive planner solves the subproblems at each level. States can be arbitrary data structures, containing for instance geometrical information and Boolean attributes. There is no explicitly represented symbolic state component. However, a set of predicates (fluents) can be defined and given interpretations in the context of these data structures. Of particular interest in HPN is the use of generators, which constitute an important link between symbolic and geometric reasoning. They support the selection of e.g. a specific location in an extended region, or a path that moves the robot into a new configuration, or more specifically into a configuration where it can pick or place a given object. Path generators can also provide the swept volumes of the robot while traversing the paths returned. These volumes can be used in preconditions in order to clear the paths of obstacles. HPN interleaves planning and execution: As soon as the primitive version of an action is encountered, that action is executed. Thus, HPN is only complete for serializable problems. The approach has also been extended to uncertainty [28].
+      </paragraph>
+      <paragraph>
+       Task planning first, then motion planning (iterated). In the third type of approach, the integration between task and motion planning is somewhat less tight. A task planner first generates a task plan, and a motion planner then generates continuous paths for the actions in the task plan. If the motion planner fails, the task planner can backtrack and try another task plan. Erdem et al. [29], [30] propose an approach of this type. First, a task plan is generated. There actually is some geometric reasoning during this phase: the task planner can make certain geometric feasibility checks by means of external predicates/functions. Once a task plan has been found, it is used to guide a motion planner that attempts to generate a continuous motion for each robot. If the motion planner fails, it can add constraints to the task planning problem. When the task planner is reinvoked, it can generate a new task plan that avoids the reasons for motion planning failure of the previous task plan. This is repeated in a loop until a plan that is feasible at both the task level and the motion level is found. The task planner is based on the Causal Calculator [31] which provides a richer causal representation than traditional planning formalisms.
+      </paragraph>
+      <paragraph>
+       Dearden and Burbridge [32], [33] propose another instance of the task planning first, then motion planning approach. Of particular interest is that probabilistic models of predicates can be learned from examples. These models can then be used for geometric sampling during the geometric planning phase. Like the work presented in this article, it has been applied to the Justin robotic platform in the context of the GeRT project. It was conceived as a complementary approach to the one presented here and originally in a workshop paper of Karlsson et al. [2], suitable for less geometrically difficult problems. Leidner and Borst [34] apply a similar approach to controlling the Justin platform, including taking advantage of its mobility. The focus of their work is on an object-oriented representation which encodes how objects belonging to different classes can be manipulated.
+      </paragraph>
+      <paragraph>
+       Finally, Srivastava et al. [35] propose an approach of the third category where geometric choices such as grasps are represented by Skolem functions. This permits the use of purely symbolic task planners using standard PDDL during the task planning step. Once a task plan has been found, an attempt is made to instantiate the plan geometrically by assigning values to the Skolem functions. If this attempt fails, information about the failed action and preconditions is registered, and another task planning attempt is made.
+      </paragraph>
+      <paragraph>
+       Our hybrid planning approach belongs to the second category (task planning querying motion planning). Besides being aimed at advanced real robots, it also distinguishes itself by using geometric backtracking, which is an issue we first addressed in a systematic manner in a workshop paper [2]. An extended abstract by Alili et al. [16] has briefly addressed that topic before. More recently, HTN–GTP [24], [25] proposes a method for combining a hierarchical task network planner (HTN) with a geometrical task planner which includes backtracking on the geometric level. Some recent planners of the third category, such as the ones by Dearden and Burbridge [32] and Leidner and Borst [34], perform geometric backtracking during the motion planning phase. The first category of planners such as aSyMov [12] can perform similarly by exploring multiple paths between states.
+      </paragraph>
+      <paragraph>
+       Fig. 4 shows schematically the consequences of these different strategies. Panel a gives the complete search space for reference. In panel b for strategies with no geometric backtracking, one can observe how an unfortunate choice of geometric states can lead to a dead end, and consequently the goal states are not reached at all. The lack of geometric backtracking makes this strategy inherently incomplete. In panel c where the task planner queries the motion planner and geometric backtracking is performed, the frequent tests of geometric preconditions make it possible to prune geometrically invalid actions at an early stage. Only those symbolic states that are also geometrically reachable are ever considered. In panel d, with task planning followed by motion planning, more symbolic states are explored, as there is no early geometric pruning, but on the other hand the effort on the geometric level is reduced. Geometric search is only invoked along the paths that actually lead to goal states.
+      </paragraph>
+      <paragraph>
+       Interestingly, if one considers approaches where motion planning is guided by task planning, such as aSyMov [12], and the way the task planner is used there, the result should be similar to the one in panel d. The reason is that aSyMov queries the task planner in order to select where to do motion planning, and the task planner returns actions on a path to the goal. If one ran the task planner in aSyMov only one action ahead, on the other hand, the result would be like in panel c.
+      </paragraph>
+      <paragraph>
+       There has been some work on comparing the different strategies, and in particular the task planner querying motion planner and the task planner first, then motion planner approaches [36], [37], [38]. Lagriffoul et al. [38] have shown that the choice depends on how much pruning effect the checks of geometric preconditions have: a high pruning rate (for instance 70% or more) would make the task planner querying motion planner approach advantageous, while a low pruning rate (for instance 30% or less) would give the task planner first, then motion planner the upper hand. Sometimes, the best choice would be to use the first of these approaches for the beginning of the plan and the second one for the remainder. Hence, we can conclude that the ideal combined task and motion planner should be able to switch between these strategies depending on the domain, and maybe even mix them for some domains.
+      </paragraph>
+      <paragraph>
+       Note that the different heuristics and the constraint propagation method for geometric backtracking that are the major contributions of this article, although implemented in the context of a task planner querying motion planner approach, are actually independent of what strategy is being used. They are easily adaptable to a task planner first, then motion planner approach: they simply presume that there is a current action sequence which is being explored geometrically.
+      </paragraph>
+      <paragraph>
+       Some recent work of Tenorth et al. focuses on describing and representing robot's motions, and task constraints that define how tasks are to be executed in terms of dynamic and geometric constraints [39], which is complementary to our work.
+      </paragraph>
+      <paragraph>
+       Li and Williams have proposed an approach to task planning with discrete and continuous actions [40]. Planning operators for continuous actions include dynamics, which are represented by bounds on the control input and a state equation. Unlike our work, the geometric space does not need to be discretized, autonomous robotic systems are modeled geometrically as point robots, and obstacles are assumed to be stationary. Action preconditions are either continuous or discrete, and flow tubes are used to represent the abstraction of the infinite number of trajectories of a continuous action. Dynamics are mapped to flow tubes, and the continuous effect of an action is then the goal region of its flow tube. Task planning a la Graphplan and mixed logic (non-)linear programs are the main building blocks of the planner, Kongming.
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      A combined task and motion planner
+     </section-title>
+     <paragraph>
+      Our combined task and motion planner utilizes a hybrid state representation, where certain predicates are evaluated as usual in the symbolic state component, but other predicates are evaluated in the geometric component. This evaluation might involve immediate geometric computations, e.g., whether an object is within a region, or a search problem such as motion planning, which in our case we solve by using sampling-based motion planning techniques [11]. Task planning is done in a forward-chaining manner in the state space [10, Chap. 4]. The important change to such a state-based forward-search task planner is how one evaluates preconditions and effects: one has to make a distinction between logical formulas with symbolic and geometric predicates.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Preliminaries: task and motion planning
+      </section-title>
+      <paragraph>
+       A task planning problem [10] consists in finding an applicable sequence of actions, i.e. a plan, {a mathematical formula}P=(a1,…,an) which leads to one of a given set of goal states specified by g when performed from a given initial state {a mathematical formula}s0. Actions are characterized by having preconditions {a mathematical formula}Prea that specify in what states a is applicable, and effects {a mathematical formula}Effa that specify how a state changes when the action is applied. Finally, a state s is a set of atomic statements {a mathematical formula}p(c1,…,cn). The plan existence problem for classical planning (without functional terms) is EXPSPACE-complete [10, p. 59]. Fig. 5 shows an example of an action schema for a hypothetical pick action for Justin.
+      </paragraph>
+      <paragraph>
+       In Hierarchical Task Network (HTN) planning, planning domain models include not only action schemas, but also methods that connect abstract tasks with adequate decomposition task networks and necessary parameter bindings. Tasks are composite or atomic partially instantiated schemas, and decomposition task networks are partial plans. An HTN planning problem is defined by one or more tasks and an initial state, and it consists in finding a plan that results from decomposing every abstract task.
+      </paragraph>
+      <paragraph>
+       Motion (or path) planning [11], on the other hand, considers a continuous space. There is a world space {a mathematical formula}W=R2 or {a mathematical formula}W=R3. The obstacles in the world space are defined by the obstacle space {a mathematical formula}O⊆W. There is a robot which can be a rigid body {a mathematical formula}A or a collection of connected links {a mathematical formula}A1,…,An.
+      </paragraph>
+      <paragraph>
+       The configuration space {a mathematical formula}C is determined by the various translations and rotations that the robot (or its links) can perform. {a mathematical formula}A(q) is the space in {a mathematical formula}W occupied by the robot transformed according to the configuration {a mathematical formula}q (and equivalently for {a mathematical formula}A1,…,An). {a mathematical formula}Cobs is the obstacle region in the configuration space, defined as the set of configurations where the interior (int) regions of {a mathematical formula}O and {a mathematical formula}A intersect:{a mathematical formula} We let {a mathematical formula}Cfree=C∖Cobs denote the free space in which the robot can move.
+      </paragraph>
+      <paragraph>
+       A motion planning problem is defined by the above entities (the domain), an initial configuration {a mathematical formula}qinit∈Cfree and a goal configuration {a mathematical formula}qgoal∈Cfree. A solution to a motion planning problem as defined above is a continuous motion path {a mathematical formula}τ:[0,1]→Cfree, where {a mathematical formula}τ(0)=qinit and {a mathematical formula}τ(1)=qgoal. Fig. 6 shows a simple motion planning problem in {a mathematical formula}C=R2 where a robot has to move from {a mathematical formula}qinit to {a mathematical formula}qgoal. The obstacles in {a mathematical formula}Cobs are in dark color, and a solution path is indicated by a dotted curve. In the general case, motion planning is PSPACE-complete [11, p. 249]. In addition to the robot, there might for instance be parts (objects) that the robot can transport, or there might even be multiple robots. In our work on the Justin robot, motion planning is done for one seven degrees-of-freedom arm at a time, and any transported parts simply follow the hand. Hence, for each motion planning problem, {a mathematical formula}C effectively consists of seven parameters. The obstacle space {a mathematical formula}Cobs comprises the table surface, objects on the table, and the other arm. For the warehouse domain, motion planning is done for a two degrees-of-freedom non-holonomic forklift. {a mathematical formula}C is expressed with four parameters for each motion planning problem. {a mathematical formula}Cobs includes the warehouse (walls and pillars) and the pallets that lay on the floor. We use two different motion planners for Justin and the forklift truck (see Sections 6 and 9 below).
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Hybrid states
+      </section-title>
+      <paragraph>
+       A hybrid state is a pair {a mathematical formula}s=〈syms,geos〉, where {a mathematical formula}syms is a symbolic state and {a mathematical formula}geos is a geometric state including the configuration of the robot(s). We assume that any hybrid state is fully observable.
+      </paragraph>
+      <paragraph>
+       In order to refer to the geometric state in the preconditions and effects of actions, some of the symbolic terms and statements represent abstractions of the geometric representation used during motion planning. In particular:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Some constants are used to denote regions or bodies (i.e., solid regions) in the work space. For instance, the logical formula in(a,b) may include a term a that denotes a body representing a box, and a term b that denotes a small area representing a position.
+       </list-item>
+       <list-item label="•">
+        Some atomic statements are used to denote subspaces of the configuration space. For instance, the above formula in(a,b) denotes the set of geometric states where the body representing the box denoted by a is inside the region denoted by b.
+       </list-item>
+      </list>
+      <paragraph>
+       In order to formalize these abstractions, we define a function ref such that {a mathematical formula}ref(t) gives the object or region o denoted by the constant term t; and a relation holds such that{a mathematical formula} is true if the relation pred holds true for the objects {a mathematical formula}〈o1,…,on〉 in geometric state {a mathematical formula}geos. The latter can be defined, e.g., in terms of constraints over {a mathematical formula}W, or through a query to a motion planner or to some other specialized reasoner. For convenience, we partition our predicates into two sets: {a mathematical formula}Predsym are those evaluated symbolically, and {a mathematical formula}Predgeo are those evaluated in the context of a geometric state. Then, an atomic statement {a mathematical formula}pred(t1,…,tn) holds in s iff either
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}pred∈Predsym and {a mathematical formula}pred(t1,…,tn)∈syms, or
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}pred∈Predgeo and {a mathematical formula}holds(pred,〈ref(t1),…,ref(tn)〉,geos).
+       </list-item>
+      </list>
+      <paragraph>
+       A compound statement is evaluated according to the standard definitions for connectives and quantifiers.
+      </paragraph>
+     </section>
+     <section label="3.3">
+      <section-title>
+       Hybrid actions and plans
+      </section-title>
+      <paragraph>
+       An action schema o is a tuple {a mathematical formula}〈A(v1,⋯,vn),pre(v1,⋯,vn+m),eff(v1,⋯,vn+m)〉, where:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        A is an action symbol.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}v1,⋯,vn is a sequence of variables serving as parameters of the action schema.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}pre(v1,⋯,vn+m) is a conjunction of literals {a mathematical formula}predi(vi1,…,viki) or {a mathematical formula}¬predi(vi1,…,viki) representing the preconditions of the action (where each variable {a mathematical formula}vij∈{v1,⋯,vn+m}). Note that the literals can use additional free variables {a mathematical formula}vn+1,⋯,vn+m, which are implicitly existentially quantified.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}eff(v1,⋯,vn+m) is a set of literals {a mathematical formula}predi(vi1,…,viki) or {a mathematical formula}¬predi(vi1,…,viki) representing the effects of the action, i.e., what atomic statements should be added to and removed from the state, respectively.
+       </list-item>
+      </list>
+      <paragraph>
+       Fig. 7 shows an action schema for Justin. An action instance is a grounded action schema, in which all variables have been replaced with constant terms. We sometimes use the letter a (symbol+arguments) to refer to an action instance, and we let {a mathematical formula}prea and {a mathematical formula}effa refer to its preconditions and effects, respectively.
+      </paragraph>
+      <paragraph>
+       The (optional) extra variables {a mathematical formula}vn+1,⋯,vn+m will be bound while preconditions are tested: we use the symbol γ for bindings. These bindings may include variables bound to geometric entities, such as paths τ. By referring to the same paths in the effects, the geometric state can be changed. We denote an action a with such bindings γ by {a mathematical formula}a/γ. An action should have at most one such geometric variable.
+      </paragraph>
+      <paragraph>
+       An action a is applicable in a hybrid state s (written {a mathematical formula}app(a,s)) iff its preconditions hold in s and any {a mathematical formula}τ(0)=geos.
+      </paragraph>
+      <paragraph>
+       The result of applying a hybrid action is:{a mathematical formula} where in turn the effects on the symbolic state {a mathematical formula}syms are{a mathematical formula}{a mathematical formula} and the effects on the geometric state {a mathematical formula}geos are:{a mathematical formula} We assume that the action effects are deterministic, and that the world (besides the robot) is static.
+      </paragraph>
+      <paragraph>
+       Each geometric literal pred comes with a procedure that makes it true in state {a mathematical formula}geos, i.e., that {a mathematical formula}holds(pred,〈ref(t1),…,ref(tn)〉,geos′) is satisfied, where {a mathematical formula}s′ is the resulting state. Typically, how to do this has already been determined when evaluating the preconditions. These preconditions should give a binding to a collision-free path τ such that {a mathematical formula}τ(0)=geos and {a mathematical formula}τ(1)=geos′, i.e., a path that connects the geometric components of the states before and after the action. This binding is then used in the corresponding effect, and it is important that τ is computed in a manner that ensures that effect. For instance, can-move-pick must be guaranteed to either produce a {a mathematical formula}τ(1) where the object in question has been picked by the robot, or else return “false.” Geometrical effects are not in general added to the symbolic state component, although for domain-debugging purposes, there is an option to do that for specific predicates. If one keeps a strict separation between symbolic and geometric predicates and confines the latter to the geometric state component, one can be sure of maintaining a consistent hybrid state.
+      </paragraph>
+      <paragraph>
+       Presently, we require that solutions for all geometric effects are computed in a single call to a geometric reasoner, such as a motion planner. The reason is the difficulty of combining several geometric solutions that have been computed independently.
+      </paragraph>
+      <paragraph>
+       Note that when a geometric effect is realized, typically by changing the pose of some object(s) in the geometric state component, then other geometric literals that are not explicitly stated in the action instance may be indirectly affected. For instance, if an object {a mathematical formula}o1 is moved to a position that happens to be in-front-of another object {a mathematical formula}o2 in the geometric state component, then in-front-of{a mathematical formula}(o1,o2) will become true. If {a mathematical formula}o1 is moved the reverse direction, ¬n-front-of{a mathematical formula}(o1,o2) will become true.{sup:3} However, such literals representing indirect geometric effects are not put explicitly in the symbolic state component in our approach. Instead, the geometric state component is queried when those literals (or their negations) appear later in preconditions. For comparison, in the HTN–GTP approach [24], [25], such literals can be added to or deleted from the symbolic state by invoking action-specific add and delete list functions which are evaluated by the geometric task planner (GTP). These functions (not to be confused with the symbolic add and delete lists) return those shared symbolic–geometric literals that are affected by the action in the current geometric state component. In order to ensure symbolic–geometric consistency in HTN–GTP, such shared literals must be updated only by the add and delete list functions, and may not occur in the symbolic add or delete lists.
+      </paragraph>
+      <paragraph>
+       A hybrid plan P is a finite sequence of actions {a mathematical formula}(a1,…,an). The result of a plan{a mathematical formula}s′=res(P,s) in a state s is defined as:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}res(P,s)=s if {a mathematical formula}P=().
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}res(P,s)=res(P2:k,res(a1,s)) otherwise,
+       </list-item>
+      </list>
+      <paragraph>
+       where {a mathematical formula}P2:k is P with the first action removed. A plan P is valid in a state s if{a mathematical formula} holds for each i, {a mathematical formula}1≤i≤n ({a mathematical formula}P1:i−1 is the first {a mathematical formula}i−1 actions of P).
+      </paragraph>
+     </section>
+     <section label="3.4">
+      <section-title>
+       Hybrid planning problem
+      </section-title>
+      <paragraph>
+       A hybrid planning domain is a tuple {a mathematical formula}D=〈O,C,Pred,N,holds,ref〉, where: O is a set of action schemas; C is a representation of the geometric state space according to Section 3.1; Pred is a set of predicates; N is a set of constants (names); and holds and ref are as above.
+      </paragraph>
+      <paragraph>
+       A hybrid planning problem is a tuple {a mathematical formula}Pb=〈s0,D,g〉, where: {a mathematical formula}s0=(syms0,geos0) is the initial state consisting of a symbolic state {a mathematical formula}syms0 and a geometric state {a mathematical formula}geos0; D is a hybrid planning domain; and g is a goal formula. A solution to a hybrid planning problem is a hybrid plan P that is valid when starting from {a mathematical formula}s0, and for which g holds in the final state {a mathematical formula}sn.
+      </paragraph>
+      <paragraph>
+       Alternatively, in an HTN planner, we may have the following definitions. A hybrid planning domain is a tuple {a mathematical formula}D=〈O,M,C,Pred,N,holds,ref〉, where:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        M is a set of methods for decomposing tasks that are composite or atomic partially instantiated actions. The methods concisely specify a (possibly infinite) set of hybrid plans {a mathematical formula}PM(T) for each task list T.
+       </list-item>
+       <list-item label="•">
+        The other elements are as previously.
+       </list-item>
+      </list>
+      <paragraph>
+       In the context of an HTN implementation, a hybrid planning problem is a tuple {a mathematical formula}Pb=〈s0,D,T〉 where: {a mathematical formula}s0 is the initial state; D is a hybrid planning domain including decomposition methods; and T is a list of tasks. A solution is then a plan {a mathematical formula}P∈PM(T) such that P is valid in {a mathematical formula}s0.
+      </paragraph>
+     </section>
+     <section label="3.5">
+      <section-title>
+       Planning algorithm
+      </section-title>
+      <paragraph>
+       Algorithm 1, forwardSearchTaskMotionPlanning, describes at a high level our combined task and motion planner. The input of this algorithm consists of an initial hybrid state {a mathematical formula}s0, a planning domain D, and a goal specification g (or for an HTN implementation, a task list). The algorithm returns a solution plan P in case the function {a mathematical formula}achieved(…) confirms goal/task achievement on line 6. It is a forward-chaining algorithm, and this is the main assumption we make. In our implementation, we have chosen a forward-chaining HTN planner (Shop2[41]), but besides forward-chaining, our approach is not dependent on a particular choice of task planning algorithm. Note however that, if regression planning was used, the computation of geometric states would be different (a possible approach is to compute pre-images, see [22]).
+      </paragraph>
+      <paragraph>
+       In order to not make any further assumptions about search order at this point, we present the algorithms as non-deterministic ones. In particular, the choice command represents a non-deterministic choice of a value, and the algorithm can be considered to fork on each choice. The fail command represents that this particular fork (sequence of choices) has failed and terminates. If all forks of a choice fail, or the set of choices is empty, the fork that has led there automatically fails.
+      </paragraph>
+      <paragraph>
+       In line 7, the function {a mathematical formula}actions(…) produces a set of available actions. In our HTN-implementation of the algorithm, the task-list (in g) is also updated. We have used the task decomposition algorithm of Shop2, and we refer to the literature about that planner [41] for further details. (The other algorithms we present (in particular for backtracking) are independent of whether the top-level algorithm is goal- or task-driven.) The importance of this line is that it provides the available actions in some manner, which depends on the particular task planner employed. Line 7 would be a backtrack point in a deterministic implementation: this is how the algorithm searches over alternative plans on the symbolic level.
+      </paragraph>
+      <paragraph>
+       In line 8, the function {a mathematical formula}evalPreconditions(…) (see Algorithm 2) is called with the present state sequence S (where the last element is the current state), the present (partial) plan P, and the selected action a. It returns an updated state sequence, and a value γ binding (among other things) a path τ in the geometric space if this is generated by the preconditions. γ may also be None in case of failure (lines 9–10).
+      </paragraph>
+      <paragraph>
+       If the preconditions are successfully satisfied, then the algorithm computes the effects of {a mathematical formula}a/γ, adds the resulting state to the state sequence S, and adds the action {a mathematical formula}a/γ to the plan P (lines 11–13).
+      </paragraph>
+      <paragraph>
+       Algorithm 2, evalPreconditions, is called each time an action is to be instantiated and its preconditions are to be evaluated. It iterates over the literals in the preconditions, and processes them according to whether they involve symbolic or geometric predicates. A binding γ of free variables in the preconditions is meanwhile constructed.
+      </paragraph>
+      <paragraph>
+       Of particular interest is the case of when a geometric predicate turns out to be unsatisfiable. This triggers geometric backtracking (line 13), which is an attempt to change geometric choices at earlier steps in the plan in a way that makes the preconditions of the present action geometrically satisfiable. This implies changing the geometric parts of the current state sequence S and the current (partial) plan P. (The symbolic parts of S and P are unchanged.) Therefore, these two entities are also returned by Algorithm 2.
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Geometric backtracking
+     </section-title>
+     <paragraph>
+      Geometric backtracking is the process of reconsidering previous geometric choices in order to satisfy the preconditions of the current action. It is triggered when certain geometric predicates cannot be satisfied in the present geometric state. Geometric backtracking may take place within each branch of the symbolic search tree. Geometric actions have different outcomes depending on the geometric state they are applied to. Therefore, the number of reachable geometric states grows exponentially (see Fig. 8). During geometric backtracking, the world is assumed to be static, i.e., it is not modified by external events other than the actions of the partial plan at hand.
+     </paragraph>
+     <paragraph>
+      Algorithm 3, geomBacktracking, takes as input a state sequence (S), a plan (P), and the action (a) whose preconditions failed on the geometric level. The algorithm selects an increasingly larger subset of actions from P ordered in the sequence {a mathematical formula}A (line 4). Note that the actions in {a mathematical formula}A need not be adjacent in P, but they should still respect the order in P. Initially, only the action that triggered the backtracking is included in {a mathematical formula}A (line 1). The simplest way of doing the selection is by reversed chronology, i.e., starting with the last action in P and then working backwards one action at a time. It then attempts to find a feasible sequence of geometric actions and states by changing the geometric choices of the selected actions (call to {a mathematical formula}searchGeomSeq(…) at line 7). If successful, it returns the updated state sequence (S) and plan (P), and a binding (γ) for the attempted action (line 9). Geometric backtracking fails, if the geometric space corresponding to the combination of geometric actions in P has been exhaustively explored unsuccessfully (line 6).
+     </paragraph>
+     <paragraph>
+      There are several possibilities for the selection function {a mathematical formula}fsel in the backtracking algorithm. The REVCHRONO criterion is defined as follows: if failed attempts occur while attempting to satisfy the preconditions of an action {a mathematical formula}ai, then we select the action {a mathematical formula}ai−1 that is the direct predecessor of {a mathematical formula}ai in P. However, such a criterion does not take into account what actually caused the difficulty of applying the current action. Yet, the reversed chronology criterion in practice has a decent chance of working, as interdependent actions often appear close in plans (e.g. a pick action directly preceding a put action with the same movable object). If that is not the case, though, it can result in selecting recent actions that for instance involve only objects that are far away from the present object and its present or target location.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Informed geometric backtracking
+      </section-title>
+      <paragraph>
+       As the cost of geometric backtracking grows exponentially with the number of actions involved, it is desirable to exclude irrelevant actions, and for those actions that are potentially relevant, to be able to sort and address them in some order of relevance in order to maximize the chance of finding a solution quickly. For that purpose, we propose two heuristics to be used for {a mathematical formula}fsel: COLL and KIN.
+      </paragraph>
+      <section label="4.1.1">
+       <section-title>
+        Collisions
+       </section-title>
+       <paragraph>
+        Not surprisingly, the presence of obstacles is a major contributing factor to failed preconditions, and these obstacles may sometimes be objects that have previously been moved. The COLL criterion is based on counting collisions with an object o that was placed by action {a mathematical formula}ai. We select {a mathematical formula}ai as follows.
+       </paragraph>
+       <paragraph>
+        We first retrieve the already moved objects {a mathematical formula}Ocoll that collided the largest number of times with a robot's hand or grasped object when trying to find a geometric instance of a:{a mathematical formula} where nbColl is the function that returns the number of collisions that were detected between the robot's hand and object o, and collisions that were detected between the object grasped by the robot and object o, and {a mathematical formula}Omoved is the set of objects that have been moved by hybrid actions of P. The statistics used for evaluating nbColl are gathered during the generation of target poses (which precedes motion planning) when the preconditions of {a mathematical formula}ai are evaluated.
+       </paragraph>
+       <paragraph>
+        We pick randomly an object {a mathematical formula}ocoll∈Ocoll if there is more than one, and we select the latest hybrid action {a mathematical formula}ai of P that manipulates object {a mathematical formula}ocoll in P and that is not already selected.
+       </paragraph>
+      </section>
+      <section label="4.1.2">
+       <section-title>
+        Kinematics
+       </section-title>
+       <paragraph>
+        The second major factor behind failed preconditions is the kinematic constraints of the robot. The KIN criterion takes these constraints into account. If failed attempts are owing to the violations of kinematic constraints while placing an object which has been picked by action {a mathematical formula}ai, then we select {a mathematical formula}ai as follows.
+       </paragraph>
+       <paragraph>
+        First, we check whether kinematic constraints have been violated when trying to find a geometric instance of a that manipulates object o. This check is performed by calling function {a mathematical formula}nbViolatedKinCst(…) which takes a as parameter and returns the number of times kinematic constraints have been violated (including joint limits). More precisely, nbViolatedKinCst considers constraints when the planner attempts to find an inverse kinematics (IK) solution for the target pose of the hand when picking up or placing an object. The violations are most often owing to the target orientation: the position is a less frequent problem.
+       </paragraph>
+       <paragraph>
+        Second, we select the latest hybrid action {a mathematical formula}ai of P that manipulates object o in P and that is not already selected.
+       </paragraph>
+      </section>
+      <section label="4.1.3">
+       <section-title>
+        Selection function chaining
+       </section-title>
+       <paragraph>
+        Selection functions can be composed by chaining. The chain {a mathematical formula}fselA▹fselB means that first the selection function {a mathematical formula}fselA is applied, and when that returns no further actions, {a mathematical formula}fselB is applied to the remaining actions. Unlike REVCHRONO that always returns actions, KIN and COLL may return no actions. For this reason, the latter two selection functions need to be chained with REVCHRONO in order to make geometric backtracking full.
+       </paragraph>
+      </section>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Search and geometric sampling for the selected actions
+      </section-title>
+      <paragraph>
+       Algorithm 4 (searchGeomSeq) visits alternative geometric instantiations of the selected actions in {a mathematical formula}A. It takes the earliest action in {a mathematical formula}A and samples possible geometric bindings for the geometric parts of its preconditions (line 5). It then applies the action with that binding, and then updates the states and actions (aBetween) that come between this and the next selected action in {a mathematical formula}A (line 12). After that, it recursively proceeds with the next action in {a mathematical formula}A. The effect is that there is a search over the ways to satisfy the preconditions of the actions in {a mathematical formula}A. Meanwhile, the preconditions of remaining actions in P are just reevaluated to accommodate the changes owing to {a mathematical formula}A, but are not otherwise involved in the search. In the case where all the forks of all the choices made in searchGeomSeq fail, the algorithm returns the state sequence S, the plan P, and no bindings ({a mathematical formula}γ=None).
+      </paragraph>
+      <paragraph>
+       In order to sample statements with geometric predicates in a systematic manner, we use the van der Corput and Halton sequences [42]. These sequences guarantee a uniformly distributed sampling over {a mathematical formula}[0,1]n, and can straightforwardly be used to sample a bounded n-dimensional space. For the manipulation domain, grasps (tool center position) are sampled for pick actions, and object poses (position and orientation) are sampled for put actions. In the pick action schema in Fig. 7, the sampling is done for the target Tool Center Point according to the literal can-move-pick({a mathematical formula}h,g,o,τ). In the warehouse scenario, the sides of the pallets to be picked up by the forklift truck are sampled, and pallet poses (position and orientation) are sampled for put-down actions.
+      </paragraph>
+      <paragraph>
+       A naive implementation of Algorithm 4 leads the search to try every geometric instance (binding) of a selected action (function {a mathematical formula}sampleGeomPreconds(…)) exhaustively, and only after repeated failed attempts, focus on another selected action. In this way, given a time limit, the search concentrates mainly on a sub-set of actions in the search tree, and as such, the collected information about violated kinematic constraints and detected collisions concerns mostly this sub-set of actions. The collected information during geometric backtracking may then be misleading for informed heuristics such as COLL and KIN. In order to avoid this bias and tend to explore equally different portions of the geometric sampling space, we set a threshold in the number of failed attempts. Then, we count the number of failed attempts, and each time the threshold is exceeded, we focus on another action and reset the counter.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Exploiting geometric constraints
+     </section-title>
+     <paragraph>
+      The heuristics presented in the previous section guide the search by prioritizing the geometric predicates on which to backtrack. This informs the algorithm on the depth of the backtrack point, but not on which geometric instance to choose in order to fix the problem. Determining the right instance is difficult when backtracking is caused by collisions, because changing the pose of the colliding object changes the configuration space of obstacles, which affects the feasibility of other actions in a way which is computationally irreducible. However, when backtracking occurs for kinematic reasons, the choice of geometric instances can be reduced by using our knowledge of the kinematic model of the robot, together with constraints automatically generated from the symbolic action sequence. This can be done by using a constraint-based approach, which has been completely described and evaluated in previous work [4].
+     </paragraph>
+     <paragraph>
+      This approach is useful when the task itself is geometrically constrained, i.e., when the robot has to place the objects in specific target poses, in particular with specific target orientations. Indeed, the Tool Center Point (TCP) of a 7-DOF manipulator, such as Justin's arms, can virtually reach any point in the nearby space, but kinematic constraints impose strong limitations on the range of orientations that can be reached by the TCP. Consequently, placing an object with a specific orientation often requires a robot to grasp the object with a specific orientation. Without guidance, the only way to solve this problem is to backtrack on the grasp action until the place action is kinematically feasible. Another example when constraints are useful is when an object is placed on a temporary location by the left arm and later grasped by the right arm. In this case, the geometric constraints help in choosing a temporary location that is reachable by both arms.
+     </paragraph>
+     <paragraph>
+      Note that the geometric constraints only apply to the geometric states that can be reached after the completion of an action. Therefore, the intermediate states (those that are reached during the motion paths of each single action) are not subject to these constraints, only the final state is. In contrast with task constraints which define how motions should be performed, e.g. keeping a glass filled with water in upright position (see the work of Tenorth et al. [39] for instance), the constraints here are used to prune out unfeasible actions. In this way, the path planner is called only if the final state is geometrically consistent.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Modeling the kinematic constraints
+      </section-title>
+      <paragraph>
+       We model the kinematic constraints by expressing the relationship between the position of the TCP r in the workspace and its possible range of rotation. Since this relationship is complex to compute, we approximate it with linear constraints. In order to do this approximation, we compute a set of kinematic maps off-line, using a procedure similar to the one proposed by Zacharias et al. [43]. The workspace of the robot is discretized into a 3-dimensional grid, and for each cell, the existence of an IK solution is tested for all possible rotations of a TCP template frame about its associated reference axis (see Fig. 9).
+      </paragraph>
+      <paragraph>
+       From this data, we build two maps {a mathematical formula}γmin and {a mathematical formula}γmax, which respectively associate the position r of the TCP to a lower and upper bound for γ, the orientation of the TCP template frame about its associated reference axis. This procedure is repeated for all TCP template frames; hence each TCP template frame is associated to two maps:{a mathematical formula}{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       These maps tell us, depending on the position r of the TCP, which range of orientations {a mathematical formula}[γmin,γmax] can be achieved. More precisely, if the TCP is oriented with {a mathematical formula}γ∈[γmin,γmax], then an IK solution may exist, and if {a mathematical formula}γ∉[γmin,γmax], then for sure no IK solution exists.
+      </paragraph>
+      <paragraph>
+       These maps (see Fig. 10) can then be used to compute a linear approximation of the kinematic constraints for a given region of space. Consider for instance that the TCP is located in a box defined by {a mathematical formula}r_ and {a mathematical formula}r‾, which are respectively a lower and upper bound for the variables {a mathematical formula}rx,ry and {a mathematical formula}rz. These bounds ({a mathematical formula}rx_ and {a mathematical formula}rx‾ in Fig. 10) are used to select a subset of points in {a mathematical formula}γmax and {a mathematical formula}γmin, from which a linear regression is employed to identify the unit normals ({a mathematical formula}nub,nlb) and offsets ({a mathematical formula}mub,mlb) of two bounding hyperplanes. Then, these parameters are used to formulate a constraint which gives the range of possible rotation of the TCP in that region of space:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       This linear approximation remains correct only for small regions of space, but it is sufficient to approximate the kinematic constraints at grasps and release positions of objects. The advantage of this approach is that these constraints can be computed without precisely knowing the position of the TCP. For instance, if a task consists in putting a glass in a sink with a top grasp, there is enough information in the symbolic plan to generate the kinematic constraints automatically, because the position and dimensions of the sink are known, as well as which manipulator and which type of grasp are used. From this symbolic information, it is also possible to formulate placement and grasp constraints. The placement constraints apply to the pose of the glass w.r.t. the sink. They can be automatically generated from the pose and dimensions of the sink. The grasp constraints apply to the TCP w.r.t. the glass. They can be formulated by knowing which object is grasped, and which type of grasp is used. Next, we describe in more detail how placement constraints and grasp constraints are constructed.
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Placement constraints
+      </section-title>
+      <paragraph>
+       A placement constraint represents the set of all possible relative stable positions of a manipulable object at/in a fixed location loc. This constraint applies to the translation part of the object pose p. A flat surface is assumed, but the formulation can be easily generalized to a volume (Fig. 11).
+      </paragraph>
+      <paragraph>
+       Assuming that the dimensions of all the objects that can be used as a location are known, we can formulate the following constraint in the frame of the location:{a mathematical formula}{a mathematical formula} In order to get this constraint expressed in the world frame, it has to be transformed according to the translation {a mathematical formula}tloc and the rotation matrix {a mathematical formula}Rloc of the location:{a mathematical formula}
+      </paragraph>
+     </section>
+     <section label="5.3">
+      <section-title>
+       Grasp constraints
+      </section-title>
+      <paragraph>
+       Grasp constraints represent the possible relative positions of the TCP with respect to the object when the object is grasped (or released). In case of a top-grasp (or bottom-grasp), the TCP remains in a small region situated roughly above (or below) the object (see Fig. 12). In case of a side-grasp, the TCP is situated along a circle centered on the z axis of the object, which can be bounded by a square region using linear constraints. Whatever type of grasp is used, a grasp constraint always defines a polyhedral region attached to the object.
+      </paragraph>
+      <paragraph>
+       Using the notation in Fig. 12, grasp constraints can be formulated using two parameters: the distance between the TCP and base of the object (δ), and the orthogonal distance between the TCP and the main axis of the object (ϵ). The grasp constraint in the frame of the object can be written as a linear inequality:{a mathematical formula}{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       During task planning, the geometric constraints described above are posted to/rolled back from a constraint network, each time a symbolic action is added to/removed from the current plan. The constraints are parametrized by mapping the arguments of symbolic actions to numerical values. Consider for instance the symbolic action pick(right,top,cup2). A pick action is associated to a grasp constraint (see previous subsection), where the parameters δ and ϵ are mapped from the grasp type top and the target object cup2.
+      </paragraph>
+      <paragraph>
+       Since each action results in new constraints, a set of variables has to be created for each new action. A pick action is represented by four variables {a mathematical formula}x,y,z,γ, which represent the position and orientation of the TCP at the grasp position, and a place action is represented by eight variables: four variables for the TCP, and four variables for the object pose at the release position. An action sequence thus results in a tuple of variables {a mathematical formula}v=〈v1,v2,…,vN〉, to which a tuple of intervals is associated:{a mathematical formula} The bounds of the intervals are shrunk using a global filtering algorithm (adapted from the work of Lebbah et al. [44]). These intervals can then be used during geometric reasoning to prune out geometric instances which violate the kinematic constraints. An important feature of this scheme is that the constraints are conservative, i.e., infeasible actions may go through the filtering process, but feasible actions cannot be pruned out. Hence, filtering safely prunes the search space without loss of the resolution completeness.
+      </paragraph>
+      <paragraph>
+       This scheme is integrated into the planner at both the symbolic level and the geometric level, using a posting/rolling back system. When a symbolic action is chosen (Algorithm 1, line 7), we save the current set of intervals {a mathematical formula}D, and post a set of constraints associated to this action into the constraint network. Constraints are propagated. If an inconsistency is detected, no geometric evaluation is needed, hence we backtrack at the symbolic level. If the network is consistent, then a set of intervals is computed and used to reduce the choice of geometric bindings (Algorithm 2, line 11 and Algorithm 4, line 5). Each time a geometric binding is chosen for a new action, geometric constraints are added and propagated, which shrinks the intervals further.
+      </paragraph>
+      <paragraph>
+       When a symbolic backtrack occurs, the constraints associated with the action are removed from the network, and the set of intervals {a mathematical formula}D is restored. During geometric backtracking, a similar procedure is applied, i.e., the set of intervals is restored, but the difference is that no constraints are removed from the constraint network because the symbolic action sequence has not been changed.
+      </paragraph>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Experiments on geometric backtrack search
+     </section-title>
+     <paragraph>
+      The aims of the experiments presented in this section are (1) to explore costs and benefits of using more informed geometric backtracking, (2) to compare quantitatively different selection criteria for geometric backtracking, and (3) to compare between not propagating and propagating geometric constraints.
+     </paragraph>
+     <paragraph>
+      In this experimental study, we test three selection functions (see {a mathematical formula}fsel in Algorithm 3): {a mathematical formula}fselREVCHRONO, {a mathematical formula}fselCOLL▹fselREVCHRONO, and {a mathematical formula}fselKIN▹fselREVCHRONO. The first, {a mathematical formula}fselREVCHRONO, is a single heuristic function, while the last two are chains of two heuristic functions (see Section 4.1).
+     </paragraph>
+     <paragraph>
+      In these experiments, our planning system looks for feasible plans without considering any optimization criterion. So, the planning process stops, as soon as the planner finds a feasible plan (see line 6 in Algorithm 1).
+     </paragraph>
+     <paragraph>
+      We consider both feasible and unfeasible problem instances in our experimental study. For feasible cases, we compare how fast the planner can find a solution using different selection heuristic criteria, and not using as well as using the propagation of geometric constraints. For unfeasible cases, we compare how fast the planner can determine that there is no solution using {a mathematical formula}fselREVCHRONO, and not using as well as using constraint propagation. We choose this selection criterion for addressing unfeasible instances, in order to avoid any bias caused by the interplay between selection heuristic and constraint propagation.
+     </paragraph>
+     <paragraph>
+      There are two series of experiments in which Justin is to stack four cups onto two flat trays positioned on a table, two cups per tray. The JSHOP2 planning domain model used in these experiments is given in Fig. A.33. Predicates can_move_pick, grasped, is_oriented and can_move_place are geometric while on, empty_hand, graspable, allow_pick, allow_place and is_location are symbolic.
+     </paragraph>
+     <paragraph>
+      Fig. 13 illustrates the initial geometric state in the simulation environment of one of the problem instances. In Fig. 14, a corresponding initial symbolic state is used for generating all problem instances. Atomic statements for arm left and cups cup2, cup3, and cup4 are omitted for space reasons.
+     </paragraph>
+     <paragraph>
+      We want to ensure that for each problem instance the different heuristic functions are used to solve exactly the same geometric backtracking problem. Therefore, each problem instance consists of a fixed task plan, with the same actions in the same order. We generated possible task plans by solving a (symbolic) task planning problem and requesting all symbolic solutions. The plans contain eight primitive actions that are grounded and totally ordered: four pick actions and four place actions. These plans differ from each other in terms of ordering and variable constraints; i.e., they are distinct with respect to how their primitive actions are sequenced and to what bindings are chosen for their actions. In Fig. 15, such a solution plan is presented. From a randomly selected subset of the symbolic solutions, we have created problem instances by combining them with randomly generated initial geometric states. For creating these initial geometric states, the positions of both trays and the initial poses of all cups are randomly chosen.
+     </paragraph>
+     <paragraph>
+      The motion planner component uses bidirectional rapidly exploring random trees (RRT). RRT is a widespread sampling-based motion planning technique [45]. The nodes of the tree represent possible configurations of the robot, and the edges represent the existence of a collision-free motion path between two nodes. The tree is built by inserting nodes (random samples from the configuration space of the robot), and attempting to connect these nodes to the current tree. Periodically, one checks if the goal configuration can be connected to the tree, in which case a solution has been found. In the following experiments, we used the bi-directional RRT technique [46], which leads to better performance. RRT is a resolution-complete technique, but in order to guarantee termination within a reasonable time, we set a limit to the resolution (i.e., number of nodes).
+     </paragraph>
+     <paragraph>
+      In Algorithm 3, if intermediate actions and states are to be updated (line 12) during geometric backtracking, we do not immediately call RRT for updating the paths associated with these actions, but postpone these calls until after we update successfully the state that results from applying the last intermediate action in aBetween. In this way, we do not call RRT at each search node, but only when we reach a leaf search node. We have implemented this optimization, since calling RRT is expensive (RRT uses frequently more than 80% of the geometric reasoning time in the following experiments).
+     </paragraph>
+     <paragraph>
+      The sampling resolution at the geometric level is constant for all experiments: 16 for the pick actions (16 orientations), and 120 for the place actions (15 positions and 8 orientations).
+     </paragraph>
+     <paragraph>
+      For each run of an experiment, a time limit of 300 s is set for geometric backtracking, and the RRT planner used to search for paths has a limit of 500 nodes per attempt. The planner is running in 32-bit Java 1.6.0 RTE with 32-bit native libraries used for collision detection (VCOLLIDE), inverse kinematics and forward kinematics computations. For modeling geometric constraints and propagating them, the planning system uses the 32-bit library of Gurobi Optimizer 5.0 [47]. The computer has an Intel CORE i5 vPro processor (2.5 GHz), 64 bit, 4 cores, 3 MB for the cache memory), 8 GB memory, and Linux kernel 2.6.38.
+     </paragraph>
+     <paragraph>
+      In the following sections, we show and analyze experimental results. The bar charts report the performance of the planner addressing problem instances. Each problem instance is addressed ten times, since the RRT motion planner is not deterministic. In the bar charts reporting geometric reasoning time, each bar represents an average cpu time in seconds, and the associated error bar represents the standard deviation of cpu time. In the histograms giving the number of explored geometric states, each bar represents an average value of number of explored geometric states, and the associated error bar represents the standard deviation of number of explored geometric states. In the histograms shown in Sections 6.2 and 6.4, a missing bar indicates that the corresponding experiment reached the time bound in at least five runs out of ten without finding a solution. The failed runs are not included in the computation of average and standard deviation values. If the number of successful runs is less than ten for an experiment, we print this number above the corresponding bar. When an error bar is not visible, it is because the associated standard deviation is too small to print. Note the logarithmic scale on the y-axis of all bar charts.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       Experimental setup: constrained area
+      </section-title>
+      <paragraph>
+       The first series of experiments involves stacking four cups onto two flat trays positioned on a table, two cups per tray. The size of the one tray is such that it can just fit two cups, while we can fit up to five cups onto the other tray. The intention is to provoke backtracking owing to collisions. The 17 generated feasible problem instances that have been solved are named {a mathematical formula}i1a, {a mathematical formula}i2a until {a mathematical formula}i17a. The 18 generated problem instances that have been found to be unfeasible are named {a mathematical formula}i18a, {a mathematical formula}i19a until {a mathematical formula}i35a.
+      </paragraph>
+     </section>
+     <section label="6.2">
+      <section-title>
+       Results: constrained area
+      </section-title>
+      <paragraph>
+       First, we consider the time it takes to find solutions to feasible problems. The first two bar charts in Fig. 16 and Fig. 17 report the performance of the planner addressing the 17 feasible problem instances for the three different selection functions when geometric constraints are not propagated (Fig. 16) and when they are propagated (Fig. 17). In these histograms, we can see that heuristic function {a mathematical formula}fselCOLL▹fselREVCHRONO can solve all the instances. {a mathematical formula}fselCOLL▹fselREVCHRONO dominates the other heuristic functions, since it performs the best for all the instances except three. With the selection criterion, the planner solves many instances with one order of magnitude better times.
+      </paragraph>
+      <paragraph>
+       In bar charts of Fig. 16, Fig. 17, as well as below in Section 6.4 in histograms (Fig. 20, Fig. 21), we get large standard deviations for some problem instances. This happens when collisions occur between the left and right arms of Justin. Arm–arm collisions occur when two actions in a row are planned for picking two cups with different arms, and when the cups are too close to each other (problem instances {a mathematical formula}i1a, {a mathematical formula}i11b, and {a mathematical formula}i16b), or when the arms need to be crossed when both cups are picked (problem instance {a mathematical formula}i4b). In such situations, the success of RRT is a matter of chance.
+      </paragraph>
+      <paragraph>
+       The general pattern here is that the selection function {a mathematical formula}fselCOLL▹fselREVCHRONO is superior, since the cups on the small tray tend to collide very often, as the space there is very constrained.
+      </paragraph>
+      <paragraph>
+       Next, we consider the time it takes to discover that a problem is unfeasible. In Fig. 16 and Fig. 17, from the results shown with {a mathematical formula}fselREVCHRONO, which is not influenced by constraint propagation, we observe that there is a light slowdown owing to the overhead of propagating constraints, although the number of explored geometric states that are pruned out is very significant (from one to two orders of magnitude). Clearly, this series of problem instances is challenging foremost because one of the trays is small and a large number of collisions are detected, and the kinematic issues are secondary: propagating geometric constraints does not help in avoiding these collisions.
+      </paragraph>
+      <paragraph>
+       The time reported in Fig. 18 is spent on exploring exhaustively the search space of geometric states associated with 18 unfeasible problem instances using REVCHRONO. The corresponding number of geometric states that are explored is given in Fig. 19. In this figure, the average number of geometric states is artificially set to one (instead of zero) for instances {a mathematical formula}i18a, {a mathematical formula}i21a, {a mathematical formula}i25a, {a mathematical formula}i27a, and {a mathematical formula}i35a when propagating geometric constraints for making the corresponding bars visible (logarithmic scale on the y-axis). The reason why these problem instances are proven infeasible by not exploring any node is that an inconsistency was detected in the constraint network generated from the symbolic action sequence, and therefore no search was needed. Quickly detecting some infeasible action sequences is an interesting feature of geometric constraint propagation, which also positively impacts the results presented in Sections 6.4, 7 and 7.2.
+      </paragraph>
+      <paragraph>
+       For six unfeasible problem instances out of 17 (instance {a mathematical formula}i32a cannot be found to have no solution without constraint propagation given the time bound), there is a significant speedup owing to constraint propagation. For all instances except one, most of the geometric reasoning time is spent on computing paths, and the part of time spent on propagating geometric constraints is insignificant in comparison. For one single instance ({a mathematical formula}i21a), there is a significant slowdown of the planning process owing to constraint propagation, since planning finishes without having called RRT (i.e., the first action of the plan cannot be geometrically grounded). For the 17 unfeasible problem instances, propagating geometric constraints prunes the search space of geometric states very much (from one to three orders of magnitude).
+      </paragraph>
+      <paragraph>
+       Note, however, that pruning the search space by propagating geometric constraints does not always result in a gain in terms of computation time. We consider two situations. On one hand, a large number of infeasible geometric states can also be discarded through exhaustive search in a short time, since an IK test takes on average 1 ms. Therefore, the effect of pruning is only noticeable when the number of geometric states pruned is very large, such as in instances {a mathematical formula}i26a and {a mathematical formula}i33a. On the other hand, a geometric state may be feasible, but inconsistent with respect to another action. Detecting such inconsistencies by constraint propagation avoids the repeated calls to the motion planner, which decreases significantly the total search time. Consider for example instances {a mathematical formula}i29a and {a mathematical formula}i31a: the pruning is similar, but a reduction in time is only observed for {a mathematical formula}i31a. In {a mathematical formula}i29a, the motion planner is called 12 times both with and without constraint propagation. In {a mathematical formula}i31a, the motion planner is called 1 time with constraint propagation and 12 times without constraint propagation. This observation applies to the results presented in Section 6.4 as well.
+      </paragraph>
+     </section>
+     <section label="6.3">
+      <section-title>
+       Experimental setup: constrained orientation
+      </section-title>
+      <paragraph>
+       In the second series of experiments, the setup is similar to the first series, but there are two important differences. Firstly, there are constraints on the final orientations of two of the cups, within a 90° interval. The two other cups have no orientation constraints. Secondly, there are now two large trays, so the space constraints for both trays are easily satisfied. This makes kinematic constraints more dominant compared to the previous setup. On the other hand, collisions become a smaller problem. Geometric backtracking when addressing these problem instances is mainly triggered when the final orientation constraints are not satisfied at the very end of the plan. The 21 instances that have been solved are named {a mathematical formula}i1b, {a mathematical formula}i2b until {a mathematical formula}i21b. The 20 unfeasible instances that have been found to have no solution are named {a mathematical formula}i22b, {a mathematical formula}i23b until {a mathematical formula}i41b.
+      </paragraph>
+     </section>
+     <section label="6.4">
+      <section-title>
+       Results: constrained orientation
+      </section-title>
+      <paragraph>
+       First, we consider the time it takes to find solutions to feasible problems. In Fig. 20 where the geometric constraints are not propagated, there is no clear winner among the selection functions, since most feasible problem instances are challenging owing to complex robot's kinematics and geometric issues, such as collisions with cups. Heuristic function {a mathematical formula}fselREVCHRONO performs best for two instances and solves nine instances, {a mathematical formula}fselCOLL▹fselREVCHRONO performs best for two instances and solves nine instances, and {a mathematical formula}fselKIN▹fselREVCHRONO performs best for two instances and solves nine instances.
+      </paragraph>
+      <paragraph>
+       In Fig. 21 where the geometric constraints are propagated, about twice the number of problem instances can be solved compared to Fig. 20. {a mathematical formula}fselCOLL▹fselREVCHRONO dominates the other selection functions: it performs the best for 11 instances, and it solves 19 instances out of 21.
+      </paragraph>
+      <paragraph>
+       In Fig. 20, Fig. 21, there is no obvious correlation between problem features: kinematic constraints and space constraints characterize the problem instances and have to be taken into account together in order to solve them.
+      </paragraph>
+      <paragraph>
+       In Fig. 20 and Fig. 21, from the results shown with {a mathematical formula}fselREVCHRONO, we can see that propagating constraints speeds up the planning process, except for three problem instances out of 16. For seven problem instances, the performance gain is significant. Overall, propagating constraints prunes a tremendous number of explored geometric states (from one to two orders of magnitude).
+      </paragraph>
+      <paragraph>
+       Next, we consider the time it takes to discover that a problem is unfeasible. The time reported in Fig. 22 is spent on exploring exhaustively the search space of geometric states associated with 20 unfeasible problems using REVCHRONO. The corresponding number of geometric states that are explored is given in Fig. 23. In this figure, the average number of geometric states is artificially set to one (instead of zero) for problem instances {a mathematical formula}i25b, {a mathematical formula}i29b, {a mathematical formula}i30b, {a mathematical formula}i32b, and {a mathematical formula}i41b when propagating geometric constraints for making the corresponding bars visible (logarithmic scale on the y-axis). As explained in Section 6.2, the number of explored geometric states is zero when an inconsistency is detected in the constraint network, and therefore no search is needed.
+      </paragraph>
+      <paragraph>
+       For four unfeasible problem instances in Fig. 22 and Fig. 23, there is a significant speedup owing to constraint propagation overall, although the final orientation constraints are never posted to the constraint network (i.e., the planning process always stops before considering the last action of the plan). For all instances, most of the geometric reasoning time is spent on computing paths, and the part of time spent on propagating geometric constraints is insignificant compared to the part of time spent on computing the paths. For all unfeasible problem instances, propagating geometric constraints prunes the search space of geometric states tremendously (from one to three orders of magnitude).
+      </paragraph>
+     </section>
+     <section label="6.5">
+      <section-title>
+       Summary and discussion
+      </section-title>
+      <paragraph>
+       The planner using heuristic function {a mathematical formula}fselCOLL▹fselREVCHRONO can solve twice as many problems with unconstrained orientations compared to using the other selection criteria, and constraint propagation speeds up the planning process in the unfeasible cases. For the series of problems with constrained final orientation solved without propagating geometric constraints, no heuristic function dominates. Constraint propagation is very helpful for coping with problems with constrained orientations, where twice as many problem instances have been solved.
+      </paragraph>
+      <paragraph>
+       The geometric backtracking search done for all the experiments presented in this section is depth-first; i.e., once the actions on which to backtrack have been selected, it always visits them in chronological order. This search strategy is rigid and does not employ the information collected during geometric backtracking to a great advantage. In the future, we could improve the search process by designing and implementing informed search strategies for geometric backtracking that are based on the detected collisions and violations of kinematic constraints. For example, with such a search strategy, the selected actions would be ranked depending on how many geometric and kinematic problems have been detected, and then we would visit the actions in the ranking order during geometric backtracking. Using an order different from the chronological order would require us to apply a ranking function on the selected actions just before calling {a mathematical formula}searchGeomSeq(…) at line 7 in Algorithm 3. In addition, we would have to modify Algorithm 4 as follows. If we visit a selected action {a mathematical formula}ai before another selected action that precedes it in the plan P, then the geometric computations for {a mathematical formula}ai are postponed and performed only after the action {a mathematical formula}ai−1 directly preceding {a mathematical formula}ai in P has been successfully evaluated at the geometric level.
+      </paragraph>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      Experiments on combined symbolic and geometric search
+     </section-title>
+     <paragraph>
+      In the previous section, we studied the effect of the selection heuristic criteria and of constraint propagation on geometric backtrack search. This was done by focusing on single sequences of actions. In the present section, we evaluate the effect of propagating geometric constraints on the global search process, i.e., combining the symbolic search space and the geometric search space. As in the previous experiments, our planning system looks for feasible plans without considering any optimization criterion. So, the planning process stops, as soon as the planner finds a feasible plan (see line 6 in Algorithm 1). The action selection process during geometric backtracking is guided using the reversed chronology heuristic function.
+     </paragraph>
+     <section label="7.1">
+      <section-title>
+       Experiments on effects of constraint propagation
+      </section-title>
+      <paragraph>
+       The scenario consists in placing a set of cups on different target locations (see Fig. 24). The initial positions of the cups and the target locations are randomized over the table for each run. The task is to place two cups on each target location. We ran four experiments: 2, 4, 6, and 8 cups with respectively 1, 2, 3, and 4 target locations, and 100 runs for each experiment. Two HTN decomposition methods were implemented to move the objects, in order to deal with all the situations. The first method simply consists in picking and placing the object to its target location. The second method involves picking and placing the object to a temporary location, re-grasping it with the opposite arm, and placing it to the target location. The second method is used when the object and the target location are not both reachable by the same arm. The domain is given in Fig. A.34 in Appendix A. The planning problems are defined by several abstract tasks, each of them for moving a single cup to its target location. Note that there are no ordering constraints between these tasks.
+      </paragraph>
+      <paragraph>
+       An RRT planner is used to search for motion paths. The combined task and motion planner is running in 32-bit Java 1.6.0 RTE with 32-bit native libraries used for collision detection (VCOLLIDE), inverse kinematics and forward kinematics computations. For modeling geometric constraints and propagating them, the planning system uses the 32-bit library of Gurobi Optimizer 5.0 [47]. A cut-off time of 300 s was set for planning.
+      </paragraph>
+      <paragraph>
+       Table 1 summarizes the results. Note that even when the task is simple (2 cups) the success rate is not 100%. This may happen for instance if a cup is not reachable in the initial state: although the cup is not located far from the robot, the position together with the orientation of the cup can result in a set of kinematically infeasible grasps. Another possibility is that the initial (or intermediate) pose of a cup always creates an obstacle for picking another cup. This happens when the number of alternative configurations for grasping the cup is limited by strong kinematic constraints on the manipulator (owing to a peculiar position of the cup to be grasped). Table 1 shows the impact of constraint propagation on the success rate, i.e., the percentage of solutions found within 300 s search time. Without constraint propagation, the success rate quickly decreases. This is caused by two different effects of constraint propagation: reduction of the search space, and detection of inconsistencies (see Fig. 25). The reduction of the search space results from pruning some geometric states that violate the kinematic constraints. This speeds up the geometric backtrack search, as do the heuristic functions, which accelerates the whole search process. The second effect applies when an action is infeasible. Without constraint propagation, the algorithm has to perform exhaustive geometric backtrack search before trying another symbolic action. Because of the large branching factor, this process is intractable, if the branch contains more than 4 or 5 actions. With constraint propagation, if the action is infeasible for kinematic reasons, e.g., an object is out of reach, then the constraint propagation mechanism detects an inconsistency, which allows the planner to resume symbolic search without performing exhaustive geometric backtrack search. Note that this does not apply if the action is infeasible because of collisions.
+      </paragraph>
+     </section>
+     <section label="7.2">
+      <section-title>
+       Experiments on scalability
+      </section-title>
+      <paragraph>
+       In these experiments, we have used the same experimental setup as in the previous section, but we have focused on a set of 30 feasible problem instances. The results are shown in Table 2. The number of actions in the plan varies depending on the initial positions of the cups with respect to their target locations. If both are on the same side of the table, then a pick-place sequence is sufficient to move the cup, otherwise a pick-place-pick-place sequence with a temporary location is needed. This explains why for the same problem size, plans of different lengths are found. The third line shows the correlation (R) between the number of symbolic backtracks and the number of inconsistencies detected by the constraint propagation mechanism. The correlation is strong, which confirms the results in Table 1. For the simplest problems, i.e., 2 cups, 4–8 actions, the correlation is slightly weaker than for larger problems. This indicates that for short sequences of actions, a part of the symbolic backtracks, i.e., when an action is geometrically infeasible, are detected by exhaustive geometric backtrack search. For longer sequences of actions, however, geometric backtracking cannot finish within the time limit; hence these problems are tractable owing to the detection of inconsistencies by the constraint propagation mechanism. Finally, the table shows the minimum, median, and maximum search times. The trend is clearly exponential, mainly because of the combinatorics of the symbolic problem.
+      </paragraph>
+     </section>
+    </section>
+    <section label="8">
+     <section-title>
+      Working with a real robot
+     </section-title>
+     <paragraph>
+      An important objective of our work has been to develop a planning system that works not just on a simulation model of Justin, but on the real platform as well. Experiments were conducted on several different problems in collaboration with the other partners of the GeRT EU project.{sup:4} Here, we introduce the relevant modules for perception, world modeling, planning, and execution on the physical robot, and demonstrate the system on three selected scenarios.
+     </paragraph>
+     <section label="8.1">
+      <section-title>
+       System overview
+      </section-title>
+      <paragraph>
+       The perception module is based on analysis of point clouds obtained from a Kinect sensor. Given known geometric models of possible objects in the actual scene, an interpretation of that scene in terms of object classes and poses is computed [48], [49].
+      </paragraph>
+      <paragraph>
+       The world model receives information from perception about classes, geometries (mesh models) and poses of objects in the scene. The world model assigns a unique name to each object, using the following convention: the class of the object (e.g. mug, cup, milk_box) is used as a prefix, and a convention is used to index them, e.g., from left to right. In addition, the world model also includes a pre-computed set of grasps for each object class. These grasps are represented by the finger configurations (before and during the grasp) and the pose of the TCP relative to the object to be grasped.
+      </paragraph>
+      <paragraph>
+       The planner queries the world model in order to get geometric information about the planning problem addressed. From the world model, it constructs a geometric model which represents the initial geometric state (see the screenshot on the right in Fig. 26). Purely symbolic information is given in a problem file. Next, the planner searches for a plan.
+      </paragraph>
+      <paragraph>
+       If the planner is successful, the plan is used to generate a robot program in the form of a sequence of Python scripts: one for each action. The scripts contain, among other things, arm motion paths computed during geometric reasoning, finger motions for grasping operations, and specific commands to detect contacts (when placing an object) or reduce the stiffness of the robot (during re-grasping operations with both hands).
+      </paragraph>
+      <paragraph>
+       The main limitation of the system is that the execution happens in open-loop: it relies on accurate estimation of object poses before planning, and precise execution of movements in the robot. Grasping an object for the first time is generally not a problem, but errors accumulate when objects are moved and grasped several times. If the object changes position within the hand during movement, after releasing it, it has a pose slightly different from the one assumed in the geometric model, which may compromise the next action in which it is grasped again.
+      </paragraph>
+     </section>
+     <section label="8.2">
+      <section-title>
+       Demonstrations
+      </section-title>
+      <paragraph>
+       Fig. 27 depicts various scenarios that we used in our experiments with the real platform. The scenarios presented below (mainly A and C) emphasize the task planning part of our system, i.e., the capacity to reason about symbolic preconditions and effects of actions in order to reach a given goal.
+      </paragraph>
+      <paragraph>
+       In scenario A, the task was to move two cups from one side of the table to the other side. In the initial position, one cup is upright, and the other one is upside-down. In the goal configuration, both cups have to be upright, and hence the planner needs to find two different action sequences to solve the problem. The first cup is moved using a hand-over, while the second cup is re-grasped using the box in the middle as a temporary location. The handover changes the orientation of the cup, while the re-grasp preserves it.
+      </paragraph>
+      <paragraph>
+       In scenario B, the task consists in placing three cups on a tray. The difficulty comes from the limited space on the tray and the bulky hands, which imposes to carefully choose the positions of the cups to fit them all on the tray. Solving this problem requires plenty of geometric backtracking.
+      </paragraph>
+      <paragraph>
+       In scenario C, the task is to place two cups in a box, while grasping these cups may be compromised by the presence of two occluding boxes placed nearby. Like in scenario B, the bulky hands plus the limited space between the objects trigger geometric backtracking. The planner here decides to move away the boxes if they actually occlude the cups. The option to move them away has been encoded in an HTN decomposition method. The planning domain model (see Fig. A.35) also allows for re-grasping operations, which is necessary to place the leftmost cup into the box. In the future, it would be desirable to use statistics from collisions to determine which objects to move in priority. The videos showing a run of these three scenarios on the real robot are available at http://aass.oru.se/~jbt/AI_journal_geomBT/.
+      </paragraph>
+      <paragraph>
+       In the experiments with the real robot, our planning system looks for feasible plans without considering any optimization criterion. The planning process stops as soon as the planner finds a valid plan (see line 6 in Algorithm 1). Using the reversed chronology heuristic without constraint propagation, problem A is solved in less than 10 s on average, and problems B and C in 10–20 s. Note that once a planning problem has been solved, a path-smoothing step is necessary because the paths computed during search with RRT are generally jerky. Smoothing proceeds in two steps (see Fig. 28). First, the raw path is augmented with intermediary configurations. Then, the algorithm iterates on randomly chosen pairs of configurations, and checks whether a collision-free path exists between them. If such a path is found, the configurations which are not connected by the path are discarded. In the present setup, the number of iterations is set to 100, which results in a smoothing time of 2 s per action on average.
+      </paragraph>
+     </section>
+    </section>
+    <section label="9">
+     <section-title>
+      Experiments in a navigation domain
+     </section-title>
+     <paragraph>
+      The combined planner has also been tested in a simulated domain inspired by the real-world industrial scenarios addressed by the SAUNA project [5]. The SAUNA project aims to provide safe autonomous navigation for fleets of industrial vehicles, such as forklift trucks and wheel loaders. An explicit goal of this project is to develop general, scalable multi-robot motion planning and coordination approaches [50], [51]. The purpose of these experiments is to demonstrate that our hybrid planning approach can be applied to a domain that is significantly different from the Justin domain, using a robot with an entirely different kind of kinematics.
+     </paragraph>
+     <section label="9.1">
+      <section-title>
+       The warehouse domain
+      </section-title>
+      <paragraph>
+       Our navigation domain consists of a forklift, intended to transport pallets from one location to another in a warehouse. Each pallet is tagged with a bar code. The forklift is a non-holonomic vehicle with car-like kinematics. The walls and pillars of the warehouse and the pallets on the floor constitute obstacles to be avoided by the forklift. For simplicity, we model only two hybrid actions: pick-up(p), which makes the forklift navigate to pallet p, dock to it, and lift it; and put-down(x), which makes the forklift go to pose x with the currently loaded pallet, place it down, and undock.
+      </paragraph>
+      <paragraph>
+       The planning problem consists in deciding the sequence of actions that leads to a state where a given set of pallets is in the shipping area such that their bar codes are visible. A bar code identifies the contents of a pallet, and is placed on one side of the pallet. Hence, pallets have to be appropriately oriented when placed in the shipping area, and in particular the bar codes should not directly face walls and pillars.
+      </paragraph>
+      <paragraph>
+       The JSHOP2 planning domain model is given in Appendix A, Fig. A.36. It contains two operators and two alternative decomposition methods. The first method decomposes an abstract move task into a sequence of two sub-tasks such that a pallet is picked up and then directly put down in the target location. The second method decomposes the same abstract task into a sequence of four sub-tasks: a pallet is picked up, put down in an intermediary location, picked up again, and then put down in the target location. The second method is useful when the forklift cannot put down the loaded pallet in the target location directly because of kinematic and/or geometric issues, and instead the pallet has to be picked up from one side, put down, and then picked up again from the other side, in order to finally be put down in the target location. Predicates at_pallet, can_pick_up and can_put_down are geometric, whereas is_forklift, loaded, is_location, and at_pallet_vehicle are symbolic.
+      </paragraph>
+      <paragraph>
+       A geometric state in this domain is given by the current poses of the forklift and pallets in the warehouse. The layout of the environment, as well as all the objects and static obstacles, are represented in 2D on a bitmap, composed by {a mathematical formula}0.2×0.2 meter cells. Fig. 29 depicts such a geometric state where two pallets lie on the floor in the warehouse, and a single forklift is in the middle of the warehouse. The two pallets are outside the shipping area which is the large striped rectangle in the bottom right corner of the warehouse. Pillars are represented by three small black squares in the middle of the warehouse.
+      </paragraph>
+      <paragraph>
+       Actions are hybrid, since they imply a change both in the symbolic state and in the geometric state. A sample solution plan of four actions for moving two pallets to the shipping area is depicted in Fig. 30. The execution of this plan is represented in Fig. 31. Larger screenshots represent geometric states, while smaller screenshots depict the maneuvers of the forklift associated with actions.
+      </paragraph>
+     </section>
+     <section label="9.2">
+      <section-title>
+       Comparison with other approaches to hybrid planning
+      </section-title>
+      <paragraph>
+       As discussed in the Introduction, even in the simpler navigation domain there may be cases in which geometric options should be taken into account during task planning, and geometric backtracking may be needed. It is reasonable to ask if these cases are so rare in this domain that they can be ignored, and if existing approaches with limited or no backtracking would perform as well as ours in practice. In this section, we answer this question by comparing our approach to other approaches in the literature.
+      </paragraph>
+      <section label="9.2.1">
+       <section-title>
+        Tested approaches
+       </section-title>
+       <paragraph>
+        Interestingly, several existing approaches can be seen as special cases of our full geometric backtrack search, and they can be emulated in our algorithm by adding specific heuristic selection functions. We consider the following five heuristics.
+       </paragraph>
+       <paragraph>
+        The first two heuristics, called NOGEOMBT, are used to emulate the semantic attachments approach presented by Dornhege et al. [18], where no geometric backtracking is implemented. These heuristics do not allow the selection of any previous action, hence there is no geometric backtracking at all, leading to an incomplete search. We use two versions of NOGEOMBT, which differ in the way the shipping area is sampled in order to generate candidate geometric configurations. The first version is {a mathematical formula}NOGEOMBTvdC, in which the samples are tried in the order given by van der Corput sequences. In the second version, called {a mathematical formula}NOGEOMBTpacking, the samples are tried in the order given by an ideal domain-dependent packing heuristic. In our domain, this heuristic is informed of the shape, size and position of the shipping area, and that several pallets must be moved to it. Given this information, the packing heuristic generates samples that correspond to an optimal packing strategy. This heuristic gives an upper bound on the performance that can be achieved with NOGEOMBT by encoding very strong domain-specific information.
+       </paragraph>
+       <paragraph>
+        The third heuristic, called {a mathematical formula}fselPUTDOWN, is used to emulate the approach of Dearden and Burbridge [32]. This approach uses a “light” form of geometric backtracking, in which only specific, pre-defined actions (e.g., placing a cup on a tray) are selected for geometric backtracking, while previous actions (e.g., picking the cup) are never reconsidered during search. In order to achieve this effect, in the {a mathematical formula}fselPUTDOWN function, only a strict subset of previous actions are possibly selected, leading to an incomplete search. Like {a mathematical formula}fselREVCHRONO, {a mathematical formula}fselPUTDOWN selects actions by reversed chronology.
+       </paragraph>
+       <paragraph>
+        The fourth heuristic is {a mathematical formula}fselCOLL▹fselREVCHRONO, which realizes our geometric backtracking approach. {a mathematical formula}fselCOLL was found in the previous section to be the strongest heuristic for our approach. In the present domain, this selection function exploits the information collected during geometric backtracking for selecting actions based on detected collisions between the forklift and moved pallets. It first selects the previous action that puts down a pallet that collides with the forklift when the loaded pallet is to be put down or when a pallet is to be loaded. Using {a mathematical formula}fselCOLL alone, the search would be incomplete; but the composite function {a mathematical formula}fselCOLL▹fselREVCHRONO provides a full geometric backtracking.
+       </paragraph>
+       <paragraph>
+        The last heuristic is {a mathematical formula}fselREVCHRONO, which results in performing a complete search with full geometric backtracking (see Section 4) since every previous action is possibly selected. This heuristic is used as a baseline reference.
+       </paragraph>
+      </section>
+      <section label="9.2.2">
+       <section-title>
+        Methodology
+       </section-title>
+       <paragraph>
+        In our experimental study, we have randomly generated 154 problem instances, and each of them was addressed by our planner using each one of the five heuristic functions above. The initial geometric state of each problem instance has been created by randomly placing two pallets and a forklift on the warehouse floor. Poses of the forklift and pallets are discrete. Given Θ, a finite set of orientations, and Φ, a finite set of steering angles, a valid configuration of the forklift is defined as {a mathematical formula}q=(x,y,θ,ϕ), where x and y are the coordinates of the reference point of the forklift on the bitmap which represents the environment, {a mathematical formula}θ∈Θ and {a mathematical formula}ϕ∈Φ. Given {a mathematical formula}Θplt, a finite set of orientations of pallet plt, the valid pose of this pallet is denoted by {a mathematical formula}(xplt,yplt,θplt), where {a mathematical formula}xplt and {a mathematical formula}yplt are the coordinates of the reference point of the pallet on the bitmap, {a mathematical formula}θplt∈Θplt. Pallets are oriented with their sides aligned to the warehouse walls, so the four cardinal directions are possible for the bar codes. The same initial symbolic state was common to all problem instances (see Fig. 32). The abstract tasks to be decomposed are the same for all problem instances: move(pallet1,shipping_area) and move(pallet2,shipping_area). The order in which the actions are to be executed is chosen at planning time. The simpler decomposition method is always tried before the more complex one during planning.
+       </paragraph>
+       <paragraph>
+        The shipping area has been the same for all problem instances: it is in the bottom right corner of the warehouse. The sampling resolutions for the put down actions depend on the location where the pallet is to be put down. The sampling resolution associated with the warehouse is 532 ({a mathematical formula}19×7 positions and 4 orientations). However, the sampling resolution associated with the shipping area is 84 ({a mathematical formula}7×3 positions and 4 orientations), which implies that, for every problem instance, the final geometric state that results from applying a solution plan from the initial state must contain both pallets side by side in the shipping area, oriented so that their bar codes face the upper side of the map. The sampling resolution for the pick up actions is always the same and equals two (trying to pick up a pallet from one of its two smaller sides).
+       </paragraph>
+       <paragraph>
+        We have used our combined task and motion planner for addressing each problem instance. For motion planning, we have used the lattice-based motion planner for non-holonomic vehicles described by Cirillo et al. [51]. The intuition behind lattice-based motion planning is to sample the geometric state space in a regular fashion and to trap the motions of a vehicle on a lattice graph. Each vertex of the lattice represents a valid pose, or configuration, of the vehicle, while each edge encodes a motion which respects the non-holonomic constraints of the vehicle. Motion primitives are pre-calculated off-line and represent the maneuvering capabilities of the vehicle. The cost associated with each motion is equal to the distance covered multiplied by a scaling factor which penalizes backwards and turning motions. The resulting weighted graph is then explored with efficient graph-exploration algorithms, such as Anytime Repairing A* (ARA*) [52]. Effective heuristic functions [53], as well as off-line computations for collision detection, are implemented to speed up the exploration of the lattice. This is a resolution-complete search technique, but in order to guarantee termination we set a time limit. Unlike the RRT motion planner used for the manipulation domain, the lattice-based motion planner is deterministic. Therefore, in this domain, it was sufficient to run each experiment only one time.
+       </paragraph>
+       <paragraph>
+        In our experiments, the planner does not consider any overall optimization criterion (although the motion planner alone takes motion costs into account). This means that the hybrid planner only searches feasible plans: as soon as one is found, the planning process stops (see line 6 in Algorithm 1).
+       </paragraph>
+       <paragraph>
+        The time limit for the whole planning has been set to 300 s. The maximal time allocated for a motion planning request has been set to 1 s. The planner has been run in 64-bit Oracle JRE Java 7 with 64-bit native libraries used for motion planning (including collision detection). The computer has an Intel CORE i5 vPro processor (2.5 GHz, 64 bit, 4 cores, 3 MB cache), 8 GB memory, and Linux kernel 3.5.0.
+       </paragraph>
+      </section>
+      <section label="9.2.3">
+       <section-title>
+        Results and discussion
+       </section-title>
+       <paragraph>
+        Out of the 154 randomly generated problem instances, 123 have been solved. Table 3 reports the number of solved problem instances for each heuristic function, together with a breakdown of the number of found plans by their length.
+       </paragraph>
+       <paragraph>
+        From these results, we see that the planner using either {a mathematical formula}fselREVCHRONO, {a mathematical formula}fselCOLL▹fselREVCHRONO, or {a mathematical formula}NOGEOMBTpacking solves significantly more problem instances compared to using the other two heuristic functions. The performance of {a mathematical formula}fselREVCHRONO and {a mathematical formula}fselCOLL▹fselREVCHRONO are comparable, and they solve the same 105 problem instances. {a mathematical formula}fselCOLL▹fselREVCHRONO does not outperform {a mathematical formula}fselREVCHRONO in the experiments, since {a mathematical formula}fselCOLL▹fselREVCHRONO ignores the detected violations of the final orientation constraints, i.e., that bar codes have to face the upper side of the map in the final geometric state.
+       </paragraph>
+       <paragraph>
+        A total of 89 common problem instances are solved by {a mathematical formula}fselREVCHRONO, {a mathematical formula}fselCOLL▹fselREVCHRONO, and {a mathematical formula}NOGEOMBTpacking. Of these 89 instances, 72 are solved by {a mathematical formula}fselPUTDOWN. From these 72, only two instances are solved by {a mathematical formula}NOGEOMBTvdC, a significantly smaller number compared to using the other four heuristic functions. From these results, we conclude that in order to solve as many problem instances as possible in this domain, one should either use full geometric backtracking, or have a very strong domain-specific heuristic for putting down pallets.
+       </paragraph>
+       <paragraph>
+        In terms of plan length, the experimental results indicate significant differences between full geometric backtracking ({a mathematical formula}fselREVCHRONO or {a mathematical formula}fselCOLL▹fselREVCHRONO), limited geometric backtracking ({a mathematical formula}fselPUTDOWN), and no geometric backtracking ({a mathematical formula}NOGEOMBTpacking). The planner performing full geometric backtracking is guided towards solution plans that contain most often four actions (68% of the solution plans for {a mathematical formula}fselREVCHRONO). By contrast, the search without geometric backtracking is guided most of the time toward solution plans that contain eight actions (69% of the solution plans). Finally, using limited geometric backtracking, most of the valid plans generated by the planning system are composed of six actions (58% of the solution plans). From this, we conclude that compromising the completeness of geometric backtracking leads to backtracking more often at the symbolic level in this domain, which means that the second, more complex, HTN decomposition method is used more often than the first one, leading to longer plans.
+       </paragraph>
+       <paragraph>
+        Note that successful runs often end much sooner than after 300 s. In order to get a feeling of how time is spent during hybrid planning, consider the solution plan represented in Fig. 31. Using {a mathematical formula}fselREVCHRONO, the planner spent 2.88 s on searching without symbolic backtracking before finding this plan. The lattice-based motion planner was invoked 53 times, and it spent 2.66 s in total. Overall geometric reasoning, including motion planning, took 2.83 s. 53 geometric states were visited during search (50 during geometric backtracking), while there were 393 failed attempts (of which 309 during geometric backtracking) in trying to connect or reach geometric states caused by detected collisions or kinematic issues.
+       </paragraph>
+       <paragraph>
+        The experiments conducted using the packing heuristic function show that good heuristics for geometric sampling of, for instance, target poses can guide the search faster towards solution plans. For example, if a movable object was to be put inside a container, such a heuristic function would select a pose for the object that leaves as large free areas in the container as possible, and may take into account the shapes of the objects. In this way, putting more objects inside the container at a later stage might be achieved with less geometric backtracking, which would make the whole planning process more efficient.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="10">
+     <section-title>
+      Discussion and future work
+     </section-title>
+     <paragraph>
+      In this article, we have focused on tasks from two different domains (humanoid robot, forklift in warehouse) which involved moving objects from one place to another. These tasks have included constraints not only on positions but also on orientations owing to the need to fit multiple objects into a limited space. It is typically these kinds of constraints that trigger geometric backtracking. We believe that a rather wide range of tasks can be addressed in this manner. However, we have not considered tasks with actions that cannot be reduced to reaching a final pose but that require instead specific trajectories. Some examples are: pouring water from a pitcher into a glass; turning a screw; wiping a surface. Likewise, we have not included actions that require coordinated motion such as lifting an object with two hands. These two classes of actions could in principle be handled by supplying specialized motion planners that are invoked by certain predicates (e.g. can-pour, has-poured). Such actions could and should also be included in geometric backtracking. That ought to be feasible, as long as they result in well-defined final geometric states.
+     </paragraph>
+     <paragraph>
+      The approach has been tested and evaluated on two very different domains. Although the domains have complex geometric and kinematic constraints, we expect that our approach will also work on less constrained domains. For example, dealing with holonomic vehicles should be possible, although the advantages of using informed heuristics or propagating constraints will probably be less notable.
+     </paragraph>
+     <paragraph>
+      We have made a number of further domain assumptions: the environment is static (only the controlled robot causes changes) and fully observable, and actions are deterministic. Consequently, no perception is required at execution time, so the planning process is open-loop. An interesting future research could focus on interleaving planning, execution, and perception, such that the plan being executed could be revised and updated according to what happens at execution time. One can also consider taking uncertainty into account during planning by using techniques such as Markov Decision Processes [54] or Partially Observable Markov Decision Processes [55]. A challenge here is how to take uncertainty into account during motion planning, and how that in turn could affect task planning.
+     </paragraph>
+     <paragraph>
+      Furthermore, if we want our planning systems to generate higher-quality plans in the future, the combined symbolic and geometric search process must take into account action costs such as consumed energy, action duration, and path length (in Cartesian or joint space). A challenge here is that sampling-based motion planners can only provide upper bounds for the optimal cost.
+     </paragraph>
+     <paragraph>
+      In addition, we have made some high-level technical assumptions. First, we use geometric sampling in order to discretize the geometric space and create choice points that are used during geometric backtracking. Making the planner work directly in the continuous geometric space and use combinatorial motion planning techniques would remove the issue of geometric backtracking, although this is tractable only for problems with simple geometries and kinematics [11]. For example, the approach based on flow tubes [40] paves the way for future work in that direction.
+     </paragraph>
+     <paragraph>
+      Second, considering the combined symbolic and geometric search as a whole, there is a need for more closely controlling the interaction between task and motion planning. In this paper, we employ a tight integration between task and motion planning. However, systematically calling a motion planner for evaluating an action at the geometric level may be inefficient for solving the problems that are trivial in terms of geometry and kinematics [38]. Hence, it might be beneficial to use a fail-first strategy which addresses the problems where the search fails with a high probability first, and postpones solving the easy problems. For example, in a relatively uncluttered environment, we can start with symbolic planning, then test kinematics, and finish with motion planning.
+     </paragraph>
+     <paragraph>
+      Also while retaining the basic assumptions of our current framework, there remain several potential technical improvements of the work presented in this paper. First, from the experimental results presented in Sections 6 and 9, it seems plausible that the planning system would perform better if the selection of actions during geometric backtracking was guided by more elaborate heuristic functions that consider both detected collisions and violations of kinematic constraints at once.
+     </paragraph>
+     <paragraph>
+      Second, in Section 9, the experiments conducted using the packing heuristic function show that good heuristics for geometric sampling of, for instance, target poses can guide the search faster towards solution plans. Designing good heuristics for geometric sampling will be desirable for dealing with new planning domain models.
+     </paragraph>
+     <paragraph>
+      Third, during geometric backtracking, if a movable object was to be put inside a container, geometric sampling could exploit information about what other objects should go into the container later according to the symbolic plan. While often not available when first considering where to put an object, this information would be available once geometric backtracking is triggered when later actions for putting additional objects into the same container fail on the geometric level.
+     </paragraph>
+     <paragraph>
+      Fourth, motion planning is an expensive search process, and it is performed many times during geometric backtracking. However, it might not always be necessary to compute a new path from scratch. Caching computed paths and explored regions of the geometric search space for later use, like in probabilistic road maps, could improve geometric search significantly. Finally, task planning could benefit from using the information collected during geometric backtracking. For example, search on the symbolic level could be guided for choosing an action to be inserted into the plan, based on an estimate of how difficult it is to instantiate every candidate action at the geometric level. In the extreme case where the geometric evaluation of an action systematically fails, a no-good indication for that action could be generated and fed back to the symbolic planning system.
+     </paragraph>
+    </section>
+    <section label="11">
+     <section-title>
+      Summary and conclusions
+     </section-title>
+     <paragraph>
+      In this paper, we have presented an approach to hybrid planning for complex robotic platforms. The approach is based on the concept of hybrid states, i.e. states that have both a symbolic component and a geometric component. The former is used for causal and logical reasoning, whereas the latter is used for geometric reasoning tasks such as motion planning. These states, together with the hybrid actions that transform them, constitute a combined search space where each symbolic state component can be paired with many different geometric state components. When the planner selects an action, it also needs to determine how to perform that action geometrically. For example, in a manipulation domain, the latter includes choosing how to grasp an object, exactly in what pose to put it down, and how to perform motions of the manipulators, both with or without objects being held. As the geometric/kinematic space is continuous, these choices involve sampling points in this space.
+     </paragraph>
+     <paragraph>
+      These kinds of choices on the geometric level will constrain geometric choices later in the plan. Still, these choices have to be made: motion planning requires specific geometric states. Hence, it is necessary to be able to backtrack on the geometric level as well as on the symbolic level. However, geometric backtracking can be prohibitively expensive, as the branching factor (determined by the sampling resolution for actions/predicates) may be very high, there can be many backtrack points, and each step may involve a motion planning problem. Previous experiments have shown that geometric reasoning and in particular motion planning dominates the computation effort by several orders of magnitude [2]. During backtracking, each action in the current plan may actually induce a large number of motion planning problems. For that reason, we have considered how to perform informed backtracking, where one selects backtrack points using heuristics based on statistics for kinematic violations and collisions with movable objects. The idea is that certain preceding choices will be irrelevant to the present actions: in particular actions that involve other objects and distant positions. We have demonstrated speedups of an order of magnitude using such techniques, the most successful one being a collision heuristic.
+     </paragraph>
+     <paragraph>
+      Our experiments in simulation show clearly that the propagation of constraints on the kinematics of the robot, on the regions in the work space, and on the feasible grasps can reduce the size of the geometric search space, in particular when specific orientations are imposed on the final poses of objects. Geometric constraints also play an important role in the combined symbolic and geometric search. By quickly detecting geometrically inconsistent partial plans (which would otherwise require a large amount of geometric backtracking), a larger part of the symbolic search space can be explored.
+     </paragraph>
+     <paragraph>
+      Our approach has been applied to a particularly challenging real robotic platform, the Justin robot at DLR. We have demonstrated it in a range of different scenarios, with tasks involving multiple objects in small areas (trays), large obstacles (boxes), small movable obstacles, and using an intermediary position to regrasp an object. We have also presented simulated experiments in a distinct domain with different kinematics: a forklift transporting pallets in a warehouse. For the latter scenario, we have made comparisons to approaches with no or limited geometric backtracking. We have found that geometric backtracking performs best, but lack of backtracking can to some extent be compensated for by carefully crafted domain-specific heuristics for geometric choices.
+     </paragraph>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     <section-title>
+      JSHOP2 planning domain models
+     </section-title>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

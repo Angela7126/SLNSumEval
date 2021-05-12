@@ -1,0 +1,812 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Automatic Detection of Cognates Using Orthographic Alignment</title>
+<!--Generated on Wed Jun 11 17:33:43 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Automatic Detection of Cognates Using Orthographic Alignment</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname"> Alina Maria Ciobanu, Liviu P. Dinu 
+<br class="ltx_break"/>Faculty of Mathematics and Computer Science, University of Bucharest 
+<br class="ltx_break"/>Center for Computational Linguistics, University of Bucharest 
+<br class="ltx_break"/><a href="alina.ciobanu@my.fmi.unibuc.ro, ldinu@fmi.unibuc.ro" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">alina.ciobanu@my.fmi.unibuc.ro,␣ldinu@fmi.unibuc.ro</span></a>
+<br class="ltx_break"/>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Words undergo various changes when entering new languages. Based on the assumption that these linguistic changes follow certain rules, we propose a method for automatically detecting pairs of cognates employing an orthographic alignment method which proved relevant for sequence alignment in computational biology. We use aligned subsequences as features for machine learning algorithms in order to infer rules for linguistic changes undergone by words when entering new languages and to discriminate between cognates and non-cognates. Given a list of known cognates, our approach does not require any other linguistic information.
+However, it can be customized to integrate historical information regarding language evolution.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Cognates are words in different languages having the same etymology and a common ancestor. Investigating pairs of cognates is very useful in historical and comparative linguistics, in the study of language relatedness <cite class="ltx_cite">[<a href="#bib.bib8" title="Identification of Closely-Related Indigenous Languages: An Orthographic Approach" class="ltx_ref">30</a>]</cite>, phylogenetic inference <cite class="ltx_cite">[<a href="#bib.bib3" title="From Words to Dates: Water into Wine, Mathemagic or Phylogenetic Inference?" class="ltx_ref">1</a>]</cite> and in identifying how and to what extent languages change over time. In other several research areas, such as language acquisition, bilingual word recognition <cite class="ltx_cite">[<a href="#bib.bib12" title="Distributions of Cognates in Europe as Based on Levenshtein Distance" class="ltx_ref">9</a>]</cite>, corpus linguistics <cite class="ltx_cite">[<a href="#bib.bib69" title="Using Cognates to Align Sentences in Bilingual Corpora" class="ltx_ref">32</a>]</cite>, cross-lingual information retrieval <cite class="ltx_cite">[<a href="#bib.bib5" title="Using Clustering and SuperConcepts Within SMART: TREC 6" class="ltx_ref">4</a>]</cite> and machine translation <cite class="ltx_cite">[<a href="#bib.bib24" title="Cognates Can Improve Statistical Translation Models" class="ltx_ref">19</a>]</cite>, the condition of common etymology is usually not essential and cognates are regarded as words with high cross-lingual meaning and orthographic or phonetic similarity.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">The wide range of applications in which cognates prove useful attracted more and more attention on methods for detecting such related pairs of words. This task is most challenging for resource-poor
+languages, for which etymologically related information is not accessible. Therefore, the research <cite class="ltx_cite">[<a href="#bib.bib42" title="Automatic Identification of Cognates and False Friends in French and English" class="ltx_ref">17</a>, <a href="#bib.bib96" title="Automatic detection of orthographic cues for cognate recognition" class="ltx_ref">25</a>, <a href="#bib.bib98" title="Clustering semantically equivalent words into cognate sets in multilingual lists" class="ltx_ref">16</a>]</cite> focused on automatic identification of cognate pairs, starting from lists of known cognates.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">In this paper, we propose a method for automatically determining pairs of cognates across languages.
+The proposed method requires a list of known cognates and, for languages for which additional linguistic information is available, it can be customized
+to integrate historical information regarding the evolution of the language.
+The rest of the paper is organized as follows: in Section 2 we present and analyze alternative methods and related work in this area. In Section 3 we introduce our approach for detection of cognates using orthographic alignment. In Section 4 we describe the experiments we conduct and we report and analyze the results, together with a comparison with previous methods. Finally, in Section 5 we draw the conclusions of our study and describe our plans for extending the method.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related Work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">There are three important aspects widely investigated in the task of cognate identification: semantic, phonetic and orthographic similarity. They were employed both individually
+<cite class="ltx_cite">[<a href="#bib.bib69" title="Using Cognates to Align Sentences in Bilingual Corpora" class="ltx_ref">32</a>, <a href="#bib.bib42" title="Automatic Identification of Cognates and False Friends in French and English" class="ltx_ref">17</a>, <a href="#bib.bib77" title="Char align: A program for aligning parallel texts at the character level" class="ltx_ref">6</a>]</cite> and combined <cite class="ltx_cite">[<a href="#bib.bib89" title="Combining Evidence in Cognate Identification" class="ltx_ref">21</a>, <a href="#bib.bib78" title="A pipeline for computational historical linguistics" class="ltx_ref">34</a>]</cite> in order to detect pairs of cognates across languages. For determining semantic similarity, external lexical resources, such as WordNet <cite class="ltx_cite">[<a href="#bib.bib88" title="WordNet: An Electronic Lexical Database" class="ltx_ref">10</a>]</cite>, or large corpora, might be necessary. For measuring phonetic and orthographic proximity of cognate candidates, string similarity metrics can be applied, using the phonetic or orthographic word forms as input. Various measures were investigated and compared <cite class="ltx_cite">[<a href="#bib.bib42" title="Automatic Identification of Cognates and False Friends in French and English" class="ltx_ref">17</a>, <a href="#bib.bib40" title="Finding Cognate Groups Using Phylogenies" class="ltx_ref">14</a>]</cite>; Levenshtein distance <cite class="ltx_cite">[<a href="#bib.bib27" title="Binary Codes Capable of Correcting Deletions, Insertions, and Reversals" class="ltx_ref">22</a>]</cite>, XDice <cite class="ltx_cite">[<a href="#bib.bib4" title="Word-Pair Extraction for Lexicography" class="ltx_ref">3</a>]</cite> and the longest common subsequence ratio <cite class="ltx_cite">[<a href="#bib.bib28" title="Automatic Evaluation and Uniform Filter Cascades for Inducing N-Best Translation Lexicons" class="ltx_ref">24</a>]</cite> are among the most frequently used metrics in this field. <cite class="ltx_cite">Gomes and Lopes (<a href="#bib.bib99" title="Measuring spelling similarity for cognate identification" class="ltx_ref">2011</a>)</cite> proposed SpSim, a more complex method for computing the similarity of cognate pairs which tolerates learned transitions between words.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">Algorithms for string alignment were successfully used for identifying cognates based on both their forms, orthographic and phonetic. <cite class="ltx_cite">Delmestri and Cristianini (<a href="#bib.bib79" title="String Similarity Measures and PAM-like Matrices for Cognate Identification" class="ltx_ref">2010</a>)</cite> used basic sequence alignment algorithms <cite class="ltx_cite">[<a href="#bib.bib80" title="A general method applicable to the search for similarities in the amino acid sequence of two proteins" class="ltx_ref">29</a>, <a href="#bib.bib81" title="Identification of common molecular subsequences" class="ltx_ref">33</a>, <a href="#bib.bib82" title="An improved algorithm for matching biological sequences" class="ltx_ref">12</a>]</cite> to obtain orthographic alignment scores for cognate candidates. <cite class="ltx_cite">Kondrak (<a href="#bib.bib86" title="A New Algorithm for the Alignment of Phonetic Sequences" class="ltx_ref">2000</a>)</cite> developed the ALINE system, which aligns words’ phonetic transcriptions based on multiple phonetic features and computes similarity scores using dynamic programming. <cite class="ltx_cite">List (<a href="#bib.bib84" title="LexStat: Automatic Detection of Cognates in Multilingual Wordlists" class="ltx_ref">2012</a>)</cite> proposed a framework for automatic detection of cognate pairs, LexStat, which combines
+different approaches to sequence comparison and alignment derived from those used in historical linguistics and evolutionary biology.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">The changes undergone by words when entering from one language into another and the transformation rules they follow have been successfully employed in various approaches to cognate detection <cite class="ltx_cite">[<a href="#bib.bib95" title="Estimating Word Translation Probabilities from Unrelated Monolingual Corpora Using the EM Algorithm" class="ltx_ref">18</a>, <a href="#bib.bib96" title="Automatic detection of orthographic cues for cognate recognition" class="ltx_ref">25</a>, <a href="#bib.bib83" title="Using Cognates in a French-Romanian Lexical Alignment System: A Comparative Study" class="ltx_ref">28</a>]</cite>.
+These orthographic changes have also been used in cognate production, which is closely related to the task of cognate detection, but has not yet been as intensively studied. While the purpose of cognate detection is to determine whether two given words form a cognate pair, the aim of cognate production is, given a word in a source language, to automatically produce its cognate pair in a target language. <cite class="ltx_cite">Beinborn<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib92" title="Cognate Production using Character-based Machine Translation" class="ltx_ref">2013</a>)</cite> proposed a method for cognate production relying on statistical character-based machine translation, learning orthographic production patterns, and <cite class="ltx_cite">Mulloni (<a href="#bib.bib97" title="Automatic Prediction of Cognate Orthography Using Support Vector Machines" class="ltx_ref">2007</a>)</cite> introduced an algorithm for cognate production based on edit distance alignment and the identification of orthographic cues when words enter a new language.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Our Approach</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">Although there are multiple aspects that are relevant in the study of language relatedness, such as orthographic, phonetic, syntactic and semantic differences, in this paper we focus only on lexical evidence. The orthographic approach relies on the idea that sound changes leave traces in the orthography and alphabetic character correspondences represent, to a fairly large extent, sound correspondences <cite class="ltx_cite">[<a href="#bib.bib79" title="String Similarity Measures and PAM-like Matrices for Cognate Identification" class="ltx_ref">8</a>]</cite>.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">Words undergo various changes when entering new languages. We assume that rules for adapting foreign words to the orthographic system of the target languages might not have been very well defined in their period of early development, but they may have since become complex and probably language-specific. Detecting pairs of cognates based on etymology is useful and reliable, but, for resource-poor languages, methods which require less linguistic knowledge might be necessary.
+According to <cite class="ltx_cite">Gusfield (<a href="#bib.bib90" title="Algorithms on Strings, Trees and Sequences: computer science and computational biology" class="ltx_ref">1997</a>)</cite>, an edit transcript (representing the conversion of one string to another) and an alignment are mathematically equivalent ways of describing relationships between strings. Therefore, because the edit distance was widely used in this research area and produced good results, we are encouraged to employ orthographic alignment for identifying pairs of cognates, not only to compute similarity scores, as was previously done, but to use aligned subsequences as features for machine learning algorithms. Our intuition is that inferring language-specific rules for aligning words will lead to better performance in the task of cognate identification.</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Orthographic Alignment</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">String alignment is closely related to the task of sequence alignment in computational biology. Therefore, to align pairs of words we employ the Needleman-Wunsch global alignment algorithm <cite class="ltx_cite">[<a href="#bib.bib80" title="A general method applicable to the search for similarities in the amino acid sequence of two proteins" class="ltx_ref">29</a>]</cite>, which is mainly used for aligning sequences of proteins or nucleotides. Global sequence alignment aims at determining the best alignment over the entire length of the input sequences. The algorithm uses dynamic programming and, thus, guarantees to find the optimal alignment. Its main idea is that any partial path of the alignment along the optimal path should be the optimal path leading up to that point. Therefore, the optimal path can be determined by incremental extension of the optimal subpaths <cite class="ltx_cite">[<a href="#bib.bib102" title="Sequence Alignment and Database Searching" class="ltx_ref">31</a>]</cite>. For orthographic alignment, we consider words as input sequences and we use a very simple substitution matrix, which gives equal scores to all substitutions,
+disregarding diacritics (e.g., we ensure that <em class="ltx_emph">e</em> and <em class="ltx_emph">è</em> are matched).</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Feature Extraction</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">Using aligned pairs of words as input, we extract features around mismatches in the alignments. There are three types of mismatches, corresponding to the following operations: insertion, deletion and substitution. For example, for the Romanian word <em class="ltx_emph">exhaustiv</em> and its Italian cognate pair <em class="ltx_emph">esaustivo</em>, the alignment is as follows:</p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<table id="S3.Ex1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex1.m1" class="ltx_Math" alttext="\begin{array}[]{c c c c c c c c c c}\verb&quot;e&quot;&amp;\verb&quot;x&quot;&amp;\verb&quot;h&quot;&amp;\verb&quot;a&quot;&amp;\verb&quot;%&#10;u&quot;&amp;\verb&quot;s&quot;&amp;\verb&quot;t&quot;&amp;\verb&quot;i&quot;&amp;\verb&quot;v&quot;&amp;\verb&quot;-&quot;\\&#10;\verb&quot;e&quot;&amp;\verb&quot;s&quot;&amp;\verb&quot;-&quot;&amp;\verb&quot;a&quot;&amp;\verb&quot;u&quot;&amp;\verb&quot;s&quot;&amp;\verb&quot;t&quot;&amp;\verb&quot;i&quot;&amp;\verb&quot;%&#10;v&quot;&amp;\verb&quot;o&quot;\\&#10;\end{array}" display="block"><mtable align="center" columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="center"><mi>𝚎</mi></mtd><mtd columnalign="center"><mi>𝚡</mi></mtd><mtd columnalign="center"><mi>𝚑</mi></mtd><mtd columnalign="center"><mi>𝚊</mi></mtd><mtd columnalign="center"><mi>𝚞</mi></mtd><mtd columnalign="center"><mi>𝚜</mi></mtd><mtd columnalign="center"><mi>𝚝</mi></mtd><mtd columnalign="center"><mi>𝚒</mi></mtd><mtd columnalign="center"><mi>𝚟</mi></mtd><mtd columnalign="center"><mo>-</mo></mtd></mtr><mtr><mtd columnalign="center"><mi>𝚎</mi></mtd><mtd columnalign="center"><mi>𝚜</mi></mtd><mtd columnalign="center"><mo>-</mo></mtd><mtd columnalign="center"><mi>𝚊</mi></mtd><mtd columnalign="center"><mi>𝚞</mi></mtd><mtd columnalign="center"><mi>𝚜</mi></mtd><mtd columnalign="center"><mi>𝚝</mi></mtd><mtd columnalign="center"><mi>𝚒</mi></mtd><mtd columnalign="center"><mi>𝚟</mi></mtd><mtd columnalign="center"><mi>𝚘</mi></mtd></mtr></mtable></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S3.SS2.p3" class="ltx_para">
+<p class="ltx_p">The first mismatch (between <em class="ltx_emph">x</em> and <em class="ltx_emph">s</em>) is caused by a substitution, the second mismatch (between <em class="ltx_emph">h</em> and <em class="ltx_emph">-</em>) is caused by a deletion from source language to target language, and the third mismatch (between <em class="ltx_emph">-</em> and <em class="ltx_emph">o</em>) is caused by an insertion from source language to target language. The features we use are character <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-grams around mismatches. We experiment with two types of features:</p>
+</div>
+<div id="S3.SS2.p4" class="ltx_para">
+<ul id="I1" class="ltx_itemize">
+<li id="I1.ix1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">i)</span> 
+<div id="I1.ix1.p1" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.ix1.p1.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-grams around gaps, i.e., we account only for insertions and deletions;</p>
+</div></li>
+<li id="I1.ix2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">ii)</span> 
+<div id="I1.ix2.p1" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.ix2.p1.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-grams around any type of mismatch, i.e., we account for all three types of mismatches.</p>
+</div></li>
+</ul>
+</div>
+<div id="S3.SS2.p5" class="ltx_para">
+<p class="ltx_p">The second alternative leads to better performance, so we account for all mismatches. As for the length of the grams, we experiment with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m1" class="ltx_Math" alttext="n\in\{1,2,3\}" display="inline"><mrow><mi>n</mi><mo>∈</mo><mrow><mo>{</mo><mrow><mn>1</mn><mo>,</mo><mn>2</mn><mo>,</mo><mn>3</mn></mrow><mo>}</mo></mrow></mrow></math>. We achieve slight improvements by combining <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m2" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-grams, i.e., for a given <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m3" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>, we use all <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m4" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math>-grams, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m5" class="ltx_Math" alttext="i\in\{1,...,n\}" display="inline"><mrow><mi>i</mi><mo>∈</mo><mrow><mo>{</mo><mrow><mn>1</mn><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mi>n</mi></mrow><mo>}</mo></mrow></mrow></math>. In order to provide information regarding the position of the features, we mark the beginning and the end of the word with a <em class="ltx_emph">$</em> symbol. Thus, for the above-mentioned pair of cognates, <em class="ltx_emph">(exhaustiv, esaustivo)</em>, we extract the following features when <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m6" class="ltx_Math" alttext="n=2" display="inline"><mrow><mi>n</mi><mo>=</mo><mn>2</mn></mrow></math>:</p>
+</div>
+<div id="S3.SS2.p6" class="ltx_para">
+<table id="S3.Ex2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex2.m1" class="ltx_Math" alttext="\begin{array}[]{c c c}\verb&quot;x&gt;s&quot;&amp;\verb&quot;ex&gt;es&quot;&amp;\verb&quot;xh&gt;s-&quot;\\&#10;\verb&quot;h&gt;-&quot;&amp;\verb&quot;xh&gt;s-&quot;&amp;\verb&quot;ha&gt;-a&quot;\\&#10;\verb&quot;-&gt;o&quot;&amp;\verb&quot;v-&gt;vo&quot;&amp;\verb&quot;-$&gt;o$&quot;\\&#10;\end{array}" display="block"><mtable align="center" columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="center"><mrow><mi>𝚡</mi><mo>&gt;</mo><mi>𝚜</mi></mrow></mtd><mtd columnalign="center"><mrow><mi>𝚎𝚡</mi><mo>&gt;</mo><mi>𝚎𝚜</mi></mrow></mtd><mtd columnalign="center"><mrow><mi>𝚡𝚑</mi><mo>&gt;</mo><mrow><mi>𝚜</mi><mo>-</mo></mrow></mrow></mtd></mtr><mtr><mtd columnalign="center"><mrow><mi>𝚑</mi><mo>&gt;</mo><mo>-</mo></mrow></mtd><mtd columnalign="center"><mrow><mi>𝚡𝚑</mi><mo>&gt;</mo><mrow><mi>𝚜</mi><mo>-</mo></mrow></mrow></mtd><mtd columnalign="center"><mrow><mi>𝚑𝚊</mi><mo>&gt;</mo><mrow><mo>-</mo><mi>𝚊</mi></mrow></mrow></mtd></mtr><mtr><mtd columnalign="center"><mrow><mo>-</mo><mo>&gt;</mo><mi>𝚘</mi></mrow></mtd><mtd columnalign="center"><mrow><mrow><mi>𝚟</mi><mo>-</mo></mrow><mo>&gt;</mo><mi>𝚟𝚘</mi></mrow></mtd><mtd columnalign="center"><mrow><mrow><mo>-</mo><mi mathvariant="normal">$</mi></mrow><mo>&gt;</mo><mrow><mi>𝚘</mi><mo>⁢</mo><mi mathvariant="normal">$</mi></mrow></mrow></mtd></mtr></mtable></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S3.SS2.p7" class="ltx_para">
+<p class="ltx_p">For identical features we account only once. Therefore, because there is one feature (<span class="ltx_text ltx_font_typewriter ltx_font_footnote">xh&gt;s-</span>) which occurs twice in our example, we have 8 features for the pair <em class="ltx_emph">(exhaustiv, esaustivo)</em>.</p>
+</div>
+</div>
+<div id="S3.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.3 </span>Learning Algorithms</h3>
+
+<div id="S3.SS3.p1" class="ltx_para">
+<p class="ltx_p">We use Naive Bayes as a baseline and we experiment with Support Vector Machines (SVMs) to learn orthographic changes and to discriminate between pairs of cognates and non-cognates. We put our system together using the Weka
+workbench <cite class="ltx_cite">[<a href="#bib.bib85" title="The WEKA data mining software: an update" class="ltx_ref">15</a>]</cite>, a suite of machine learning algorithms and tools. For SVM, we use the wrapper provided by Weka for LibSVM <cite class="ltx_cite">[<a href="#bib.bib93" title="LIBSVM: A Library for Support Vector Machines" class="ltx_ref">5</a>]</cite>. We use the radial basis function kernel (RBF), which can handle the case when the relation between class labels and attributes is non-linear, as it maps samples non-linearly into a higher dimensional space. Given two instances <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m1" class="ltx_Math" alttext="x_{i}" display="inline"><msub><mi>x</mi><mi>i</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m2" class="ltx_Math" alttext="x_{j}" display="inline"><msub><mi>x</mi><mi>j</mi></msub></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m3" class="ltx_Math" alttext="x_{i}\in\mathbb{R}^{n}" display="inline"><mrow><msub><mi>x</mi><mi>i</mi></msub><mo>∈</mo><msup><mi>ℝ</mi><mi>n</mi></msup></mrow></math>, the RBF kernel function for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m4" class="ltx_Math" alttext="x_{i}" display="inline"><msub><mi>x</mi><mi>i</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m5" class="ltx_Math" alttext="x_{j}" display="inline"><msub><mi>x</mi><mi>j</mi></msub></math> is defined as follows:</p>
+</div>
+<div id="S3.SS3.p2" class="ltx_para">
+<table id="S3.Ex3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex3.m1" class="ltx_Math" alttext="K(x_{i},x_{j})=exp(-\gamma||x_{i}-x_{j}||^{2}),\gamma&gt;0," display="block"><mrow><mrow><mrow><mrow><mi>K</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>x</mi><mi>i</mi></msub><mo>,</mo><msub><mi>x</mi><mi>j</mi></msub></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mi>e</mi><mo>⁢</mo><mi>x</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mo>-</mo><mrow><mi>γ</mi><mo>⁢</mo><msup><mrow><mo fence="true">||</mo><mrow><msub><mi>x</mi><mi>i</mi></msub><mo>-</mo><msub><mi>x</mi><mi>j</mi></msub></mrow><mo fence="true">||</mo></mrow><mn>2</mn></msup></mrow></mrow><mo>)</mo></mrow></mrow></mrow><mo>,</mo><mrow><mi>γ</mi><mo>&gt;</mo><mn>0</mn></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S3.SS3.p3" class="ltx_para">
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m1" class="ltx_Math" alttext="\gamma" display="inline"><mi>γ</mi></math> is a kernel parameter.</p>
+</div>
+<div id="S3.SS3.p4" class="ltx_para">
+<p class="ltx_p">We split the data in two subsets, for training and testing, with a 3:1 ratio, and we perform grid search and 3-fold cross validation over the training set in order to optimize hyperparameters <em class="ltx_emph">c</em> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p4.m1" class="ltx_Math" alttext="\gamma" display="inline"><mi>γ</mi></math>. We search over <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p4.m2" class="ltx_Math" alttext="\{1,2,...,10\}" display="inline"><mrow><mo>{</mo><mrow><mn>1</mn><mo>,</mo><mn>2</mn><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mn>10</mn></mrow><mo>}</mo></mrow></math> for <em class="ltx_emph">c</em> and over <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p4.m3" class="ltx_Math" alttext="\{10^{-5},10^{-4},...,10{{}^{4}},10{{}^{5}}\}" display="inline"><mrow><mo>{</mo><msup><mn>10</mn><mrow><mo>-</mo><mn>5</mn></mrow></msup><mo>,</mo><msup><mn>10</mn><mrow><mo>-</mo><mn>4</mn></mrow></msup><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mn>10</mn><mmultiscripts><mo>,</mo><mprescripts/><none/><mn>4</mn></mmultiscripts><mn>10</mn><mmultiscripts><mo>}</mo><mprescripts/><none/><mn>5</mn></mmultiscripts></mrow></math> for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p4.m4" class="ltx_Math" alttext="\gamma" display="inline"><mi>γ</mi></math>. The values which optimize accuracy on the training set are reported, for each pair of languages, in Table <a href="#S4.T3" title="Table 3 ‣ 4.2 Results Analysis ‣ 4 Experiments ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Experiments</h2>
+
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Data</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">We apply our method on an automatically extracted dataset of cognates for four pairs of languages: Romanian-French, Romanian-Italian, Romanian-Spanish and Romanian-Portuguese. In order to build the dataset, we apply the methodology proposed by <cite class="ltx_cite">Ciobanu and Dinu (<a href="#bib.bib100" title="Building a Dataset of Multilingual Cognates for the Romanian Lexicon" class="ltx_ref">2014</a>)</cite> on the DexOnline<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup><a href="http://dexonline.ro" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://dexonline.ro</span></a></span></span></span> machine-readable dictionary for Romanian. We discard pairs of words for which the forms across languages are identical (i.e., the Romanian word <em class="ltx_emph">matrice</em> and its Italian cognate pair <em class="ltx_emph">matrice</em>, having the same form), because these pairs do not provide any orthographic changes to be learned. For each pair of languages we determine a number of non-cognate pairs equal to the number of cognate pairs.
+Finally, we obtain 445 pairs of cognates for Romanian-French<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>The number of pairs of cognates is much lower for French than for the other languages because there are numerous Romanian words which have French etymology and, in this paper, we do not consider these words to be cognate candidates.</span></span></span>, 3,477 for Romanian-Italian, 5,113 for Romanian-Spanish and 7,858 for Romanian-Portuguese. Because we need sets of approximately equal size for comparison across languages, we keep 400 pairs of cognates and 400 pairs of non-cognates for each pair of languages. In Tables <a href="#S4.T1" title="Table 1 ‣ 4.1 Data ‣ 4 Experiments ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> and <a href="#S4.T2" title="Table 2 ‣ 4.1 Data ‣ 4 Experiments ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> we provide, for each pair of languages, the five most relevant 2-gram orthographic changes, determined using the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m1" class="ltx_Math" alttext="\chi^{2}" display="inline"><msup><mi>χ</mi><mn>2</mn></msup></math> distribution implemented in Weka, and the five most frequent 2-gram orthographic changes in the cognate pairs from our dataset<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>For brevity, we use in the tables the ISO 639-1 codes for language abbreviation. We denote pairs of languages by the target language, given the fact that Romanian is always the source language in our experiments.</span></span></span>. None of the top ranked orthographic cues occurs at the beginning of the word, while many of them occur at the end of the word.
+The most frequent operation in Tables <a href="#S4.T1" title="Table 1 ‣ 4.1 Data ‣ 4 Experiments ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> and <a href="#S4.T2" title="Table 2 ‣ 4.1 Data ‣ 4 Experiments ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> is substitution.</p>
+</div>
+<div id="S4.T1" class="ltx_table">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r"/>
+<th class="ltx_td ltx_align_center">1<sup class="ltx_sup">st</sup></th>
+<th class="ltx_td ltx_align_center">2<sup class="ltx_sup">nd</sup></th>
+<th class="ltx_td ltx_align_center">3<sup class="ltx_sup">rd</sup></th>
+<th class="ltx_td ltx_align_center">4<sup class="ltx_sup">th</sup></th>
+<th class="ltx_td ltx_align_center">5<sup class="ltx_sup">th</sup></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">IT</th>
+<td class="ltx_td ltx_align_center ltx_border_t">iu<code class="ltx_verbatim ltx_font_typewriter">&gt;</code>io</td>
+<td class="ltx_td ltx_align_center ltx_border_t">un<code class="ltx_verbatim ltx_font_typewriter">&gt;</code>on</td>
+<td class="ltx_td ltx_align_center ltx_border_t">l-<code class="ltx_verbatim ltx_font_typewriter">&gt;</code>le</td>
+<td class="ltx_td ltx_align_center ltx_border_t">t$<code class="ltx_verbatim ltx_font_typewriter">&gt;</code>-$</td>
+<td class="ltx_td ltx_align_center ltx_border_t">-$<code class="ltx_verbatim ltx_font_typewriter">&gt;</code>e$</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">FR</th>
+<td class="ltx_td ltx_align_center">un<code class="ltx_verbatim ltx_font_typewriter">&gt;</code>on</td>
+<td class="ltx_td ltx_align_center">ne<code class="ltx_verbatim ltx_font_typewriter">&gt;</code>n-</td>
+<td class="ltx_td ltx_align_center">iu<code class="ltx_verbatim ltx_font_typewriter">&gt;</code>io</td>
+<td class="ltx_td ltx_align_center">ţi<code class="ltx_verbatim ltx_font_typewriter">&gt;</code>ti</td>
+<td class="ltx_td ltx_align_center">e$<code class="ltx_verbatim ltx_font_typewriter">&gt;</code>-$</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">ES</th>
+<td class="ltx_td ltx_align_center">-$<code class="ltx_verbatim ltx_font_typewriter">&gt;</code>o$</td>
+<td class="ltx_td ltx_align_center">ţi<code class="ltx_verbatim ltx_font_typewriter">&gt;</code>ci</td>
+<td class="ltx_td ltx_align_center">–<code class="ltx_verbatim ltx_font_typewriter">&gt;</code>ón</td>
+<td class="ltx_td ltx_align_center">ie<code class="ltx_verbatim ltx_font_typewriter">&gt;</code>ió</td>
+<td class="ltx_td ltx_align_center">at<code class="ltx_verbatim ltx_font_typewriter">&gt;</code>ad</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">PT</th>
+<td class="ltx_td ltx_align_center">ie<code class="ltx_verbatim ltx_font_typewriter">&gt;</code>ão</td>
+<td class="ltx_td ltx_align_center">aţ<code class="ltx_verbatim ltx_font_typewriter">&gt;</code>aç</td>
+<td class="ltx_td ltx_align_center">ţi<code class="ltx_verbatim ltx_font_typewriter">&gt;</code>çã</td>
+<td class="ltx_td ltx_align_center">i$<code class="ltx_verbatim ltx_font_typewriter">&gt;</code>-$</td>
+<td class="ltx_td ltx_align_center">ă$<code class="ltx_verbatim ltx_font_typewriter">&gt;</code>a$</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span>The most relevant orthographic cues for each pair of languages determined on the entire datasets using the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T1.m2" class="ltx_Math" alttext="\chi^{2}" display="inline"><msup><mi>χ</mi><mn>2</mn></msup></math> attribute evaluation method implemented in Weka.</div>
+</div>
+<div id="S4.T2" class="ltx_table">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r"/>
+<th class="ltx_td ltx_align_center">1<sup class="ltx_sup">st</sup></th>
+<th class="ltx_td ltx_align_center">2<sup class="ltx_sup">nd</sup></th>
+<th class="ltx_td ltx_align_center">3<sup class="ltx_sup">rd</sup></th>
+<th class="ltx_td ltx_align_center">4<sup class="ltx_sup">th</sup></th>
+<th class="ltx_td ltx_align_center">5<sup class="ltx_sup">th</sup></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">IT</th>
+<td class="ltx_td ltx_align_center ltx_border_t">-$<code class="ltx_verbatim ltx_font_typewriter">&gt;</code>e$</td>
+<td class="ltx_td ltx_align_center ltx_border_t">-$<code class="ltx_verbatim ltx_font_typewriter">&gt;</code>o$</td>
+<td class="ltx_td ltx_align_center ltx_border_t">ă$<code class="ltx_verbatim ltx_font_typewriter">&gt;</code>a$</td>
+<td class="ltx_td ltx_align_center ltx_border_t">–<code class="ltx_verbatim ltx_font_typewriter">&gt;</code>re</td>
+<td class="ltx_td ltx_align_center ltx_border_t">ţi<code class="ltx_verbatim ltx_font_typewriter">&gt;</code>zi</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">FR</th>
+<td class="ltx_td ltx_align_center">e$<code class="ltx_verbatim ltx_font_typewriter">&gt;</code>-$</td>
+<td class="ltx_td ltx_align_center">un<code class="ltx_verbatim ltx_font_typewriter">&gt;</code>on</td>
+<td class="ltx_td ltx_align_center">ne<code class="ltx_verbatim ltx_font_typewriter">&gt;</code>n-</td>
+<td class="ltx_td ltx_align_center">iu<code class="ltx_verbatim ltx_font_typewriter">&gt;</code>io</td>
+<td class="ltx_td ltx_align_center">ţi<code class="ltx_verbatim ltx_font_typewriter">&gt;</code>ti</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">ES</th>
+<td class="ltx_td ltx_align_center">-$<code class="ltx_verbatim ltx_font_typewriter">&gt;</code>o$</td>
+<td class="ltx_td ltx_align_center">e$<code class="ltx_verbatim ltx_font_typewriter">&gt;</code>-$</td>
+<td class="ltx_td ltx_align_center">ţi<code class="ltx_verbatim ltx_font_typewriter">&gt;</code>ci</td>
+<td class="ltx_td ltx_align_center">ă$<code class="ltx_verbatim ltx_font_typewriter">&gt;</code>a$</td>
+<td class="ltx_td ltx_align_center">at<code class="ltx_verbatim ltx_font_typewriter">&gt;</code>ad</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">PT</th>
+<td class="ltx_td ltx_align_center">-$<code class="ltx_verbatim ltx_font_typewriter">&gt;</code>o$</td>
+<td class="ltx_td ltx_align_center">ă$<code class="ltx_verbatim ltx_font_typewriter">&gt;</code>a$</td>
+<td class="ltx_td ltx_align_center">e$<code class="ltx_verbatim ltx_font_typewriter">&gt;</code>-$</td>
+<td class="ltx_td ltx_align_center">-$<code class="ltx_verbatim ltx_font_typewriter">&gt;</code>r$</td>
+<td class="ltx_td ltx_align_center">-$<code class="ltx_verbatim ltx_font_typewriter">&gt;</code>a$</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 2: </span>The most frequent orthographic cues for each pair of languages determined on the cognate lists using the raw frequencies.</div>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Results Analysis</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">We propose a method for automatic detection of cognate pairs using orthographic alignment. We experiment with two machine-learning approaches: Naive Bayes and SVM. In Table <a href="#S4.T3" title="Table 3 ‣ 4.2 Results Analysis ‣ 4 Experiments ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> we report the results of our research. We report the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-gram values for which the best results are obtained and the hyperparameters for SVM, <em class="ltx_emph">c</em> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m2" class="ltx_Math" alttext="\gamma" display="inline"><mi>γ</mi></math>. The best results are obtained for French and Spanish, while the lowest accuracy is obtained for Portuguese. The SVM produces better results for all languages except Portuguese, where the accuracy is equal.
+For Portuguese, both Naive Bayes and SVM misclassify more non-cognates as cognates than viceversa. A possible explanation might be the occurrence, in the dataset, of more remotely related words, which are not labeled as cognates. We plan to investigate this assumption and to apply the proposed method on other datasets in our future work.</p>
+</div>
+<div id="S4.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r"/>
+<th class="ltx_td ltx_align_center" colspan="4">Naive Bayes</th>
+<th class="ltx_td ltx_align_center" colspan="6">SVM</th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r"/>
+<th class="ltx_td ltx_align_center">P</th>
+<th class="ltx_td ltx_align_center">R</th>
+<th class="ltx_td ltx_align_center">A</th>
+<th class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math></th>
+<th class="ltx_td ltx_align_center">P</th>
+<th class="ltx_td ltx_align_center">R</th>
+<th class="ltx_td ltx_align_center">A</th>
+<th class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m2" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math></th>
+<th class="ltx_td ltx_align_center"><em class="ltx_emph">c</em></th>
+<th class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m3" class="ltx_Math" alttext="\gamma" display="inline"><mi>γ</mi></math></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">IT</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.72</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.93</td>
+<td class="ltx_td ltx_align_center ltx_border_t">79.0</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">1</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.76</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.92</td>
+<td class="ltx_td ltx_align_center ltx_border_t">81.5</td>
+<td class="ltx_td ltx_align_center ltx_border_t">1</td>
+<td class="ltx_td ltx_align_center ltx_border_t">1</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.10</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">FR</td>
+<td class="ltx_td ltx_align_center">0.81</td>
+<td class="ltx_td ltx_align_center">0.91</td>
+<td class="ltx_td ltx_align_center">82.0</td>
+<td class="ltx_td ltx_align_center ltx_border_r">2</td>
+<td class="ltx_td ltx_align_center">0.84</td>
+<td class="ltx_td ltx_align_center">0.89</td>
+<td class="ltx_td ltx_align_center">87.0</td>
+<td class="ltx_td ltx_align_center">2</td>
+<td class="ltx_td ltx_align_center">10</td>
+<td class="ltx_td ltx_align_center">0.01</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">ES</td>
+<td class="ltx_td ltx_align_center">0.79</td>
+<td class="ltx_td ltx_align_center">0.92</td>
+<td class="ltx_td ltx_align_center">84.0</td>
+<td class="ltx_td ltx_align_center ltx_border_r">1</td>
+<td class="ltx_td ltx_align_center">0.85</td>
+<td class="ltx_td ltx_align_center">0.88</td>
+<td class="ltx_td ltx_align_center">86.5</td>
+<td class="ltx_td ltx_align_center">2</td>
+<td class="ltx_td ltx_align_center">4</td>
+<td class="ltx_td ltx_align_center">0.01</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">PT</td>
+<td class="ltx_td ltx_align_center">0.67</td>
+<td class="ltx_td ltx_align_center">0.88</td>
+<td class="ltx_td ltx_align_center">73.0</td>
+<td class="ltx_td ltx_align_center ltx_border_r">2</td>
+<td class="ltx_td ltx_align_center">0.70</td>
+<td class="ltx_td ltx_align_center">0.78</td>
+<td class="ltx_td ltx_align_center">73.0</td>
+<td class="ltx_td ltx_align_center">2</td>
+<td class="ltx_td ltx_align_center">10</td>
+<td class="ltx_td ltx_align_center">0.01</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 3: </span> Results for automatic detection of cognates using orthographic alignment. We report the precision (P), recall (R) and accuracy (A) obtained on the test sets and the optimal <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m6" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-gram values. For SVM we also report the optimal hyperparameters <em class="ltx_emph">c</em> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T3.m7" class="ltx_Math" alttext="\gamma" display="inline"><mi>γ</mi></math> obtained during cross-validation on the training sets.</div>
+</div>
+</div>
+<div id="S4.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.3 </span>Comparison with Previous Methods</h3>
+
+<div id="S4.SS3.p1" class="ltx_para">
+<p class="ltx_p">We investigate the performance of the method we propose in comparison to previous approaches for automatic detection of cognate pairs based on orthographic similarity. We employ several orthographic metrics widely used in this research area: the edit distance <cite class="ltx_cite">[<a href="#bib.bib27" title="Binary Codes Capable of Correcting Deletions, Insertions, and Reversals" class="ltx_ref">22</a>]</cite>, the longest common subsequence ratio <cite class="ltx_cite">[<a href="#bib.bib28" title="Automatic Evaluation and Uniform Filter Cascades for Inducing N-Best Translation Lexicons" class="ltx_ref">24</a>]</cite> and the XDice metric <cite class="ltx_cite">[<a href="#bib.bib4" title="Word-Pair Extraction for Lexicography" class="ltx_ref">3</a>]</cite><span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>We use normalized similarity metrics. For the edit distance, we subtract the normalized value from 1 in order to obtain similarity.</span></span></span>. In addition, we use SpSim <cite class="ltx_cite">[<a href="#bib.bib99" title="Measuring spelling similarity for cognate identification" class="ltx_ref">11</a>]</cite>, which outperformed the longest common subsequence ratio and a similarity measure based on the edit distance in previous experiments.
+To evaluate these metrics on our dataset, we use the same train/test sets as we did in our previous experiments and we follow the strategy described in <cite class="ltx_cite">[<a href="#bib.bib42" title="Automatic Identification of Cognates and False Friends in French and English" class="ltx_ref">17</a>]</cite>. First, we compute the pairwise distances between pairs of words for each orthographic metric individually, as a single feature<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup>SpSim cannot be computed directly, as the other metrics, so we introduce an additional step in which we use 1/3 of the training set (only cognates are needed) to learn orthographic changes. In order to maintain a stratified dataset, we discard an equal number of non-cognates in the training set and then we compute the distances for the rest of the training set and for the test set. We use the remaining of the initial training set for the next step of the procedure.</span></span></span>. In order to detect the best threshold for discriminating between cognates and non-cognates, we run a decision stump classifier (provided by Weka) on the training set for each pair of languages and for each metric. A decision stump is a decision tree classifier with only one internal node and two leaves corresponding to our two class labels. Using the best threshold value selected for each metric and pair of languages, we further classify the pairs of words in our test sets as cognates or non-cognates. In Table <a href="#S4.T4" title="Table 4 ‣ 4.3 Comparison with Previous Methods ‣ 4 Experiments ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> we report the results for each approach. Our method performs better than the orthographic metrics considered as individual features. Out of the four similarity metrics, SpSim obtains, overall, the best performance. These results support the relevance of accounting for orthographic cues in cognate identification.</p>
+</div>
+<div id="S4.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r"/>
+<th class="ltx_td ltx_align_center" colspan="4">EDIT</th>
+<th class="ltx_td ltx_align_center" colspan="4">LCSR</th>
+<th class="ltx_td ltx_align_center" colspan="4">XDICE</th>
+<th class="ltx_td ltx_align_center" colspan="4">SPSIM</th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r"/>
+<th class="ltx_td ltx_align_center">P</th>
+<th class="ltx_td ltx_align_center">R</th>
+<th class="ltx_td ltx_align_center">A</th>
+<th class="ltx_td ltx_align_center ltx_border_r"><em class="ltx_emph">t</em></th>
+<th class="ltx_td ltx_align_center">P</th>
+<th class="ltx_td ltx_align_center">R</th>
+<th class="ltx_td ltx_align_center">A</th>
+<th class="ltx_td ltx_align_center ltx_border_r"><em class="ltx_emph">t</em></th>
+<th class="ltx_td ltx_align_center">P</th>
+<th class="ltx_td ltx_align_center">R</th>
+<th class="ltx_td ltx_align_center">A</th>
+<th class="ltx_td ltx_align_center ltx_border_r"><em class="ltx_emph">t</em></th>
+<th class="ltx_td ltx_align_center">P</th>
+<th class="ltx_td ltx_align_center">R</th>
+<th class="ltx_td ltx_align_center">A</th>
+<th class="ltx_td ltx_align_center"><em class="ltx_emph">t</em></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">IT</th>
+<td class="ltx_td ltx_align_center ltx_border_t">0.67</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.97</td>
+<td class="ltx_td ltx_align_center ltx_border_t">75.0</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.43</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.68</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.91</td>
+<td class="ltx_td ltx_align_center ltx_border_t">75.0</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.51</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.66</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.98</td>
+<td class="ltx_td ltx_align_center ltx_border_t">74.0</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.21</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.66</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.98</td>
+<td class="ltx_td ltx_align_center ltx_border_t">74.5</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.44</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">FR</th>
+<td class="ltx_td ltx_align_center">0.76</td>
+<td class="ltx_td ltx_align_center">0.93</td>
+<td class="ltx_td ltx_align_center">82.0</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.30</td>
+<td class="ltx_td ltx_align_center">0.76</td>
+<td class="ltx_td ltx_align_center">0.90</td>
+<td class="ltx_td ltx_align_center">81.5</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.42</td>
+<td class="ltx_td ltx_align_center">0.77</td>
+<td class="ltx_td ltx_align_center">0.79</td>
+<td class="ltx_td ltx_align_center">78.0</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.26</td>
+<td class="ltx_td ltx_align_center">0.86</td>
+<td class="ltx_td ltx_align_center">0.83</td>
+<td class="ltx_td ltx_align_center">85.0</td>
+<td class="ltx_td ltx_align_center">0.59</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">ES</th>
+<td class="ltx_td ltx_align_center">0.77</td>
+<td class="ltx_td ltx_align_center">0.91</td>
+<td class="ltx_td ltx_align_center">82.0</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.56</td>
+<td class="ltx_td ltx_align_center">0.72</td>
+<td class="ltx_td ltx_align_center">0.97</td>
+<td class="ltx_td ltx_align_center">80.0</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.47</td>
+<td class="ltx_td ltx_align_center">0.72</td>
+<td class="ltx_td ltx_align_center">0.99</td>
+<td class="ltx_td ltx_align_center">80.5</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.19</td>
+<td class="ltx_td ltx_align_center">0.81</td>
+<td class="ltx_td ltx_align_center">0.90</td>
+<td class="ltx_td ltx_align_center">85.0</td>
+<td class="ltx_td ltx_align_center">0.64</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">PT</th>
+<td class="ltx_td ltx_align_center">0.62</td>
+<td class="ltx_td ltx_align_center">0.99</td>
+<td class="ltx_td ltx_align_center">69.5</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.34</td>
+<td class="ltx_td ltx_align_center">0.59</td>
+<td class="ltx_td ltx_align_center">0.99</td>
+<td class="ltx_td ltx_align_center">65.5</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.34</td>
+<td class="ltx_td ltx_align_center">0.57</td>
+<td class="ltx_td ltx_align_center">0.99</td>
+<td class="ltx_td ltx_align_center">63.5</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.10</td>
+<td class="ltx_td ltx_align_center">0.62</td>
+<td class="ltx_td ltx_align_center">0.97</td>
+<td class="ltx_td ltx_align_center">69.0</td>
+<td class="ltx_td ltx_align_center">0.39</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 4: </span>Comparison with previous methods for automatic detection of cognate pairs based on orthography. We report the precision (P), recall (R) and accuracy (A) obtained on the test sets and the optimal threshold <em class="ltx_emph">t</em> for discriminating between cognates and non-cognates.</div>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Conclusions and Future Work</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">In this paper we proposed a method for automatic detection of cognates based on orthographic alignment. We employed the Needleman-Wunsch algorithm <cite class="ltx_cite">[<a href="#bib.bib80" title="A general method applicable to the search for similarities in the amino acid sequence of two proteins" class="ltx_ref">29</a>]</cite> for sequence alignment widely-used in computational biology
+and we used aligned pairs of words to extract rules for lexical changes occurring when words enter new languages. We applied our method on an automatically extracted dataset of cognates for four pairs of languages.</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">As future work, we plan to extend our method on a few levels.
+In this paper we used a very simple substitution matrix for the alignment algorithm, but the method can be adapted to integrate historical information regarding language evolution.
+The substitution matrix for the alignment algorithm can be customized with language-specific information, in order to reflect the probability of a character to change into another. An important achievement in this direction belongs to <cite class="ltx_cite">Delmestri and Cristianini (<a href="#bib.bib79" title="String Similarity Measures and PAM-like Matrices for Cognate Identification" class="ltx_ref">2010</a>)</cite>, who introduced PAM-like matrices, linguistic-inspired substitution matrices which are based on information regarding orthographic changes. We plan to investigate the contribution of using this type of substitution matrices for our method.</p>
+</div>
+<div id="S5.p3" class="ltx_para">
+<p class="ltx_p">We intend to investigate other approaches to string alignment, such as local alignment <cite class="ltx_cite">[<a href="#bib.bib81" title="Identification of common molecular subsequences" class="ltx_ref">33</a>]</cite>, and other learning algorithms for discriminating between cognates and non-cognates. We plan to extend our analysis with more language-specific features, where linguistic knowledge is available. First, we intend to use the part of speech as an additional feature. We assume that some orthographic changes are dependent on the part of speech of the words. Secondly, we want to investigate whether accounting for the common ancestor language influences the results.
+We are interested to find out if the orthographic rules depend on the source language, or if they are rather specific to the target language.
+Finally, we plan to make a performance comparison on cognate pairs versus word-etymon pairs and to investigate false friends <cite class="ltx_cite">[<a href="#bib.bib101" title="Cognate or False Friend? Ask the Web!" class="ltx_ref">27</a>]</cite>.</p>
+</div>
+<div id="S5.p4" class="ltx_para">
+<p class="ltx_p">We further intend to adapt our method for cognate detection to a closely related task, namely cognate production, i.e., given an input word <em class="ltx_emph">w</em>, a related language <em class="ltx_emph">L</em> and a set of learned rules for orthographic changes, to produce the cognate pair of <em class="ltx_emph">w</em> in <em class="ltx_emph">L</em>.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgements</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">We thank the anonymous reviewers for their helpful and constructive comments. The contribution of the authors to this paper is equal. Research supported by CNCS UEFISCDI, project number PN-II-ID-PCE-2011-3-0959.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Q. D. Atkinson, R. D. Gray, G. K. Nicholls and D. J. Welch</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">From Words to Dates: Water into Wine, Mathemagic or Phylogenetic Inference?</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Transactions of the Philological Society</span> <span class="ltx_text ltx_bib_volume">103</span>, <span class="ltx_text ltx_bib_pages"> pp. 193–219</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib92" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Beinborn, T. Zesch and I. Gurevych</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Cognate Production using Character-based Machine Translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 883–891</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related Work ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Brew and D. McKelvie</span><span class="ltx_text ltx_bib_year">(1996)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Word-Pair Extraction for Lexicography</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 45–55</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.SS3.p1" title="4.3 Comparison with Previous Methods ‣ 4 Experiments ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Buckley, M. Mitra, J. A. Walz and C. Cardie</span><span class="ltx_text ltx_bib_year">(1997)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Using Clustering and SuperConcepts Within SMART: TREC 6</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 107–124</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib93" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Chang and C. Lin</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">LIBSVM: A Library for Support Vector Machines</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">ACM Transactions on Intelligent Systems and Technology</span> <span class="ltx_text ltx_bib_volume">2</span>, <span class="ltx_text ltx_bib_pages"> pp. 27:1–27:27</span>.
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note">Software available at <span class="ltx_ERROR undefined">\url</span>http://www.csie.ntu.edu.tw/ cjlin/libsvm</span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.p1" title="3.3 Learning Algorithms ‣ 3 Our Approach ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>.
+</span></li>
+<li id="bib.bib77" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. W. Church</span><span class="ltx_text ltx_bib_year">(1993)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Char align: A program for aligning parallel texts at the character level</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1–8</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib100" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. M. Ciobanu and L. P. Dinu</span><span class="ltx_text ltx_bib_year">(2014)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Building a Dataset of Multilingual Cognates for the Romanian Lexicon</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.p1" title="4.1 Data ‣ 4 Experiments ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib79" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Delmestri and N. Cristianini</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">String Similarity Measures and PAM-like Matrices for Cognate Identification</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Bucharest Working Papers in Linguistics</span> <span class="ltx_text ltx_bib_volume">12</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 71–82</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.p1" title="3 Our Approach ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S5.p2" title="5 Conclusions and Future Work ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Dijkstra, F. Grootjen and J. Schepens</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Distributions of Cognates in Europe as Based on Levenshtein Distance</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Bilingualism: Language and Cognition</span> <span class="ltx_text ltx_bib_volume">15</span>, <span class="ltx_text ltx_bib_pages"> pp. 157–166</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib88" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_editor">C. Fellbaum (Ed.)</span><span class="ltx_text ltx_bib_year">(1998)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">WordNet: An Electronic Lexical Database</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">MIT Press,
+Cambridge, Massachusetts</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib99" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Gomes and J. G. P. Lopes</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Measuring spelling similarity for cognate identification</span>.
+</span>
+<span class="ltx_bibblock">See <span class="ltx_text ltx_bib_crossref"><cite class="ltx_cite"/></span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 624–633</span>.
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note">Software available at <span class="ltx_ERROR undefined">\url</span>http://research.variancia.com/spsim</span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.SS3.p1" title="4.3 Comparison with Previous Methods ‣ 4 Experiments ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+<li id="bib.bib82" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">O. Gotoh</span><span class="ltx_text ltx_bib_year">(1982)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">An improved algorithm for matching biological sequences</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Molecular Biology</span> <span class="ltx_text ltx_bib_volume">162</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 705–708</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib90" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Gusfield</span><span class="ltx_text ltx_bib_year">(1997)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Algorithms on Strings, Trees and Sequences: computer science and computational biology</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Cambridge University Press New York, NY, USA</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p2" title="3 Our Approach ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib40" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Hall and D. Klein</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Finding Cognate Groups Using Phylogenies</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1030–1039</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib85" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Hall, E. Frank, G. Holmes, B. Pfahringer, P. Reutemann and I. H. Witten</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The WEKA data mining software: an update</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">SIGKDD Explorations</span> <span class="ltx_text ltx_bib_volume">11</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 10–18</span>.
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note">Software available at <span class="ltx_ERROR undefined">\url</span>http://www.cs.waikato.ac.nz/ml/weka</span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.p1" title="3.3 Learning Algorithms ‣ 3 Our Approach ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>.
+</span></li>
+<li id="bib.bib98" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Hauer and G. Kondrak</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Clustering semantically equivalent words into cognate sets in multilingual lists</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 865–873</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib42" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Inkpen, O. Frunza and G. Kondrak</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatic Identification of Cognates and False Friends in French and English</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 251–257</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p1" title="2 Related Work ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.SS3.p1" title="4.3 Comparison with Previous Methods ‣ 4 Experiments ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+<li id="bib.bib95" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Koehn and K. Knight</span><span class="ltx_text ltx_bib_year">(2000)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Estimating Word Translation Probabilities from Unrelated Monolingual Corpora Using the EM Algorithm</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 711–715</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related Work ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. Kondrak, D. Marcu and K. Knight</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Cognates Can Improve Statistical Translation Models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 46–48</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib86" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. Kondrak</span><span class="ltx_text ltx_bib_year">(2000)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A New Algorithm for the Alignment of Phonetic Sequences</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 288–295</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib89" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. Kondrak</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Combining Evidence in Cognate Identification</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 44–59</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib27" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">V. I. Levenshtein</span><span class="ltx_text ltx_bib_year">(1965)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Binary Codes Capable of Correcting Deletions, Insertions, and Reversals</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Soviet Physics Doklady</span> <span class="ltx_text ltx_bib_volume">10</span>, <span class="ltx_text ltx_bib_pages"> pp. 707–710</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.SS3.p1" title="4.3 Comparison with Previous Methods ‣ 4 Experiments ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+<li id="bib.bib84" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. List</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">LexStat: Automatic Detection of Cognates in Multilingual Wordlists</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 117–125</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib28" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Melamed</span><span class="ltx_text ltx_bib_year">(1995)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatic Evaluation and Uniform Filter Cascades for Inducing N-Best Translation Lexicons</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.SS3.p1" title="4.3 Comparison with Previous Methods ‣ 4 Experiments ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+<li id="bib.bib96" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Mulloni and V. Pekar</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatic detection of orthographic cues for cognate recognition</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 2387–2390</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p3" title="2 Related Work ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib97" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Mulloni</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatic Prediction of Cognate Orthography Using Support Vector Machines</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 25–30</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related Work ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib101" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Nakov, P. Nakov and E. Paskaleva</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Cognate or False Friend? Ask the Web!</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 55–62</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p3" title="5 Conclusions and Future Work ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib83" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[28]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Navlea and A. Todirascu</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Using Cognates in a French-Romanian Lexical Alignment System: A Comparative Study</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 247–253</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related Work ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib80" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[29]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. B. Needleman and C. D. Wunsch</span><span class="ltx_text ltx_bib_year">(1970)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A general method applicable to the search for similarities in the amino acid sequence of two proteins</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Molecular Biology</span> <span class="ltx_text ltx_bib_volume">48</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 443 – 453</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS1.p1" title="3.1 Orthographic Alignment ‣ 3 Our Approach ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>,
+<a href="#S5.p1" title="5 Conclusions and Future Work ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[30]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Ng, B. Chin, A. W. Yeo and B. Ranaivo-Malançon</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Identification of Closely-Related Indigenous Languages: An Orthographic Approach</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Int. J. of Asian Lang. Proc.</span> <span class="ltx_text ltx_bib_volume">20</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 43–62</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib102" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[31]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. D. Schuler</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Sequence Alignment and Database Searching</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Bioinformatics: A Practical Guide to the Analysis of Genes and Proteins</span> <span class="ltx_text ltx_bib_volume">43</span>.
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note">A. D. Baxevanis and B. F. F. Ouellette, John Wiley &amp; Sons, Inc., New York, USA</span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p1" title="3.1 Orthographic Alignment ‣ 3 Our Approach ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib69" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[32]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Simard, G. F. Foster and P. Isabelle</span><span class="ltx_text ltx_bib_year">(1992)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Using Cognates to Align Sentences in Bilingual Corpora</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p1" title="2 Related Work ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib81" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[33]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. F. Smith and M. S. Waterman</span><span class="ltx_text ltx_bib_year">(1981)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Identification of common molecular subsequences</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Molecular Biology</span> <span class="ltx_text ltx_bib_volume">147</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 195–197</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S5.p3" title="5 Conclusions and Future Work ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib78" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[34]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Steiner, P. F. Stadler and M. Cysouw</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A pipeline for computational historical linguistics</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Language Dynamics and Change</span> <span class="ltx_text ltx_bib_volume">1</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 89–127</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Automatic Detection of Cognates Using Orthographic Alignment" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 17:33:43 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

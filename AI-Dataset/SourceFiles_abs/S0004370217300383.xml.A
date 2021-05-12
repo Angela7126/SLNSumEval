@@ -1,0 +1,2440 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Commonsense reasoning about containers using radically incomplete information.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Physical reasoning based on radically incomplete information
+     </section-title>
+     <paragraph>
+      In physical reasoning, humans, unlike programs for scientific computation, are often able to carry out useful reasoning based on radically incomplete information. If AI systems are to achieve human levels of reasoning, they must likewise have this ability. The challenges of radically incomplete information are often far beyond the scope of existing automated reasoners based on simulation [11]; rather they require alternative reasoning techniques specifically designed for incomplete information.
+     </paragraph>
+     <paragraph>
+      As a vivid example, consider the human capacity to reason about containers — boxes, bottles, cups, pails, bags, and so on — and the interactions of containers with their contents. For instance, you can reason that you can carry groceries in a grocery bag and that they will remain in the bag with only very weak specifications of the shape and material of the groceries being carried, the shape and material of the bag, and the trajectory of motion. Containers are ubiquitous in everyday life, and children start to learn how containers work at a very early age [21] (Fig. 1).{sup:1}
+     </paragraph>
+     <paragraph>
+      Containers likewise are central in a wide range of applications and domains.{sup:2} For example, in a separate study we have recently begun of the reasoning needed to understand a biology textbook [36], we find that physical containers of many different kinds and scales appear in domains relevant to biology. Some examples:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       The membrane of a cell is a container that holds the contents of the cell. Many of the primary processes in the cell are concerned with bringing material into the container and expelling material from the container.
+      </list-item>
+      <list-item label="•">
+       The skin or other outer layer of an animal is a container for the animal. Again, many of the central life processes — eating, breathing, excreting — deal with transporting material into and out of the container.
+      </list-item>
+      <list-item label="•">
+       In a discussion of speciation (p. 493), it is mentioned that a subpopulations of a water creature can be isolated if the water level of a lake falls, dividing it into two lakes. Here the container is the lake bed, and the phenomenon depends on the somewhat non-obvious fact that a liquid container that bounds a single connected region at one level may bound two regions at a lower level (Fig. 2).
+      </list-item>
+     </list>
+     <paragraph>
+      In this paper we describe the initial stages of development of a knowledge-based system for reasoning about manipulating containers, in which knowledge of geometry and physics and problem specifications are represented by propositions. Below, we outline the system, and show that this approach suffices to justify a number of commonsense physical inferences, based on very incomplete knowledge of the situation and of the dynamic laws that govern the objects involved. These inferences have been automatically verified using the first-order theorem prover SPASS [42].
+     </paragraph>
+     <section label="1.1">
+      <section-title>
+       Incomplete information
+      </section-title>
+      <paragraph>
+       The issues of complete and incomplete information can easily be misunderstood, so let us make clear what we have in mind. Of course, few representations are truly complete or entirely precise; in virtually any representation, some aspects are omitted, some are simplified, and some are approximated. However, techniques such as simulation, or STRIPS-like representations, require that the initial conditions of the scenario and that the dynamics of the microworld be fully specified relative to a given level of description. That is, the representational framework specifies some number of critical relations between entities and properties of entities. A complete representation of a situation relative to that framework enumerates all the entities that are relevant to the situation, and specifies all the relations in the framework that hold between those entities. The description must be detailed and precise enough that the situation at the next time step is likewise fully specified, in the same sense.
+      </paragraph>
+      <paragraph>
+       For instance, the standard blocks world representation omits the size, shape, and physical characteristics of the blocks involved, and the trajectory of the actions. Situations are describe purely in terms of the predicate On(t,x,y) (object x is on object y at time t) and actions are described in terms of Puton(t,x,y) (the agent puts object x onto y at time t). However, the dynamic theory is a complete account at this level of description; that is, a complete enumeration of the On relations that hold in one situation completely determines what actions are feasible, and determines all the On relations that will hold once the action is executed. Additionally, most projection and most planning problems provide a complete enumeration of the On relations that hold in the initial situation.
+      </paragraph>
+      <paragraph>
+       By contrast, in the theory that we develop in this paper, both general domain axioms and problem specifications may give full specifications of some of the features involve, but leave others partially specified or wholly unspecified. For instance, inference 1 (section 8) specifies that initially object Ox1 is inside box Ob1, but it does not specify whether or not there are any other objects inside Ob1 nor does it specify whether Ox1 is in contact with box Ob1, nor does it specify the spatial relation of the agent to either of these. The physical laws given specify that if the agent drops an object that it is holding, the object will end up in a stable state, but the theory does not in general specify where it will end up, or where it will pass through while it is falling, or how it might impact other objects. The theory does support the inference that if it is inside an open container when dropped, it will remain inside the container, and not come into contact with any object outside the container. Some necessary conditions and some sufficient conditions are given for the feasibility of the agent being able to move from a starting to an ending positions are given, but the necessary conditions are much weaker than the sufficient conditions; in many cases, it is indeterminate.
+      </paragraph>
+     </section>
+    </section>
+    <section label="2">
+     <section-title>
+      Containers
+     </section-title>
+     <paragraph>
+      We begin with a general discussion of the properties of containers as encountered in everyday situations and of the characteristics of commonsense reasoning about containers.
+     </paragraph>
+     <paragraph>
+      A container can be made of a wide range of materials, such as rigid materials, paper, cloth, animal body parts, or combinations of these. The only requirement is that the material should maintain its shape to a sufficient degree that holes do not open up through which the contents can escape. Under some circumstances, there can even be a container whose bottom boundary is a liquid; for instance, an insect can be trapped in a region formed by the water in a basin and an upside-down cup. A container can also have a wide range of shapes (precise geometric conditions for different kinds of containers are given in section 6.1).
+     </paragraph>
+     <paragraph>
+      The material of the contents of a container is even less constrained. In the case of a closed container, the only constraint is that the material of the contents cannot penetrate or be absorbed into the material of the container (e.g. you cannot carry water in a paper bag or carry light in a cardboard box); and that the contents cannot destroy the material of the container (you cannot keep a gorilla in a balsa wood cage). Using an open container requires additionally that the contents cannot fly out the top [8]. Using a container with holes requires that the contents cannot fit or squeeze through the holes.
+     </paragraph>
+     <paragraph>
+      Those are all the constraints. In the case of a closed container, the material of the contents can be practically anything with practically any kind of dynamics. For instance, you can infer that an eel will remain inside a closed fish tank without knowing anything at all about the mechanisms that eels use to swim or about the motions that are possible for eels.
+     </paragraph>
+     <paragraph>
+      A container can serve many different purposes, including: carrying contents that are difficult or impossible to carry directly (e.g. a shopping bag or a bottle); ensuring that the contents remain in a fixed place (e.g. a crib or a cage); protecting the contents against other objects or physical influences (e.g. a briefcase or a thermos bottle); hiding the contents from inspection (e.g. an envelope); or ensuring that objects can only enter or exit through specific portals (e.g. a tea-kettle). In some cases it is necessary that some kinds of material or physical effects can either fit through the portals or pass through the material of the container, while others cannot. For instance, a pet-carrying case has holes to allow air to go in and out; a display case allows light to go in and out but not dust.
+     </paragraph>
+     <paragraph>
+      There are four primary kinds of physical principles involved in all of these cases. First, matter must move continuously; if the contents could be teleported out of the container, as in Star Trek, these constraints would not apply. Second, the contents (or the externality being kept out, such as dust) cannot pass through the material of the container. Third, there are constraints on the deformations possible to the shapes of the container and of the content. Fourth, in the case of an upright open container, gravity prevents the contents from escaping.
+     </paragraph>
+     <paragraph>
+      Simple, natural examples of commonsense physical reasoning reveal a number of important characteristics [9].
+     </paragraph>
+     <paragraph>
+      First, human reasoners can use very partial spatial information. For example, consider the text, “There was a beetle crawling on the inside of the cup. Wendy trapped it by putting her hand over the top of the cup, then carried the cup outside, and dumped the beetle out onto the lawn.” A reader understands that the cup and the hand formed a closed container for the beetle, and that Wendy removed her hand from the top of the cup before dumping the beetle. Thus, qualitative spatial knowledge about cups, hands, and beetles suffices for interpreting the text; the reader does not require the geometry of these to be specified precisely.
+     </paragraph>
+     <paragraph>
+      Second, human reasoners can often infer that a material is confined within a closed container even if they have only a vague idea of the physics of the material of the container and almost no idea at all of the material of the contents. For example, the text above can be understood by a reader who does not know whether a “beetle” is an insect, a worm, or a small jellyfish.
+     </paragraph>
+     <paragraph>
+      Third, human reasoners can predict qualitative behavior of a system and ignore the irrelevant complex details; unlike much software, they are often very good at seeing the forest and not being distracted by the trees. For example, if you pour water into a cup, you can predict that, within a few seconds it will be sitting quietly at the bottom of the cup; and you do not need to trace through the complex trajectory that the water goes through in getting to that equilibrium state.
+     </paragraph>
+     <paragraph>
+      Finally, knowledge about containers, like most high-level knowledge, can be used for a wide variety of tasks in a number of different modalities, including prediction, planning, manipulation, design, textual or visual interpretation, and explanation.
+     </paragraph>
+     <paragraph>
+      The theory developed in this paper shares these properties, though certainly with much less range and flexibility than a human reasoner. By contrast simulation models almost always require precise physical and spatial information; generate highly detailed, precise predictions; and are aimed almost exclusively at the task of projection. (The limits of simulation models are discussed further in section 5.)
+     </paragraph>
+     <paragraph>
+      Section 3 of this paper discusses the overall architecture and goals of our theory of physical reasoning. Section 4 discusses the prospects for using this theory in an implemented automated reasoner. Section 5 explains the advantages of the theory presented here over a theory based on simulation. Section 6 gives a preformal sketch of the physical microworld. Section 7 comprises this majority of this paper; it is a detailed axiomatization of our theory. Section 8 presents five sample inferences and sketches the proofs of the inferences from the theory in section 7 and the validation of the proofs using the SPASS theorem prover. Details of the proofs and the validation are given in an online supplement. Section 9 discusses what is involved in establishing the consistency of this theory. Section 10 discusses related work. Section 11 reviews our conclusions and sketches the major issues for future work.
+     </paragraph>
+    </section>
+    <section label="3">
+     <section-title>
+      Physical reasoning: overall architecture
+     </section-title>
+     <paragraph>
+      We conjecture that, in humans, physical reasoning comprises several different modes of reasoning, and we argue that machine reasoning will be most effective if it follows suit. Simulation can sometimes be effective; for example, for prediction problems when a high-quality dynamic theory and precise problem specifications are known [9], [1]. An agent can use highly trained, specialized manipulations and control regimes, such as an outfielder chasing a fly ball. Analogy is used to relate a new physical situation that has some structural similarities to a known situation, such as comparing an electric circuit to a hydraulic system. Abstraction reduces a physical situation to a small number of key relations, for instance reducing a physical electric device to a circuit diagram. Approximation permits the simplification of numerical or geometric specification; for instance, approximating an oblong object as a rectangular box. Moreover, all of these modes are to some degree integrated; if an outfielder chasing a fly ball and a fan throws a bottle onto the field, the outfielder may alter his path to avoid tripping on it.
+     </paragraph>
+     <paragraph>
+      Where knowledge of the dynamics of a domain or of the specifications of a situation are extremely weak, the most appropriate reasoning mode would seem to be knowledge-based reasoning; that is, a reasoning method in which problem specifications and some part of world knowledge are represented declaratively, and where reasoning consists largely in drawing making inferences, also represented declaratively, from this knowledge. Such forms of representation and reasoning are particularly flexible in their ability to express partial information and to use it in many directions.{sup:3} Our objective in this paper is to present a part of a knowledge-based theory of containers and manipulation.
+     </paragraph>
+     <paragraph>
+      The knowledge-based theory itself has many components at different levels of specificity and abstraction. For example:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       We use a theory of time that only involves order relations between instants: time TA occurs before time TB. A richer theory might involve also order relations between durations (duration DA is shorter than DB); or order-of-magnitude relations between durations (DA is much shorter than DB); or a full metric theory of times and durations (DA is twice as long as DB). However, the examples we consider in this paper do not require those.
+      </list-item>
+      <list-item label="•">
+       Our theory of spatial and geometrical relations has a number of different components. For the most part, we use topological and parthood relations between regions, such as “Region RA is part of region RB,” “RA is in contact with RB”, or “RA is an interior cavity of RB.” However we also incorporate a theory of order-of-magnitude relations between the size of regions (“RA is much smaller than RB”).
+      </list-item>
+      <list-item label="•">
+       Our theory of the spatio-temporal characteristics of objects includes the relations “Object O occupies region R at time T”, “Region R is a feasible shape for object O” (that is, O can be manipulated so as to occupy R), and “The trajectory of object O between times TA and TB is history H.”
+      </list-item>
+     </list>
+     <paragraph>
+      In many cases, a concept that is important at an abstract level can only be defined exactly or fully characterized at a more concrete level. For example, the full definition of a “continuously changing region” requires a metric over regions which we do not develop here (see [6]). However, one can assert some of the properties of continuous change; for instance, an object with a continuously changing shape cannot go from inside to outside a container without overlapping the container. Therefore we include the concept of a “continuous history” in the qualitative level even though we do not fully define it.
+     </paragraph>
+     <paragraph>
+      Another, more complex, example: A key concept in the theory of manipulation is the feasibility of moving an object O from place A to place B. It is sometimes possible to show that this action is infeasible using purely topological information; for example, if place A is inside a closed container and B is outside it, then the action is not feasible. Giving necessary and sufficient conditions, however, is much more difficult. In delicate cases, where one has to rely on bending the object O through a tight passage, reasoning whether it is feasible to move O from A to B or not may require a very detailed theory of the physical and geometric properties both of O and of the manipulator.{sup:4} Moreover, because of the frequency and importance of manipulation in everyday life, non-expert people are implicitly aware of many of the issues and complexities involved, though, of course, they cannot always carry out the physical and geometric reasoning involved with perfect precision and accuracy.
+     </paragraph>
+     <paragraph>
+      However, at this stage of our theory development, we are not attempting to characterize a complete theory of moving an object, or even of the commonsense understanding of moving an object. Rather, we are just trying to characterize some of the knowledge used in cases where the information is radically incomplete and the reasoning is easy. Therefore, rather than presenting general conditions that are necessary and sufficient, our knowledge base incorporates a number of specialized rules, some stating necessary conditions, and some stating sufficient conditions.
+     </paragraph>
+     <paragraph>
+      The theory that we envision, and the fragment of it that we have worked out, is frankly neither an elegant system of equations nor a system of necessary and sufficient conditions expressed at a uniform level of description. It is much more piecemeal: there are constraints, there are necessary conditions, there are sufficient conditions; but these are not “tight”. Some of these are very general (e.g. two objects do not overlap), others quite specialized. Some require only topological information, some require qualitative metric information, some require quite precise geometric information. Nonetheless, we believe that this is on the right track because it seems to address the problem and reflect the characteristics of radically incomplete reasoning much more closely than any alternative.
+     </paragraph>
+     <paragraph>
+      The theory that we have developed does not conform to any well-defined metalogical framework, along the lines of [38] or [37]. Such frameworks, when available, have many advantages: they guide theory construction, guide efficient implementation, and allow the possibility of proving metalogical properties such as consistency or computational complexity. Moreover, in both of these theories, correct frame axioms can be derived nonmonotonically; this was, indeed, one of the major motivations of the design of these theories. However, both Sandewall's and Reiter's framework are largely designed for cases where complete dynamic theories are available. In particular, they each assume that the theory describes all changes to fluents; frame axioms can then be derived by positing that any fluent that is not obliged to change remains the same. Therefore these do not work well with reasoning from radically incomplete information, in which it may be indeterminate whether and how a fluent changes. By contrast, in this paper we state our frame axioms explicitly; but this is appropriate, since the theories are too weak to justify the standard default assumption that a fluent does not change unless there is some action that posits that it changes. Quite the contrary, in one case (axiom M.S.A.1, section 7.5.3) we introduce an axiom positing that an unstable state must always be followed, eventually, by a stable state, with no explanation of the mechanism that brings that about. If we could work out a framework for formulating physical theories that is both systematic and supports flexible inference from radically incomplete information, that might well be advantageous, and we hope to revisit the question in future work; but it is beyond the scope of this paper.
+     </paragraph>
+     <paragraph>
+      Frameworks such as Sandewall's and Reiter's also have the advantage that one can prove meta-level theorems guaranteeing that the theory is consistent with problem specifications of a particular form. As we will discuss in section 9, consistency theorems can be proved for our theory, but they are almost unavoidably narrower in scope.
+     </paragraph>
+     <paragraph>
+      The design of this knowledge base must also face the issues of the redundancy of rules and of the level of generality at which rules should be stated. Contrary to common practice in axiomatizing mathematical theories, we have invested little effort in finding a minimal collection of axioms, since for our purposes there is little advantage to that. There remains the question, however, of choosing the level of abstraction at which to state the rules, and our choice may strike some readers as leaning implausibly to the abstract side. The motivation for this is to bring out the commonality in different situations.
+     </paragraph>
+     <paragraph>
+      Consider, for example, the following three facts:
+     </paragraph>
+     <paragraph label="Fact 1">
+      An object inside a solid closed container cannot come out of the container, even if the container is moved around.
+     </paragraph>
+     <paragraph label="Fact 2">
+      In the situation shown in Fig. 3, the ball must go through the red region before it can reach the green region.
+     </paragraph>
+     <paragraph label="Fact 3">
+      The water in a tea kettle with the lid on can only come out the spout.
+     </paragraph>
+     <paragraph>
+      It is certainly possible that a human reasoner is applying three entirely separate rules specific to these particular situations. (Undoubtedly, the way in which reasoning is done varies from one person to another, and also changes developmentally.) However, it certainly seem plausible that often people will use the same knowledge in solving all three problems, that they will think of the three problems in the same way, and, if they are presented with all these problems, they will realize that they are similar. An automated reasoner should do likewise. Note, though, that the specific physics of the three situations are quite different: in Fact 1, there is a single moving object that is a closed container; in Fact 2, there is a closed container formed by the union of the solid walls with the purely spatial region marked in red; in Fact 3, there is a closed container formed by the kettle plus lid plus an imaginary cork in the spout. To formulate a principle that subsumes a;; three cases, therefore, requires the fairly abstract concept of a history, a function from time to regions of space, that can move around (needed for Fact 1, Fact 3) but is not tied to a physical object (needed for Fact 2, Fact 3).
+     </paragraph>
+     <paragraph>
+      We use first-order logic with equality as a convenient notation, without at all claiming, either that this is an ideal formalism for an automated system or that it is especially close to cognitive realities. First-order logic has the advantage that it is a standard lingua franca[17], and that there exist standard software inference engines.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Methodology
+      </section-title>
+      <paragraph>
+       Our approach is that of knowledge-based analysis of commonsense reasoning [18], [5]. The results of the analysis, at the knowledge level [31], consists of five parts (Fig. 4):
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        A collection of example problems whose solutions seem commonsensically obvious.
+       </list-item>
+       <list-item label="2.">
+        A microworld. The microworld is a well-defined idealization of the domain, with some limited collection of relations and sorts of entities. The microworld is rich enough to capture the important aspects of the problems in the collection.
+       </list-item>
+       <list-item label="3.">
+        A representation language. We use a first-order language. The meanings of the symbols in the representation language are grounded in the microworld. The representation language is rich enough to express the facts in the knowledge base and to express specifications of the problems in the collection.
+       </list-item>
+       <list-item label="4.">
+        A knowledge base, a formal theory whose meaning is grounded in the microworld and is true in the microworld and that is sufficient to support the inferences needed to solve the problems.
+       </list-item>
+       <list-item label="5.">
+        Problem specifications, expressed in the representation language. The answer to each problem can be justified as an inference, given the problem specification and the knowledge base.
+       </list-item>
+      </list>
+      <paragraph>
+       In this paper, unlike [8], we require that the axioms be reasonably easily to state in first-order logic. In particular, in the knowledge-based system described here, we avoid the use of axiom schemas, infinite collections of axioms, such as the principle of induction or the comprehension axiom from set theory. Axiom schemas are certainly problematic in terms of computational efficiency of inference, and perhaps also in terms of cognitive plausibility.
+      </paragraph>
+      <paragraph>
+       There are also two further desiderata that we try to achieve for the axioms (these two often conflict, so there is a trade-off to be managed). First, symbols should correspond to concepts that seem reasonably natural in a cognitive model. For instance, ClosedContainer seems plausible; HausdorffDistance, used in [8], seems less so. Second, axioms should be stated at a fairly high-level of generality and abstraction, so that each axiom can be used for many different problems.
+      </paragraph>
+      <paragraph>
+       For simplicity, we have above portrayed our methodology as sequential: first problems, then microworld, then knowledge representation, then encoding. In practice it is cyclical and iterative. In particular the process of formulating the axioms suggests new problems, improved formulations for old problems, and improvements to the scope and characteristics of the microworld.
+      </paragraph>
+      <paragraph>
+       Our aim here is not to be comprehensive, but rather to explore basic issues. A complete theory would have to include many additional forms of spatial, physical, and planning knowledge, and would have to integrate other forms of reasoning including simulation, reasoning by analogy, and induction. Nonetheless we believe that our analysis provides insight both into commonsense physical reasoning specifically and into coping with incomplete information generally.
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Evaluation
+      </section-title>
+      <paragraph>
+       The difficulties of systematically evaluating such a theory are formidable. As we have argued elsewhere [5], it is in general difficult to evaluate theories of commonsense reasoning in a limited domain, because there is rarely any natural source of commonsense problems limited to a given domain. In the AI literature, the class of commonsense physical reasoning problems that has been studied often reflects what can be easily implemented or what is of immediate practical value; in the cognitive psychology literature (e.g. [20], [1]) it often reflects the problems that can easily be the subject of controlled psychological experiments. Thus, both directions of research can miss the kinds of problems that people face in ecologically natural settings. The criteria mentioned above in our methodology do not lend themselves to numerical measures of success, and the iterative nature of theory development means that the goal itself is a moving target.
+      </paragraph>
+      <paragraph>
+       What we have done is to demonstrate that the symbols and rules in the knowledge base are adequate to express and justify simple commonsensical qualitative inferences, discussed below in section 8.
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      From theory to working knowledge base
+     </section-title>
+     <paragraph>
+      As we will see in section 7, the theory that we have developed is quite complex, with 6 sorts, 107 other non-logical symbols, 78 definitions and 72 axioms. Moreover the proofs of the sample inferences, in the paper supplement, are long; the proof of inference 4 involves 300 steps. Considering how narrow the scope of the theory is, and how simple the inferences seem, this is rather complex; the reader is certainly justified in wondering how this will scale to richer theories and less obvious inferences. In particular, three questions might leap to mind: How can an automated reasoner be expected to find such long proofs in such a rich theory? How will this handcrafting of knowledge-based theories scale? How can we seriously propose this as a cognitive model? A fourth question, whether it is possible to be sure that the theory is consistent, will be addressed in section 9.
+     </paragraph>
+     <paragraph>
+      The answer to the first question, regarding the length of the inference chains, is largely that the formulation here is not optimized for automated inference. Rather, the formulation given here is geared toward making comparatively easy for the human reader to read the paper, for the authors to write it, and for both readers and authors to be confident that the symbols are being used consistently and that the axioms are mutually consistent. The axioms have thus the whole been kept minimal and primitive. Also, we have often used many symbols of closely related meaning; this helps readability, but forces the reasoning process to repeatedly go through long chains of definition hunting. In any actual system, many of our lemmas (including, quite possibly, our sample inference 1) would be built in, rather than re-derived each time. Likewise of the defined symbols would probably be replaced by their definitions, to save the labor involved in definition hunting. In short, we would expect that in an implemented knowledge base the chains of reasoning would be shorter than they are here.
+     </paragraph>
+     <paragraph>
+      Moreover, it should be possible to develop heuristics to focus the reasoning process on key elements. For example, the lengthy proof of inference 4 consists largely of validating frame inferences; proving that, after the robot has carried out a specific action, the objects not involved remain as they were. It may well be possible to systematize the process of inferring these, and thereby reduce the size of the search space.
+     </paragraph>
+     <paragraph>
+      The second challenge — scaling this up from a toy theory of a hundred axioms to the perhaps hundreds of thousands or millions one would need to cover a large fraction of commonsense knowledge – is of course very real. There are essentially only four solutions on the table: either you use experts to handcraft knowledge bases, or you crowd-source to non-experts, or you use machine learning techniques to derive the knowledge from texts [10], or you use machine learning to derive the knowledge from videos or from direct interaction with the world. Hand-crafting by experts is slow and expensive. Crowd-sourcing yields results of very uneven quality, particularly in foundational domains such as spatial, temporal, and elementary physical reasoning. Text-mining is currently highly limited. Learning from seeing the world and interacting with it must ultimately be possible, since it is how children learn about the world, but so far only very preliminary and limited results have been obtained this way [28]. Our feeling is that, to achieve the desired flexibility in this kind of reasoning, it will be important to analyze what needs to be learned before deploying general purpose learning techniques.
+     </paragraph>
+     <paragraph>
+      We note a couple of specific points. The work in this paper represents about three person-months of solid work, building on a large body of previous work, and has constructed a theory of about 100 symbols and 150 axioms and definitions, which, we would claim, addresses fundamental issues in physical reasoning and is of quite high quality. If the production scales linearly with the effort, which of course is not at all a safe prediction, then generating a theory of 200,000 axioms would require 250 person years – a large effort but certainly an imaginable one.{sup:5} What fraction of commonsense physical reasoning or of commonsense reasoning generally can be covered in 200,000 axioms is anybody's guess. As a point of comparison, about 1.5 million species of animals have been identified. Each of these identifications was done by hand by a taxonomic biologist (professional or serious amateur) and we presume required not less than a week's work, and often considerably more; and taxonomic biologists are not a dime a dozen. With patience, large projects can be accomplished. While calling for this sort of in-depth of knowledge engineering is outside of today's mainstream, we think it is feasible, and we think it is indispensable.
+     </paragraph>
+     <paragraph>
+      Finally, with respect to cognitive modeling, our claims are modest. We are only putting this forward as a model at the knowledge level [31] or the computational level [30], not as a process model. All that we would propose is that human reasoners can carry out and do carry out the kinds of reasoning that we are describing; that they would (generally) assent to the correctness of the axioms here, and that doing these kind of reasoning almost certainly requires knowledge and a conceptual apparatus in some ways similar to the theory that we have described, whatever “knowledge” and “concepts” ultimately turn out to be.
+     </paragraph>
+     <paragraph>
+      At the same time, we do not by any means claim that the set of concepts or the set of axioms presented in this paper is the only correct way to construct a knowledge base or a cognitive theory for this domain. Many of the choices we have made in developing the theory in section 7 are somewhat or entirely arbitrary. We do not suppose that there is a unique right way to construct the knowledge base, or a unique way that different minds think about these issues; rather, there are probably quite a number of ways of constructing a knowledge base that will suffice for these kinds of problems. Rather, the point of this paper is that inference like those discussed in section 8 are important; that previous theories of physical reasoning in the AI and cognitive psychology literature do not address them adequately; but that they can be addressed in a suitably-designed knowledge-based system. The theory presented here is a proof of concept of this last point: With a suitably-designed system, a wide-range of otherwise difficult inferences can be readily captured.
+     </paragraph>
+    </section>
+    <section label="5">
+     <section-title>
+      “Why don't you just use simulation?”
+     </section-title>
+     <paragraph>
+      The knowledge-based analysis we will propose below is complex, highly incomplete, unimplemented, and untested; completing the theory and producing a reliable implementation are major projects of uncertain success. By contrast, the technology of physics simulators (“physics engines”) such as PHYSX is very well established, powerful, and quite general. The reader might reasonably suggest that simulators would be a more promising basis for commonsense physical reasoning than knowledge-based systems.
+     </paragraph>
+     <paragraph>
+      As we have argued elsewhere, at much greater length [11], physics engines, though powerful, are in many ways poorly suited to the needs of commonsense reasoning. In that paper, we analyze a number of features of physical reasoning problems that are inherently difficult for simulation, including incomplete information, unknown physics, irrelevant complexity. Two examples:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       (Incomplete information and irrelevant complexity.) Suppose that you have a closed can, half-way full of sand, and you shake it up and down a few times. You wish to infer that the sand stays in the can. In our knowledge-based approach, that inference is very simple; in fact, it is just an instance of our first sample inference (section 8.1). In a pure simulation approach, it would be necessary to specify, as boundary conditions, the exact shape and initial position of each grain of sand and the exact trajectory of the shaking, and then it would be necessary to trace every collision of two grains of sand together.
+      </list-item>
+      <list-item label="2.">
+       (Unknown physics.) Suppose that you are walking along the beach and you see an oddly shaped mound of green glop. You are wondering what will happen if you kick it. Not knowing what kind of thing it is, you cannot predict that with any precision. Still, there are many scenarios you can rule out; it will not turn into a hummingbird, for example.
+      </list-item>
+     </list>
+     <paragraph>
+      More broadly, the seeming greater simplicity of simulation-based theories is partly an illusion due to the familiarity of physics engines and their technology. A state-of-the-art physics engine incorporates an enormous number of sophisticated techniques: for geometric modeling, for motion modeling, for collision detection, and for numerically solving the complex dynamics, which mix differential behavior with discontinuous change. A complete description of such a program would probably be a monograph many times longer than this paper.
+     </paragraph>
+     <paragraph>
+      There is also an apparent advantage to physics engines in terms of parsimony; against the large number of rules we propose, feasibility can in many instances simply be computed seemingly (to the end user) using computational techniques that apply very generally. However actual physics engine have built in all kinds of assumptions of how things can be described, with all kinds of special cases for how they interact. Even ensuring that the shape description for an object remains topologically coherent as the object moves around (i.e. that the boundary neither develops gaps nor intersects itself) is a challenging problem in many standard shape representations. We would argue that the advantage in parsimony is more apparent than real.
+     </paragraph>
+     <paragraph>
+      In parallel to this, physics engines might superficially seem more psychologically plausible; in inference 4 below, 300 steps are required to infer that, under suitable circumstances, an agent can drop a small object into an open container and then pull his hand out, leaving the object in the container. But if one were to look at a full trace of what is happening in a physics engine simulating an instance of this process, that would also look implausible as a cognitive theory. The explanation, in both cases, is partly that what is happening in physical and spatial reasoning below the level that is accessible to conscious introspection must be more complicated than one might suppose; and partly that both of these theories are accounts at the computational level, not the algorithmic level. At present, both theories lack sufficient psychological grounding, but then again neither can yet be ruled out on psychological grounds, either, since our knowledge about how computational level theories are algorithmically realized (and realizable) remains primitive.
+     </paragraph>
+     <paragraph>
+      Of course, it is a fact that a powerful theory of simulation now exists{sup:6} and the technology is implemented. That fact is of very great practical importance if one wishes to build an AI physical reasoning engine over the short term. However from the point of view of building, over the long term, an AI system capable of general physical reasoning, and still more from the point of view of developing a cognitive model of physical reasoning, that fact that, in 2016, existing physics engines are powerful and sophisticated and logic-based qualitative physical reasoners are not, may be largely a historical happenstance.
+     </paragraph>
+     <paragraph>
+      The more important point is this. It is easy to look at the collection of particular cases that are individually described in our theory, to contrast this with the broad scope of the physical theories that underlie a physics engine and to conclude that the scope of a physics engine is enormously greater than the scope of our theory. After all, a physics engine for solid rigid objects can handle all kinds of physical phenomena that we have not begun to characterize: projectiles, gyroscopes, collisions, sliding, rolling, and so on. What is easily missed, though, is that our theory can deal with all kinds of inferences that a simulation-based physics engine cannot. First, as discussed in section 6.4, since our inferences are monotonic, they are valid whatever additional facts are true about the situation and whatever else is happening.
+     </paragraph>
+     <paragraph>
+      Second, our inferences apply generally, across broad classes of objects. For instance, in a physics engine, if you want to reason about manipulation by a robot, human, or animal, you need to create a physical model of the interactions of the agent with the outside world; each new type of agent requires a new model. There is, in fact, a small cottage industry in building such models and building infrastructure for them. Our model of manipulation is much less precise and more limited in terms of the kinds of manipulations it describes, but it applies without change across a broad range of agents.
+     </paragraph>
+     <paragraph>
+      Third, in a logic-based system, any two logically equivalent inferences have essentially the same proof; and therefore the same reasoning system can be used for inferences in very different directions. For example, the inference in Scenario 6.1 states that if ob is a rigid object and a closed container and contains object os at time ta then ob contains object os at any later time; this is a prediction problem. But the same proof will show that if ob is rigid and does not contain object os at time tb, then it does not contain object os at any earlier time, which is a postdiction problem. It also shows that if object ob contains os at time ta, and does not contain os at a later time tb, then ob is not rigid; this is a problem of inferring object characteristics from observations over time. In a simulation-based reasoner, inferences other than prediction are problematic, and certainly these equivalences do not hold. One approach that would sometimes work would be to first run a logic-based front end that translates a non-predictive problem into a prediction problem; then run a simulator to do the prediction; then run a logic-based back-end to translate the answer to the prediction problem into a solution to the original. However, this is not a general solution.
+     </paragraph>
+     <paragraph>
+      Finally, if one considers the problem of commonsense physical reasoning in the larger context of implementing commonsense knowledge generally, rather than as in isolation, the knowledge-based approach seems much less anomalous. Among various forms of reasoning, physical and mathematical reasoning are almost alone in having elegant, comprehensive theories that often lend themselves to highly efficient specialized algorithms. In most areas of commonsense reasoning, as far as anyone knows, one is necessarily faced with the task of organizing a large, amorphous body of knowledge, with no overarching elegant theory. From that point of view, the kind of theory described here seems very much what one would expect; unusual only in that many of the axioms actually can be justified in terms of standard theories of geometry and physics.
+     </paragraph>
+    </section>
+    <section label="6">
+     <section-title>
+      Preformal sketch of the microworld and the inferences
+     </section-title>
+     <paragraph>
+      In this section, we will present a preformal description of the microworld that we have in mind, and sketch some of the characteristics of the theory. In section 7, we will present a full formal account of the microworld and the knowledge base.
+     </paragraph>
+     <paragraph>
+      The physical world consists of a collection of objects, which move around in time over space. Objects are distinct; that is, one object cannot be part of another or overlap spatially with another. They are eternal, neither created nor destroyed. They move continuously. An object occupies a region of some three-dimensional extent (technically, a topologically regular region); it cannot be a one-dimensional curve or two-dimensional surface. Objects can be flexible and can change shape, but we do not consider cutting an object into pieces to make several objects or gluing multiple objects together to make a single object. We assume that an object occupies an interior connected region; that is, it does not consist of two parts only connected at a point or along a one-dimensional curve.
+     </paragraph>
+     <paragraph>
+      This object ontology works with solid, indestructible objects. It does not work well for liquids, thought it does not entirely exclude them{sup:7}; ontologies for liquids are developed in [19] and [7].
+     </paragraph>
+     <paragraph>
+      For any object O, there is some range of regions that O can in principle occupy, consistent with its own internal structure; these are called the feasible regions for O. For instance, a rigid object can in principle occupy any region that is congruent (without reflection) to its standard shape. A string can occupy any tube-shaped region of a specific length and diameter. A particular quantity of liquid can occupy any region of a specific volume.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       Containers
+      </section-title>
+      <paragraph>
+       We are primarily concerned with containers and their contents. We distinguish four particular types of containers (Fig. 5).
+      </paragraph>
+      <list>
+       <list-item label="•">
+        A closed container is an object or set of objects that completely envelopes an internal cavity.
+       </list-item>
+       <list-item label="•">
+        An open container surrounds a cavity on all sides but one, where it has a single opening.
+       </list-item>
+       <list-item label="•">
+        An upright open container is an open container with the opening on top.
+       </list-item>
+       <list-item label="•">
+        A box with lid is a pair of objects that together form a closed container for a cavity, and that have the property that, if the box is moved, the lid will remain in place.
+       </list-item>
+      </list>
+      <paragraph>
+       The formal theory of these relations is given in sections 7.3.2, 7.4.3, and 7.4.4. “Closed container”, “open container” and “open upright container” are defined purely in terms of the geometry of the objects involved. “Box with lid” involves both geometrical and physical characteristics, since the constraint that the lid will remain on the box depends on the physical characteristics of the two objects.
+      </paragraph>
+      <paragraph>
+       In a container made of flexible material, cavities can split and merge; they can open up to the outside world or close themselves off from the outside world.{sup:8}
+      </paragraph>
+      <paragraph>
+       To characterize cavities dynamically, we use histories; that is, functions from time to regions [18]. Thus the value of history H at time T is a region denoted Slice(T,H). The place occupied by an object, or by a set of objects, over time is one kind of history. We say that a history Hc is a dynamic cavity of history Hx from time Ta to time Tb if it satisfies these two conditions:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        At all times Tm strictly between Ta and Tb, Slice(Tm,Hc) is a cavity inside the spatial closed container Slice(Tm,Hx).
+       </list-item>
+       <list-item label="•">
+        Hc is weakly continuous. That is, for any time Tm there exists an interval (Tc,Td) and a region R such that throughout (Tc,Td) R is part of Hc. Intuitively, a cavity is weakly continuous if a small marble that can foresee how Hc will evolve and can move arbitrarily quickly can succeed in staying inside Hc.
+       </list-item>
+      </list>
+      <paragraph>
+       We distinguish three categories of dynamic cavities (Fig. 6):
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Hc is a no-exit cavity of Hx if there is no way to escape from Hc except through Hx.
+       </list-item>
+       <list-item label="•">
+        Hc is a no-entrance cavity of Hx if there is no way to get into Hc except through Hx.
+       </list-item>
+       <list-item label="•">
+        Hc is a persistent cavity of Hx if it is both a no-exit and a no-entrance cavity.
+       </list-item>
+      </list>
+     </section>
+     <section label="6.2">
+      <section-title>
+       The agent and his actions
+      </section-title>
+      <paragraph>
+       There is a single agent, who himself is an object. The agent is capable of moving by himself, grasping other objects, manipulating other objects while grasping them, and releasing them. The theory developed here of these actions, particularly grasping and manipulating, is very weak. We specify some general necessary geometric conditions for being able to grasp an object (e.g. the agent must be geometrically touching the object) but no sufficient conditions. The feasibility of grasping an object therefore has to be stated as part of the problem specifications. We assume that the agent can release an object he is grasping at any time. If the object is in a stable position when he releases it, it will stay where placed; if not, it will fall.
+      </paragraph>
+      <paragraph>
+       Manipulating one object may cause other objects to move as well. In some cases this effect can be predicted; e.g. if the agent is manipulating a closed container, then the objects inside the container move along. In some cases one can predict that moving one object will not cause another to move, if they are parts of two sets that are causally isolated from one another (this is discussed further in section 6.3). Otherwise, our theory leaves the effect of moving one object on another indeterminate. We do posit that the agent can only directly cause the motion of an object by manipulating it, rather than by pushing it or hitting it; that is, we assume that the agent is careful not to push or hit a movable object, if he is not deliberately manipulating it. Thus, in our theory, the agent can manipulate object A, which pushes on object B, with largely indeterminate effect but it cannot directly push on object B with its own body.
+      </paragraph>
+      <paragraph>
+       Our causal theory thus includes two kinds of actions: the agent can travel empty-handed to region r, represented by the EventTravel(r), or the agent can manipulate an object by grasping it, moving it, and releasing it. Section 7.5 develops weak causal theories of traveling and ungrasping. Richer theories of causation and of physical preconditions are associated with more specialized actions. In section 7.8, we develop a theory of one such specialized action: loading an object into an open upright container.
+      </paragraph>
+     </section>
+     <section label="6.3">
+      <section-title>
+       Physical laws
+      </section-title>
+      <paragraph>
+       The qualitative theory of physics developed here is divided into six parts: general physical laws; basic laws of the agent's motion and manipulation; a theory of open containers; a theory of stability and falling; frame axioms, which limit the kinds of changes that occur; and specialized axioms for specific actions. We sketch each of these here; full details are given in section 7.
+      </paragraph>
+      <paragraph>
+       General physical laws
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Two distinct objects do not overlap spatially.
+       </list-item>
+       <list-item label="•">
+        The trajectory of an object is a continuous function of time.
+       </list-item>
+       <list-item label="•">
+        An object o occupies a region feasible for o.
+       </list-item>
+      </list>
+      <paragraph>
+       Motion and manipulation
+      </paragraph>
+      <list>
+       <list-item label="•">
+        The agent can grasp an object o only if he is spatially in contact with o. The agent can manipulate o only if he is grasping it.
+       </list-item>
+       <list-item label="•">
+        If the agent is holding an object, he can release it at any time.
+       </list-item>
+      </list>
+      <paragraph>
+       Open containers
+      </paragraph>
+      <list>
+       <list-item label="•">
+        If an object is in an upright open container, and the agent moves the container and keeps it upright, then the object will remain in the container.
+       </list-item>
+       <list-item label="•">
+        If a lid is properly placed on a box, and the agent moves the box and keeps it upright, then the lid will stay on the box.
+       </list-item>
+      </list>
+      <paragraph>
+       We do not need comparable physical axioms for closed containers; the fact that an object necessarily remains in a closed container is a consequence of the general physical laws, that objects move continuously and do not overlap, together with spatio-temporal theorems.
+      </paragraph>
+      <paragraph>
+       Stability and falling
+      </paragraph>
+      <list>
+       <list-item label="•">
+        If an object is not being grasped and is in an unstable position, it will fall for a time, then reach a stable position.
+       </list-item>
+       <list-item label="•">
+        If an object is inside an upright open container and falls, it will remain inside the container.
+       </list-item>
+      </list>
+      <paragraph>
+       We do not give any geometric rules for evaluating stability. The theory in this paper is consistent with the possibility that an object is stable while floating in mid-air. A stronger theory of stability is given in [8].
+      </paragraph>
+      <paragraph label="Frame axioms">
+       The most important of the frame axioms governs change in position, and is formulated in terms of “causally isolated” sets of objects. A set of object ox is isolated by a set of objects os if the agent cannot cause any of the objects in ox to move without moving some of those in os.
+      </paragraph>
+      <list>
+       <list-item label="•">
+        At any time, if the agent is not manipulating any object and all objects are stable, then no object except the agent moves. (This corresponds to a quasi-static physics, in which dissipative forces like friction are large enough to rapidly stop any inertial motion.)
+       </list-item>
+       <list-item label="•">
+        If a set of objects s is causally isolated during the interval [ta,tb] and all the objects in s are in a stable position at time ta, then all the objects in s remain motionless and stable throughout the interval.
+       </list-item>
+      </list>
+      <paragraph>
+       In the real world, there are, of course, exceptions to many of these rules; but in everyday settings they are generally true or approximately true.
+      </paragraph>
+      <paragraph>
+       Specialized action
+      </paragraph>
+      <list>
+       <list-item label="•">
+        If the agent can both grasp object o and reach the inside of open container oc and if the current contents of oc together with o are small as compared to the inside of oc, then the agent can load o into oc.
+       </list-item>
+      </list>
+     </section>
+     <section label="6.4">
+      <section-title>
+       Sample inferences
+      </section-title>
+      <paragraph>
+       In section 8 we establish the power of the theory constructed in section 7 by showing that it suffices to justify a collection of sample inferences.
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        An object inside a rigid closed container remains inside.
+       </list-item>
+       <list-item label="2.">
+        If object oa is inside a closed container ob, which is inside a closed container oc, and oc is a rigid object, then oa remains inside oc.
+       </list-item>
+       <list-item label="3.">
+        In the problem shown in Fig. 3, the ball must reach the red region before it can reach the green region.
+       </list-item>
+       <list-item label="4.">
+        If object ox4 is outside upright container ob4, and the current contents of ob4 together with ox4 are much smaller than the interior of ob4, and the agent can reach and move ox4 and can reach into ob4, then the agent can load ox4 into ob4.
+       </list-item>
+       <list-item label="5.">
+        Let ob5 and ol5 be a box with lid at time ta5, and let os5 be an object inside the box. Assume that the agent is outside the box at time ta5. If os5 is somewhere else at time tb5, and the box is fixed throughout [ta5,tb5] then the lid must have moved at some time in between ta5 and tb5.
+       </list-item>
+      </list>
+      <paragraph>
+       Two key features of these inferences should be noted. The first is the weakness of the information provided. In none of these do we require any geometric specifications of the objects involved. The inferences do require that some of the objects are rigid; but the objects that are not constrained to be rigid can be anything at all.
+      </paragraph>
+      <paragraph>
+       The second feature is that the inferences remain valid whatever else is true and whatever else is going on. In inference (1) above, for example, it may be that the container is a box containing fifty randomly shaped objects of unknown physical characteristics, and that the box is being tossed up and down. Nothing in the problem specification rules this out. The conclusion is still valid; in fact, the proof is unchanged. (It may, of course, be more difficult for an automated reasoner to find the proof, amid this distracting additional information.) In inference 4, ox4 may itself be a closed container with objects inside, or an upright open container, or a box with a lid. This is one of the major advantages, often overlooked in the AI literature, of deductive inference as opposed to plausible inference. In any system of plausible inference, adding any additional fact can potentially upset the entire applecart; you always have to check that the new fact does not disrupt assumptions you have made. In non-monotonic logic, you have to check that the new fact does not contradict default assumptions (weaken circumscriptive axioms etc.). In probabilistic reasoning, you have to check that the old conclusion is independent of the new information. By contrast, in monotonic logic, a valid proof from premises remains valid, whatever else is learned.
+      </paragraph>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      Formal theory of the microworld and the knowledge base
+     </section-title>
+     <paragraph>
+      We now proceed to the formal account of the microworld, the representation language, and the knowledge base. In section 8, we will present formal specifications for some problems.
+     </paragraph>
+     <section label="7.1">
+      <section-title>
+       Logic, sorts, notation
+      </section-title>
+      <paragraph>
+       The representation language is a sorted (typed) first-order logic with equality. We use symbols in lower case Arial font for variables, such as u,v; symbols in Arial font, starting with an upper case character, for constants, function, and predicates symbols; such as Lt or Union; and symbols in italics for sorts, such as Time or Region.
+      </paragraph>
+      <paragraph>
+       The sorting system is simple.
+      </paragraph>
+      <list>
+       <list-item label="•">
+        A sort is equivalent to a monadic predicate.
+       </list-item>
+       <list-item label="•">
+        The space of entities is partitioned into 6 disjoint sets: Time, Region, History, Object, ObjectSet and Action.
+       </list-item>
+       <list-item label="•">
+        Every non-logical symbol (constant, function, predicate) has a unique sortal signature. We do not use overloading or polymorphism.
+       </list-item>
+      </list>
+      <paragraph>
+       The precedence of Boolean operators is: ¬, ∧, ∨, ⇒, ⇔. The quantifiers ∀, ∃, and {a mathematical formula}∃1 (unique existence) have scope until the end of the formula or close bracket of larger scope.
+      </paragraph>
+      <paragraph>
+       The entities in the universe are partitioned into sorts. Each entity is of exactly one sort. There are six sorts: Time, Region, History, Object, ObjectSet and Event. For each sort there is a corresponding unary predicate, written in typewriter font; for example, the predicate Time(t) corresponds to the sort Time.
+      </paragraph>
+      <paragraph>
+       We use italicized sortal symbols in two contexts. The first use is for restricted quantification.{sup:9} A quantified variable can be restricted to a sort, with the standard meanings: If μ is a variable, α is a sortal symbol and {a mathematical formula}ϕ(μ) is a formula, then{a mathematical formula} For example{a mathematical formula} The second use of sortal symbols is in the declaration of non-logical symbols. Every non-logical symbol is introduced with a declaration of the sorts of its arguments and values. In our theory, sorting of non-logical symbols is strict; every symbol except the equality and inequality signs is sorted and there is no overloading or polymorphism. Each such declaration implicitly expresses a sortal axiom governing the symbol. The syntax of declarations is modeled on the syntax of function declarations in programming languages such as Pascal or Ada. These declarations and axioms are of three types:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Constant symbols. A constant symbol has a declaration of the form Symbol → Sort. The corresponding axiom states that the symbol is of the sort. For example, the declaration “Ta → Time” corresponds to the axiom “Time(Ta)”.
+       </list-item>
+       <list-item label="•">
+        Predicate symbols. A predicate symbol declaration declares a sort for each argument. The corresponding axiom asserts that the predicate holds on arguments only if the arguments are of the proper sorts. For instance, the declaration{a mathematical formula}
+       </list-item>
+       <list-item label="•">
+        Function symbols. A function symbol declaration declares the sorts of each argument and the sort of the result. The corresponding axiom asserts that if the arguments have the specified sorts, then the result has the specified sort. For example, the declaration{a mathematical formula} Functions are all total over the space of arguments of the proper sort. (Presumably, the function is undefined if the sortal conditions on the arguments are not met, but we do not axiomatize that.)
+       </list-item>
+      </list>
+      <paragraph>
+       Thus, the entire theory in the sorted logic can be translated into an equivalent theory in an unsorted logic.
+      </paragraph>
+      <paragraph>
+       We have not formalized the distinction between a definition and an axiom, but what we intend is that a definition of symbol s allows s to be replaced by its defining term in all meaningful contexts. How that is achieved depends on what s is. For instance, a predicate is defined by necessary and sufficient conditions; a set is defined by specifying necessary and sufficient conditions on its elements; an event is defined by specifying necessary and sufficient conditions for its occurrence; and so on. A definition of a constant or a function symbol in terms of a property can be a substantive axiom, since it implies that an entity satisfying that property exists. For instance, in section 7.4.1, we define the function Pair(oa,ob) as a function mapping two objects oa and ob to the set {oa, ob}; this definition corresponds to the usual Zermelo–Frankel axiom of pairing, since it entails that such a set exists.
+      </paragraph>
+      <paragraph>
+       The axioms here are sufficient to prove the five sample inferences of section 8, and they are necessarily true in our intended model. However neither converse holds: some of the axioms are not used in any of the sample inferences and thus, not necessary for those inferences; and the axioms are not sufficient to enforce all the properties of the model described in the text. For instance, as regards the axioms of time, it turns out, somewhat surprisingly, that the only proper axiom of time that we use in our inferences, is T.I.A.2, transitivity; that is, our inferences will work in any model of time in which “earlier than” is transitive. In the other direction, the axioms certainly do not suffice to enforce the condition that time lines are continuous (isomorphic to the real line). The choice of which axioms to include here is determined, partly by considerations of which axioms we think might be used in other commonsense reasoning, partly by the aesthetics of axiomatization. It would seem too weird to omit anti-symmetry in an axiomatization of time, even though this property never happens to come up in our sample inferences.
+      </paragraph>
+      <paragraph>
+       We organize our presentation in this section in terms of subtheories in a dependency order. The subtheories are organized in a two-level hierarchy. The structure of this section of the paper corresponds to this same hierarchy: Top-level subtheories correspond to subsections of the paper (e.g. Space is subsection 7.3) and lower-level subtheories correspond to sub-subsections (e.g. Containment is sub-subsection 7.3.2). In each section or subsection, we first declare the new formal symbols introduced, then enumerate the definitions, then enumerate the axioms. The symbols used in the definitions and axioms for a given subtheory are introduced either in that subtheory or in previously presented subtheories; that is, no subtheory depends in any way on material presented later.
+      </paragraph>
+      <paragraph>
+       Axioms are numbered using four field designators. The first two indicate the second and subsection; the third is ‘D’ or ‘A’ for definition or axiom; the fourth is just an enumerative number. Occasionally there may be redundant axioms; unlike a mathematical context, in developing a knowledge base, eliminating redundancy is not in general a priority.
+      </paragraph>
+      <paragraph>
+       Table 1 enumerates the subtheories, the character designators, the corresponding paper sections, and the scenarios that illustrate the use of the subtheory. Fig. 7 displays the dependency relations between the subtheories. Both the division into the lower-level subtheories and the dependencies between subtheories are substantially arbitrary and should not be taken very seriously.
+      </paragraph>
+     </section>
+     <section label="7.2">
+      <section-title>
+       Time
+      </section-title>
+      <paragraph>
+       In our intended model, time is forward-branching and continuous; each maximal fully-ordered path through the time structure is isomorphic to the real line {a mathematical formula}R. Forward branching corresponds to an agent's choice between actions. Branches occur after instants; that is, an interval that is bounded and open on the right has a unique least upper bound, but there can be any number of non-overlapping intervals with the same lower bound. For instance, in Fig. 8 on the next page, the figure on the left shows a permissible branching, in which the open interval U has a single end point B, and the closed intervals [B, C], [B, D], and [B, E] have the common start point B and are otherwise disjoint. The figure on the right shows a non-permissible topology for branching, in which the open interval U is followed by three possible endpoints, B1, B2, and B3; and the closed intervals [B1, C], [B2, D], and [B3, E] each has a different starting point.{sup:10}
+      </paragraph>
+      <paragraph>
+       The axioms of time given below do not enforce these conditions, but the conditions are assumed in theories developed later in the paper. For instance, as discussed in section 7.5.1, it is assumed that a grasping or non-grasping relation holds over a time interval that is open on the left and closed on the right; that choice is arbitrary in physical terms, but it is made in order to conform to this model.
+      </paragraph>
+      <paragraph>
+       Since time is forward branching, it is not totally ordered; but the times previous to any given time Z are totally ordered (axiom T.I.A.4 below).
+      </paragraph>
+      <paragraph>
+       It will be convenient to view the time structure as containing all possible configurations of the objects. This allows us to define the predicate FeasiblePlace(o,r), (region r is a feasible configuration for object o) as true if and only if there is some time when r is the region occupied by o, and to define the predicate Fits(s,r), (object set s fits inside r) as true if and only if there is some time when s is inside r (section 7.4.5).
+      </paragraph>
+      <paragraph>
+       As a convention, in any predicate or function where there are both temporal arguments and arguments of a different sort, we place the temporal arguments first.
+      </paragraph>
+      <section label="7.2.1">
+       <section-title>
+        Time ordering
+       </section-title>
+       <paragraph>
+        Symbols
+       </paragraph>
+       <paragraph>
+        Lt(x,y:Time) – Time x is earlier than time y.
+       </paragraph>
+       <paragraph>
+        Leq(x,y: Time) – Time x is earlier than or equal to time y.
+       </paragraph>
+       <paragraph>
+        Ordered(x,y:Time).
+       </paragraph>
+       <paragraph>
+        Leq3(x,y,z:Time). x ≤ y ≤ z.
+       </paragraph>
+       <paragraph>
+        Definitions
+       </paragraph>
+       <list>
+        <list-item label="T.I.D.1">
+         ∀x,y: TimeLeq(x,y) ⇔ Lt(x,y) ∨ {a mathematical formula}x=y.
+        </list-item>
+        <list-item label="T.I.D.2">
+         ∀x,y: TimeOrdered(x,y) ⇔ Leq(x,y) ∨ Leq(y,x).
+        </list-item>
+        <list-item label="T.I.D.3">
+         Leq3(x,y,z) ⇔ Leq(x,y) ∧ Leq(y,z).
+        </list-item>
+       </list>
+       <paragraph>
+        Axioms
+       </paragraph>
+       <paragraph>
+        {a mathematical formula}
+       </paragraph>
+       <paragraph>
+        Forward branching: The times earlier than z are totally ordered.
+       </paragraph>
+      </section>
+      <section label="7.2.2">
+       <section-title>
+        Actions
+       </section-title>
+       <paragraph>
+        An action a is executed over an extended interval [ta,tb] where ta &lt; tb. An action a is feasible at time t if it is executed on some branch of the time line starting at t. The action Sequence(a1,a2) occurs if a1 and a2 are executed in sequence.
+       </paragraph>
+       <paragraph>
+        Symbols
+       </paragraph>
+       <paragraph>
+        Occur(ta,tb:Time; a:Action).
+       </paragraph>
+       <paragraph>
+        Feasible(t: Time; a: Action).
+       </paragraph>
+       <paragraph>
+        Sequence(a1,a2:Action) → Action.
+       </paragraph>
+       <paragraph>
+        Definitions
+       </paragraph>
+       <list>
+        <list-item label="T.A.D.1">
+         Feasible(ta,a) ⇔ ∃tbOccurs(ta,tb,a).
+        </list-item>
+        <list-item label="T.A.D.2">
+         ∀ta,tb: Time; a1,a2:ActionOccurs(ta,tb,Sequence(a1,a2)) ⇔ ∃txOccurs(ta,tx,a1) ∧ Occurs(tx,tb,a2).
+        </list-item>
+       </list>
+       <paragraph>
+        Axioms
+       </paragraph>
+       <paragraph>
+        T.A.A.1 Occurs(ta,tb,a) ⇒ Lt(ta,tb).
+       </paragraph>
+      </section>
+     </section>
+     <section label="7.3">
+      <section-title>
+       Spatial relations
+      </section-title>
+      <paragraph>
+       Space is assumed to be three-dimensional Euclidean space {a mathematical formula}R3. As it happens, none of the axioms in this paper depend very strongly on that assumption; they certainly all hold in {a mathematical formula}Rk for any {a mathematical formula}k&gt;1, and probably in less realistic spatial models as well (e.g. carefully constructed discrete models of space). A Region is a bounded, topologically regular, set of points in {a mathematical formula}R3.
+      </paragraph>
+      <section label="7.3.1">
+       <section-title>
+        Basic spatial relations
+       </section-title>
+       <paragraph>
+        We use the RCC-8 [34] binary spatial relations P, C, O, DR, EC, DC and OV. The definitions and axioms S.B.A.2 and .3 below are standard in the RCC literature. S.B.A.1 asserts, in effect, that the RCC relation EQ is in fact logical equality. Axiom S.A.B.4 asserts that if region w overlaps the union of u and v then it overlaps either u or v. For an extensive discussion of the axiomatization of RCC, see [32], [33].
+       </paragraph>
+       <paragraph>
+        Symbols
+       </paragraph>
+       <paragraph>
+        P(u,v:Region) – Region u is a subset of v.
+       </paragraph>
+       <paragraph>
+        C(u,v:Region) – Regions u and v are in contact.
+       </paragraph>
+       <paragraph>
+        O(u,v:Region) – Regions u and v overlap.
+       </paragraph>
+       <paragraph>
+        DR(u,v:Region) – Regions u and v do not overlap.
+       </paragraph>
+       <paragraph>
+        EC(u,v:Region) – Regions u and v are externally connected.
+       </paragraph>
+       <paragraph>
+        DC(u,v:Region) – Regions u and v are disconnected.
+       </paragraph>
+       <paragraph>
+        OV (u,v:Region) – Regions u and v partially overlap.
+       </paragraph>
+       <paragraph>
+        RUnion(u,v:Region) → Region – Union of regions u and v.
+       </paragraph>
+       <paragraph>
+        Definitions
+       </paragraph>
+       <list>
+        <list-item label="S.B.D.1">
+         ∀u,v: RegionP(u,v) ⇔ ∀wC(w,u) ⇒ C(w,v).
+        </list-item>
+        <list-item label="S.B.D.2">
+         O(u,v) ⇔ ∃zP(z,u) ∧ P(z,v).
+        </list-item>
+        <list-item label="S.B.D.3">
+         ∀u,v: RegionDR(u,v) ⇔ ¬O(u,v).
+        </list-item>
+        <list-item label="S.B.D.4">
+         EC(u,v) ⇔ DR(u,v) ∧ C(u,v).
+        </list-item>
+        <list-item label="S.B.D.5">
+         ∀u,v:RegionDC(u,v) ⇔ ¬C(u,v).
+        </list-item>
+        <list-item label="S.B.D.6">
+         ∀u,v:Regionw = RUnion(u,v) ⇔ P(u,w) ∧ P(v,w) ∧ ∀xP(u,x) ∧ P(v,x) ⇒ P(w,x).
+        </list-item>
+        <list-item label="S.B.D.7">
+         OV(u,v) ⇔ O(u,v) ∧ ¬P(u,v) ∧ ¬P(v,u)
+        </list-item>
+       </list>
+       <paragraph>
+        Axioms
+       </paragraph>
+       <list>
+        <list-item label="S.B.A.1">
+         P(u,v) ∧ P(v,u) ⇒ {a mathematical formula}u=v.
+        </list-item>
+        <list-item label="S.B.A.2">
+         ∀u:RegionC(u,u).
+        </list-item>
+        <list-item label="S.B.A.3">
+         C(u,v) ⇒ C(v,u).
+        </list-item>
+        <list-item label="S.B.A.4">
+         O(u,RUnion(v,w)) ⇒ O(u,v) ∨ O(u,w).
+        </list-item>
+       </list>
+      </section>
+      <section label="7.3.2">
+       <section-title>
+        Spatial containment
+       </section-title>
+       <paragraph>
+        For convenience, we define multiple symbols for what are essentially the same containment relations applying to one region containing another (this section); to an object or set of objects containing a region (section 7.4.3); or to one object or set of objects containing another (section 7.4.4).
+       </paragraph>
+       <paragraph>
+        Region R is a closed container for cavity C (a region) if C is an interior-connected, bounded component of the complement of R (Fig. 9).
+       </paragraph>
+       <paragraph>
+        Region R is an open container for cavity C if there exists a region A between two parallel planar surfaces S1 and S2 such that:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         A and R do not overlap. The intersection where they meet R ∩ A is (in three dimensions) equal to the ring around A separating S1 and S2: R ∩ A = Bd(A) \ (S1 ∩ S2).
+        </list-item>
+        <list-item label="•">
+         C is a cavity of the union R ∪ A, but is not a cavity of either R or of A separately.
+        </list-item>
+       </list>
+       <paragraph>
+        Region R is an upright open container for cavity C if the planar surfaces S1 and S2 associated with A are horizontal and A is above C.
+       </paragraph>
+       <paragraph>
+        Region R is a simple upright open container for cavity C if C is the unique maximal interior with respect to which R is an upright open container (Fig. 10).
+       </paragraph>
+       <paragraph>
+        The definition of closed container is purely topological, and therefore is expressible in our qualitative spatial language. However, expressing the conditions that the surfaces S1 and S2 are planar and parallel would require a more powerful geometric theory than we are undertaking here. We therefore leave OpenContainerShape as a primitive.
+       </paragraph>
+       <paragraph>
+        We also define the function ConvexHull(r) and the relation FullyOutside(ra,rb), which is defined as holding if the convex hulls of ra and rb are disconnected (definition S.C.D.7). The relation FullyOutside is useful as a sufficient condition to establish that one object does not contain another and that two objects do not interact. We posit a few useful axioms of ConvexHull.
+       </paragraph>
+       <paragraph>
+        Symbols
+       </paragraph>
+       <paragraph>
+        IntConn(r:Region) — Region r is interior connected.
+       </paragraph>
+       <paragraph>
+        Cavity(u,v:Region) — Region u is an interior cavity of v.
+       </paragraph>
+       <paragraph>
+        Outside(u,v:Region) — Region u is outside region v.
+       </paragraph>
+       <paragraph>
+        (u is a subset of the unbounded connected component of the complement of v.)
+       </paragraph>
+       <paragraph>
+        Contained(u,v: Region) — Region u is inside a cavity in v.
+       </paragraph>
+       <paragraph>
+        CombinedContainer(ra,rb,rc: Region) — Region rc is an interior cavity of ra ∪ rb.
+       </paragraph>
+       <paragraph>
+        OpenContainerShape(rb,rc: Region) — Region rb is an open container with interior rc.
+       </paragraph>
+       <paragraph>
+        UprightContainerShape(rb,rc: Region) — Region rb is an upright open container with interior rc.
+       </paragraph>
+       <paragraph>
+        SimpleUprightContainerShape(rb,rc: Region).
+       </paragraph>
+       <paragraph>
+        OpenContained(ra,rb:Region) — Region ra is in the open container rb.
+       </paragraph>
+       <paragraph>
+        ConvexHull (r:Region) → Region — Convex hull of region r.
+       </paragraph>
+       <paragraph>
+        FullyOutside (ra,rb:Region)– Regions ra and rb are separable by a plane.
+       </paragraph>
+       <paragraph>
+        PartiallyContained(ra,rb:Region)– Region ra is partially contained in the open container rb.
+       </paragraph>
+       <paragraph>
+        Definitions
+       </paragraph>
+       <list>
+        <list-item label="S.C.D.1">
+         Cavity(u,v) ⇔ IntConn(u) ∧ IntConn(v) ∧ DR(u,v) ∧ ∀rIntConn(r) ∧ O(r,u) ∧ DR(r,v) ⇒ P(r,u).Region u is a cavity of v if it is a maximal interior-connected region disjoint from v. (Note that the outside of v does not satisfy this condition, since u must be a region and by definition a region is bounded.)
+        </list-item>
+        <list-item label="S.C.D.2">
+         Outside(u,v) ⇔ [DR(u,v) ∧ [∀wCavity(w,v) ⇒ DR(u,w)]].Region u is outside v if u is disjoint from v and from every cavity of u.
+        </list-item>
+        <list-item label="S.C.D.3">
+         Contained(u,v) ⇔ ∃cCavity(c,v) ∧ P(u,c).Region u is contained in v if u is part of a cavity of v.
+        </list-item>
+        <list-item label="S.C.D.4">
+         CombinedContainer(ra,rb,rc) ⇔ EC(ra,rb) ∧ Cavity(rc,RUnion(ra,rb)) ∧ ¬Cavity(rc,ra) ∧ ¬Cavity(rc,rb).
+        </list-item>
+        <list-item label="S.C.D.5">
+         SimpleUprightContainerShape(rb,rc) ⇔ UprightContainerShape(rb,rc) ∧ ∀rdUprightContainerShape(rb,rd) ⇒ P(rd,rc).
+        </list-item>
+        <list-item label="S.C.D.6">
+         OpenContained(ra,rb) ⇔ ∃rcOpenContainerShape(rb,rc) ∧ P(ra,rc).
+        </list-item>
+        <list-item label="S.C.D.7">
+         FullyOutside(ra,rb) ⇔ DC(ConvexHull(ra),ConvexHull(rb))
+        </list-item>
+        <list-item label="S.C.D.8">
+         PartiallyContained(ra,rb) ⇔ ¬OpenContained(ra,rb) ∧ ∃rcP(rc,ra) ∧ OpenContained(rc,rb).
+        </list-item>
+       </list>
+       <paragraph>
+        Axioms
+       </paragraph>
+       <list>
+        <list-item label="S.C.A.1">
+         Contained(u,v) ∧ Contained(v,w) ⇒ Contained(u,w).
+        </list-item>
+        <list-item label="S.C.A.2">
+         UprightContainerShape(rb,rc) ⇒ OpenContainerShape(rb,rc).
+        </list-item>
+        <list-item label="S.C.A.3">
+         OpenContainerShape(u,v) ⇒ EC(u,v).
+        </list-item>
+        <list-item label="S.C.A.4">
+         ∀r:RegionP(r,ConvexHull(r)).
+        </list-item>
+        <list-item label="S.C.A.5">
+         Cavity(u,v) ⇒ P(u,ConvexHull(v)).
+        </list-item>
+        <list-item label="S.C.A.6">
+         OpenContainerShape(u,v) ⇒ P(v,ConvexHull(u)).
+        </list-item>
+        <list-item label="S.C.A.7">
+         P(u,v) ⇒ P(ConvexHull(u),ConvexHull(v)).
+        </list-item>
+        <list-item label="S.C.A.8">
+         OpenContained(u,v) ∧ DR(ConvexHull(u),v) ⇒ OpenContained(ConvexHull(u),v).
+        </list-item>
+       </list>
+      </section>
+      <section label="7.3.3">
+       <section-title>
+        Much smaller
+       </section-title>
+       <paragraph>
+        We include a qualitative comparator on the size of regions: MuchSmaller(ra,rb), meaning that region ra is much smaller than rb. This comparator on region is related to the predicate SmallSet(s,r) (section 7.4.5) which in turn is used in some specialized physical axioms (e.g. A.C.A.A, section 7.8.2).
+       </paragraph>
+       <paragraph>
+        The axioms state that MuchSmaller is a partial ordering (S.M.A.1, .2); compatible with the part relation P (S.M.A.3); and invariant under taking the convex hull (S.M.A.4). S.M.A.5 asserts that a container, closed or open, cannot be much smaller than the region it contains. It follows that a small region cannot contain a larger region in any sense of “containment”. These axioms, and further properties stated below, are satisfied under various possible definitions of MuchSmaller; for example, they are satisfied if MuchSmaller(ra,rb) is defined as the diameter of ra is k times smaller than the diameter of rb for some fixed {a mathematical formula}k&gt;1. (On the other hand, there are plausible geometric relations that could be called “much smaller” that would not satisfy the axioms; for instance, the relation “volume of ra is much smaller than volume of rb” would not satisfy axiom S.M.A.4. or S.M.A.5.).
+       </paragraph>
+       <paragraph>
+        Symbols
+       </paragraph>
+       <paragraph>
+        MuchSmaller(ra,rb:Region).
+       </paragraph>
+       <paragraph>
+        Axioms
+       </paragraph>
+       <list>
+        <list-item label="S.M.A.1">
+         ¬MuchSmaller(ra,ra).
+        </list-item>
+        <list-item label="S.M.A.2">
+         MuchSmaller(ra,rb) ∧ MuchSmaller(rb,rc) ⇒ MuchSmaller(ra,rc).
+        </list-item>
+        <list-item label="S.M.A.3">
+         MuchSmaller(ra,rb) ∧ P(rc,ra) ∧ P(rb,rd) ⇒ MuchSmaller(rc,rd).
+        </list-item>
+        <list-item label="S.M.A.4">
+         MuchSmaller(ra,rb) ⇒ MuchSmaller(ConvexHull(ra),rb)
+        </list-item>
+        <list-item label="S.M.A.5">
+         MuchSmaller(ra,rb) ⇒ ¬Cavity(rb,ra) ∧ ¬OpenContainerShape(ra,rb)
+        </list-item>
+       </list>
+      </section>
+     </section>
+     <section label="7.4">
+      <section-title>
+       Objects
+      </section-title>
+      <paragraph>
+       The theory of objects introduces two sorts: Object and ObjectSet. Objects are disjoint; they do not overlap, and one object is not part of another.
+      </paragraph>
+      <section label="7.4.1">
+       <section-title>
+        Object sets
+       </section-title>
+       <paragraph>
+        The relations over object sets and their definitions are standard. The sole axiom O.S.A.1 is the axiom of extension, that two sets with the same elements are equal. We do not posit a comprehension axiom, that any definable property defines a set, since that would require an axiom schema. For that reason, when we need to refer to a particular set, we need to posit its existence (in some cases implicitly, by using a constant or function symbol). For instance, in section 7.4.2 we define the set of all objects in region r at time t to be a set by introducing the function Contents(t,r) to have sort ObjectSet and by asserting necessary and sufficient conditions for an object o to be an element of Contents(t,r) (definition O.T.D.2).
+       </paragraph>
+       <paragraph>
+        Symbols
+       </paragraph>
+       <paragraph>
+        Element(x:Object; s:ObjectSet). — Objectx is an element of ObjectSets.
+       </paragraph>
+       <paragraph>
+        Null → ObjectSet.
+       </paragraph>
+       <paragraph>
+        Singleton(x:Object) → ObjectSet. — { x }
+       </paragraph>
+       <paragraph>
+        Pair(x,y:Object) → ObjectSet. — { x,y }
+       </paragraph>
+       <paragraph>
+        Subset(sa,sb:ObjectSet).
+       </paragraph>
+       <paragraph>
+        Disjoint(sa,sb:ObjectSet).
+       </paragraph>
+       <paragraph>
+        Union(sa,sb:ObjectSet) → ObjectSet.
+       </paragraph>
+       <paragraph>
+        Definitions
+       </paragraph>
+       <list>
+        <list-item label="O.S.D.1">
+         ∀x ¬Element(x,Null).
+        </list-item>
+        <list-item label="O.S.D.2">
+         ∀x,y: ObjectElement(y,Singleton(x)) ⇔ y = x.
+        </list-item>
+        <list-item label="O.S.D.3">
+         ∀sa,sb: ObjectSetSubset(sa,sb) ⇔ ∀oElement(o,sa) ⇒ Element(o,sb).
+        </list-item>
+        <list-item label="O.S.D.4">
+         ∀x,y,z: ObjectElement(z,Pair(x,y)) ⇔ z = x ∨ z = y.
+        </list-item>
+        <list-item label="O.S.D.5">
+         ∀sa,sb: ObjectSetDisjoint(sa,sb) ⇔ ¬∃oElement(o,sa) ∧ Element(o,sb).
+        </list-item>
+        <list-item label="O.S.D.6">
+         ∀sa,sb: ObjectSet; x:ObjectElement(x,Union(sa,sb)) ⇔ Element(x,sa) ∨ Element(x,sb).
+        </list-item>
+       </list>
+       <paragraph>
+        Axioms
+       </paragraph>
+       <paragraph>
+        O.S.A.1 ∀sa,sb:ObjectSet[∀x Element(x,sa) ⇔ Element(x,sb)] ⇒ sa = sb.
+       </paragraph>
+      </section>
+      <section label="7.4.2">
+       <section-title>
+        Objects and object sets: spatio-temporal
+       </section-title>
+       <paragraph>
+        We next define the primitives that relate objects to the regions they occupy at a given time. The function Place(t,o) is the region the object o occupies at time t. The predicate FeasiblePlace(o,r) holds if it is physically possible to configure o so that it occupies r. The predicate OSPlace(t,s,r) holds if r is the region occupied by object set s at time t. (This is a predicate rather than a function, since the null set does not occupy any region.) The function Contents(t,r) is the set of objects that are in region r at time t.
+       </paragraph>
+       <paragraph>
+        Symbols
+       </paragraph>
+       <paragraph>
+        Place(t: Time; o:Object) → Region.
+       </paragraph>
+       <paragraph>
+        FeasiblePlace(o:Object; r:Region).
+       </paragraph>
+       <paragraph>
+        OSPlace(t:Time; s:ObjectSet; r:Region).
+       </paragraph>
+       <paragraph>
+        Contents(t:Time; r:Region) → ObjectSet.
+       </paragraph>
+       <paragraph>
+        Definitions
+       </paragraph>
+       <list>
+        <list-item label="O.T.D.1">
+         OSPlace(t,s,r) ⇔ s ≠ Null ∧ [∀oElement(o,s) ⇒ P(Place(t,o),r)] ∧ [∀ra [∀oElement(o,s) ⇒ P(Place(t,o),ra)] ⇒ P(r,ra)].The region occupied by a set s is the minimal region that contains all the regions occupied by the elements of s.
+        </list-item>
+        <list-item label="O.T.D.2">
+         ∀o:Object; r:Region; t: TimeElement(o,Contents(t,r)) ⇔ P(Place(t,o),r).
+        </list-item>
+        <list-item label="O.T.D.3">
+         ∀r:Region; o:ObjectFeasiblePlace(o,r) ⇔ ∃t:TimePlace(t,o) = r.
+        </list-item>
+       </list>
+       <paragraph>
+        Axioms
+       </paragraph>
+       <list>
+        <list-item label="O.T.A.1">
+         Any two objects are spatially disjoint.
+        </list-item>
+        <list-item label="O.T.A.2">
+         The null set has no place.
+        </list-item>
+        <list-item label="O.T.A.3">
+         Every non-empty set of objects occupies a unique region at any time.
+        </list-item>
+        <list-item label="O.T.A.4">
+         An object occupies an interior connected region.
+        </list-item>
+        <list-item label="O.T.A.5">
+         OSPlace(t,s,r) ∧ Object(o) ∧ ¬Element(o,s) ⇒ DR(Place(t,o),r).Any object o that is not an element of set s occupies a region disjoint from the place of s. You would think this should be a consequence of O.T.A.5 and O.T.A.2, but a more powerful spatial theory would be needed to support that inference.
+        </list-item>
+       </list>
+      </section>
+      <section label="7.4.3">
+       <section-title>
+        Objects containing regions
+       </section-title>
+       <paragraph>
+        We here define the containment relations between a container, which is an object or a set of objects and a region that it contains. Here and in section 7.5.4, we define closed containers in terms of a set of objects but open containers in terms of a single object, because closed containers are often composed of multiple objects (e.g. a box with a lid; a bottle with a cap; and so on) whereas this is rarer for open containers, though it does occur (e.g. cupping your two hands).
+       </paragraph>
+       <paragraph>
+        Note: A cup upside down inside a closed box is both an object inside a closed container and part of a closed container. A box with shelves therefore forms {a mathematical formula}n(n−1)/2 closed containers (any pair of shelves/top/bottom determine a container) and a box with small cubby holes and dividers in two directions forms an exponential number (any interior-connected collection of cubby holes is considered a closed container) but that's the way it goes.
+       </paragraph>
+       <paragraph>
+        Symbols
+       </paragraph>
+       <paragraph>
+        ClosedContainer(t:Time; s:ObjectSet;rc:Region).
+       </paragraph>
+       <paragraph>
+        OpenContainer(t:Time;o:Object;rc:Region).
+       </paragraph>
+       <paragraph>
+        UprightContainer(t:Time;o:Object;rc:Region).
+       </paragraph>
+       <paragraph>
+        SimpleUprightContainer(t:Time;o:Object;rc:Region).
+       </paragraph>
+       <paragraph>
+        Definitions
+       </paragraph>
+       <list>
+        <list-item label="O.R.D.1">
+         ClosedContainer(t,s,rc) ⇔ ∃rsOSPlace(t,s,rs) ∧ Cavity(rc,rs).
+        </list-item>
+        <list-item label="O.R.D.2">
+         OpenContainer(t,o,rc) ⇔ Time(t) ∧ Object(o) ∧ OpenContainerShape(Place(t,o),rc).
+        </list-item>
+        <list-item label="O.R.D.3">
+         UprightContainer(t,o,rc) ⇔ Time(t) ∧ Object(o) ∧ UprightContainerShape(Place(t,o),rc).
+        </list-item>
+        <list-item label="O.R.D.4">
+         SimpleUprightContainer(t,o,rc) ⇔ Time(t) ∧ Object(o) ∧ SimpleUprightContainerShape(Place(t,o),rc).
+        </list-item>
+       </list>
+      </section>
+      <section label="7.4.4">
+       <section-title>
+        Object containment
+       </section-title>
+       <paragraph>
+        We define the analogous containment relations for the case of one object or a set of objects containing another object.
+       </paragraph>
+       <paragraph>
+        Symbols
+       </paragraph>
+       <paragraph>
+        CContained(t:Time; ox:Object;s:ObjectSet).
+       </paragraph>
+       <paragraph>
+        OContained(t:Time; ox, ob:Object).
+       </paragraph>
+       <paragraph>
+        UContained(t:Time; ox, ob:Object).
+       </paragraph>
+       <paragraph>
+        CContents(t:Time; s:ObjectSet) → ObjectSet.
+       </paragraph>
+       <paragraph>
+        UContents(t:Time; o:Object) → ObjectSet.
+       </paragraph>
+       <paragraph>
+        Definitions
+       </paragraph>
+       <list>
+        <list-item label="O.C.D.1">
+         CContained(t,ox,s) ⇔ ∃rcClosedContainer(t,s,rc) ∧ Object(ox) ∧ P(Place(t,ox),rc).
+        </list-item>
+        <list-item label="O.C.D.2">
+         OContained(t,ox,ob) ⇔ ∃rcOpenContainer(t,ob,rc) ∧ Object(ox) ∧ P(Place(t,ox),rc).
+        </list-item>
+        <list-item label="O.C.D.3">
+         UContained(t,ox,ob) ⇔ ∃rcUprightContainer(t,ob,rc) ∧ Object(ox) ∧ P(Place(t,ox),rc).
+        </list-item>
+        <list-item label="O.C.D.4">
+         ∀t:Time;s,sb:ObjectSets = CContents(t,s,sb) ⇔ ∀oxElement(ox,s) ⇔ CContained(t,ox,sb).
+        </list-item>
+        <list-item label="O.C.D.5">
+         ∀t:Time;ob:Object;s:ObjectSets = UContents(t,ob) ⇔ ∀oxElement(ox,s) ⇔ UContained(t,ox,ob).
+        </list-item>
+       </list>
+      </section>
+      <section label="7.4.5">
+       <section-title>
+        Fits and small set
+       </section-title>
+       <paragraph>
+        The final category of spatial relations that we axiomatize involves objects fitting into a region. The predicates Fits(s,r) means that object set s fits into region r. (This is a purely geometric relation, meaning that there is a configuration of s that lies inside r; it does not require that it is physically possible to move the objects in s into that configuration.) The predicate SmallSet(s,r) means that object set s fits into a region that is much smaller than r. Likewise we consider a class of small objects. These are objects that are much smaller than the agent, and therefore particularly easy to move.
+       </paragraph>
+       <paragraph>
+        Symbols
+       </paragraph>
+       <paragraph>
+        Fits(s:ObjectSet;r:Region).
+       </paragraph>
+       <paragraph>
+        OMuchSmaller(o:Object;r:Region).
+       </paragraph>
+       <paragraph>
+        SmallSet(s:ObjectSet;r:Region).
+       </paragraph>
+       <paragraph>
+        SmallObject(o:Object).
+       </paragraph>
+       <paragraph>
+        Definitions
+       </paragraph>
+       <list>
+        <list-item label="O.F.D.1">
+         Fits(s,r) ⇔ s = Null ∨ ∃t,raOSPlace(t,s,ra) ∧ P(ra,r).
+        </list-item>
+        <list-item label="O.F.D.2">
+         OMuchSmaller(o,r) ⇔ ∀rbFeasiblePlace(o,rb) ⇒ MuchSmaller(rb,r).
+        </list-item>
+        <list-item label="O.F.D.3">
+         SmallObject(o) ⇔ ∀raFeasiblePlace(Agent,ra) ⇒ OMuchSmaller(o,ra).
+        </list-item>
+        <list-item label="O.F.D.4">
+         SmallSet(s,r) ⇔ [∃raFits(s,ra) ∧ MuchSmaller(ra,r)] ∧ [∀oElement(o,s) ⇒ OMuchSmaller(o,r)].
+        </list-item>
+       </list>
+      </section>
+      <section label="7.4.6">
+       <section-title>
+        Isolates
+       </section-title>
+       <paragraph>
+        The relation Isolates(t,sp,sx), read “At time t, object set sp isolates object set sx,” is central to our formulation of frame axioms in section 7.5.4. The intended meaning is that the agent, in his current position, cannot move the objects in sx without moving some of the objects in sp. We do not give a full characterization of the predicate Isolates; we enumerate a few properties and give two sufficient conditions. Definition O.I.D.1 defines sets sp and sx as “isolate candidates” if they are disjoint, and neither contains the agent himself. Axiom O.I.A.1 states that sp can only isolate sx if they are isolate candidates. Axiom O.I.A.2 states that sp isolates sx if they are isolate candidates, and if the only objects in contact with an object in sx is either in sx itself or in sp. Axiom O.I.A.3 states that sp isolates sx if sp forms a closed container with cavity rc, sx is the contents of rc, and the agent is outside rc.
+       </paragraph>
+       <paragraph>
+        One might suppose that O.I.A.3 followed from O.I.A.1 and .2, but Fig. 11 shows why that is not the case. The agent is in contact with the object U, so the conditions of axiom O.I.A.2 are not satisfied, but axiom O.I.A.3 can be used to infer that the set { V } isolates set { U }.
+       </paragraph>
+       <paragraph>
+        Symbols
+       </paragraph>
+       <paragraph>
+        Isolates(t: Time; sp,sx:ObjectSet)
+       </paragraph>
+       <paragraph>
+        IsolatesCand(sp,sx:ObjectSet)
+       </paragraph>
+       <paragraph>
+        Definitions
+       </paragraph>
+       <paragraph>
+        O.I.D.1 IsolateCand(sp,sx) ⇔ ¬Element(Agent,sp) ∧ ¬Element(Agent,sx) ∧ Disjoint(sp,sx).
+       </paragraph>
+       <paragraph>
+        Axioms
+       </paragraph>
+       <list>
+        <list-item label="O.I.A.1">
+         Isolates(t,sp,sx) ⇒ IsolateCand(sp,sx)
+        </list-item>
+        <list-item label="O.I.A.2">
+         {a mathematical formula}∀sx,sp:ObjectSet;; t: Time;IsolateCand(sp,sx) ∧[∀ox,oElement(ox,sx) ∧ EC(Place(t,o),Place(t,ox)) ⇒[Element(o,sx) ∨ Element(o,sp)]] ⇒Isolates(t,sp,sx).
+        </list-item>
+        <list-item label="O.I.A.3">
+         ClosedContainer(t,sp,rc) ∧ ¬P(Place(t,Agent),rc) ∧ ¬Element(Agent,sp) ⇒ Isolates(t,sp,Contents(t,rc))
+        </list-item>
+       </list>
+      </section>
+     </section>
+     <section label="7.5">
+      <section-title>
+       Motion and manipulation
+      </section-title>
+      <paragraph>
+       In this section we present a partial, qualitative theory of an object moving and of an agent manipulating an object. Our theory partially categorizes motion under quasi-static conditions ([26], section 13.1.3), in which forces like friction always quickly dissipate inertia.
+      </paragraph>
+      <paragraph>
+       Our theory posits the following constraints on motion:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        The agent can move as he chooses, subject to the limits on the possible configuration he can attain.
+       </list-item>
+       <list-item label="2.">
+        The agent can grasp an object and manipulate it.
+       </list-item>
+       <list-item label="3.">
+        An object that is in an unstable position will fall until it attains a stable position.
+       </list-item>
+       <list-item label="4.">
+        An object that is specified to be fixed remains motionless. (Boundary conditions in problem specifications often involve objects that are assumed to be fixed.)
+       </list-item>
+       <list-item label="5.">
+        If a collection of objects are in a stable position, are not grasped, and are isolated from any moving object other than the agent, then they remain motionless.
+       </list-item>
+      </list>
+      <paragraph>
+       Otherwise, the theory is indeterminate about the motion of the object. Our theory does not specify any constraints on the trajectory of a falling object, except for a rule that states that an object that is inside an upright open container cannot fall out of the container (axiom H.U.A.1, section 7.6.3).
+      </paragraph>
+      <section label="7.5.1">
+       <section-title>
+        Grasping an object
+       </section-title>
+       <paragraph>
+        Our theory of grasping an object has two basic primitives. The constant Agent denotes the hero agent, a distinguished object. The predicate Grasp(t,o) meaning that the agent is grasping object o at time t. We define some further predicates for convenient reference.
+       </paragraph>
+       <paragraph>
+        By convention we suppose that, on any time line, the agent grasps any given object over a time interval that is open on the left and closed on the right. Thus, if the agent grasps o from time ta to tb and then releases it, he is grasping o at time tb and is not grasping it over some interval (tb,tc] open on the left and closed on the right. For instance, in the branching structure shown in Fig. 12 on time line 1, the agent grasps o from ta to tc; on time line 2, the agent grasps o from ta to tb and then is not grasping at all times after tb up to td.
+       </paragraph>
+       <paragraph>
+        Symbols
+       </paragraph>
+       <paragraph>
+        Agent → Object.
+       </paragraph>
+       <paragraph>
+        Grasp(t: Time; o:Object).
+       </paragraph>
+       <paragraph>
+        EmptyHanded(t:Time).
+       </paragraph>
+       <paragraph>
+        Grasps(ta,tb:Time; o:Object).
+       </paragraph>
+       <paragraph>
+        CanGrasp(t:Time; o:Object). — The agent can grasp object o at time t.
+       </paragraph>
+       <paragraph>
+        Released(ta,tb: Time; o: Object).
+       </paragraph>
+       <paragraph>
+        Definitions
+       </paragraph>
+       <list>
+        <list-item label="M.G.D.1">
+         EmptyHanded(t) ⇔ Time(t) ∧ ¬∃oGrasp(t,o).The agent is EmptyHanded at time t if he is not grasping anything at t.
+        </list-item>
+        <list-item label="M.G.D.2">
+         Grasps(ta,tb,o) ⇔ Lt(ta,tb) ∧ ∀tLt(ta,t) ∧ Leq(t,tb) ⇒ Grasp(t,o).The agent grasps object o from time ta (non-inclusive) to time tb (inclusive).
+        </list-item>
+        <list-item label="M.G.D.3">
+         CanGrasp(t,o) ⇔ ∃tbGrasps(t,tb,o).
+        </list-item>
+        <list-item label="M.G.D.4">
+         Released(ta,tb,o) ⇔ Object(o) ∧ Lt(ta,tb) ∧ ∀tLt(ta,t) ∧ Leq(t,tb) ⇒ ¬Grasp(t,o).Object o is released (i.e. the agent is not grasping it) from time ta (not inclusive) through tb (inclusive).
+        </list-item>
+       </list>
+       <paragraph>
+        Axioms
+       </paragraph>
+       <list>
+        <list-item label="M.G.A.1">
+         Isolates(t,sp,sx) ∧ Element(o,sx) ⇒ ¬Grasp(t,o) ∧ ¬CanGrasp(t,o).The agent cannot grasp an object o that is part of an isolated set sx.
+        </list-item>
+        <list-item label="M.G.A.2">
+         ∀ta:Time;o:Object ∃tbReleased(ta,tb,o).At any time ta it is possible for the agent to release object o (assuming that he is holding o).
+        </list-item>
+        <list-item label="M.G.A.3">
+         The agent cannot grasp a container (in order to move it) if he is entirely inside it.
+        </list-item>
+        <list-item label="M.G.A.4">
+         The agent can only grasp an object if he is spatially touching it.
+        </list-item>
+       </list>
+      </section>
+      <section label="7.5.2">
+       <section-title>
+        Motion
+       </section-title>
+       <paragraph>
+        We introduce some convenient symbols for describing motion and manipulation. We define all of these in terms of change of place and grasping except the predicate Moving(t,o). The predicate Moving(t,o) is implicitly defined in axiom M.O.A.1, which states that object o is Motionless between times ta and tb if and only if it is not Moving at any time t between ta and tb.
+       </paragraph>
+       <paragraph>
+        Symbols
+       </paragraph>
+       <paragraph>
+        Moves(ta,tb:Time;o:Object).
+       </paragraph>
+       <paragraph>
+        Object o changes place from time ta to time tb.
+       </paragraph>
+       <paragraph>
+        Moving(t:Time;o:Object).
+       </paragraph>
+       <paragraph>
+        Object o is moving at time t.
+       </paragraph>
+       <paragraph>
+        Motionless(ta,tb:Time;o:Object).
+       </paragraph>
+       <paragraph>
+        Object o is motionless between time ta and time tb.
+       </paragraph>
+       <paragraph>
+        TravelTo(r:Region) → Action.
+       </paragraph>
+       <paragraph>
+        The action of the agent traveling empty-handed to region r.
+       </paragraph>
+       <paragraph>
+        StandStill → Action.
+       </paragraph>
+       <paragraph>
+        The action of the agent standing still, not changing his grasps.
+       </paragraph>
+       <paragraph>
+        Definitions
+       </paragraph>
+       <list>
+        <list-item label="M.O.D.1">
+         ∀ta,tb:Time;o:ObjectMoves(ta,tb,o) ⇔ Lt(ta,tb) ∧ Place(tb,o) ≠ Place(ta,o).
+        </list-item>
+        <list-item label="M.O.D.2">
+         1 ∀ta,tb:Time;o:ObjectMotionless(ta,tb,o) ⇔ Lt(ta,tb) ∧ ∀t:TimeLeq3(ta,t,tb) ⇒ Place(t,o) = Place(ta,o).
+        </list-item>
+        <list-item label="M.O.D.3">
+         1 ∀ta,tb:Time;r:RegionOccurs(ta,tb,TravelTo(r)) ⇔ r = Place(tb,Agent) ∧ ∀o:ObjectReleased(ta,tb,o).
+        </list-item>
+        <list-item label="M.O.D.4">
+         Occurs(ta,tb,StandStill) ⇔ Motionless(ta,tb,Agent) ∧ ∀t,oLeq3(ta,t,tb) ⇒ [Grasp(t,o) ⇔ Grasp(ta,o)]
+        </list-item>
+       </list>
+       <paragraph>
+        Axioms
+       </paragraph>
+       <paragraph>
+        M.O.A.1 Motionless(ta,tb,o) ⇔ Lt(ta,tb) ∧ [∀t:TimeLt(ta,t) ∧ Lt(t,tb) ⇒ ¬Moving(t,o)].
+       </paragraph>
+      </section>
+      <section label="7.5.3">
+       <section-title>
+        Stability and falling
+       </section-title>
+       <paragraph>
+        We next present a very partial theory of stability and falling. We assume a world in which, normally, everything is in a stable state or is being grasped; this is called an AllStable state of the world (definition M.S.D.1). This happy condition can be interrupted if the agent drops object o, which he does by ungrasping it in an unstable position. That will cause o to fall, which may in turn destabilize other objects, causing them to fall. However, if the agent stands still, then the world will eventually attain a state where everything is stable (axiom M.S.A.1; see further discussion below).
+       </paragraph>
+       <paragraph>
+        We do not give any geometric or physical conditions for stability, either necessary or sufficient; nor do we give any constraints on the motions of falling objects, except to posit that falling objects inside containers do not exit the container nor cause anything outside the container to fall (axiom M.R.A.5, section 7.5.4). Further constraints on how avalanches of falling objects spread are given as frame axioms in section 7.5.4.
+       </paragraph>
+       <paragraph>
+        An object can be declared to be Fixed, in which case it is always stable and motionless (M.S.A.2). This is particularly useful in problem specifications; there are often fixed objects such as the ground, tables, buildings, and so on. It is taken to be an atemporal (eternal) property of the object. The predicate AllStable holds at time t if all objects in the world are either stable or being grasped. The set AllMobileObjects includes every mobile object i.e. not fixed and not the agent.
+       </paragraph>
+       <paragraph>
+        Axiom M.S.A.1 is not as strong as one would wish. The axiom states that, starting at any time ta, there is a timeline in which the agent stands still and in which the world eventually reaches an AllStable state. What one would like to say, rather, is that, whatever the agent does, as long has he doesn't keep dropping objects, the world will eventually reach an AllStable state. However, stating this would require a significantly more expressive language of time, that allows quantification over time-lines. The formulation here is sufficient for the inferences we are considering.
+       </paragraph>
+       <paragraph>
+        Symbols
+       </paragraph>
+       <paragraph>
+        Stable(t:Time;o:Object) — At time t, object o is in a position where it will be stable, if released.
+       </paragraph>
+       <paragraph>
+        AllStable(t:Time). — All objects are either grasped or stable at time t.
+       </paragraph>
+       <paragraph>
+        Fixed(o:Object) — Object o is fixed in place.
+       </paragraph>
+       <paragraph>
+        AllMobileObjects → ObjectSet — The set of all non-fixed objects.
+       </paragraph>
+       <paragraph>
+        Definitions
+       </paragraph>
+       <list>
+        <list-item label="M.S.D.1">
+         AllStable(t) ⇔ ∀o:Objecto = Agent ∨ Stable(t,o) ∨ Grasp(t,o).
+        </list-item>
+        <list-item label="M.S.D.2">
+         ∀o:ObjectElement (o,AllMobileObjects) ⇔ o ≠ Agent ∧ ¬Fixed (o).
+        </list-item>
+       </list>
+       <paragraph>
+        Axioms
+       </paragraph>
+       <list>
+        <list-item label="M.S.A.1">
+         ∀ta:Time ∃tbOccurs(ta,tb,StandStill) ∧ AllStable(tb).
+        </list-item>
+        <list-item label="M.S.A.2">
+         A fixed object is stable and motionless.
+        </list-item>
+       </list>
+      </section>
+      <section label="7.5.4">
+       <section-title>
+        Frame axioms
+       </section-title>
+       <paragraph>
+        In this section we present frame axioms, which limit the way that change over time can occur; that is, they specify conditions under which things remain the same.
+       </paragraph>
+       <paragraph>
+        The first axiom M.R.A.1 asserts that an object o is moving at time t only if o is the agent, or is not stable at t or some object ox is being manipulated at time t (that is, ox is being grasped and is moving). This, in itself, has the form of a state constraint, rather than a frame axiom. However, in combination with axiom M.O.A.1, which asserts that an object which is never moving remains motionless, and definition M.O.D.2, which asserts that a motionless object remains in the same place, the net effect is to posit that an object o can change its position between times ta and tb only if o is the agent, if o is unstable at some time between ta and tb, or if some (possibly other) object ox is being manipulated between ta and tb.
+       </paragraph>
+       <paragraph>
+        Axiom M.R.A.2 is based on the idea of a causally isolated set of objects. A set of objects sx is causally isolated between times ta and tb if there is a set of objects sp that isolates sx and that remains motionless throughout the interval [ta,tb]. For instance, if a container remains motionless over a time interval and the agent remains outside, then the set of objects inside is causally isolated. A set s is static causally isolated if it is causally isolated and, additionally, all the objects in s are stable at the initial time ta (definition M.R.D.2). Frame axiom M.R.A.2 asserts that if set s is static causally isolated, then every object in s remains motionless and remains stable.
+       </paragraph>
+       <paragraph>
+        Frame axioms M.R.A.3 and M.R.A.4 limit the influence of objects moving around inside a container on objects outside the container. They state that, for any container, if all the objects not inside the container (including the container itself) are stable at time ta and are not manipulated over the interval [ta,tb], then all these objects remain stable and motionless throughout [ta,tb]. M.R.A.3 states this for a set of objects s that forms a closed container. M.R.A.4 states it for an object o that is an upright container; in that case, it is necessary to add the condition that there are no objects partially inside the container except possibly the agent.
+       </paragraph>
+       <paragraph>
+        In M.R.A.2–.4 one would prefer to make the stronger statement that in general if two sets of objects are causally isolated one from another, then they evolve independently. The axioms here and the analogous axiom A.S.A.2 below (section 7.8.1) are essentially the special case of this principle in the case where one of these evolutions is that all the objects remain stable and motionless. Formulating the more general principle requires a more general notion of a history than we develop here and a powerful calculus on histories [8].
+       </paragraph>
+       <paragraph>
+        Finally, axioms M.R.A.5 asserts that, if everything is stable at time ta, and the agent does not grasp anything between times ta and tb, then everything remains stable and motionless from ta to tb.
+       </paragraph>
+       <paragraph>
+        Symbols
+       </paragraph>
+       <paragraph>
+        CausallyIsolated(ta, tb:Time; s:ObjectSet).
+       </paragraph>
+       <paragraph>
+        StaticCausallyIsolated(ta, tb:Time; s:ObjectSet).
+       </paragraph>
+       <paragraph>
+        StableThroughout (ta, tb:Time; o:Object).
+       </paragraph>
+       <paragraph>
+        NoPartialContents(t:Time;o:Object) — No objects except possibly the agent are partially contained in the open container o at time t.
+       </paragraph>
+       <paragraph>
+        Definitions
+       </paragraph>
+       <list>
+        <list-item label="M.R.D.1">
+         CausallyIsolated(ta, tb,sx) ⇔ Lt(ta,tb) ∧ ∃sp:ObjectSet [∀oElement(o,sp) ⇒ Motionless(ta,tb,o)] ∧ [∀tLeq(ta,t) ∧ Lt(t,tb) ⇒ Isolates(t,sp,sx) ].
+        </list-item>
+        <list-item label="M.R.D.2">
+         StaticCausallyIsolated(ta, tb,s) ⇔ CausallyIsolated(ta, tb,s) ∧ ∀oxElement(ox,s) ⇒ Stable(ta,ox)
+        </list-item>
+        <list-item label="M.R.D.3">
+         StableThroughout(ta, tb,o) ⇔ Lt(ta,tb) ∧ [∀tLeq3(ta,t,tb) ⇒ Stable(t,o)].
+        </list-item>
+        <list-item label="M.R.D.4">
+         ∀t:Time;o:ObjectNoPartialContents(t,o) ⇔ ∀oc:ObjectPartiallyContained(Place(t,oc),Place(t,o)) ⇒ oc = Agent.
+        </list-item>
+       </list>
+       <paragraph>
+        Axioms
+       </paragraph>
+       <list>
+        <list-item label="M.R.A.1">
+         Moving(t,o) ⇒ o = Agent ∨ ∃ox ¬Stable(t,ox) ∨ [Grasp(t,ox) ∧ Moving(t)].
+        </list-item>
+        <list-item label="M.R.A.2">
+         StaticCausallyIsolated(ta,tb,s) ∧ Element(o,s) ⇒ Motionless(ta,tb,o) ∧ StableThroughout(ta,tb,o).
+        </list-item>
+        <list-item label="M.R.A.3">
+         {a mathematical formula}∀ta,tb:Time;s: ObjectSet[∀ox =ox:ObjectAgent ∨ CContained(ta, ox,s) ∨[Stable(ta,ox) ∧ Released(ta,tb,ox)]]⇒[∀ox =ox:ObjectAgent ∨ CContained(ta,ox,s) ∨[Motionless(ta,tb,ox) ∧ StableThroughout(ta,tb,ox)]].
+        </list-item>
+        <list-item label="M.R.A.4">
+         {a mathematical formula}∀ta,tb:Time;ob:ObjectNoPartialContents(ta,ob) ∧[∀ox =ox:ObjectAgent ∨ UContained(ta,ox,ob) ∨[Stable(ta,ox) ∧ Released(ta,tb,ox)]]⇒[∀ox =ox:ObjectAgent ∨ UContained(ta,ox,ob) ∨[Motionless(ta,tb,ox) ∧ StableThroughout(ta,tb,ox)]].
+        </list-item>
+        <list-item label="M.R.A.5">
+         Lt(ta,tb) ∧ AllStable(ta) ∧ EmptyHanded(ta) ∧ [∀o:ObjectReleased(ta,tb,o)] ⇒ Motionless(ta,tb,o) ∧ AllStable(tb)]
+        </list-item>
+       </list>
+      </section>
+      <section label="7.5.5">
+       <section-title>
+        Feasibility of traveling
+       </section-title>
+       <paragraph>
+        We give a partial characterization of the feasibility of TravelTo (i.e. movements of the agent while empty-handed).
+       </paragraph>
+       <paragraph>
+        The predicate Trajectory(ra,rb,rw) means that there is a feasible trajectory for the agent from ra to rb remaining in rw, assuming that rw is free of obstacles. We give some necessary conditions for this (axiom M.F.A.2) and some combinatorial axioms (M.F.A.4–.6 ). Axiom M.F.A.3 covers the trivial case where the agent stays fixed in ra.
+       </paragraph>
+       <paragraph>
+        Axioms M.F.A.7 gives necessary conditions and M.F.A.8 give sufficient conditions for the feasibility of traveling in terms of Trajectory if no other objects are moving.{sup:11} M.F.A.7 states that, if TravelTo(rb) occurs from ta to tb, then there exists a region rw such that Trajectory(Place(ta,Agent),rb,rw) and the agent stays in rw during [ta,tb]. M.F.A.8 states that, if Trajectory(Place(ta,Agent),rb,rw) and rw is free of obstacles, thenTravelTo(rb) is feasible at time ta.
+       </paragraph>
+       <paragraph>
+        The predicate Graspable(t,o), meaning that the agent can travel to a position where he can grasp o, defined in definition M.F.D.4, is not used in the axioms, but is used in the problem specification for scenario 4.
+       </paragraph>
+       <paragraph>
+        Symbols
+       </paragraph>
+       <paragraph>
+        NoObstacles(t:Time;r:Region) — No objects other than the agent are inside region r at time t.
+       </paragraph>
+       <paragraph>
+        Trajectory(ra,rb,rw:Region). Discussed in the text.
+       </paragraph>
+       <paragraph>
+        MiddlePos(ta,tb:Time: o:Object;r:Region) — Object o occupies region r some time between times ta and tb.
+       </paragraph>
+       <paragraph>
+        StaysIn(ta,tb:Time;o:Object;r:Region) — Object o remains inside r throughout the interval [ta,tb].
+       </paragraph>
+       <paragraph>
+        Graspable(t:Time; o:Object) — At time t, the agent can move so as to grasp o.
+       </paragraph>
+       <paragraph>
+        Definitions
+       </paragraph>
+       <list>
+        <list-item label="M.F.D.1">
+         NoObstacles(t,r) ⇔ Time(t) ∧ ∀o:Objecto ≠ Agent ⇒ DR(Place(t,o),r).
+        </list-item>
+        <list-item label="M.F.D.2">
+         MiddlePos(ta,tb,o,r) ⇔ Object(o) ∧ ∃txLeq3(ta,tx,tb) ∧ r = Place(tx,o).
+        </list-item>
+        <list-item label="M.F.D.3">
+         ∀ta,tb:Time;o:Object;r:RegionStaysIn(ta,tb,o,r) ⇔ ∀rxMiddlePos(ta,tb,o,rx) ⇒P(rx,r).
+        </list-item>
+        <list-item label="M.F.D.4">
+         Graspable(t,o) ⇔ ∃tb,raOccurs(t,tb,TravelTo(ra)) ∧ CanGrasp(tb,o).Object o is graspable if the agent can travel to a place ra where he can grasp o.
+        </list-item>
+       </list>
+       <paragraph>
+        Axioms
+       </paragraph>
+       <list>
+        <list-item label="M.F.A.1">
+         In a more powerful spatio-temporal theory this would of course be a theorem rather than an axiom.
+        </list-item>
+        <list-item label="M.F.A.2">
+         Trajectory(ra,rb,rw) ⇒ FeasiblePlace(Agent,ra) ∧ FeasiblePlace(Agent,rb) ∧ IntConn(rw) ∧ P(ra,rw) ∧ P(rb,rw).
+        </list-item>
+        <list-item label="M.F.A.3">
+         FeasiblePlace(Agent,ra) ⇒Trajectory(ra,ra,ra).
+        </list-item>
+        <list-item label="M.F.A.4">
+         Trajectory(ra,rb,rw) ⇒Trajectory(rb,ra,rw).
+        </list-item>
+        <list-item label="M.F.A.5">
+         Trajectory(ra,rb,rw) ∧ Trajectory(rb,rc,rx) ⇒ Trajectory(ra,rc,RUnion(rw,rx)).
+        </list-item>
+        <list-item label="M.F.A.6">
+         Trajectory(ra,rb,rw) ∧ P(rw,rx) ∧ IntConn(rx) ⇒ Trajectory(ra,rb,rx).
+        </list-item>
+        <list-item label="M.F.A.7">
+         EmptyHanded(ta) ∧ AllStable(ta) ∧ Occurs(ta,tb,TravelTo(rb)) ⇒ ∃rwTrajectory(Place(ta,Agent),rb,rw) ∧ StaysIn(ta,tb,Agent,rw) ∧ NoObstacles(ta,rw).
+        </list-item>
+        <list-item label="M.F.A.8">
+         EmptyHanded(t) ∧ AllStable(t) ∧ NoObstacles(t,rw) ∧ Trajectory(Place(t,Agent),rb,rw) ⇒ ∃tbOccurs(t,tb,TravelTo(rb)) ∧ StaysIn(t,tb,Agent,rw).
+        </list-item>
+       </list>
+      </section>
+     </section>
+     <section label="7.6">
+      <section-title>
+       Histories
+      </section-title>
+      <paragraph>
+       There are some physical constraints whose representation requires the use of histories: functions from time to regions [18]. For example, in a continuous model of time, the statement that objects move continuously must be stated as a property of the trajectory of the object over time (axioms H.I.A.1 below).
+      </paragraph>
+      <paragraph>
+       In a general theory of manipulation, it would be necessary to characterize a large class of manipulations that are physically possible; e.g. that the agent can move its hand through any continuous trajectory of geometrically feasible positions, subjects to constraints of continuity and bounds on the velocity and acceleration. In our framework, such a statement is couched in terms of sufficient condition for the existence of certain kinds of histories; it can be formalized, either by providing a suitably rich constructive vocabulary of manipulation, or by asserting a powerful comprehension axiom, either a second-order axiom or an axiom schema. Examples of how such axioms are formulated and used can be found in [7] and [8]. However, these create an immense explosion of the search space in inference. Instead we have a number of specialized axioms and function symbols that guarantee the existence of various histories. For instance, axiom H.I.A.3 guarantees the existence of a constant history for each region.
+      </paragraph>
+      <section label="7.6.1">
+       <section-title>
+        Basic properties of histories
+       </section-title>
+       <paragraph>
+        The basic spatio-temporal primitive associated with histories is the function Slice(t,h), the region that is the extent of history h at time t. The basic primitive relating histories to objects is the function HPlace(o), the history corresponding to the regions occupied by object o.
+       </paragraph>
+       <paragraph>
+        The predicate Continuous(h) means that history h is continuous with respect to the dual-Hausdorff metric [6]. Formalizing this definition would be both lengthy and unnecessary here; we take this to be a primitive.
+       </paragraph>
+       <paragraph>
+        A history h is weakly continuous if it never jumps from one region to a disconnected region. Intuitively, h is weakly continuous if a small marble that can predict in advance how h will develop can succeed in staying inside h. Formally, h is weakly continuous at time tm if there is an open interval (tc,td) containing t and a region r such that, for any time t in (tc,td), the slice of h at t contains r (H.I.D.4). The dynamic cavities shown in Fig. 6 are weakly continuous, though not continuous.
+       </paragraph>
+       <paragraph>
+        The remaining symbols and the axioms are straightforward.
+       </paragraph>
+       <paragraph>
+        Symbols
+       </paragraph>
+       <paragraph>
+        Slice(t:Time, h:History) → Region. — The slice of history h at time t (a region).
+       </paragraph>
+       <paragraph>
+        Continuous(ta,tb:Time; h:History) — History h is continuous between times ta and tb.
+       </paragraph>
+       <paragraph>
+        HPlace(o:Object) → History. — The place occupied by object o over time (a history).
+       </paragraph>
+       <paragraph>
+        HSPlace(s: ObjectSet; h: History) — Object set s occupies history h over time. (Like OSPlace, this has to be a relation rather  than a function because of the case s = Null).
+       </paragraph>
+       <paragraph>
+        WeaklyContinuous(ta,tb:Time; h: History) — Defined in the text.
+       </paragraph>
+       <paragraph>
+        Constant(t1,t2:Time; h: History) — History h has a constant value between times t1 and t2 (inclusive).
+       </paragraph>
+       <paragraph>
+        HUnion(ha,hb: History) → History. Spatial union of histories ha and hb.
+       </paragraph>
+       <paragraph>
+        AlwaysIntConn(t1,t2:Time; h: History) — History h is always interior-connected between times t1 and t2 (inclusive).
+       </paragraph>
+       <paragraph>
+        Definitions
+       </paragraph>
+       <list>
+        <list-item label="H.I.D.1">
+         AlwaysIntConn(t1,t2,h) ⇔ History(h) ∧ Lt(t1,t2) ∧ ∀tLeq3(t1,t,t2) ⇒ IntConn(Slice(t,h)).
+        </list-item>
+        <list-item label="H.I.D.2">
+         ∀s:ObjectSet;h:HistoryHSPlace(s,h) ⇔ ∀t:TimeOSPlace(t,s,Slice(t,h)).
+        </list-item>
+        <list-item label="H.I.D.3">
+         Constant(t1,t2,h) ⇔ History(h) ∧ Lt(t1,t2) ∧ ∀tLeq3(t1,t,t2) ⇒ Slice(t,h) = Slice(t1,h).
+        </list-item>
+        <list-item label="H.I.D.4">
+         WeaklyContinuous(ta,tb,h) ⇔ Lt(ta,tb) ∧ History(h) ∧ AlwaysIntConn(ta,tb,h) ∧  ∀tmLt(ta,tm) ∧ Lt(tm,tb) ⇒ ∃tc,td,rLt(tc,tm) ∧ Lt(tm,td) ∧  ∀tLeq3(tc,t,td) ⇒ P(r,Slice(t,h)).
+        </list-item>
+       </list>
+       <paragraph>
+        Axioms
+       </paragraph>
+       <list>
+        <list-item label="H.I.A.1">
+         An object occupies a continuous history.
+        </list-item>
+        <list-item label="H.I.A.2">
+         ∀t:Time;o:ObjectPlace(t,o) = Slice(t,HPlace(o)).Place can be defined in terms of Slice and HPlace.
+        </list-item>
+        <list-item label="H.I.A.3">
+         Region(r) ∧ Lt(t1,t2) ⇒ ∃hConstant(t1,t2,h) ∧ Slice(t1,h) = r.For any region r there is a history that is constantly equal to r.
+        </list-item>
+        <list-item label="H.I.A.4">
+         A constant history is continuous.
+        </list-item>
+        <list-item label="H.I.A.5">
+         A continuous history is weakly continuous.
+        </list-item>
+        <list-item label="H.I.A.6">
+         Continuous(ta,tb,h) ∧ Leq(ta,tc) ∧ Lt(tc,td) ∧ Leq(td,tb) ⇒ Continuous(tc,td,h).A history that is continuous over [ta,tb] is continuous over any subinterval.
+        </list-item>
+        <list-item label="H.I.A.7">
+         A history that is continuous over two adjoining intervals is continuous over their join.
+        </list-item>
+        <list-item label="H.I.A.8">
+         ∀t:Time;ha,hb:HistorySlice(t,HUnion(ha,hb)) = RUnion(Slice(t,ha),Slice(t,hb)).
+        </list-item>
+       </list>
+      </section>
+      <section label="7.6.2">
+       <section-title>
+        Dynamic containers and cavities
+       </section-title>
+       <paragraph>
+        In a container made of flexible material, cavities can split and merge, like bubbles in liquid; they can open up to the outside world, or close themselves off from the outside world.
+       </paragraph>
+       <paragraph>
+        A history hc is a dynamic cavity of container ho over interval [ta,tb] if hc is weakly continuous and, at every time in [ta,tb], hc is a cavity of ho. We distinguish three kinds of dynamic cavities:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         History hc is a no-exit cavity of ho if there is no way to escape from hc, except by going through the material of ho itself.
+        </list-item>
+        <list-item label="•">
+         History hc is a no-entrance cavity of ho if there is no way to enter hc, except by going through the material of ho itself.
+        </list-item>
+        <list-item label="•">
+         History hc is a persistent cavity of ho if it is both a no-exit and a no-entrance cavity.
+        </list-item>
+       </list>
+       <paragraph>
+        Definition H.C.D.1 defines persistent cavity in terms of no-exit and no-entrance cavities. H.C.A.1 states that no-exit and no-entrance cavities are always spatial cavities and are weakly continuous. H.C.A.2 asserts that if hc is a no-exit cavity of hb and hs is a continuous history that starts inside hc at time ta and is outside hc at a later time tb, then hs overlaps with hb at some intermediate time. H.C.A.3 makes the corresponding assertion for no-entrance cavities. Axiom H.C.A.4 asserts that if histories hc and hb are constant throughout [t1,t2], and hc is a cavity of hb at t1, then hc is a persistent cavity of hb over [t1,t2]. Axioms H.C.A.5 and 5 assert that the properties NoExitCavity and NoEntranceCavity are inherited by subintervals.
+       </paragraph>
+       <paragraph>
+        The condition AlwaysIntConn(hs) in H.C.A.2 and H.C.A.3 is needed because these rules do not apply to situations such as illustrated in Fig. 13, in which history U “seeps through” a point where the cavity in V is in contact with the outside. A physical object cannot do this, of course; however, histories are defined as spatio-temporal entities, and U is a legitimate history.
+       </paragraph>
+       <paragraph>
+        Symbols
+       </paragraph>
+       <paragraph>
+        NoExitCavity(t1,t2:Time; hc,ho:History).
+       </paragraph>
+       <paragraph>
+        NoEntranceCavity(t1,t2:Time; hc,ho:History).
+       </paragraph>
+       <paragraph>
+        PersistentCavity(t1,t2:Time; hc,ho:History).
+       </paragraph>
+       <paragraph>
+        Definitions
+       </paragraph>
+       <paragraph>
+        H.C.D.1 PersistentCavity(t1,t2,hc,hb) ⇔ NoExitCavity(t1,t2,hc,hb) ∧ NoEntranceCavity(t1,t2,hc,hb).
+       </paragraph>
+       <paragraph>
+        Axioms
+       </paragraph>
+       <list>
+        <list-item label="H.C.A.1">
+         [NoExitCavity(t1,t2,hc,ho) ∨ NoEntranceCavity(t1,t2,hc,ho)] ⇒ Lt(t1,t2) ∧ WeaklyContinuous(t1,t2,hc) ∧ ∀tLeq3(t1,t,t2) ⇒ Cavity(Slice(t,hc),Slice(t,ho)).
+        </list-item>
+        <list-item label="H.C.A.2">
+         NoExitCavity(t1,t2,hc,hb) ∧ Continuous(t1,t2,hs) ∧ AlwaysIntConn(t1,t2,hs) ∧ P(Slice(t1,hs),Slice(t1,hc)) ∧ ¬P(Slice(t2,hs),Slice(t2,hc)) ⇒ ∃tmLt(t1,tm) ∧ Lt(tm,t2) ∧ O(Slice(tm,hs),Slice(tm,hb)).
+        </list-item>
+        <list-item label="H.C.A.3">
+         NoEntranceCavity(t1,t2,hc,hb) ∧ Continuous(t1,t2,hs) ∧ AlwaysIntConn(t1,t2,hs) ∧  ¬P(Slice(t1,hs),Slice(t1,hc)) ∧P(Slice(t2,hs),Slice(t2,hc)) ⇒ ∃tmLt(t1,tm) ∧ Lt(tm,t2) ∧ O(Slice(tm,hs),Slice(tm,hb)).
+        </list-item>
+        <list-item label="H.C.A.4">
+         Constant(t1,t2,hc) ∧ Constant(t1,t2,ho) ∧ Cavity(Slice(t1,hc), Slice(t1,ho)) ⇒ PersistentCavity(t1,t2,hc,ho).
+        </list-item>
+        <list-item label="H.C.A.5">
+         NoExitCavity(t1,t2,hc,hb) ∧ Lt(t1,tm) ∧ Lt(tm,t2) ⇒ NoExitCavity(t1,tm,hc,hb) ∧ NoExitCavity(tm,t2,hc,hb)
+        </list-item>
+        <list-item label="H.C.A.6">
+         NoEntranceCavity(t1,t2,hc,hb) ∧ Lt(t1,tm) ∧ Lt(tm,t2) ⇒ NoEntranceCavity(t1,tm,hc,hb) ∧ NoEntranceCavity(tm,t2,hc,hb).
+        </list-item>
+       </list>
+      </section>
+      <section label="7.6.3">
+       <section-title>
+        Dynamic upright containers
+       </section-title>
+       <paragraph>
+        A dynamic upright container is an object that functions as an upright container over a time interval. Specifically the predicate DynamicUprightContainer(ta,tb,ob,hc) asserts that object ob is an upright container with cavity hc (a history) over the interval [ta,tb]. The history hc must be continuous; and at all times tm in [ta,tb], ob must form an upright container with cavity hc which is large enough to contain all the objects that were inside hc at the start time ta (definition H.U.D.1). Under these conditions, the objects inside hc will remain in hc, if there is no external interference (axiom H.U.A.1). Specifically, if ob is a dynamic upright container over the interval with cavity hc, and an object o is inside hc at time ta and outside ob at time tb, then at some time t between ta and tb some object ox was at least partially inside ob and was being manipulated. The object ox may be o itself or may be some other object; e.g. an object being used to scoop up o. In reality there are exceptions to this rule,{sup:12} but it is a good general rule for carrying solid objects in an open container. Axiom H.U.A.1 is a frame axiom in explanation closure form [39].
+       </paragraph>
+       <paragraph>
+        Symbols
+       </paragraph>
+       <paragraph>
+        DynamicUContainer(ta,tb:Time; ob:Object; hc:History).
+       </paragraph>
+       <paragraph>
+        Definitions
+       </paragraph>
+       <list>
+        <list-item label="H.U.D.1">
+         DynamicUContainer(ta,tb,ob,hc) ⇔ Continuous(ta,tb,hc) ∧ ∀tmLeq3(ta,tm,tb) ⇒ UprightContainer(tm,o,Slice(tm,hc)) ∧ Fits(Contents(ta,Slice(ta,hc)),Slice(tm,hc)).
+        </list-item>
+       </list>
+       <paragraph>
+        Axioms
+       </paragraph>
+       <list>
+        <list-item label="H.U.A.1">
+         DynamicUContainer(ta,tb,ob,hc) ∧ P(Place(ta,o),Slice(ta,hc)) ∧ ¬UContained(tb,o,ob) ⇒ ∃tm,oyLt(ta,tm) ∧ Lt(tm,tb) ∧ Grasp(tm,oy) ∧ O(Place(tm,oy),Slice(tm,HPlace(hc))).
+        </list-item>
+       </list>
+      </section>
+     </section>
+     <section label="7.7">
+      <section-title>
+       Rigid objects
+      </section-title>
+      <paragraph>
+       Rigid objects maintain their shape over time; they are a particularly important and well-behaved kind of object.
+      </paragraph>
+      <section label="7.7.1">
+       <section-title>
+        Basic rigid objects
+       </section-title>
+       <paragraph>
+        The place of a rigid object over time is a rigid history (axiom R.O.A.1). We do not define rigid histories geometrically, since that would require a theory of congruence, which we have not developed. For our purposes, the most important property of rigid histories is that any cavity of a time slice of a rigid history is a time slice of a persistent cavity (axiom R.O.A.2).
+       </paragraph>
+       <paragraph>
+        A history h is rigid and upright if it does not involve any rotations of the vertical axis. If an object is an upright container and its place is a rigid upright history, then it is a dynamic upright container (axiom R.O.A.3).
+       </paragraph>
+       <paragraph>
+        Symbols
+       </paragraph>
+       <paragraph>
+        RigidObject(o:Object). – o is a rigid solid object.
+       </paragraph>
+       <paragraph>
+        RigidHistory(h:History) – h is a rigid history.
+       </paragraph>
+       <paragraph>
+        RigidUprightHistory(ta,tb:Time;h:History) – h is a rigid history that maintains a vertical axis.
+       </paragraph>
+       <paragraph>
+        Axioms
+       </paragraph>
+       <list>
+        <list-item label="R.O.A.1">
+         RigidObject(o) ⇒ RigidHistory(HPlace(o)).
+        </list-item>
+        <list-item label="R.O.A.2">
+         RigidHistory(h) ∧ Leq3(t1,tm,t2) ∧ Cavity(r,Slice(tm,h)) ⇒ ∃hcRigidHistory(hc) ∧ PersistentCavity(t1,t2,hc,h) ∧ r = Slice(tm,hc).
+        </list-item>
+        <list-item label="R.O.A.3">
+         RigidUprightHistory(ta,tb,HPlace(o)) ∧ UprightContainer(t,o,rc) ⇒ ∃hcDynamicUContainer(ta,tb,o,hc) ∧ rc = Slice(ta,hc).
+        </list-item>
+       </list>
+      </section>
+      <section label="7.7.2">
+       <section-title>
+        Box with lid
+       </section-title>
+       <paragraph>
+        The intended meaning of a box with a lid is a pair of rigid objects that form a closed container, where the lid is stably placed on the box, so that, if you move the box, the lid will follow along. We do not axiomatize the conditions necessary for this, which involve both geometric and physical properties of the box and the lid. Rather, we present it as a primitive and use it in some further causal axioms characterizing actions.
+       </paragraph>
+       <paragraph>
+        Note that the inside of the box-with-lid can be more than the inside of the box by itself viewed as an open container; the lid can arch over the box and enclose more space (Fig. 14).
+       </paragraph>
+       <paragraph>
+        The predicate BoxWithLid(t,ob,ol) asserts that objects ob and ol form a box with lid at time t. BoxWithLidC(t,ol,ob,rc) is the same, with the additional argument rc, the cavity enclosed.
+       </paragraph>
+       <paragraph>
+        BLContained(t,ox,ob) asserts that at time t, object ox is inside a box ob with an unspecified lid.
+       </paragraph>
+       <paragraph>
+        Axiom R.B.A.1 asserts some basic properties: A box is a pair of rigid objects, not the agent; the lid is stable; and the box and lid form a combined container for a cavity.
+       </paragraph>
+       <paragraph>
+        Axiom R.B.A.2 states that if a box is motionless and the agent does not grasp the lid, then the lid remains motionless — obviously not always physically true, but true of the way in which a box with lid is standardly used.
+       </paragraph>
+       <paragraph>
+        Axioms R.B.A.3 is a frame axiom for the BoxWithLid relation; it4 states that a BoxWithLid relation can only be created by manipulating the lid.
+       </paragraph>
+       <paragraph>
+        Axiom R.B.A.4 states that an agent who is inside a box with a lid cannot grasp the box so as to move it. (However, he may be able to grasp the lid, e.g. to push it off.) It is analogous to axiom M.G.A.3, which asserts the same thing for agents inside closed and open boxes.
+       </paragraph>
+       <paragraph>
+        Axiom R.B.A.5 asserts that, for any particular pair of objects ob and ol, whether they form a “box with lid” at time t depends entirely on their positions at time t.
+       </paragraph>
+       <paragraph>
+        Symbols
+       </paragraph>
+       <paragraph>
+        BoxWithLid(t:Time;ob,ol:Object) — Objects ob,ol physically form a box with lid (thus, ol will move along when ob is moved).
+       </paragraph>
+       <paragraph>
+        BoxWithLidC(t:Time;ob,ol:Object;r:Region ) — At time t objects ob,ol form a box with lid with interior rc.
+       </paragraph>
+       <paragraph>
+        BLContained (t:Time;ox,ob:Object) — Object ox is contained in a box ob which has a lid.
+       </paragraph>
+       <paragraph>
+        Definitions
+       </paragraph>
+       <list>
+        <list-item label="R.B.D.1">
+         BoxWithLidC(t,ob,ol,rc) ⇔ BoxWithLid(t,ob,ol) ∧ CombinedContainer(Place(t,ob),Place(t,ol),rc).
+        </list-item>
+        <list-item label="R.B.D.2">
+         BLContained(t,ox,ob) ⇔ ∃rc,olBoxWithLidC(t,ob,ol,rc) ∧ Object(ox) ∧ P(Place(t,ox),rc).
+        </list-item>
+       </list>
+       <paragraph>
+        Axioms
+       </paragraph>
+       <list>
+        <list-item label="R.B.A.1">
+         BoxWithLid(t,ob,ol) ⇒ RigidObject(ob) ∧ RigidObject(ol) ∧ Stable(t,ol) ∧ ob ≠ Agent ∧ ol ≠ Agent ∧∃rcCombinedContainer(Place(t,ob),Place(t,ol),rc).
+        </list-item>
+        <list-item label="R.B.A.2">
+         BoxWithLid (ta,ob,ol) ∧ Released(ta,tb,ol) ∧ Motionless(ta,tb,ob) ⇒ Motionless(ta,tb,ol).
+        </list-item>
+        <list-item label="R.B.A.3">
+         Lt(ta,tb) ∧ ¬BoxWithLid(ta,ob,ol) ∧ Released(ta,tb,ol) ⇒ ¬BoxWithLid(tb,ob,ol).
+        </list-item>
+        <list-item label="R.B.A.4">
+         BLContained(t,Agent,ob) ⇒ ¬Grasp(t,ob) ∧ ¬CanGrasp(t,ob).
+        </list-item>
+        <list-item label="R.B.A.5">
+         BoxWithLid(ta,ob,ol) ∧ Place(tb,ob) = Place(ta,ob) ∧ Place(tb,ol) = Place(ta,ol) ⇒ BoxWithLid(tb,ob,ol).
+        </list-item>
+       </list>
+      </section>
+     </section>
+     <section label="7.8">
+      <section-title>
+       Specific actions
+      </section-title>
+      <paragraph>
+       The theory developed so far is too weak to support many of the kinds of inferences we would like to make. In particular, the axioms do not suffice to validate any plans, because there are no axioms giving sufficient conditions for a manipulation to be feasible. In fact, we have not been able to formulate any axioms that give sufficient conditions for manipulation using the kind of general geometric and physical conditions that we have discussed so far in this paper. Rather, we conjecture that, in qualitative reasoning about manipulation, it is necessary to work at a lower level of generality, and develop a collection of more specific theories addressing narrower classes of action.
+      </paragraph>
+      <paragraph>
+       In this section we sketch the beginning of such a qualitative analysis of manipulations involving containers. We first characterize a class of safe manipulations; i.e. manipulations where the effects are predictable and controlled (section 7.8.1). We then formulate a theory for the specific case of safely loading a small object into an upright container (section 7.8.2).
+      </paragraph>
+      <section label="7.8.1">
+       <section-title>
+        Safe manipulation
+       </section-title>
+       <paragraph>
+        To simplify the description of safe manipulations we define a number of predicates. The predicate BoxedIn(t,ox,ob) (definition A.S.D.4) means that ob is a closed container, open container, or box with lid that contains ox. The predicate SafelyMoveWith(t,ox,ob) (definition A.S.D.5) means that ox is an object that reliably moves along with o if o is moved safely. Specifically, either ox is ob itself; or ox is a lid on top of ob; or ox is boxed in ob. The function MovingGroup(t,o) (definition A.S.D.6) is the set of all objects that safely move with o.
+       </paragraph>
+       <paragraph>
+        The predicate SafeManipulate(ta,tb,o,r) means that object o is manipulated in a safe way during the time interval [ta,tb]. Region r is the region occupied by the moving group of o at time tb. For a manipulation to be safe, the following must hold (axiom A.S.A.1; these are necessary conditions, but not sufficient):
+       </paragraph>
+       <list>
+        <list-item label="•">
+         Object o is the only thing the agent is grasping.
+        </list-item>
+        <list-item label="•">
+         If o is a closed container containing object ox, then the cavity hc containing o is a no-exit cavity; thus, ox remains inside o (predicate PreserveCContents, definition A.S.D.1).
+        </list-item>
+        <list-item label="•">
+         If o is an upright container containing object ox, then o is a dynamic upright container; thus, ox remains inside o (predicate PreserveUContents, definition A.S.D.2).
+        </list-item>
+        <list-item label="•">
+         If o is a box that has a lid, then o is carried vertically upright; (predicate PreserveBoxWithLid, definition A.S.D.3).
+        </list-item>
+       </list>
+       <paragraph>
+        If a manipulation of o during [ta,tb] is safe, then it follows from the frame axioms already stated that the objects inside o remain inside o; and any lid on o remains on o.
+       </paragraph>
+       <paragraph>
+        Axiom A.S.A.2 asserts further that if everything that is not in the moving group of o is stable at time ta, then those objects outside o are all motionless. As discussed in section 7.5.4, this is a special case of a more general principle that the objects outside o evolve independently of the manipulation; but stating that requires a more powerful language.
+       </paragraph>
+       <paragraph>
+        We say that o is safely movable if the other objects in the world would not interfere with moving it safely; that is, if the agent can get into a position where he can grasp it, then he can move it safely. We do not formally define this predicate; rather, we take SafelyMovable to be a primitive, and we posit (axiom A.S.A.3) that, if two situations are the same except for the position of the agent, then the same objects are safely movable. (A stronger axiom would state that if the objects close to object o are the same at two different times then whether o is safely movable is also the same at the two different times; but that would require a more powerful spatial language than we are using here.)
+       </paragraph>
+       <paragraph>
+        For example, if o has objects piled on top of it, or is surrounded closely by objects on all sides, then it is not safely movable. We do not here specify geometric conditions sufficient to guarantee that an object is safely movable; rather it is a condition stated in the problem specifications.
+       </paragraph>
+       <paragraph>
+        Symbols
+       </paragraph>
+       <paragraph>
+        PreserveCContents(ta,tb:Time; o:Object).
+       </paragraph>
+       <paragraph>
+        PreserveUContents(ta,tb:Time; o:Object).
+       </paragraph>
+       <paragraph>
+        PreserveBoxWithLid(ta,tb:Time; o:Object).
+       </paragraph>
+       <paragraph>
+        BoxedIn (t:Time;ox,ob:Object).
+       </paragraph>
+       <paragraph>
+        SafelyMovesWith(t:Time;ox,ob:Object)
+       </paragraph>
+       <paragraph>
+        MovingGroup (t:Time;ox:Object) → ObjectSet.
+       </paragraph>
+       <paragraph>
+        SafeManipulate(ta,tb: Time; o:Object; r:Region).
+       </paragraph>
+       <paragraph>
+        SafelyMovable(t:Time; o:Object).
+       </paragraph>
+       <paragraph>
+        Definitions
+       </paragraph>
+       <list>
+        <list-item label="A.S.D.1">
+         ∀ta,tb:Time;o:ObjectPreserveCContents (ta,tb,o) ⇔ ∀ox,rcClosedContainer(ta,Singleton(o),rc) ∧ P(Place(ta,ox),rc) ⇒  ∃hcSlice(ta,hc) = rc ∧ NoExitCavity(ta,tb,hc,HPlace(o)).
+        </list-item>
+        <list-item label="A.S.D.2">
+         ∀ta,tb:Time;o:ObjectPreserveUContents (ta,tb,o) ⇔ ∀ox,rcUprightContainer(ta,o,rc) ∧ P(Place(ta,ox),rc) ⇒ ∃hcSlice(ta,hc) = rc ∧ DynamicUContainer(ta,tb,o,hc).
+        </list-item>
+        <list-item label="A.S.D.3">
+         ∀ta,tb:Time;o:ObjectPreserveBoxWithLid (ta,tb,o) ⇔ [∃olBoxWithLid (ta,ob,ol)] ∧ RigidUprightHistory(ta,tb,HPlace(ob))].
+        </list-item>
+        <list-item label="A.S.D.4">
+         BoxedIn(t,ox,ob) ⇔ CContained(t,ox,Singleton(ob)) ∨ UContained(t,ox,ob) ∨ BLContained(t,ox,ob)
+        </list-item>
+        <list-item label="A.S.D.5">
+         ∀t:Time;ox,ob:ObjectSafelyMovesWith(t,ox,ob) ⇔ ox = ob ∨ BoxedIn(t,ox,ob) ∨ BoxWithLid(t,ob,ox).
+        </list-item>
+        <list-item label="A.S.D.6">
+         ∀ta; Time; o,ox:ObjectElement(ox,MovingGroup(t,o)) ⇔ SafelyMovesWith(t,ox,o).
+        </list-item>
+       </list>
+       <paragraph>
+        Axioms
+       </paragraph>
+       <list>
+        <list-item label="A.S.A.1">
+         SafeManipulate(ta,tb o,r) ⇒ Grasps(ta,tb,o) ∧ [∀ox: Object;tm: Timeox ≠ o ∧ Leq3(ta,tm,tb) ⇒ ¬Grasp(tm,ox)] ∧OSPlace(tb,MovingGroup(ta,o),r) ∧ PreserveCContents(ta,tb,o) ∧ PreserveUContents(ta,tb,o) ∧PreserveBoxWithLid(ta,tb,o)
+        </list-item>
+        <list-item label="A.S.A.2">
+         SafeManipulate(ta,tb o,r) ∧ [∀ox: Objectox = Agent ∨ Element(ox,MovingGroup(ta,o)) ∨ Stable(ta,ox)] ⇒ [∀ox:Objectox = Agent ∨ Element(ox,MovingGroup(ta,o)) ∨ [Motionless(ta,tb,ox) ∧ StableThroughout(ta,tb,ox)]].
+        </list-item>
+        <list-item label="A.S.A.3">
+         SafelyMovable(ta,o) ∧ [∀oxox ≠ Agent ⇒ Place(tb,ox) = Place(ta,ox)] ⇒ SafelyMovable(tb,o).
+        </list-item>
+       </list>
+      </section>
+      <section label="7.8.2">
+       <section-title>
+        Loading an upright container
+       </section-title>
+       <paragraph>
+        We now give a theory for the specific action of loading a small object into an upright container.
+       </paragraph>
+       <paragraph>
+        We define two actions. The simple action PutInUC(ox,ob) is the action of safely putting an object ox into an open container oc (definition A.L.D.1). The compound action LoadUprightContainer(ox,ob) is a sequence of three steps: The agent travels to a position where he can grasp ox, loads ox into the open container ob, and then moves his hand out of ob.
+       </paragraph>
+       <paragraph>
+        We posit two feasibility axioms associated with these. Axioms A.L.A.1 asserts that it is feasible to load ox into ob if ox can be grasped and safely moved, and the agent can reach the inside of ob, and the current contents of ob together with ox are small as compared to the inside of ob, and everything is stable (so that we can be sure that nothing will fall to block the path). Axiom A.L.A.2 states that, if the agent can initially travel to some destination rx which is fully outside the container ob and then loads ox into ob, then the agent can still travel to rx. It is fairly easy to find exceptions to A.L.A.1, and it is possible, though not easy, to find exceptions to A.L.A.2, but they are both quite good rules of thumb.
+       </paragraph>
+       <paragraph>
+        Symbols
+       </paragraph>
+       <paragraph>
+        Reachable(t:Time;r:Region).
+       </paragraph>
+       <paragraph>
+        PutInUC(ox,ob:Object) → Action.
+       </paragraph>
+       <paragraph>
+        LoadUprightContainer(ox,ob:Object) → Action.
+       </paragraph>
+       <paragraph>
+        Definitions
+       </paragraph>
+       <list>
+        <list-item label="A.L.D.1">
+         ∀ta,tb: Time;ox,ob:ObjectOccurs(ta,tb,PutInUC(ox,ob)) ⇔ ∃rc,rxUprightContainer(ta,ob,rc) ∧ P(rx,rc) ∧SafeManipulate(ta,tb,ox,rx) ∧ PartiallyContained(Place(tb,Agent),Place(tb,ob))
+        </list-item>
+        <list-item label="A.L.D.2">
+         ∀ta,tb: Time;ox,ob:ObjectOccurs(ta,tb,LoadUprightContainer(ox,ob)) ⇔ ∃r1,r3FullyOutside(r3,Place(ta,ob)) ∧Occurs(ta,tb,Sequence(TravelTo(r1), Sequence(PutInUC(ox,ob), TravelTo(r3))).Loading object ox into open upright container ob is the sequence of traveling to a place where ox can be grasped, moving ox inside ob and then withdrawing the manipulator out of ob. The container ob remains motionless throughout.
+        </list-item>
+        <list-item label="A.L.D.3">
+         Reachable(ta,r) ⇔ ∃rx:RegionIntConn(RUnion(rx,r)) ∧ Feasible(t,TravelTo(rx)).Region r is reachable at time t if it is feasible for the agent to travel to a position rx such that r ∪ rx is interior connected.
+        </list-item>
+       </list>
+       <paragraph>
+        Axioms
+       </paragraph>
+       <list>
+        <list-item label="A.L.A.1">
+         UprightContainer(ta,ob,rc) ∧ CanGrasp(ta,ox) ∧ Reachable(ta,rc) ∧ SafelyMovable(ta,ox) ∧ AllStable(ta) ∧SmallObject(ob) ∧ SmallSet(Union(UContents(ta,ob),MovableGroup(ta,ox)), rc) ⇒ Feasible(ta,PutInUC(ox,ob)).Feasibility axiom: If ob is an upright container with cavity rc, the agent can grasp ox, ox together with the current contents of rc is small as compared to rc, ox is safely movable, ob is stable, and the agent can reach inside rc, then the agent can load ox into ob.
+        </list-item>
+        <list-item label="A.L.A.2">
+         Occurs(ta,tb,PutInUC (o,ob)) ∧ Feasible(ta,TravelTo(rx)) ∧ FullyOutside(rx,Place(ta,ob)) ⇒ Feasible(tb,TravelTo(rx)).
+        </list-item>
+       </list>
+      </section>
+     </section>
+    </section>
+    <section label="8">
+     <section-title>
+      Inferences
+     </section-title>
+     <paragraph>
+      We come at last to our example inferences.
+     </paragraph>
+     <paragraph>
+      Note that, if an inference can be made, then any logically equivalent inference can be made with a slight adaptation to the proof. For instance, Scenario 1 states that if box Ob1 is a rigid object and, at time Ta1 contains object Ox1 as a closed container, then Ox1 is still in Ob1 at any later time; this is a prediction problem. Equivalently, one can infer that, if at time Ta1, Ob1 is a closed container containing Ox1, and at time Tb1, Ox1 is not inside Ob1, then Ob1 is not a rigid object; this is a problem of inferring object characteristics from observations made over time.
+     </paragraph>
+     <section label="8.1">
+      <section-title>
+       Inference 1
+      </section-title>
+      <paragraph>
+       Qualitative prediction. If Ob1 is a rigid object and it is a closed container containing object Ox1, then Ox1 remains inside Ob1 (Fig. 15).
+      </paragraph>
+      <paragraph>
+       Symbols
+      </paragraph>
+      <paragraph>
+       Ox1 → Object — Some stuff.
+      </paragraph>
+      <paragraph>
+       Ob1 → Object — A box.
+      </paragraph>
+      <paragraph>
+       Ta1,Tb1 → Time — Times.
+      </paragraph>
+      <paragraph>
+       Given:
+      </paragraph>
+      <list>
+       <list-item label="C.1.A.1">
+        RigidObject(Ob1).
+       </list-item>
+       <list-item label="C.1.A.2">
+        CContained(Ta1,Ox1,Singleton(Ob1)).
+       </list-item>
+       <list-item label="C.1.A.3">
+        Lt(Ta1,Tb1).
+       </list-item>
+      </list>
+      <paragraph>
+       Infer.CContained(Tb1,Ox1,Singleton(Ob1)).
+      </paragraph>
+      <paragraph label="Sketch of proof">
+       Object Ob1 lies inside a cavity of Ox1 (O.C.D.1, O.R.D.1). Since Ox1 is a rigid object, there is a corresponding persistent cavity (R.O.A.1, R.O.A.2). If Ox1 were go to from inside the cavity to outside the cavity, it would have to spatially overlap Ob1 (H.C.A.2), but this is impossible because they are different objects (O.T.A.5). (Place(T1a,Ob1) contains Place(Ta1,Ox1), and it is a geometric theorem that a region cannot contain itself.)
+      </paragraph>
+     </section>
+     <section label="8.2">
+      <section-title>
+       Inference 2
+      </section-title>
+      <paragraph>
+       Qualitative prediction. If Ob2b is a rigid object and a closed container containing Ob2a, and Ob2a is a closed container (not necessarily rigid) containing object Os2, then Os2 will remain inside Ob2b (Fig. 16).
+      </paragraph>
+      <paragraph>
+       Symbols
+      </paragraph>
+      <paragraph>
+       Os2 → Object — Some stuff.
+      </paragraph>
+      <paragraph>
+       Ob2a → Object — Inner container.
+      </paragraph>
+      <paragraph>
+       Ob2b → Object — Outer box.
+      </paragraph>
+      <paragraph>
+       Ta2,Tb2 → Time — Times.
+      </paragraph>
+      <paragraph>
+       Given:
+      </paragraph>
+      <list>
+       <list-item label="C.2.A.1">
+        RigidObject(Ob2b).
+       </list-item>
+       <list-item label="C.2.A.2">
+        CContained(Ta2,Os2,Singleton(Ob2a)).
+       </list-item>
+       <list-item label="C.2.A.3">
+        CContained(Ta2,Ob2a,Singleton(Ob2b)).
+       </list-item>
+       <list-item label="C.2.A.4">
+        Ordered(Ta2,Tb2).
+       </list-item>
+      </list>
+      <paragraph>
+       Infer.CContained(Tb2,Os2a,Singleton(Ob2a)).
+      </paragraph>
+      <paragraph label="Sketch of proof">
+       By axiom S.C.A.1, spatial closed containment is transitive; hence Os2a is contained in Ob2b. The result then follows from scenario 1.
+      </paragraph>
+      <paragraph>
+       As an illustration of how carefully these inferences have to be formulated, Fig. 17 illustrates that this inference is not valid if the inner container is an open container. Let Oa be the red, U-shaped region with hatching;; let Ob be the blue U-shaped region with an internal cavity containing Oa and let Os be the green ball. Then Oa contains Os as an open container and Ob contains Oa as a closed container, but Ob does not contain Os as a closed container.
+      </paragraph>
+      <paragraph>
+       Note also that the condition that the two time points Ta2 and Tb2 are ordered is necessary; otherwise, they could be on two completely unrelated time lines.
+      </paragraph>
+     </section>
+     <section label="8.3">
+      <section-title>
+       Inference 3
+      </section-title>
+      <paragraph>
+       If the situation depicted in Fig. 3 above is modified so that the red region is flush against the barriers, then the ball must reach the red region before it can reach the green region.
+      </paragraph>
+      <paragraph>
+       Symbols
+      </paragraph>
+      <paragraph>
+       Os3 → Object. Movable object.
+      </paragraph>
+      <paragraph>
+       Ob3 → Object. Fixed object.
+      </paragraph>
+      <paragraph>
+       RRed, RGreen, RInside → Region. Two target regions.
+      </paragraph>
+      <paragraph>
+       Ta3, Tb3 → Time.
+      </paragraph>
+      <paragraph>
+       Given:
+      </paragraph>
+      <list>
+       <list-item label="C.3.A.1">
+        Fixed(Ob3).
+       </list-item>
+       <list-item label="C.3.A.2">
+        CombinedContainer(Place(Ta,Ob3), RRed, RInside)
+       </list-item>
+       <list-item label="C.3.A.3">
+        P(Place(Ta3,Os3),RInside).
+       </list-item>
+       <list-item label="C.3.A.4">
+        Outside(RGreen, RUnion(Place(Ta3,Ob3),RRed)).
+       </list-item>
+       <list-item label="C.3.A.5">
+        P(Place(Tb3,Os3),RGreen).
+       </list-item>
+       <list-item label="C.3.A.6">
+        Lt(Ta3,Tb3).
+       </list-item>
+       <list-item label="C.3.A.7">
+        Os3 ≠ Ob3.
+       </list-item>
+      </list>
+      <paragraph>
+       Infer. ∃tmLt(Ta3,tm) ∧ Lt(tm,Tb3) ∧ O(Place(tm,Os3),RRed).
+      </paragraph>
+      <paragraph label="Sketch of proof">
+       Let Ru be the spatial union of the red region plus the object Ob3. This is a closed container containing Ob3 at the start. By the same argument as in scenario 1, if object Os3 goes from inside this container to outside it in the green region, it must overlap the union at some time in between. Since it cannot overlap Ob3, it must overlap the red region (axiom S.B.A.4).
+      </paragraph>
+      <paragraph>
+       There are two differences between the problem as analyzed here, on the one hand, and the problem as presented by Smith et al. [40] to their subjects, on the other. First, the geometry has been altered. In Smith et al.'s experiment, shown in Fig. 3 above, the red region is slightly separated from the barriers. Second, and more importantly, the physics is different; the experiment deals with a ball bouncing autonomously, whereas our physics objects move only when manipulated or when falling.
+      </paragraph>
+      <paragraph>
+       These differences become important if one considers alternative versions of the problem in which the red region is further and further from the barriers. If the red region is quite close to the barriers, one can reason that there is no room for the ball to “squeeze through” the gap between the red region and the barriers. This could be added to our theory with only a slight extension of the geometric language, plus the specification that the ball is a rigid object. If the red region is further away, then one has to reason that the ball must be moving rightward when it exits the region contained by the barriers, and therefore can never reach the green region. (In Fig. 3 as drawn, the diameter of the ball is almost exactly equal to the width of the gap, so it is not clear which of these applies.) Carrying out the inference about direction of motion in the second case would require a very substantial extension to our spatial and physical theory, since our spatial language has no representation of direction other than the vertical, and our physical theory incorporates no idea of momentum. Adding a theory of direction to the spatial theory is straightforward and not problematic. Adding a useful qualitative theory of momentum sufficient to this inference to the physical theory in a principled way would be a substantial project, though formulating ad hoc rules sufficient for this particular inference would be easy enough. (Forbus' FROB program [15] developed a qualitative theory of momentum, but only for a point object moving among fixed obstacles in two-dimensional space divided into zones along the cardinal directions.)
+      </paragraph>
+     </section>
+     <section label="8.4">
+      <section-title>
+       Inference 4
+      </section-title>
+      <paragraph>
+       If Ox4 is outside upright container Ob4, and the current contents of Ob4 together with Ox4 are much smaller than the interior of Ob4, and the agent can reach and move Ox4 and can reach into Ob4, then (a) the agent can load Ox4 into Ob4; (b) if the agent does load Ox4 into Ob4, then Ox4 and all its initial contents and all the initial contents of Ob4 will end up in a stable state inside Ob4 (Fig. 18).
+      </paragraph>
+      <paragraph>
+       Symbols
+      </paragraph>
+      <paragraph>
+       Ob4 → Object. Object being loaded.
+      </paragraph>
+      <paragraph>
+       Ox4 → Object. Open container.
+      </paragraph>
+      <paragraph>
+       Rc4 → Region. Inside of Ox4.
+      </paragraph>
+      <paragraph>
+       Ta4 → Time.
+      </paragraph>
+      <paragraph>
+       Given:
+      </paragraph>
+      <list>
+       <list-item label="C.4.A.1">
+        UprightContainer(Ta4,Ob4,Rc4).
+       </list-item>
+       <list-item label="C.4.A.2">
+        FullyOutside(Place(Ta4,Ox4),Place(Ta4,Ob4)).
+       </list-item>
+       <list-item label="C.4.A.3">
+        SmallSet(Union(UContents(Ta4,Ob4),MovingGroup (Ta4,Ox4)),Rc4).
+       </list-item>
+       <list-item label="C.4.A.4">
+        AllStable(Ta4).
+       </list-item>
+       <list-item label="C.4.A.5">
+        EmptyHanded(Ta4).
+       </list-item>
+       <list-item label="C.4.A.6">
+        Graspable(Ta4,Ox4).
+       </list-item>
+       <list-item label="C.4.A.7">
+        Reachable(Ta4,Rc4).
+       </list-item>
+       <list-item label="C.4.A.8">
+        Ox4 ≠ Agent ≠ Ob4.
+       </list-item>
+       <list-item label="C.4.A.9">
+        FullyOutside(Place(Ta4,Agent),Place(Ta4,Ob4)).
+       </list-item>
+       <list-item label="C.4.A.10">
+        SafelyMovable(Ta4,Ox4).
+       </list-item>
+       <list-item label="C.4.A.11">
+        SmallObject(Ob4).
+       </list-item>
+       <list-item label="C.4.A.12">
+        ¬BoxedIn(Ta4,Agent,Ob4).
+       </list-item>
+       <list-item label="C.4.A.13">
+        NoPartialContents(Ta4,Ob4).
+       </list-item>
+      </list>
+      <paragraph>
+       Infer. 4.a: Feasible(Ta4, LoadUprightContainer(Ox4,Ob4)).
+      </paragraph>
+      <paragraph label="Sketch of proof">
+       Axioms A.L.D.1, A.L.D.2, and T.A.D.2 are used to expand the meaning of LoadUprightContainer: The agent must first travel to a position where he can grasp Ox4, then manipulate it so that it is inside Ob4, then withdraw his hand from Ob4. It follows from M.F.D.4 that the initial travel is feasible. It follows from A.L.A.1 that, after traveling to grasp Ox4, it will be feasible for him to put Ox4 inside Ob4. It follows from A.L.A.2 that, after putting Ox4 inside Ob4, it will be feasible for him to withdraw his hand. The details of the proof are quite long, because it takes work to establish that the conditions of A.L.A.1 and .2 will be met at the times in question. In particular, it is necessary to carry out many different frame inferences, stating that important conditions do not change while these actions are being executed.
+      </paragraph>
+      <paragraph>
+       Infer. 4.b: {a mathematical formula}∀tbOccurs(Ta4,tb,LoadUprightContainer(Ox4,Ob4)) ⇒∃tcOccurs(tb,tc,StandStill) ∧ AllStable(tc) ∧UContents(tc,Ob4) =Union(UContents(Ta4,Ob4),MovingGroup(Ta4,Ox4)).
+      </paragraph>
+      <paragraph label="Sketch of proof">
+       From A.L.D.1, M.S.A.1, A.S.A.1, A.S.D.5, A.S.D.6 it follows that, after the action PutInUC(Ox4,Ob4) (the second step of LoadUprightContainer(Ox4,Ob4)), the object Ox4 will be inside the upright container Ob4. Axiom M.S.A.1 asserts that, after the agent has released Ox4, the world will eventually attain a stable state. Axiom M.R.A.4 asserts that, while waiting for the world to attain stable state, all the objects in the upright box Ob4 will remain inside the upright box. As with part 4.a, projecting forward all the states of the system requires many steps.
+      </paragraph>
+     </section>
+     <section label="8.5">
+      <section-title>
+       Inference 5
+      </section-title>
+      <paragraph>
+       Let Ob5 and Ol5 be a box with lid at time Ta5, and let Os5 be an object inside the box. Assume that the agent is outside the box at time Ta5. If Os5 is somewhere else at time Tb5, and the box is fixed throughout [Ta5,Tb5] then the lid must move at some time in between Ta5 and Tb5 (Fig. 19).
+      </paragraph>
+      <paragraph>
+       Ob5 → Object. Box
+      </paragraph>
+      <paragraph>
+       Ol5 → Object. Lid.
+      </paragraph>
+      <paragraph>
+       Os5 → Object. Stuff.
+      </paragraph>
+      <paragraph>
+       Rc5 → Region. Inside of box with lid.
+      </paragraph>
+      <paragraph>
+       Ta5, Tb5 → Time.
+      </paragraph>
+      <paragraph>
+       Given:
+      </paragraph>
+      <list>
+       <list-item label="C.5.A.1">
+        BoxWithLidC(Ta5,Ob5,Ol5,Rc5).
+       </list-item>
+       <list-item label="C.5.A.2">
+        P(Place(Ta5,Os5),Rc5).
+       </list-item>
+       <list-item label="C.5.A.3">
+        ¬P(Place(Ta5,Agent),Rc5).
+       </list-item>
+       <list-item label="C.5.A.4">
+        AllStable(Ta5).
+       </list-item>
+       <list-item label="C.5.A.5">
+        Place(Ta5,Os5) ≠ Place(Tb5,Os5)
+       </list-item>
+       <list-item label="C.5.A.6">
+        Constant(Ta5,Tb5,HPlace(Ob5))
+       </list-item>
+      </list>
+      <paragraph>
+       Infer. ¬Motionless(Ta5,Tb5,Ol5).
+      </paragraph>
+      <paragraph label="Sketch of proof">
+       Proof by contradiction. Suppose that the lid remains motionless. Then the box and the lid form a closed container (definition R.B.D.1), so, by an argument analogous to scenario 1, neither the agent nor any object that the agent can reach can get inside the box. Therefore, the set of objects in the box is static causally isolated (definitions M.R.D.1, M.R.D.2), and therefore all the objects are motionless (axiom M.R.A.2), contradicting C.5.A.5.
+      </paragraph>
+     </section>
+     <section label="8.6">
+      <section-title>
+       Formal proofs and automated verification
+      </section-title>
+      <paragraph>
+       Complete human-written formal proofs of Inferences 1–5 in a natural-deduction format may be found at http://www.cs.nyu.edu/faculty/davise/containers/Proofs.html. These proofs have been verified using the SPASS theorem prover [42]; the inputs and outputs of the verification are linked at the same web site.
+      </paragraph>
+      <paragraph>
+       It may be noted that a substantial amount of human labor (some number of man-months) was involved in carrying out the automated verification, even beyond the manual construction of the formal proofs. When we had completed the construction of the first draft of the formal proofs, we thought, optimistically, that the process of verification would be easy and straightforward; we would be able to divide the proof into large chunks, code up each chunk, and run it through SPASS. In practice, the gaps in the proofs we had written were so frequent and so large that we often ended up generating separate SPASS runs for each step in the formal proofs. The problems that we encountered fell into three categories:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Errors in translating the human-written proofs into valid SPASS input. In particular, the human proofs deliberately omit sortal preconditions and often omit necessary temporal axioms. These had to be restored in preparing the SPASS input.
+       </list-item>
+       <list-item label="•">
+        Gaps in the human-written proofs. This was the most frequent form of problem. The human-written proofs often either omitted some of the justifications needed for a step in the proof or omitted some of the steps needed to complete a proof. Several times, additional lemmas requiring proofs of a dozen or more steps needed to be added.
+       </list-item>
+       <list-item label="•">
+        Gaps and errors in the actual theory. The most important outcome of this work on automated verification was to find a half-dozen mistakes in the axioms as they were then written in the draft of section 7. Most of these were fairly trivial; the wrong variable was used, arguments were in the wrong order, a simple object variable o was used in a context where Singleton(o) was required. One error was more substantive; completing the proof required adding an additional axiom.
+       </list-item>
+      </list>
+      <paragraph>
+       It would certainly be possible to write tools, such as a sort-checking interface, that would very much reduce the labor involved in completing the automated proofs, or to use existing tools, and if this kind of work is done on a larger scale, that would certainly be worthwhile.
+      </paragraph>
+     </section>
+    </section>
+    <section label="9">
+     <section-title>
+      Consistency
+     </section-title>
+     <paragraph>
+      One might well wonder, seeing the complexity of the theory developed here, whether there is any hope of establishing that it is consistent. As we shall see, it is extremely easy to show that it is consistent, in a trivial sense, and not difficult to show that it is consistent in a non-trivial sense, but neither of these answers the question that one presumably has in mind. However, it is not at all easy to say exactly what the “right” question is, let alone to answer it.
+     </paragraph>
+     <paragraph>
+      First, there is an entirely trivial sense in which the theory is consistent. One establishes that a theory is consistent by presenting a model for it. It is easily checked that the following model satisfies all the axioms in section 7 of the paper.
+     </paragraph>
+     <paragraph label="Model 1">
+      There is a single Object, namely the agent. (The agent has to exist, because he is named by a constant symbol.) There is a single History, namely HPlace(Agent). There are two ObjectSets: Null and Singleton(Agent). The set of Actions is StandStill, PutInUC(Agent,Agent), LoadUprightContainer(Agent,Agent), and all finite sequences of these three. These are the only entities that exist; the sorts Time and Region both denote the empty set.{sup:13} If you go back and check, you will see that there are no axioms that require that any times exist; and if no times exist, there are no axioms that require that any regions exist.
+     </paragraph>
+     <paragraph>
+      Of course, this is a ridiculous model, but it is worthwhile being specific about why it is ridiculous. There are two obvious problems. First, it doesn't at all match the description of the model given in the text; we had said that Times exist within a branching continuous time line; that Regions are topologically regular regions of {a mathematical formula}R3, and so on. Second, the model is completely inconsistent with assumptions of inferences 1–5 of section 8.
+     </paragraph>
+     <paragraph>
+      In view of these objections, we can reformulate the objective as follows: Can we construct a model that incorporates branching continuous time and three-dimensional geometry, and that satisfies both the axioms of section 7 and the boundary conditions of inferences 1–5? The answer is again yes, and is still not very difficult, though no longer trivial. We will sketch below a model (more precisely, a class of models) satisfying scenario 1; the construction of the models satisfying the other scenarios, individually or all together, is analogous, though somewhat more involved.
+     </paragraph>
+     <paragraph label="Model 2">
+      Intuitively, this model will consist of the two objects Ob and Ox and the Agent remaining motionless for all time.Formally: The denotation of sort Time is {a mathematical formula}R, the real line. The denotation of sort Region is some set of topologically regular, bounded subsets of {a mathematical formula}R3. There are four specific regions Rb, Rc, Rx, and RAgent. Rb is a closed container; Rc is a cavity of Rb; Rx is a connected region which is a subset of Rc, RAgent is a connected region which is disjoint from Rb and Rc. Rb, Rc, Rx, and RAgent are elements of Region, and the class Region is closed under finite union; otherwise, the choice of which topologically regular, bounded subsets of {a mathematical formula}R3 to include in Region is arbitrary. The sort History is some class of functions from Time to Region. For every region r, the sort History includes the constant function from Time to r; which other functions are included in History is arbitrary.The sort Object is equal to the set {Ob, Ox, Agent }. The sort ObjectSet is the set of all subsets of Object. The primitive actions are StandStill, PutInUC(o1,o2), and LoadUprightContainer(o1,o2), where o1 and o2 are two of the objects (not necessarily distinct). The sort Action includes all finite sequences of primitive actions.The purely temporal primitives, the purely spatial primitives, the spatio-temporal primitives associated with histories, and the set-theoretic primitives have their standard interpretations. Predicate Occurs(ta,tb,a) holds if and only if ta &lt; tb and a is a sequence of StandStill. For all times t, Place(t,Agent) = RAgent, Place(t,Ob) = Rb, Place(t,Ox) = Rx. The extension of predicate OSPlace(t,s,r) is then determined by definition O.T.D.1. FeasiblePlace(o,r) holds if and only if [o = Agent and r = RAgent] or [o = Ox and r = Rx] or [o = Ob and R = Rb]. The extension of predicates SmallObject and SmallSet is empty. Predicate Isolates(t,sp,sx) holds for all t, for sp = { Ob } and sx = Ox and for no other values. Grasps(t,o) and Fixed(o) do not hold for any values. Stable(t,o) holds for all times t and all objects o. Trajectory(ra,rb,rw) holds if ra = rb and rw is a superset of ra. DynamicUContainer(ta,tb,ob,hc) and BoxWithLid(t,ob,ol) hold for no values. RigidObject(o) holds for object ob and ox. The extensions of the remaining predicates are determined by the definitions and axioms. End of description of model 2.
+     </paragraph>
+     <paragraph>
+      The models satisfying Scenarios 2, 3, and 5 are analogous. In the models for scenario 2, the objects are the agent and the named objects and everything remains still forever. In the model for scenario 3, the objects are the agent, the ball, and the frame. The agent always stands still. The frame is fixed. The ball moves on a feasible path for a while and then settles down. In the model for scenario 5, all the objects remain motionless.
+     </paragraph>
+     <paragraph>
+      The model for scenario 4 is more complicated. There are four objects: the agent, the box Ob4, the object Ox4, and the ground, which is fixed. The model specifies some geometry for these that would allow the agent to put the object into the box. There is one time line in which the agent goes over to Ox4, grasps it, carries it over to Ob4, puts it inside Ob4, and releases it; and then Ox4 clatters to the bottom of Ob4. From each time point on this line, there is an alternative branch of time structure in which the agent stands still forever. From each time point t on the original line or on these branches, if the agent is grasping Ox4 at t then there is an alternative branch of the time structure in which the agent releases Ox4, Ox4 falls to the ground, and then eventually attains a stable state.
+     </paragraph>
+     <paragraph>
+      Axioms A.L.A.1 and A.L.A.2, noted as “rules of thumb” in the text, rule out a small class of object shapes and agent motions. However, since there is no comprehension axiom positing that every geometrically reasonable shape can be instantiated as an object, these do not create contradictions.
+     </paragraph>
+     <paragraph>
+      Full formal specifications of these models are available from the authors on request.
+     </paragraph>
+     <paragraph>
+      The construction of these kinds of models certainly bring us closer to establishing that the theory is OK, in the sense we are looking for, but there is still a long way to go. All we have done is to establish that these specific scenarios are consistent with our theory. Of course, we could easily generalize these somewhat and add more scenarios, but still all we would have is a collection of special cases. What we are really looking for is a general theorem that any “reasonable” problem specification is consistent with the axioms, and does not entail overly strong; but it is not at all clear what constitutes a reasonable problem specification. Also, and even more vaguely, we would like some assurance that our theory is “forward-compatible” in the sense if we fill in reasonable theories of stability, of feasible manipulations, and of the other parts of our theory that we have left entirely unspecified, the result will still be consistent. But again it is hard to see how one would formally state such a meta-theorem, let alone prove it.
+     </paragraph>
+    </section>
+    <section label="10">
+     <section-title>
+      Related work
+     </section-title>
+     <paragraph>
+      There is much previous AI work on physical reasoning with partial information, especially under the rubric of “qualitative reasoning” (QR) in the narrow sense [2]. This work has primarily focused on qualitative differential equations [24] or similar formalisms [16], [12]. The current project is broadly speaking in the same spirit; however, it shares very little technical content, because of a number of differences in domain. First, our theory uses a much richer language of qualitative spatial relations than in most of the QR literature. Systems considered in the QR literature tend to involve either no geometry (e.g. electronic circuits [12]; highly restricted geometry (e.g. the geometry of linkages [22]); or fully specified geometries (e.g. [14]). Second, the problems considered in the QR literature involved primarily the internal evolution of physical systems; exogenous action was a secondary consideration. In our domain, almost all change is initiated by the action of an agent. Finally, the QR literature is primarily, though not exclusively, focused on prediction; our theory is designed with the intent of supporting inference in many different directions.
+     </paragraph>
+     <paragraph>
+      More directly relevant to our project is the substantial literature on qualitative spatial reasoning, initiated by the papers of Randell, Cui, and Cohn [34] and of Egenhofer and Franzosa [13] and extensively developed since [4]. In particular, we use the RCC-8 language of topological relations between regions as the basis of our spatial representation; the concept of a closed container can be defined in that language. However, the theories of open containers and of open upright containers, and the theory of temporally evolving containers are largely new here.
+     </paragraph>
+     <paragraph>
+      In previous work [7], [8] we developed representation languages and systems of rules to characterize reasoning about loading solid objects into boxes and carrying objects in boxes, and pouring liquids between open containers. The theory discussed in this paper differs in two major respects. First, the earlier work developed moderately detailed dynamic theories of rigid solid object and of liquids. In this paper, the dynamic theories apply across a much wider range of materials, and therefore are much less detailed. Second, the previous work made arbitrary use of set theory, geometry, and real analysis in constructing the proofs; that is, considerations of both effective implementation and cognitive plausibility were entirely ignored in favor of representational and inferential adequacy. The current project aims at a theory that is both effectively implementable and cognitively realistic, sacrificing expressive and inferential power where necessary.
+     </paragraph>
+     <paragraph>
+      Kim [23] developed a system that carried out qualitative predictions of the motions of liquids in response to the motions of pistons. She also included in her model a special case of solids being acted on by liquids, namely the opening and closing of one-way valves. Her theory was mostly concerned with qualitative reasoning about pressures and forces between solids and liquids, and thus quite disjoint from the issues considered here. She did not discuss moving the container as a whole, containers with any non-rigidity other than pistons and valves, or any containment relations other than that a solid container and liquid contents. Both the geometric and physical language of this system were quite limited.
+     </paragraph>
+     <paragraph>
+      A study by Smith et al. [40] studies the way in which experimental participants reason about a ball bouncing among obstacles. They demonstrate that, though in many circumstances, subjects' responses are consistent with a theory that they are simulating the motion of the ball, under some circumstances where qualitative reasoning easily supplies the answer, they can answer much more quickly than the simulation theory would predict. For example, when presented with the situation shown in Fig. 3 and asked, “Which region does the ball reach first: the red region or the green region?” they can quickly answer “the red region”. As it happens, all of the instances of qualitative reasoning they discuss can be viewed as some form of reasoning about containment. As discussed in section 8.3, our knowledge base supports a modified form of this particular inference (assuming that the ball is itself the agent or is being moved by the agent).
+     </paragraph>
+    </section>
+    <section label="11">
+     <section-title>
+      Conclusions and future work
+     </section-title>
+     <paragraph>
+      Human commonsense physical reasoning is strikingly flexible in its ability to deal with radically incomplete problem specifications and incomplete theories of the physics of the situation at hand. We have argued that an appropriate method for achieving this flexibility in an automated system would be to use a knowledge-based system incorporating rules spanning a wide range of specificity. As an initial step, we have formulated some of the axioms that would be useful in reasoning about manipulating containers, and we have shown that these axioms suffice to justify some simple commonsense inferences.
+     </paragraph>
+     <paragraph>
+      In future work on this project, we plan to expand the knowledge base to cover many more forms of qualitative reasoning about containers, and to expand the collection of commonsense inferences under consideration. We will also attempt to implement the knowledge base within an automated reasoning system that can carry out the inferences from problem specification to conclusion.
+     </paragraph>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

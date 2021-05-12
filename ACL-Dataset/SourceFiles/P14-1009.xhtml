@@ -1,0 +1,1166 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>A practical and linguistically-motivated approachto
+compositional distributional semantics</title>
+<!--Generated on Tue Jun 10 17:15:05 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">A practical and linguistically-motivated approach
+<br class="ltx_break"/>to
+compositional distributional semantics</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Denis Paperno 
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Nghia The Pham 
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Marco Baroni
+<br class="ltx_break"/>Center for Mind/Brain Sciences (University of Trento, Italy)
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">(denis.paperno|thenghia.pham|marco.baroni)@unitn.it</span> 
+<br class="ltx_break"/>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Distributional semantic methods to approximate word meaning with
+context vectors have been very successful empirically, and the last
+years have seen a surge of interest in their compositional extension
+to phrases and sentences. We present here a new model that, like
+those of <cite class="ltx_cite">Coecke<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib109" title="Mathematical foundations for a compositional distributional model of meaning" class="ltx_ref">2010</a>)</cite> and
+<cite class="ltx_cite">Baroni and Zamparelli (<a href="#bib.bib39" title="Nouns are vectors, adjectives are matrices: representing adjective-noun constructions in semantic space" class="ltx_ref">2010</a>)</cite>, closely mimics the standard
+Montagovian semantic treatment of composition in distributional
+terms. However, our approach avoids a number of issues that have
+prevented the application of the earlier linguistically-motivated
+models to full-fledged, real-life sentences. We test the model on
+a variety of empirical tasks, showing that it consistently
+outperforms a set of competitive rivals.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Compositional distributional semantics</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">The research of the last two decades has established empirically that
+distributional vectors for words obtained from corpus statistics can
+be used to represent word meaning in a variety of tasks
+<cite class="ltx_cite">[<a href="#bib.bib445" title="From frequency to meaning: vector space models of semantics" class="ltx_ref">25</a>]</cite>. If distributional vectors encode certain
+aspects of word meaning, it is natural to expect that similar aspects
+of sentence meaning can also receive vector representations, obtained
+compositionally from word vectors. Developing a practical model of
+compositionality is still an open issue, which we address in this
+paper. One approach is to use simple, parameter-free models that
+perform operations such as pointwise multiplication or summing
+<cite class="ltx_cite">[<a href="#bib.bib317" title="Vector-based models of semantic composition" class="ltx_ref">20</a>]</cite>. Such models turn out to be surprisingly
+effective in practice <cite class="ltx_cite">[<a href="#bib.bib58" title="A comparison of vector-based representations for semantic composition" class="ltx_ref">6</a>]</cite>, but they have obvious
+limitations. For instance, symmetric operations like vector addition
+are insensitive to syntactic structure, therefore meaning
+differences encoded in word order are lost in composition:
+<span class="ltx_text ltx_font_italic">pandas eat bamboo</span> is identical to <span class="ltx_text ltx_font_italic">bamboo eats
+pandas</span>. <cite class="ltx_cite">Guevara (<a href="#bib.bib197" title="A regression model of adjective-noun compositionality in distributional semantics" class="ltx_ref">2010</a>)</cite>, <cite class="ltx_cite">Mitchell and Lapata (<a href="#bib.bib319" title="Composition in distributional models of semantics" class="ltx_ref">2010</a>)</cite>,
+<cite class="ltx_cite">Socher<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib407" title="Dynamic pooling and unfolding recursive autoencoders for paraphrase detection" class="ltx_ref">2011</a>)</cite> and <cite class="ltx_cite">Zanzotto<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib471" title="Estimating linear models for compositional distributional semantics" class="ltx_ref">2010</a>)</cite> generalize
+the simple additive model by applying structure-encoding operators to
+the vectors of two sister nodes before addition, thus breaking the
+inherent symmetry of the simple additive model. A related approach
+<cite class="ltx_cite">[<a href="#bib.bib408" title="Semantic compositionality through recursive matrix-vector spaces" class="ltx_ref">24</a>]</cite> assumes richer lexical representations where
+each word is represented with a vector and a matrix that encodes its
+interaction with its syntactic sister. The training proposed in this
+model estimates the parameters in a supervised setting. Despite
+positive empirical evaluation, this approach is hardly practical for
+general-purpose semantic language processing, since it requires
+computationally expensive approximate parameter optimization
+techniques, and it assumes task-specific parameter learning whose
+results are not meant to generalize across tasks.</p>
+</div>
+<div id="S1.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">1.1 </span>The lexical function model</h3>
+
+<div id="S1.SS1.p1" class="ltx_para">
+<p class="ltx_p">None of the proposals mentioned above, from simple to elaborate,
+incorporates in its architecture the intuitive idea (standard in
+theoretical linguistics) that semantic composition is more than a
+weighted combination of words. Generally one of the components of a
+phrase, e.g., an adjective, acts as a function affecting the other
+component (e.g., a noun). This underlying intuition, adopted from
+formal semantics of natural language, motivated the creation of the
+<em class="ltx_emph">lexical function</em> model of composition (<em class="ltx_emph">lf</em>)
+<cite class="ltx_cite">[<a href="#bib.bib39" title="Nouns are vectors, adjectives are matrices: representing adjective-noun constructions in semantic space" class="ltx_ref">4</a>, <a href="#bib.bib109" title="Mathematical foundations for a compositional distributional model of meaning" class="ltx_ref">9</a>]</cite>. The lf model can be
+seen as a projection of the symbolic Montagovian approach to semantic
+composition in natural language onto the domain of vector spaces and
+linear operations on them <cite class="ltx_cite">[<a href="#bib.bib43" title="Frege in space: A program for compositional distributional semantics" class="ltx_ref">3</a>]</cite>. In lf, arguments
+are vectors and functions taking arguments (e.g., adjectives that
+combine with nouns) are tensors, with the number of arguments (n)
+determining the order of tensor (n+1). For example, adjectives, as
+unary functors, are modeled with 2-way tensors, or matrices.
+Tensor by vector multiplication formalizes function application and serves as the general composition method.</p>
+</div>
+<div id="S1.SS1.p2" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Baroni and Zamparelli (<a href="#bib.bib39" title="Nouns are vectors, adjectives are matrices: representing adjective-noun constructions in semantic space" class="ltx_ref">2010</a>)</cite> propose a practical and empirically
+effective way to estimate matrices representing adjectival modifiers
+of nouns by linear regression from corpus-extracted examples of noun
+and adjective-noun vectors. Unlike the neural network approach of Socher et
+al. <cite class="ltx_cite">[<a href="#bib.bib407" title="Dynamic pooling and unfolding recursive autoencoders for paraphrase detection" class="ltx_ref">23</a>, <a href="#bib.bib408" title="Semantic compositionality through recursive matrix-vector spaces" class="ltx_ref">24</a>]</cite>, the Baroni and
+Zamparelli method does not require manually labeled data nor costly
+iterative estimation procedures, as it relies on automatically
+extracted phrase vectors and on the analytical solution of the
+least-squares-error problem.</p>
+</div>
+<div id="S1.SS1.p3" class="ltx_para">
+<p class="ltx_p">The same method was later applied to
+matrix representations of intransitive verbs and determiners
+<cite class="ltx_cite">[<a href="#bib.bib53" title="A relatedness benchmark to test the role of determiners in compositional distributional semantics" class="ltx_ref">5</a>, <a href="#bib.bib132" title="General estimation and evaluation of compositional distributional semantic models" class="ltx_ref">10</a>]</cite>, always with good empirical results.</p>
+</div>
+<div id="S1.SS1.p4" class="ltx_para">
+<p class="ltx_p">The full range of semantic types required for natural language
+processing, including those of adverbs and transitive verbs, has to
+include, however, tensors of greater rank. The estimation method
+originally proposed by Baroni and Zamparelli has been extended to
+3-way tensors representing transitive verbs by
+<cite class="ltx_cite">Grefenstette<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib193" title="Multi-step regression learning for compositional distributional semantics" class="ltx_ref">2013</a>)</cite> with preliminary success. Grefenstette et al.’s method works in two steps. First, one estimates matrices of verb-object
+phrases from subject and subject-verb-object vectors; next, transitive
+verb tensors are estimated from verb-object matrices and object
+vectors.</p>
+</div>
+</div>
+<div id="S1.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">1.2 </span>Problems with the extension of the lexical function model
+to sentences</h3>
+
+<div id="S1.SS2.p1" class="ltx_para">
+<p class="ltx_p">With all the advantages of lf, scaling it up to arbitrary sentences, however, leads to several issues. In particular, it is desirable for all
+practical purposes to limit representation size. For example, if noun
+meanings are encoded in vectors of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.SS2.p1.m1" class="ltx_Math" alttext="300" display="inline"><mn>300</mn></math> dimensions, adjectives become
+matrices of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.SS2.p1.m2" class="ltx_Math" alttext="300^{2}" display="inline"><msup><mn>300</mn><mn>2</mn></msup></math> cells, and transitive verbs are represented as
+tensors with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.SS2.p1.m3" class="ltx_Math" alttext="300^{3}" display="inline"><msup><mn>300</mn><mn>3</mn></msup></math>=<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.SS2.p1.m4" class="ltx_Math" alttext="27,000,000" display="inline"><mrow><mn>27</mn><mo>,</mo><mn>000</mn><mo>,</mo><mn>000</mn></mrow></math> dimensions.</p>
+</div>
+<div id="S1.SS2.p2" class="ltx_para">
+<p class="ltx_p">Estimating tensors of this size runs into data sparseness issues
+already for less common transitive verbs. Indeed, in order to train a
+transitive verb tensor (e.g., <span class="ltx_text ltx_font_italic">eat</span>), the method of
+<cite class="ltx_cite">Grefenstette<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib193" title="Multi-step regression learning for compositional distributional semantics" class="ltx_ref">2013</a>)</cite> requires a sufficient number of
+distinct verb object phrases with that verb (e.g., <span class="ltx_text ltx_font_italic">eat cake</span>,
+<span class="ltx_text ltx_font_italic">eat fruits</span>), each attested in combination with a certain
+number of subject nouns with sufficient frequency to extract sensible
+vectors. It is not feasible to obtain enough data points for all verbs
+in such a training design.</p>
+</div>
+<div id="S1.SS2.p3" class="ltx_para">
+<p class="ltx_p">Things get even worse for other categories. Adverbs like
+<span class="ltx_text ltx_font_italic">quickly</span> that modify intransitive verbs have to be represented
+with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.SS2.p3.m1" class="ltx_Math" alttext="{300^{2}}^{2}" display="inline"><mmultiscripts><mn>300</mn><none/><mn>2</mn><none/><mn>2</mn></mmultiscripts></math> = <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.SS2.p3.m2" class="ltx_Math" alttext="8,100,000,000" display="inline"><mrow><mn>8</mn><mo>,</mo><mn>100</mn><mo>,</mo><mn>000</mn><mo>,</mo><mn>000</mn></mrow></math> dimensions. Modifiers of transitive
+verbs would have even greater representation size, which may not be
+possible to store and learn efficiently.</p>
+</div>
+<div id="S1.SS2.p4" class="ltx_para">
+<p class="ltx_p">Another issue is that the same or similar items that occur in
+different syntactic contexts are assigned different semantic types
+with incomparable representations. For example, verbs like
+<span class="ltx_text ltx_font_italic">eat</span> can be used in transitive or intransitive constructions
+(<span class="ltx_text ltx_font_italic">children eat meat</span>/<span class="ltx_text ltx_font_italic">children eat</span>), or in passive
+(<span class="ltx_text ltx_font_italic">meat is eaten</span>). Since predicate arity is encoded in the
+order of the corresponding tensor, <span class="ltx_text ltx_font_italic">eat</span> and the like have to
+be assigned different representations (matrix or tensor) depending on
+the context. Deverbal nouns like <span class="ltx_text ltx_font_italic">demolition</span>, often used
+without mention of who demolished what, would have to get vector
+representations while the corresponding verbs (<span class="ltx_text ltx_font_italic">demolish</span>)
+would become tensors, which makes immediately related verbs and nouns
+incomparable. Nouns in general would oscillate between vector and
+matrix representations depending on argument vs. predicate vs. modifier position (<span class="ltx_text ltx_font_italic">an animal runs</span> vs. <span class="ltx_text ltx_font_italic">this is an
+animal</span> vs. <span class="ltx_text ltx_font_italic">animal shelter</span>). Prepositions are the hardest,
+as the syntactic positions in which they occur are most diverse
+(<span class="ltx_text ltx_font_italic">park in the dark</span> vs. <span class="ltx_text ltx_font_italic">play in the dark</span> vs. <span class="ltx_text ltx_font_italic">be in the dark </span> vs. <span class="ltx_text ltx_font_italic">a light glowing in the dark</span>).</p>
+</div>
+<div id="S1.SS2.p5" class="ltx_para">
+<p class="ltx_p">In all those cases, the same word has to be mapped to tensors of
+different orders. Since each of these tensors must be learned from
+examples individually, their obvious relation is missed. Besides
+losing the comparability of the semantic contribution of a word across
+syntactic contexts, we also worsen the data
+sparseness
+issues.</p>
+</div>
+<div id="S1.SS2.p6" class="ltx_para">
+<p class="ltx_p">The last, and related, point is that for the tensor calculus to
+work, one needs to model, for each word, each of the constructions in
+the corpus that the word is attested in. In its pure form lf does not
+include an emergency backoff strategy when unknown words or
+constructions are encountered. For example, if we only observe
+transitive usages of <span class="ltx_text ltx_font_italic">to eat</span> in the training corpus, and
+encounter an intransitive or passive example of it in testing data,
+the system would not be able to compose a sentence vector at all. This
+issue is unavoidable since we don’t expect to find all words in all
+possible constructions even in the largest corpus.</p>
+</div>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>The practical lexical function model</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">As follows from section <a href="#S1.SS2" title="1.2 Problems with the extension of the lexical function model&#10;to sentences ‣ 1 Compositional distributional semantics ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1.2</span></a>, it would be desirable to have a
+compositional distributional model that encodes function-argument
+relations but avoids the troublesome high-order tensor representations
+of the pure lexical function model, with all the practical problems
+that come with them. We may still want to represent word meanings in
+different syntactic contexts differently, but at the same time we need
+to incorporate a formal connection between those representations,
+e.g., between the transitive and the intransitive instantiations of
+the verb <span class="ltx_text ltx_font_italic">to eat</span>. Last but not least, all items need to
+include a common aspect of their representation (e.g., a vector) to
+allow comparison across categories (the case of <span class="ltx_text ltx_font_italic">demolish</span> and
+<span class="ltx_text ltx_font_italic">demolition</span>).</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">To this end, we propose a new model of composition that maintains the
+idea of function application, while avoiding the complications and
+rigidity of lf. We call our proposal <em class="ltx_emph">practical lexical function</em>
+model, or <em class="ltx_emph">plf</em>. In plf, a functional word is not represented by
+a single tensor of arity-dependent order, but by a vector plus an
+ordered set of matrices, with one matrix for each argument the function
+takes. After applying the matrices to the corresponding argument
+vectors, a single representation is obtained by summing across all
+resulting vectors.</p>
+</div>
+<div id="S2.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.1 </span>Word meaning representation</h3>
+
+<div id="S2.SS1.p1" class="ltx_para">
+<p class="ltx_p">In plf, all words are represented by a vector, and functional words,
+such as predicates and modifiers, are also assigned one or more
+matrices. The general form of a semantic representation for a
+linguistic unit is an ordered tuple of a vector and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m1" class="ltx_Math" alttext="n\in\mathbb{N}" display="inline"><mrow><mi>n</mi><mo>∈</mo><mi>ℕ</mi></mrow></math>
+matrices:<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>Matrices associated with
+term <em class="ltx_emph">x</em> are symbolized <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m2" class="ltx_Math" alttext="\overset{\Box}{x}" display="inline"><mover accent="true"><mi>x</mi><mo>□</mo></mover></math>.</span></span></span></p>
+<table id="S2.Ex1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex1.m1" class="ltx_Math" alttext="\left\langle\vec{x},\overset{\Box_{1}}{x},\ldots,\overset{\Box_{n}}{x}\right\rangle" display="block"><mrow><mo>⟨</mo><mrow><mover accent="true"><mi>x</mi><mo stretchy="false">→</mo></mover><mo>,</mo><mover accent="true"><mi>x</mi><msub><mi mathvariant="normal">□</mi><mn>1</mn></msub></mover><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mover accent="true"><mi>x</mi><msub><mi mathvariant="normal">□</mi><mi>n</mi></msub></mover></mrow><mo>⟩</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S2.SS1.p2" class="ltx_para">
+<p class="ltx_p">The number of matrices in the representation encodes the arity of a
+linguistic unit, i.e., the number of other units to which it applies
+as a function. Each matrix corresponds to a function-argument
+relation, and words have as many matrices as many arguments they take:
+none for (most) nouns, one for adjectives and intransitive verbs, two
+for transitives, etc. The matrices formalize argument slot
+saturation, operating on an argument vector representation through
+matrix by vector multiplication, as described in the next section.</p>
+</div>
+<div id="S2.SS1.p3" class="ltx_para">
+<p class="ltx_p">Modifiers of n-ary functors are represented by n+1-ary structures. For
+instance, we treat adjectives that modify nouns (0-ary) as unary
+functions, encoded in a vector-matrix pair. Adverbs have different semantic types depending on their syntactic role. Sentential adverbs are unary, while adverbs that modify
+adjectives (<span class="ltx_text ltx_font_italic">very</span>) or verb phrases (<span class="ltx_text ltx_font_italic">quickly</span>) are
+encoded as binary functions, represented by a vector and two matrices.
+The form of semantic
+representations we are using is shown in Table <a href="#S2.T1" title="Table 1 ‣ 2.1 Word meaning representation ‣ 2 The practical lexical function model ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>To determine the number and ordering of matrices representing the word in the current
+syntactic context, our plf implementation relies
+on the syntactic type assigned to the word in the categorial grammar parse of the sentence.</span></span></span></p>
+</div>
+<div id="S2.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">dog</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m1" class="ltx_Math" alttext="\vec{dog}" display="inline"><mover accent="true"><mrow><mi>d</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>g</mi></mrow><mo stretchy="false">→</mo></mover></math></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">run</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m2" class="ltx_Math" alttext="\vec{run},\overset{\Box}{run}" display="inline"><mrow><mover accent="true"><mrow><mi>r</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>n</mi></mrow><mo stretchy="false">→</mo></mover><mo>,</mo><mover accent="true"><mrow><mi>r</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>n</mi></mrow><mo>□</mo></mover></mrow></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">chase</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m3" class="ltx_Math" alttext="\vec{chase},\overset{\Box_{s}}{chase},\overset{\Box_{o}}{chase}" display="inline"><mrow><mover accent="true"><mrow><mi>c</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>e</mi></mrow><mo stretchy="false">→</mo></mover><mo>,</mo><mover accent="true"><mrow><mi>c</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>e</mi></mrow><msub><mi mathvariant="normal">□</mi><mi>s</mi></msub></mover><mo>,</mo><mover accent="true"><mrow><mi>c</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>e</mi></mrow><msub><mi mathvariant="normal">□</mi><mi>o</mi></msub></mover></mrow></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">give</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m4" class="ltx_Math" alttext="\vec{give},\overset{\Box_{s}}{give},\overset{\Box_{o}}{give},\overset{\Box_{io%&#10;}}{give}" display="inline"><mrow><mover accent="true"><mrow><mi>g</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>v</mi><mo>⁢</mo><mi>e</mi></mrow><mo stretchy="false">→</mo></mover><mo>,</mo><mover accent="true"><mrow><mi>g</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>v</mi><mo>⁢</mo><mi>e</mi></mrow><msub><mi mathvariant="normal">□</mi><mi>s</mi></msub></mover><mo>,</mo><mover accent="true"><mrow><mi>g</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>v</mi><mo>⁢</mo><mi>e</mi></mrow><msub><mi mathvariant="normal">□</mi><mi>o</mi></msub></mover><mo>,</mo><mover accent="true"><mrow><mi>g</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>v</mi><mo>⁢</mo><mi>e</mi></mrow><msub><mi mathvariant="normal">□</mi><mrow><mi>i</mi><mo>⁢</mo><mi>o</mi></mrow></msub></mover></mrow></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">big</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m5" class="ltx_Math" alttext="\vec{big},\overset{\Box}{big}" display="inline"><mrow><mover accent="true"><mrow><mi>b</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>g</mi></mrow><mo stretchy="false">→</mo></mover><mo>,</mo><mover accent="true"><mrow><mi>b</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>g</mi></mrow><mo>□</mo></mover></mrow></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">very</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m6" class="ltx_Math" alttext="\vec{very},\overset{\Box_{n}}{very},\overset{\Box_{a}}{very}" display="inline"><mrow><mover accent="true"><mrow><mi>v</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>y</mi></mrow><mo stretchy="false">→</mo></mover><mo>,</mo><mover accent="true"><mrow><mi>v</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>y</mi></mrow><msub><mi mathvariant="normal">□</mi><mi>n</mi></msub></mover><mo>,</mo><mover accent="true"><mrow><mi>v</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>y</mi></mrow><msub><mi mathvariant="normal">□</mi><mi>a</mi></msub></mover></mrow></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_r ltx_border_t">quickly</th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m7" class="ltx_Math" alttext="\vec{quickly},\overset{\Box_{s}}{quickly},\overset{\Box_{v}}{quickly}" display="inline"><mrow><mover accent="true"><mrow><mi>q</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>k</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>y</mi></mrow><mo stretchy="false">→</mo></mover><mo>,</mo><mover accent="true"><mrow><mi>q</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>k</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>y</mi></mrow><msub><mi mathvariant="normal">□</mi><mi>s</mi></msub></mover><mo>,</mo><mover accent="true"><mrow><mi>q</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>k</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>y</mi></mrow><msub><mi mathvariant="normal">□</mi><mi>v</mi></msub></mover></mrow></math></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span> Examples of word representations. Subscripts encode, just for mnemonic purposes, the constituent whose vector the matrix combines with: <span class="ltx_text ltx_font_bold">s</span>ubject, <span class="ltx_text ltx_font_bold">o</span>bject, <span class="ltx_text ltx_font_bold">i</span>ndirect <span class="ltx_text ltx_font_bold">o</span>bject, <span class="ltx_text ltx_font_bold">n</span>oun, <span class="ltx_text ltx_font_bold">a</span>djective, <span class="ltx_text ltx_font_bold">v</span>erb phrase.</div>
+</div>
+</div>
+<div id="S2.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.2 </span>Semantic composition</h3>
+
+<div id="S2.SS2.p1" class="ltx_para">
+<p class="ltx_p">Our system incorporates semantic composition via two composition
+rules, one for combining structures of different arity and the other
+for symmetric composition of structures with the same arity. These
+rules incorporate insights of two empirically successful models,
+lexical function and the simple additive approach, used as the default
+structure merging strategy.</p>
+</div>
+<div id="S2.F1" class="ltx_figure"><span class="ltx_ERROR undefined ltx_centering">\Tree</span>
+<p class="ltx_p ltx_align_center"><span class="ltx_text ltx_font_small">[.<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.F1.m1" class="ltx_Math" alttext="\left\langle\vec{x}+{\color{red}\overset{\Box_{n+k}}{x}}\times\vec{y},\overset%&#10;{\Box_{1}}{x}+\overset{\Box_{1}}{y},\ldots,\overset{\Box_{n}}{x}+\overset{\Box%&#10;_{n}}{y},\ldots\right\rangle" display="inline"><mrow><mo mathsize="small" stretchy="false">⟨</mo><mrow><mrow><mover accent="true"><mi mathsize="normal" stretchy="false">x</mi><mo mathsize="normal" stretchy="false">→</mo></mover><mo mathsize="normal" stretchy="false">+</mo><mrow><mover accent="true"><mi mathcolor="#FF0000" mathsize="normal" stretchy="false">x</mi><msub><mi mathcolor="#FF0000" mathsize="normal" mathvariant="normal" stretchy="false">□</mi><mrow><mi mathcolor="#FF0000" mathsize="normal" stretchy="false">n</mi><mo mathcolor="#FF0000" mathsize="normal" stretchy="false">+</mo><mi mathcolor="#FF0000" mathsize="normal" stretchy="false">k</mi></mrow></msub></mover><mo mathsize="normal" stretchy="false">×</mo><mover accent="true"><mi mathsize="normal" stretchy="false">y</mi><mo mathsize="normal" stretchy="false">→</mo></mover></mrow></mrow><mo mathsize="small" stretchy="false">,</mo><mrow><mover accent="true"><mi mathsize="normal" stretchy="false">x</mi><msub><mi mathsize="normal" mathvariant="normal" stretchy="false">□</mi><mn mathsize="normal" stretchy="false">1</mn></msub></mover><mo mathsize="normal" stretchy="false">+</mo><mover accent="true"><mi mathsize="normal" stretchy="false">y</mi><msub><mi mathsize="normal" mathvariant="normal" stretchy="false">□</mi><mn mathsize="normal" stretchy="false">1</mn></msub></mover></mrow><mo mathsize="small" stretchy="false">,</mo><mi mathsize="normal" mathvariant="normal" stretchy="false">…</mi><mo mathsize="small" stretchy="false">,</mo><mrow><mover accent="true"><mi mathsize="normal" stretchy="false">x</mi><msub><mi mathsize="normal" mathvariant="normal" stretchy="false">□</mi><mi mathsize="normal" stretchy="false">n</mi></msub></mover><mo mathsize="normal" stretchy="false">+</mo><mover accent="true"><mi mathsize="normal" stretchy="false">y</mi><msub><mi mathsize="normal" mathvariant="normal" stretchy="false">□</mi><mi mathsize="normal" stretchy="false">n</mi></msub></mover></mrow><mo mathsize="small" stretchy="false">,</mo><mi mathsize="normal" mathvariant="normal" stretchy="false">…</mi></mrow><mo mathsize="small" stretchy="false">⟩</mo></mrow></math> [ <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.F1.m2" class="ltx_Math" alttext="\left\langle\vec{x},\overset{\Box_{1}}{x},\ldots,\overset{\Box_{n}}{x},\ldots,%&#10;{\color{red}\overset{\Box_{n+k}}{x}}\right\rangle" display="inline"><mrow><mo mathsize="small" stretchy="false">⟨</mo><mrow><mover accent="true"><mi mathsize="normal" stretchy="false">x</mi><mo mathsize="normal" stretchy="false">→</mo></mover><mo mathsize="small" stretchy="false">,</mo><mover accent="true"><mi mathsize="normal" stretchy="false">x</mi><msub><mi mathsize="normal" mathvariant="normal" stretchy="false">□</mi><mn mathsize="normal" stretchy="false">1</mn></msub></mover><mo mathsize="small" stretchy="false">,</mo><mi mathsize="normal" mathvariant="normal" stretchy="false">…</mi><mo mathsize="small" stretchy="false">,</mo><mover accent="true"><mi mathsize="normal" stretchy="false">x</mi><msub><mi mathsize="normal" mathvariant="normal" stretchy="false">□</mi><mi mathsize="normal" stretchy="false">n</mi></msub></mover><mo mathsize="small" stretchy="false">,</mo><mi mathsize="normal" mathvariant="normal" stretchy="false">…</mi><mo mathsize="small" stretchy="false">,</mo><mover accent="true"><mi mathcolor="#FF0000" mathsize="normal" stretchy="false">x</mi><msub><mi mathcolor="#FF0000" mathsize="normal" mathvariant="normal" stretchy="false">□</mi><mrow><mi mathcolor="#FF0000" mathsize="normal" stretchy="false">n</mi><mo mathcolor="#FF0000" mathsize="normal" stretchy="false">+</mo><mi mathcolor="#FF0000" mathsize="normal" stretchy="false">k</mi></mrow></msub></mover></mrow><mo mathsize="small" stretchy="false">⟩</mo></mrow></math> ] [ <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.F1.m3" class="ltx_Math" alttext="\left\langle\vec{y},\overset{\Box_{1}}{y},\ldots,\overset{\Box_{n}}{y}\right\rangle" display="inline"><mrow><mo mathsize="small" stretchy="false">⟨</mo><mrow><mover accent="true"><mi mathsize="normal" stretchy="false">y</mi><mo mathsize="normal" stretchy="false">→</mo></mover><mo mathsize="small" stretchy="false">,</mo><mover accent="true"><mi mathsize="normal" stretchy="false">y</mi><msub><mi mathsize="normal" mathvariant="normal" stretchy="false">□</mi><mn mathsize="normal" stretchy="false">1</mn></msub></mover><mo mathsize="small" stretchy="false">,</mo><mi mathsize="normal" mathvariant="normal" stretchy="false">…</mi><mo mathsize="small" stretchy="false">,</mo><mover accent="true"><mi mathsize="normal" stretchy="false">y</mi><msub><mi mathsize="normal" mathvariant="normal" stretchy="false">□</mi><mi mathsize="normal" stretchy="false">n</mi></msub></mover></mrow><mo mathsize="small" stretchy="false">⟩</mo></mrow></math> ] ]
+</span></p>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Function application: If two syntactic sisters have different
+arity, treat the higher-arity sister as the functor. Compose by
+multiplying the last matrix in the functor tuple by the argument
+vector and summing the result to the functor vector. Unsaturated
+matrices are carried up to the composed node, summing across
+sisters if needed.</div>
+</div>
+<div id="S2.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">dogs</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T2.m1" class="ltx_Math" alttext="\vec{dogs}" display="inline"><mover accent="true"><mrow><mi>d</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mi>s</mi></mrow><mo stretchy="false">→</mo></mover></math></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">run</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T2.m2" class="ltx_Math" alttext="\vec{run},\overset{\Box}{run}" display="inline"><mrow><mover accent="true"><mrow><mi>r</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>n</mi></mrow><mo stretchy="false">→</mo></mover><mo>,</mo><mover accent="true"><mrow><mi>r</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>n</mi></mrow><mo>□</mo></mover></mrow></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">dogs run</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T2.m3" class="ltx_Math" alttext="\vec{run}+\overset{\Box}{run}\times\vec{dog}" display="inline"><mrow><mover accent="true"><mrow><mi>r</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>n</mi></mrow><mo stretchy="false">→</mo></mover><mo>+</mo><mrow><mover accent="true"><mrow><mi>r</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>n</mi></mrow><mo>□</mo></mover><mo>×</mo><mover accent="true"><mrow><mi>d</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>g</mi></mrow><mo stretchy="false">→</mo></mover></mrow></mrow></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">house</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T2.m4" class="ltx_Math" alttext="\vec{house}" display="inline"><mover accent="true"><mrow><mi>h</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>e</mi></mrow><mo stretchy="false">→</mo></mover></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">big</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T2.m5" class="ltx_Math" alttext="\vec{big},\overset{\Box}{big}" display="inline"><mrow><mover accent="true"><mrow><mi>b</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>g</mi></mrow><mo stretchy="false">→</mo></mover><mo>,</mo><mover accent="true"><mrow><mi>b</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>g</mi></mrow><mo>□</mo></mover></mrow></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_r ltx_border_t">big house</th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T2.m6" class="ltx_Math" alttext="\vec{big}+\overset{\Box}{big}\times\vec{house}" display="inline"><mrow><mover accent="true"><mrow><mi>b</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>g</mi></mrow><mo stretchy="false">→</mo></mover><mo>+</mo><mrow><mover accent="true"><mrow><mi>b</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>g</mi></mrow><mo>□</mo></mover><mo>×</mo><mover accent="true"><mrow><mi>h</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>e</mi></mrow><mo stretchy="false">→</mo></mover></mrow></mrow></math></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 2: </span> Examples of function application.</div>
+</div>
+<div id="S2.SS2.p2" class="ltx_para">
+<p class="ltx_p">The first rule is <em class="ltx_emph">function application</em>, illustrated in Figure
+<a href="#S2.F1" title="Figure 1 ‣ 2.2 Semantic composition ‣ 2 The practical lexical function model ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>. Table <a href="#S2.T2" title="Table 2 ‣ 2.2 Semantic composition ‣ 2 The practical lexical function model ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> illustrates simple cases
+of function application. For transitive verbs semantic composition
+applies iteratively as shown in the derivation of Figure
+<a href="#S2.F2" title="Figure 2 ‣ 2.2 Semantic composition ‣ 2 The practical lexical function model ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>. For ternary predicates such as <em class="ltx_emph">give</em> in a
+ditransitive construction, the first step in the derivation absorbs
+the innermost argument by multiplying its vector by the third <em class="ltx_emph">give</em>
+matrix, and then composition proceeds like for transitives.</p>
+</div>
+<div id="S2.F2" class="ltx_figure"><span class="ltx_ERROR undefined ltx_centering">\Tree</span>
+<p class="ltx_p ltx_align_center"><span class="ltx_text ltx_font_small">[.<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.F2.m1" class="ltx_Math" alttext="\overset{\Box_{s}}{chase}\times\vec{dogs}+\vec{chase}+\overset{\Box_{o}}{chase%&#10;}\times\vec{cats}" display="inline"><mrow><mrow><mover accent="true"><mrow><mi mathsize="normal" stretchy="false">c</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">h</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">a</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">s</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">e</mi></mrow><msub><mi mathsize="normal" mathvariant="normal" stretchy="false">□</mi><mi mathsize="normal" stretchy="false">s</mi></msub></mover><mo mathsize="normal" stretchy="false">×</mo><mover accent="true"><mrow><mi mathsize="normal" stretchy="false">d</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">o</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">g</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">s</mi></mrow><mo mathsize="normal" stretchy="false">→</mo></mover></mrow><mo mathsize="normal" stretchy="false">+</mo><mover accent="true"><mrow><mi mathsize="normal" stretchy="false">c</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">h</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">a</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">s</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">e</mi></mrow><mo mathsize="normal" stretchy="false">→</mo></mover><mo mathsize="normal" stretchy="false">+</mo><mrow><mover accent="true"><mrow><mi mathsize="normal" stretchy="false">c</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">h</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">a</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">s</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">e</mi></mrow><msub><mi mathsize="normal" mathvariant="normal" stretchy="false">□</mi><mi mathsize="normal" stretchy="false">o</mi></msub></mover><mo mathsize="normal" stretchy="false">×</mo><mover accent="true"><mrow><mi mathsize="normal" stretchy="false">c</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">a</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">s</mi></mrow><mo mathsize="normal" stretchy="false">→</mo></mover></mrow></mrow></math> [ <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.F2.m2" class="ltx_Math" alttext="\vec{dogs}" display="inline"><mover accent="true"><mrow><mi mathsize="normal" stretchy="false">d</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">o</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">g</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">s</mi></mrow><mo mathsize="normal" stretchy="false">→</mo></mover></math> ] [.<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.F2.m3" class="ltx_Math" alttext="\left\langle\vec{chase}+\overset{\Box_{o}}{chase}\times\vec{cats},\overset{%&#10;\Box_{s}}{chase}\right\rangle" display="inline"><mrow><mo mathsize="small" stretchy="false">⟨</mo><mrow><mrow><mover accent="true"><mrow><mi mathsize="normal" stretchy="false">c</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">h</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">a</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">s</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">e</mi></mrow><mo mathsize="normal" stretchy="false">→</mo></mover><mo mathsize="normal" stretchy="false">+</mo><mrow><mover accent="true"><mrow><mi mathsize="normal" stretchy="false">c</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">h</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">a</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">s</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">e</mi></mrow><msub><mi mathsize="normal" mathvariant="normal" stretchy="false">□</mi><mi mathsize="normal" stretchy="false">o</mi></msub></mover><mo mathsize="normal" stretchy="false">×</mo><mover accent="true"><mrow><mi mathsize="normal" stretchy="false">c</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">a</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">s</mi></mrow><mo mathsize="normal" stretchy="false">→</mo></mover></mrow></mrow><mo mathsize="small" stretchy="false">,</mo><mover accent="true"><mrow><mi mathsize="normal" stretchy="false">c</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">h</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">a</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">s</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">e</mi></mrow><msub><mi mathsize="normal" mathvariant="normal" stretchy="false">□</mi><mi mathsize="normal" stretchy="false">s</mi></msub></mover></mrow><mo mathsize="small" stretchy="false">⟩</mo></mrow></math> [ <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.F2.m4" class="ltx_Math" alttext="\left\langle\vec{chase},\overset{\Box_{s}}{chase},\overset{\Box_{o}}{chase}\right\rangle" display="inline"><mrow><mo mathsize="small" stretchy="false">⟨</mo><mrow><mover accent="true"><mrow><mi mathsize="normal" stretchy="false">c</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">h</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">a</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">s</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">e</mi></mrow><mo mathsize="normal" stretchy="false">→</mo></mover><mo mathsize="small" stretchy="false">,</mo><mover accent="true"><mrow><mi mathsize="normal" stretchy="false">c</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">h</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">a</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">s</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">e</mi></mrow><msub><mi mathsize="normal" mathvariant="normal" stretchy="false">□</mi><mi mathsize="normal" stretchy="false">s</mi></msub></mover><mo mathsize="small" stretchy="false">,</mo><mover accent="true"><mrow><mi mathsize="normal" stretchy="false">c</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">h</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">a</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">s</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">e</mi></mrow><msub><mi mathsize="normal" mathvariant="normal" stretchy="false">□</mi><mi mathsize="normal" stretchy="false">o</mi></msub></mover></mrow><mo mathsize="small" stretchy="false">⟩</mo></mrow></math> ] [ <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.F2.m5" class="ltx_Math" alttext="\vec{cats}" display="inline"><mover accent="true"><mrow><mi mathsize="normal" stretchy="false">c</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">a</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">s</mi></mrow><mo mathsize="normal" stretchy="false">→</mo></mover></math> ] ] ]
+</span></p>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>Applying function application twice to derive the
+representation of a transitive sentence.</div>
+</div>
+<div id="S2.SS2.p3" class="ltx_para">
+<p class="ltx_p">The second composition rule, <em class="ltx_emph">symmetric composition</em> applies when
+two syntactic sisters are of the same arity (e.g., two vectors, or two
+vector-matrix pairs). Symmetric composition simply sums the objects in
+the two tuples: vector with vector, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-th matrix with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m2" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-th matrix.</p>
+</div>
+<div id="S2.SS2.p4" class="ltx_para">
+<p class="ltx_p">Symmetric composition is reserved for structures in which the
+function-argument distinction is problematic. Some candidates for
+such treatment are coordination and nominal compounds, although we
+recognize that the headless analysis is not the only possible one
+here. See two examples of Symmetric Composition application in Table
+<a href="#S2.T3" title="Table 3 ‣ 2.2 Semantic composition ‣ 2 The practical lexical function model ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.</p>
+</div>
+<div id="S2.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_small">sing: </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T3.m1" class="ltx_Math" alttext="\vec{sing},\overset{\Box}{sing}" display="inline"><mrow><mover accent="true"><mrow><mi>s</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>g</mi></mrow><mo stretchy="false">→</mo></mover><mo>,</mo><mover accent="true"><mrow><mi>s</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>g</mi></mrow><mo>□</mo></mover></mrow></math></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">dance: </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T3.m2" class="ltx_Math" alttext="\vec{dance},\overset{\Box}{dance}" display="inline"><mrow><mover accent="true"><mrow><mi>d</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>e</mi></mrow><mo stretchy="false">→</mo></mover><mo>,</mo><mover accent="true"><mrow><mi>d</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>e</mi></mrow><mo>□</mo></mover></mrow></math></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_small">sing and dance:</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T3.m3" class="ltx_Math" alttext="\vec{sing}+\vec{dance},\overset{\Box}{sing}+\overset{\Box}{dance}" display="inline"><mrow><mrow><mover accent="true"><mrow><mi>s</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>g</mi></mrow><mo stretchy="false">→</mo></mover><mo>+</mo><mover accent="true"><mrow><mi>d</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>e</mi></mrow><mo stretchy="false">→</mo></mover></mrow><mo>,</mo><mrow><mover accent="true"><mrow><mi>s</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>g</mi></mrow><mo>□</mo></mover><mo>+</mo><mover accent="true"><mrow><mi>d</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>e</mi></mrow><mo>□</mo></mover></mrow></mrow></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_small">rice: </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T3.m4" class="ltx_Math" alttext="\vec{rice}" display="inline"><mover accent="true"><mrow><mi>r</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>e</mi></mrow><mo stretchy="false">→</mo></mover></math></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">cake: </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T3.m5" class="ltx_Math" alttext="\vec{cake}" display="inline"><mover accent="true"><mrow><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>k</mi><mo>⁢</mo><mi>e</mi></mrow><mo stretchy="false">→</mo></mover></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_small">rice cake</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T3.m6" class="ltx_Math" alttext="\vec{rice}+\vec{cake}" display="inline"><mrow><mover accent="true"><mrow><mi>r</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>e</mi></mrow><mo stretchy="false">→</mo></mover><mo>+</mo><mover accent="true"><mrow><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>k</mi><mo>⁢</mo><mi>e</mi></mrow><mo stretchy="false">→</mo></mover></mrow></math></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 3: </span> Examples of symmetric composition.</div>
+</div>
+<div id="S2.SS2.p5" class="ltx_para">
+<p class="ltx_p">Note that the <em class="ltx_emph">sing and dance</em> composition in Table
+<a href="#S2.T3" title="Table 3 ‣ 2.2 Semantic composition ‣ 2 The practical lexical function model ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> skips the conjunction. Our current plf
+implementation treats most grammatical words, including conjunctions,
+as “empty” elements, that do not project into semantics. This choice
+leads to some interesting “serendipitous” treatments of various
+constructions. For example, since the copula is empty, a sentence with
+a predicative adjective (<em class="ltx_emph">cars are red</em>) is treated in the same
+way as a phrase with the same adjective in attributive position
+(<em class="ltx_emph">red cars</em>) – although the latter, being a phrase and not a
+full sentence, will later be embedded as argument in a larger
+construction. Similarly, leaving the relative pronoun empty makes
+<em class="ltx_emph">cars that run</em> identical to <em class="ltx_emph">cars run</em>, although, again,
+the former will be embedded in a larger construction later in the
+derivation.</p>
+</div>
+<div id="S2.SS2.p6" class="ltx_para">
+<p class="ltx_p">We conclude our brief exposition of plf with an alternative intuition
+for it: the plf model is also a more sophisticated version of the
+additive approach, where argument words are adapted by matrices that
+encode the relation to their functors before the sentence vector is
+derived by summing.</p>
+</div>
+</div>
+<div id="S2.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.3 </span>Satisfying the desiderata</h3>
+
+<div id="S2.SS3.p1" class="ltx_para">
+<p class="ltx_p">Let us now outline how plf addresses the shortcomings of lf listed in
+Section <a href="#S1.SS2" title="1.2 Problems with the extension of the lexical function model&#10;to sentences ‣ 1 Compositional distributional semantics ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1.2</span></a>. First, all issues caused by representation
+size disappear. An n-ary predicate is no longer encoded as an n+1-way
+tensor; instead we have a sequence of n matrices. The representation
+size grows linearly, not exponentially, for higher semantic types,
+allowing for simpler and more efficient parameter estimation, storage,
+and computation.</p>
+</div>
+<div id="S2.SS3.p2" class="ltx_para">
+<p class="ltx_p">As a consequence of our architecture, we no longer need to perform the
+complicated step-by-step estimation for elements of higher
+arity. Indeed, one can estimate each matrix of a complex
+representation individually using the simple method of
+<cite class="ltx_cite">Baroni and Zamparelli (<a href="#bib.bib39" title="Nouns are vectors, adjectives are matrices: representing adjective-noun constructions in semantic space" class="ltx_ref">2010</a>)</cite>. For instance, for transitive verbs
+we estimate the verb-subject combination matrix from subject and
+verb-subject vectors, the verb-object combination matrix from object
+and verb-object vectors. We expect a reasonably large corpus to
+feature many occurrences of a verb with a variety of subjects and a
+variety of objects (but not necessarily a variety of subjects with
+each of the objects as required by Grefenstette et al.’s training),
+allowing us to avoid the data sparseness issue.</p>
+</div>
+<div id="S2.SS3.p3" class="ltx_para">
+<p class="ltx_p">The semantic representations we propose include a semantic vector for
+constituents of any semantic type, thus enabling semantic comparison
+for words of different parts of speech (the case of
+<span class="ltx_text ltx_font_italic">demolition</span> vs. <span class="ltx_text ltx_font_italic">demolish</span>).</p>
+</div>
+<div id="S2.SS3.p4" class="ltx_para">
+<p class="ltx_p">Finally, the fact that we represent the predicate interaction with
+each of its arguments in a separate matrix allows for a natural and
+intuitive treatment of argument alternations. For instance, as shown
+in Table <a href="#S2.T4" title="Table 4 ‣ 2.3 Satisfying the desiderata ‣ 2 The practical lexical function model ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>, one can distinguish the transitive and
+intransitive usages of the verb <span class="ltx_text ltx_font_italic">to eat</span> by the presence of the
+object-oriented matrix of the verb while keeping the rest of the
+representation intact. To model passive usages, we insert the object
+matrix of the verb only, which will be multiplied by the syntactic
+subject vector, capturing the similarity between <em class="ltx_emph">eat
+meat</em> and <em class="ltx_emph">meat is eaten</em>.</p>
+</div>
+<div id="S2.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">boys</span></th>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T4.m1" class="ltx_Math" alttext="\vec{boys}" display="inline"><mover accent="true"><mrow><mi>b</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>y</mi><mo>⁢</mo><mi>s</mi></mrow><mo stretchy="false">→</mo></mover></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_small">eat</span><span class="ltx_text ltx_font_small"> (intrans.)</span></th>
+<td class="ltx_td ltx_align_left ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T4.m2" class="ltx_Math" alttext="\vec{eat},\overset{\Box_{s}}{eat}" display="inline"><mrow><mover accent="true"><mrow><mi>e</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi></mrow><mo stretchy="false">→</mo></mover><mo>,</mo><mover accent="true"><mrow><mi>e</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi></mrow><msub><mi mathvariant="normal">□</mi><mi>s</mi></msub></mover></mrow></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_small">boys eat</span></th>
+<td class="ltx_td ltx_align_left ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T4.m3" class="ltx_Math" alttext="\overset{\Box_{s}}{eat}\times\vec{boys}+\vec{eat}" display="inline"><mrow><mrow><mover accent="true"><mrow><mi>e</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi></mrow><msub><mi mathvariant="normal">□</mi><mi>s</mi></msub></mover><mo>×</mo><mover accent="true"><mrow><mi>b</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>y</mi><mo>⁢</mo><mi>s</mi></mrow><mo stretchy="false">→</mo></mover></mrow><mo>+</mo><mover accent="true"><mrow><mi>e</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi></mrow><mo stretchy="false">→</mo></mover></mrow></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">meat</span></th>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T4.m4" class="ltx_Math" alttext="\vec{meat}" display="inline"><mover accent="true"><mrow><mi>m</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi></mrow><mo stretchy="false">→</mo></mover></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_small">eat</span><span class="ltx_text ltx_font_small"> (trans.)</span></th>
+<td class="ltx_td ltx_align_left ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T4.m5" class="ltx_Math" alttext="\vec{eat},\overset{\Box_{s}}{eat},\overset{\Box_{o}}{eat}" display="inline"><mrow><mover accent="true"><mrow><mi>e</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi></mrow><mo stretchy="false">→</mo></mover><mo>,</mo><mover accent="true"><mrow><mi>e</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi></mrow><msub><mi mathvariant="normal">□</mi><mi>s</mi></msub></mover><mo>,</mo><mover accent="true"><mrow><mi>e</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi></mrow><msub><mi mathvariant="normal">□</mi><mi>o</mi></msub></mover></mrow></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_small">boys eat meat</span></th>
+<td class="ltx_td ltx_align_left ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T4.m6" class="ltx_Math" alttext="\overset{\Box_{s}}{eat}\times\vec{boys}+\vec{eat}+\overset{\Box_{o}}{eat}%&#10;\times\vec{meat}" display="inline"><mrow><mrow><mover accent="true"><mrow><mi>e</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi></mrow><msub><mi mathvariant="normal">□</mi><mi>s</mi></msub></mover><mo>×</mo><mover accent="true"><mrow><mi>b</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>y</mi><mo>⁢</mo><mi>s</mi></mrow><mo stretchy="false">→</mo></mover></mrow><mo>+</mo><mover accent="true"><mrow><mi>e</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi></mrow><mo stretchy="false">→</mo></mover><mo>+</mo><mrow><mover accent="true"><mrow><mi>e</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi></mrow><msub><mi mathvariant="normal">□</mi><mi>o</mi></msub></mover><mo>×</mo><mover accent="true"><mrow><mi>m</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi></mrow><mo stretchy="false">→</mo></mover></mrow></mrow></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">(is) eaten</span><span class="ltx_text ltx_font_small"> (pass.)</span></th>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T4.m7" class="ltx_Math" alttext="\vec{eat},\overset{\Box_{o}}{eat}" display="inline"><mrow><mover accent="true"><mrow><mi>e</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi></mrow><mo stretchy="false">→</mo></mover><mo>,</mo><mover accent="true"><mrow><mi>e</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi></mrow><msub><mi mathvariant="normal">□</mi><mi>o</mi></msub></mover></mrow></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_small">meat is eaten</span></th>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T4.m8" class="ltx_Math" alttext="\vec{eat}+\overset{\Box_{o}}{eat}\times\vec{meat}" display="inline"><mrow><mover accent="true"><mrow><mi>e</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi></mrow><mo stretchy="false">→</mo></mover><mo>+</mo><mrow><mover accent="true"><mrow><mi>e</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi></mrow><msub><mi mathvariant="normal">□</mi><mi>o</mi></msub></mover><mo>×</mo><mover accent="true"><mrow><mi>m</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi></mrow><mo stretchy="false">→</mo></mover></mrow></mrow></math></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 4: </span> The verb <span class="ltx_text ltx_font_italic">to eat</span> associated to different sets of matrices in different syntactic contexts.</div>
+</div>
+<div id="S2.SS3.p5" class="ltx_para">
+<p class="ltx_p">So keeping the verb’s interaction with subject and object encoded in
+distinct matrices not only solves the issues of representation size
+for arbitrary semantic types, but also provides a sensible built-in
+strategy for handling a word’s occurrence in multiple
+constructions. Indeed, if we encounter a verb used intransitively
+which was only attested as transitive in the training corpus, we can
+simply omit the object matrix to obtain a type-appropriate
+representation. On the other hand, if the verb occurs with more
+arguments than usual in testing materials, we can add a default
+diagonal identity matrix to its representation, signaling agnosticism
+about how the verb relates to the unexpected argument. This
+flexibility makes our model suitable to compute vector representations
+of sentences without stumbling at unseen syntactic usages of words.</p>
+</div>
+<div id="S2.SS3.p6" class="ltx_para">
+<p class="ltx_p">To summarize, plf is an extension of the lexical function model that
+inherits its strengths and overcomes its weaknesses. We still employ a
+linguistically-motivated notion of semantic composition as function
+application and use distinct kinds of representations for different
+semantic types. At the same time, we avoid high order tensor
+representations, produce semantic vectors for all syntactic
+constituents, and allow for an elegant and transparent correspondence
+between different syntactic usages of a lexeme, such as the
+transitive, the intransitive, and the passive usages of the verb
+<span class="ltx_text ltx_font_italic">to eat</span>. Last but not least, our implementation is suitable
+for realistic language processing since it allows to produce vectors
+for sentences of arbitrary size, including those containing novel
+syntactic configurations.</p>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Evaluation</h2>
+
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Evaluation materials</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">We consider 5 different benchmarks that focus on different aspects of
+sentence-level semantic composition. The first data set, created by Edward
+Grefenstette and Mehrnoosh Sadrzadeh and introduced in
+<cite class="ltx_cite">Kartsaklis<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib240" title="Separating disambiguation from composition in distributional semantics" class="ltx_ref">2013</a>)</cite>, features 200 sentence pairs that were
+rated for similarity by 43 annotators. In this data set, sentences
+have fixed adjective-noun-verb-adjective-noun (anvan) structure, and
+they were built in order to crucially require context-based verb
+disambiguation (e.g., <em class="ltx_emph">young woman filed long nails</em> is paired
+with both <em class="ltx_emph">young woman smoothed long nails</em> and <em class="ltx_emph">young woman
+registered long nails</em>). We also consider a similar data set
+introduced by <cite class="ltx_cite">Grefenstette (<a href="#bib.bib192" title="Category-theoretic quantitative compositional distributional models of natural language semantics" class="ltx_ref">2013</a>)</cite>, comprising 200 sentence
+pairs rated by 50 annotators. We will call these benchmarks
+<span class="ltx_text ltx_font_bold">anvan1</span> and <span class="ltx_text ltx_font_bold">anvan2</span>, respectively. Evaluation is
+carried out by computing the Spearman correlation between the
+annotator similarity ratings for the sentence pairs and the cosines of
+the vectors produced by the various systems for the same sentence
+pairs.</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">The benchmark introduced by <cite class="ltx_cite">Pham<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib427" title="Sentence paraphrase detection: when determiners and word order make the difference" class="ltx_ref">2013</a>)</cite> at the TFDS
+workshop (<span class="ltx_text ltx_font_bold">tfds</span> below) was specifically designed to test
+compositional methods for their sensitivity to word order and the
+semantic effect of determiners. The tfds benchmark contains 157 target
+sentences that are matched with a set of (approximate) paraphrases (8
+on average), and a set of “foils” (17 on average). The foils have
+high lexical overlap with the targets but very different meanings, due
+to different determiners and/or word order. For example, the target
+<em class="ltx_emph">A man plays an acoustic guitar</em> is matched with paraphrases such
+as <em class="ltx_emph">A man plays guitar</em> and <em class="ltx_emph">The man plays the guitar</em>, and
+foils such as <em class="ltx_emph">The man plays no guitar</em> and <em class="ltx_emph">A guitar plays
+a man</em>. A good system should return higher similarities for the
+comparison with the paraphrases with respect to that with the
+foils. Performance is assessed through the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m1" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math>-standardized
+cross-target average of the difference between mean cosine with
+paraphrases and mean cosine with foils (Pham and colleagues,
+equivalently, reported non-standardized average and standard
+deviations).</p>
+</div>
+<div id="S3.SS1.p3" class="ltx_para">
+<p class="ltx_p">The two remaining data sets are larger and more ‘natural’, as they were not constructed by
+linguists under controlled conditions to focus on specific
+phenomena. They are aimed at evaluating systems on the sort of
+free-form sentences one encounters in real-life applications. The
+<span class="ltx_text ltx_font_bold">msrvid</span> data set from the SemEval-2012 Semantic Textual
+Similarity (STS) task <cite class="ltx_cite">[<a href="#bib.bib1" title="SemEval-2012 Task 6: a pilot on semantic textual similarity" class="ltx_ref">2</a>]</cite> consists of 750 sentence
+pairs that describe brief videos. Sentence pairs were scored for
+similarity by 5 subjects each. Following standard practice in
+paraphrase detection studies (e.g., <cite class="ltx_cite">Blacoe and Lapata (<a href="#bib.bib58" title="A comparison of vector-based representations for semantic composition" class="ltx_ref">2012</a>)</cite>), we
+use cosine similarity between sentence pairs as computed by one of our
+systems together with two shallow similarity cues: word overlap
+between the two sentences and difference in sentence length. We obtain
+a final similarity score by weighted addition of the 3 cues, with the
+optimal weights determined by linear regression on separate msrvid
+train data that were also provided by the SemEval task organizers
+(before combining, we checked that the collinearity between cues was
+low). System scores are evaluated by their Pearson correlation with
+the human ratings.</p>
+</div>
+<div id="S3.SS1.p4" class="ltx_para">
+<p class="ltx_p">The final set we use is <span class="ltx_text ltx_font_bold">onwn</span>, from the *SEM-2013 STS shared
+task <cite class="ltx_cite">[<a href="#bib.bib4" title="*SEM 2013 shared task: Semantic Textual Similarity" class="ltx_ref">1</a>]</cite>. This set contains 561 pairs of glosses
+(from the WordNet and OntoNotes databases), rated by 5 judges for
+similarity. Our main interest in this set stems from the fact that
+glosses are rarely well-formed full sentences (consider, e.g.,
+<em class="ltx_emph">cause something to pass or lead somewhere</em>; <em class="ltx_emph">coerce by
+violence, fill with terror</em>). For this reason, they are very
+challenging for standard parsers. Indeed, we estimated from a sample
+of 40 onwn glosses that the C&amp;C parser (see below) has only 45%
+accuracy on this set. Since <em class="ltx_emph">plf</em> needs syntactic information to
+construct sentence vectors compositionally, we test it on onwn to make
+sure that it is not overly sensitive to parser noise. Evaluation
+proceeds as with msrvid (cue weights are determined by 10-fold
+cross-validation).<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>We did not evaluate on other STS
+benchmarks since they have characteristics, such as high density of
+named entities, that would require embedding our compositional
+models into more complex systems, obfuscating their impact on the
+overall performance.</span></span></span></p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Semantic space construction and composition model
+implementation</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">Our source corpus was given by the concatenation of ukWaC
+(<a href="wacky.sslmit.unibo.it" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">wacky.sslmit.unibo.it</span></a>), a mid-2009 dump of the English
+Wikipedia (<a href="en.wikipedia.org" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">en.wikipedia.org</span></a>) and the British National Corpus
+(<a href="www.natcorp.ox.ac.uk" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">www.natcorp.ox.ac.uk</span></a>), for a total of about 2.8 billion words.</p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p">We collected a 30K-by-30K matrix by counting co-occurrence of the 30K
+most frequent content lemmas (nouns, adjectives and verbs) within a
+3-word window. The raw count vectors were transformed into positive
+Pointwise Mutual Information scores and reduced to 300 dimensions by
+the Singular Value Decomposition. All vectors were normalized to length 1. This setup was picked without tuning, as we
+found it effective in previous, unrelated experiments.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>With the multiplicative composition model we also tried
+Nonnegative Matrix Factorization instead of Singular Value
+Decomposition, because the negative values produced by SVD are
+potentially problematic for mult. In addition, we repeated the evaluation for the multiplicative and
+additive models without any form of
+dimensionality reduction. The overall pattern of results did not
+change significantly, and thus for consistency we report all models’
+performance only for the SVD-reduced space.</span></span></span></p>
+</div>
+<div id="S3.SS2.p3" class="ltx_para">
+<p class="ltx_p">We consider four composition models. The <span class="ltx_text ltx_font_bold">add</span> (additive) model
+produces the vector of a sentence by summing the vectors of all content words
+in it. Similarly, <span class="ltx_text ltx_font_bold">mult</span> uses component-wise
+multiplication of vectors for composition. While these models are very
+simple, a long experimental tradition has proven their effectiveness
+<cite class="ltx_cite">[<a href="#bib.bib262" title="A solution to Plato’s problem: the latent semantic analysis theory of acquisition, induction, and representation of knowledge" class="ltx_ref">19</a>, <a href="#bib.bib317" title="Vector-based models of semantic composition" class="ltx_ref">20</a>, <a href="#bib.bib319" title="Composition in distributional models of semantics" class="ltx_ref">21</a>, <a href="#bib.bib58" title="A comparison of vector-based representations for semantic composition" class="ltx_ref">6</a>]</cite>.</p>
+</div>
+<div id="S3.SS2.p4" class="ltx_para">
+<p class="ltx_p">For the <span class="ltx_text ltx_font_bold">lf</span> (lexical function) model, we construct functional
+matrix representations of adjectives, determiners and intransitive
+verbs. These are trained using Ridge regression with generalized
+cross-validation from corpus-extracted vectors of nouns, as input, and
+phrases including those nouns as output (e.g., the matrix for
+<em class="ltx_emph">red</em> is trained from corpus-extracted <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m1" class="ltx_Math" alttext="\left\langle\emph{noun},\emph{red-noun}\right\rangle" display="inline"><mrow><mo>⟨</mo><mrow><mtext><em xmlns="http://www.w3.org/1999/xhtml" class="ltx_emph">noun</em></mtext><mo>,</mo><mtext><em xmlns="http://www.w3.org/1999/xhtml" class="ltx_emph">red-noun</em></mtext></mrow><mo>⟩</mo></mrow></math> vector pairs). Transitive verb tensors are
+estimated using the two-step regression procedure outlined by
+<cite class="ltx_cite">Grefenstette<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib193" title="Multi-step regression learning for compositional distributional semantics" class="ltx_ref">2013</a>)</cite>. We did not attempt to train a lf
+model for the larger and more varied msrvid and onwn data sets, as
+this would have been extremely time consuming and impractical for all
+the reasons we discussed in Section <a href="#S1.SS2" title="1.2 Problems with the extension of the lexical function model&#10;to sentences ‣ 1 Compositional distributional semantics ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1.2</span></a> above.</p>
+</div>
+<div id="S3.SS2.p5" class="ltx_para">
+<p class="ltx_p">Training <span class="ltx_text ltx_font_bold">plf</span> (practical lexical function) proceeds similarly,
+but we also build preposition matrices (from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m1" class="ltx_Math" alttext="\left\langle\emph{noun},\emph{preposition-noun}\right\rangle" display="inline"><mrow><mo>⟨</mo><mrow><mtext><em xmlns="http://www.w3.org/1999/xhtml" class="ltx_emph">noun</em></mtext><mo>,</mo><mtext><em xmlns="http://www.w3.org/1999/xhtml" class="ltx_emph">preposition-noun</em></mtext></mrow><mo>⟩</mo></mrow></math> vector pairs), and for verbs we prepare
+separate subject and object matrices.</p>
+</div>
+<div id="S3.SS2.p6" class="ltx_para">
+<p class="ltx_p">Since syntax guides lf and plf composition, we supplied all test
+sentences with categorial grammar parses. Every sentence in the anvan1
+and anvan2 datasets has the form (subject) Adjective + Noun +
+Transitive Verb + (object) Adjective + Noun, so parsing them is
+trivial. All sentences in tfds have a predictable structure that
+allows perfect parsing with simple finite state rules. In all these
+cases, applying a general-purpose parser to the data would have, at
+best, had no impact and, at worst, introduced parsing errors. For
+msrvid and onwn, we used the output of the C&amp;C parser
+<cite class="ltx_cite">[<a href="#bib.bib106" title="Wide-coverage efficient statistical parsing with CCG and log-linear models" class="ltx_ref">8</a>]</cite>.</p>
+</div>
+</div>
+<div id="S3.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.3 </span>Results</h3>
+
+<div id="S3.SS3.p1" class="ltx_para">
+<p class="ltx_p">Table <a href="#S3.T5" title="Table 5 ‣ 3.3 Results ‣ 3 Evaluation ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> summarizes the performance of our models on
+the chosen tasks, and compares it to the state of the art reported in
+previous work, as well as to various strong baselines.</p>
+</div>
+<div id="S3.T5" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r"><em class="ltx_emph">models</em></td>
+<td class="ltx_td ltx_align_center ltx_border_r">anvan</td>
+<td class="ltx_td ltx_align_center ltx_border_r">anvan</td>
+<td class="ltx_td ltx_align_center ltx_border_r">tfds</td>
+<td class="ltx_td ltx_align_center ltx_border_r">msr</td>
+<td class="ltx_td ltx_align_center">onwn</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_r">1</td>
+<td class="ltx_td ltx_align_center ltx_border_r">2</td>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_r">vid</td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">add</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">8</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">22</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">-0.2</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">78</td>
+<td class="ltx_td ltx_align_center ltx_border_t">66</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">mult</td>
+<td class="ltx_td ltx_align_center ltx_border_r">8</td>
+<td class="ltx_td ltx_align_center ltx_border_r">-4</td>
+<td class="ltx_td ltx_align_center ltx_border_r">-2.3</td>
+<td class="ltx_td ltx_align_center ltx_border_r">77</td>
+<td class="ltx_td ltx_align_center">55</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">lf</td>
+<td class="ltx_td ltx_align_center ltx_border_r">15</td>
+<td class="ltx_td ltx_align_center ltx_border_r">30</td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold">5.90</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r">NA</td>
+<td class="ltx_td ltx_align_center">NA</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">plf</td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold">20</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold">36</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r">2.7</td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold">79</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">67</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">soa</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">22</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">27</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">11.4</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">87</td>
+<td class="ltx_td ltx_align_center ltx_border_t">75</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_r">baseline</td>
+<td class="ltx_td ltx_align_center ltx_border_r">8</td>
+<td class="ltx_td ltx_align_center ltx_border_r">22</td>
+<td class="ltx_td ltx_align_center ltx_border_r">7.9</td>
+<td class="ltx_td ltx_align_center ltx_border_r">77</td>
+<td class="ltx_td ltx_align_center">55</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 5: </span>Performance of composition models on all
+evaluation sets. Figures of merit follow previous art on each set
+and are: percentage Spearman coefficients for anvan1 and anvan2,
+t-standardized average difference between mean cosines with
+paraphrases and with foils for tfds, percentage Pearson coefficients
+for msrvid and onwn. State-of-the-art (soa) references: anvan1: <cite class="ltx_cite">Kartsaklis and Sadrzadeh (<a href="#bib.bib239" title="Prior disambiguation of word tensors for constructing sentence vectors" class="ltx_ref">2013</a>)</cite>; anvan2: <cite class="ltx_cite">Grefenstette (<a href="#bib.bib192" title="Category-theoretic quantitative compositional distributional models of natural language semantics" class="ltx_ref">2013</a>)</cite>; tfds: <cite class="ltx_cite">Pham<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib427" title="Sentence paraphrase detection: when determiners and word order make the difference" class="ltx_ref">2013</a>)</cite>; msrvid: <cite class="ltx_cite">Bär<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib21" title="UKP: computing semantic textual similarity by combining multiple content similarity measures" class="ltx_ref">2012</a>)</cite>; onwn: <cite class="ltx_cite">Han<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib201" title="UMBC_EBIQUITY-CORE: semantic textual similarity systems" class="ltx_ref">2013</a>)</cite>. Baselines: anvan1/anvan2: verb vectors only; tfds: word overlap; msrvid/onwn: word overlap + sentence length.</div>
+</div>
+<div id="S3.SS3.p2" class="ltx_para">
+<p class="ltx_p">The plf model performs very well on both anvan benchmarks,
+outperforming not only add and mult, but also the full-fledged lf
+model. Given that these data sets contain, systematically, transitive
+verbs, the major difference between plf and lf lies in their
+representation of the latter. Evidently, the separately-trained
+subject and object matrices of plf, being less affected by data
+sparseness than the 3-way tensors of lf, are better able to capture
+how verbs interact with their arguments. For anvan1, plf is just below
+the state of the art, which is based on disambiguating the verb vector
+in context <cite class="ltx_cite">[<a href="#bib.bib239" title="Prior disambiguation of word tensors for constructing sentence vectors" class="ltx_ref">18</a>]</cite>, and lf outperforms the
+baseline, which consists in using the verb vector only as a proxy to
+sentence similarity.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup>We report state of the art from
+<cite class="ltx_cite">Kartsaklis and Sadrzadeh (<a href="#bib.bib239" title="Prior disambiguation of word tensors for constructing sentence vectors" class="ltx_ref">2013</a>)</cite> rather than
+<cite class="ltx_cite">Kartsaklis<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib240" title="Separating disambiguation from composition in distributional semantics" class="ltx_ref">2013</a>)</cite>, since only the former used a source
+corpus that is comparable to ours.</span></span></span> On anvan2, plf outperforms the
+best model reported by <cite class="ltx_cite">Grefenstette (<a href="#bib.bib192" title="Category-theoretic quantitative compositional distributional models of natural language semantics" class="ltx_ref">2013</a>)</cite> (an implementation
+of the lexical function ideas along the lines of Grefenstette and
+Sadrzadeh
+<cite class="ltx_cite">[<a href="#bib.bib189" title="Experimental support for a categorical compositional distributional model of meaning" class="ltx_ref">12</a>, <a href="#bib.bib190" title="Experimenting with transitive verbs in a DisCoCat" class="ltx_ref">13</a>]</cite>). And
+lf is, again, the only model, besides plf, that performs better than
+the baseline.</p>
+</div>
+<div id="S3.SS3.p3" class="ltx_para">
+<p class="ltx_p">In the tfds task, not surprisingly the add and mult models, lacking
+determiner representations and being order-insensitive, fail to
+distinguish between true paraphrases and foils (indeed, for the mult
+model foils are significantly <em class="ltx_emph">closer</em> to the targets than the
+paraphrases, probably because the latter have lower content word
+overlap than the foils, that often differ in word order and
+determiners only). Our plf approach is able to handle determiners and
+word order correctly, as demonstrated by a highly significant
+(<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m1" class="ltx_Math" alttext="p&lt;0.01" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.01</mn></mrow></math>) difference between paraphrase and foil similarity (average difference in cosine .017, standard deviation .077). In this
+case, however, the traditional lf model (average difference .044, standard deviation .092) outperforms plf. Since
+determiners are handled identically under the two approaches, the
+culprit must be word order. We conjecture that the lf 3-way tensor
+representation of transitive verbs leads to a stronger asymmetry
+between sentences with inverted arguments, and thus makes this model
+particularly sensitive to word order differences. Indeed, if we limit
+evaluation to those foils characterized by word order changes only, lf
+discriminates between paraphrases and foils even more clearly, whereas
+the plf difference, while still significant, decreases slightly.</p>
+</div>
+<div id="S3.SS3.p4" class="ltx_para">
+<p class="ltx_p">The state-of-the-art row for tfds reports the lf implementation by
+<cite class="ltx_cite">Pham<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib427" title="Sentence paraphrase detection: when determiners and word order make the difference" class="ltx_ref">2013</a>)</cite>, which outperforms ours. The main
+difference is that Pham and colleagues do not normalize vectors
+like we do. If we don’t normalize, we do get larger differences
+for our models as well, but consistently lower performance in all
+other tasks. More worryingly, the simple word overlap baseline reported in the
+table sports a larger difference than our best model. Clearly, this
+baseline is exploiting the systematic determiner differences in the
+foils and, indeed, when it is evaluated on foils where only word order
+changes its performance is no longer
+significant.</p>
+</div>
+<div id="S3.SS3.p5" class="ltx_para">
+<p class="ltx_p">On
+msrvid, the plf approach outperforms add and mult, although the difference between the three is not big. Our result stands in contrast with
+<cite class="ltx_cite">Blacoe and Lapata (<a href="#bib.bib58" title="A comparison of vector-based representations for semantic composition" class="ltx_ref">2012</a>)</cite>, the only study we are aware of that
+compared a sophisticated composition model (Socher et al.’s 2011
+model) to add and mult on realistic sentences, which attained the top
+performance with the simple models for both figures of merit they
+used.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">6</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">6</sup>We refer here to the results reported in the erratum
+available at
+<a href="http://homepages.inf.ed.ac.uk/s1066731/pdf/emnlp2012erratum.pdf" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://homepages.inf.ed.ac.uk/s1066731/pdf/emnlp2012erratum.pdf</span></a>. The
+add/mult advantage was even more marked in the original paper.</span></span></span> The
+best 2012 STS system <cite class="ltx_cite">[<a href="#bib.bib21" title="UKP: computing semantic textual similarity by combining multiple content similarity measures" class="ltx_ref">7</a>]</cite>, obtained 0.87 correlation,
+but with many more and considerably more complex features than the
+ones we used here. Indeed, our simple system would have obtained a
+respectable 25/89 ranking in the STS 2012 msrvid task. Still, we must
+also stress the impressive performance of our baseline, given by the
+combination of the word overlap and sentence length cues. This
+suggests that the msrvid benchmark lacks the lexical and
+syntactic variety we would like to test our systems on.</p>
+</div>
+<div id="S3.SS3.p6" class="ltx_para">
+<p class="ltx_p">Our plf model is again the best on the onwn set (albeit by a small margin
+over add). This is a very positive result, in the light of the fact that
+the parser has very low performance on the onwn glosses, thus
+suggesting that plf can produce sensible semantic vectors from noisy
+syntactic representations. Here the overlap+length baseline does not
+perform so well, and again the best STS 2013 system
+<cite class="ltx_cite">[<a href="#bib.bib201" title="UMBC_EBIQUITY-CORE: semantic textual similarity systems" class="ltx_ref">16</a>]</cite> uses considerably richer knowledge sources and
+algorithms than ours. Our plf-based method would have reached a
+respectable 20/90 rank in the STS 2013 onwn task.</p>
+</div>
+<div id="S3.SS3.p7" class="ltx_para">
+<p class="ltx_p">As a final remark, in all experiments the running time of plf was only
+slightly larger than for the simpler models, but orders of magnitude
+smaller than lf, confirming another practical side of our approach.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Conclusion</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">We introduced an approach to compositional distributional semantics
+based on a linguistically-motivated syntax-to-semantics type mapping,
+but simple and flexible enough that it can produce representations of
+English sentences of arbitrary size and structure.</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">We showed that our approach is competitive against the more complex
+lexical function model when evaluated on the simple constructions the
+latter can be applied to, and it outperforms the additive and multiplicative compositionality models
+when tested on more realistic benchmarks (where the
+full-fledged lexical function approach is difficult or impossible to
+use), even in presence of strong noise in its syntactic input. While
+our results are encouraging, no current benchmark combines
+large-scale, real-life data with the syntactic variety on which a
+syntax-driven approach to semantics such as ours could truly prove its
+worth. The recently announced SemEval 2014 Task
+1<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">7</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">7</sup><a href="http://alt.qcri.org/semeval2014/task1/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://alt.qcri.org/semeval2014/task1/</span></a></span></span></span> is filling
+exactly this gap, and we look forward to apply our method to this new
+benchmark, as soon as it becomes available.</p>
+</div>
+<div id="S4.p3" class="ltx_para">
+<p class="ltx_p">One of the strengths of our framework is that it allows for
+incremental improvement focused on specific constructions. For example, one could add representations for different conjunctions (<span class="ltx_text ltx_font_italic">and</span> vs. <span class="ltx_text ltx_font_italic">or</span>), train matrices for verb arguments other than subject and direct object, or include new types of modifiers into the model, etc.</p>
+</div>
+<div id="S4.p4" class="ltx_para">
+<p class="ltx_p">While there is potential for local improvements, our framework, which extends and improves on existing compositional semantic vector models, has demonstrated its ability to account for full sentences in a principled and elegant way. Our implementation of the model relies on simple and efficient training, works fast, and shows good empirical results.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgements</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">We thank Roberto Zamparelli and the COMPOSES team for helpful
+discussions. This research was supported by the ERC 2011 Starting
+Independent Research Grant n. 283554 (COMPOSES).</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Agirre, D. Cer, M. Diab, A. Gonzalez-Agirre and W. Guo</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">*SEM 2013 shared task: Semantic Textual Similarity</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Atlanta, GA</span>, <span class="ltx_text ltx_bib_pages"> pp. 32–43</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p4" title="3.1 Evaluation materials ‣ 3 Evaluation ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Agirre, D. Cer, M. Diab and A. Gonzalez-Agirre</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">SemEval-2012 Task 6: a pilot on semantic textual similarity</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Montreal, Canada</span>, <span class="ltx_text ltx_bib_pages"> pp. 385–393</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p3" title="3.1 Evaluation materials ‣ 3 Evaluation ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib43" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Baroni, R. Bernardi and R. Zamparelli</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Frege in space: A program for compositional distributional semantics</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Linguistic Issues in Language Technology</span>.
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note">In press; <span class="ltx_ERROR undefined">\url</span>http://clic.cimec.unitn.it/composes/materials/frege-in-space.pdf</span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.SS1.p1" title="1.1 The lexical function model ‣ 1 Compositional distributional semantics ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1.1</span></a>.
+</span></li>
+<li id="bib.bib39" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Baroni and R. Zamparelli</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Nouns are vectors, adjectives are matrices: representing adjective-noun constructions in semantic space</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Boston, MA</span>, <span class="ltx_text ltx_bib_pages"> pp. 1183–1193</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <span class="ltx_ref ltx_ref_self"><span class="ltx_text ltx_ref_title">A practical and linguistically-motivated approach<span class="ltx_text"> </span>to
+compositional distributional semantics</span></span>,
+<a href="#S1.SS1.p1" title="1.1 The lexical function model ‣ 1 Compositional distributional semantics ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1.1</span></a>,
+<a href="#S1.SS1.p2" title="1.1 The lexical function model ‣ 1 Compositional distributional semantics ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1.1</span></a>,
+<a href="#S2.SS3.p2" title="2.3 Satisfying the desiderata ‣ 2 The practical lexical function model ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>.
+</span></li>
+<li id="bib.bib53" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Bernardi, G. Dinu, M. Marelli and M. Baroni</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A relatedness benchmark to test the role of determiners in compositional distributional semantics</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sofia, Bulgaria</span>, <span class="ltx_text ltx_bib_pages"> pp. 53–57</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.SS1.p3" title="1.1 The lexical function model ‣ 1 Compositional distributional semantics ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1.1</span></a>.
+</span></li>
+<li id="bib.bib58" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">W. Blacoe and M. Lapata</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A comparison of vector-based representations for semantic composition</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Jeju Island, Korea</span>, <span class="ltx_text ltx_bib_pages"> pp. 546–556</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Compositional distributional semantics ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.SS1.p3" title="3.1 Evaluation materials ‣ 3 Evaluation ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>,
+<a href="#S3.SS2.p3" title="3.2 Semantic space construction and composition model&#10;implementation ‣ 3 Evaluation ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>,
+<a href="#S3.SS3.p5" title="3.3 Results ‣ 3 Evaluation ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>.
+</span></li>
+<li id="bib.bib21" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Bär, C. Biemann, I. Gurevych and T. Zesch</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">UKP: computing semantic textual similarity by combining multiple content similarity measures</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Montreal, Canada</span>, <span class="ltx_text ltx_bib_pages"> pp. 435–440</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.p5" title="3.3 Results ‣ 3 Evaluation ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>,
+<a href="#S3.T5" title="Table 5 ‣ 3.3 Results ‣ 3 Evaluation ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib106" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Clark and J. Curran</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Wide-coverage efficient statistical parsing with CCG and log-linear models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">33</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 493–552</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p6" title="3.2 Semantic space construction and composition model&#10;implementation ‣ 3 Evaluation ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib109" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Coecke, M. Sadrzadeh and S. Clark</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Mathematical foundations for a compositional distributional model of meaning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Linguistic Analysis</span> <span class="ltx_text ltx_bib_volume">36</span>, <span class="ltx_text ltx_bib_pages"> pp. 345–384</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <span class="ltx_ref ltx_ref_self"><span class="ltx_text ltx_ref_title">A practical and linguistically-motivated approach<span class="ltx_text"> </span>to
+compositional distributional semantics</span></span>,
+<a href="#S1.SS1.p1" title="1.1 The lexical function model ‣ 1 Compositional distributional semantics ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1.1</span></a>.
+</span></li>
+<li id="bib.bib132" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. Dinu, N. The Pham and M. Baroni</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">General estimation and evaluation of compositional distributional semantic models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sofia, Bulgaria</span>, <span class="ltx_text ltx_bib_pages"> pp. 50–58</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.SS1.p3" title="1.1 The lexical function model ‣ 1 Compositional distributional semantics ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1.1</span></a>.
+</span></li>
+<li id="bib.bib193" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Grefenstette, G. Dinu, Y. Zhang, M. Sadrzadeh and M. Baroni</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Multi-step regression learning for compositional distributional semantics</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Potsdam, Germany</span>, <span class="ltx_text ltx_bib_pages"> pp. 131–142</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.SS1.p4" title="1.1 The lexical function model ‣ 1 Compositional distributional semantics ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1.1</span></a>,
+<a href="#S1.SS2.p2" title="1.2 Problems with the extension of the lexical function model&#10;to sentences ‣ 1 Compositional distributional semantics ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1.2</span></a>,
+<a href="#S3.SS2.p4" title="3.2 Semantic space construction and composition model&#10;implementation ‣ 3 Evaluation ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib189" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Grefenstette and M. Sadrzadeh</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Experimental support for a categorical compositional distributional model of meaning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Edinburgh, UK</span>, <span class="ltx_text ltx_bib_pages"> pp. 1394–1404</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.p2" title="3.3 Results ‣ 3 Evaluation ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>.
+</span></li>
+<li id="bib.bib190" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Grefenstette and M. Sadrzadeh</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Experimenting with transitive verbs in a DisCoCat</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Edinburgh, UK</span>, <span class="ltx_text ltx_bib_pages"> pp. 62–66</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.p2" title="3.3 Results ‣ 3 Evaluation ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>.
+</span></li>
+<li id="bib.bib192" class="ltx_bibitem ltx_bib_thesis"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Grefenstette</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Category-theoretic quantitative compositional distributional models of natural language semantics</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_type">PhD thesis</span>, <span class="ltx_text ltx_bib_publisher">University of Oxford Essex</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p1" title="3.1 Evaluation materials ‣ 3 Evaluation ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>,
+<a href="#S3.SS3.p2" title="3.3 Results ‣ 3 Evaluation ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>,
+<a href="#S3.T5" title="Table 5 ‣ 3.3 Results ‣ 3 Evaluation ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib197" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Guevara</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A regression model of adjective-noun compositionality in distributional semantics</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Uppsala, Sweden</span>, <span class="ltx_text ltx_bib_pages"> pp. 33–37</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Compositional distributional semantics ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib201" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Han, A. Kashyap, T. Finin, J. Mayfield and J. Weese</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">UMBC_EBIQUITY-CORE: semantic textual similarity systems</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Atlanta, GA</span>, <span class="ltx_text ltx_bib_pages"> pp. 44–52</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.p6" title="3.3 Results ‣ 3 Evaluation ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>,
+<a href="#S3.T5" title="Table 5 ‣ 3.3 Results ‣ 3 Evaluation ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib240" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Kartsaklis, M. Sadrzadeh and S. Pulman</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Separating disambiguation from composition in distributional semantics</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sofia, Bulgaria</span>, <span class="ltx_text ltx_bib_pages"> pp. 114–123</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p1" title="3.1 Evaluation materials ‣ 3 Evaluation ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>,
+<a href="#S3.SS3.p2" title="3.3 Results ‣ 3 Evaluation ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>.
+</span></li>
+<li id="bib.bib239" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Kartsaklis and M. Sadrzadeh</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Prior disambiguation of word tensors for constructing sentence vectors</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Seattle, WA</span>, <span class="ltx_text ltx_bib_pages"> pp. 1590–1601</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.p2" title="3.3 Results ‣ 3 Evaluation ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>,
+<a href="#S3.T5" title="Table 5 ‣ 3.3 Results ‣ 3 Evaluation ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib262" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Landauer and S. Dumais</span><span class="ltx_text ltx_bib_year">(1997)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A solution to Plato’s problem: the latent semantic analysis theory of acquisition, induction, and representation of knowledge</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Psychological Review</span> <span class="ltx_text ltx_bib_volume">104</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 211–240</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p3" title="3.2 Semantic space construction and composition model&#10;implementation ‣ 3 Evaluation ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib317" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Mitchell and M. Lapata</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Vector-based models of semantic composition</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Columbus, OH</span>, <span class="ltx_text ltx_bib_pages"> pp. 236–244</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Compositional distributional semantics ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.SS2.p3" title="3.2 Semantic space construction and composition model&#10;implementation ‣ 3 Evaluation ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib319" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Mitchell and M. Lapata</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Composition in distributional models of semantics</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Cognitive Science</span> <span class="ltx_text ltx_bib_volume">34</span> (<span class="ltx_text ltx_bib_number">8</span>), <span class="ltx_text ltx_bib_pages"> pp. 1388–1429</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Compositional distributional semantics ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.SS2.p3" title="3.2 Semantic space construction and composition model&#10;implementation ‣ 3 Evaluation ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib427" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. T. Pham, R. Bernardi, Y. Zhang and M. Baroni</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Sentence paraphrase detection: when determiners and word order make the difference</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Potsdam, Germany</span>, <span class="ltx_text ltx_bib_pages"> pp. 21–29</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p2" title="3.1 Evaluation materials ‣ 3 Evaluation ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>,
+<a href="#S3.SS3.p4" title="3.3 Results ‣ 3 Evaluation ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>,
+<a href="#S3.T5" title="Table 5 ‣ 3.3 Results ‣ 3 Evaluation ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib407" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Socher, E. Huang, J. Pennin, A. Ng and C. Manning</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Dynamic pooling and unfolding recursive autoencoders for paraphrase detection</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Granada, Spain</span>, <span class="ltx_text ltx_bib_pages"> pp. 801–809</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.SS1.p2" title="1.1 The lexical function model ‣ 1 Compositional distributional semantics ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1.1</span></a>,
+<a href="#S1.p1" title="1 Compositional distributional semantics ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib408" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Socher, B. Huval, C. Manning and A. Ng</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Semantic compositionality through recursive matrix-vector spaces</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Jeju Island, Korea</span>, <span class="ltx_text ltx_bib_pages"> pp. 1201–1211</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.SS1.p2" title="1.1 The lexical function model ‣ 1 Compositional distributional semantics ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1.1</span></a>,
+<a href="#S1.p1" title="1 Compositional distributional semantics ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib445" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Turney and P. Pantel</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">From frequency to meaning: vector space models of semantics</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Artificial Intelligence Research</span> <span class="ltx_text ltx_bib_volume">37</span>, <span class="ltx_text ltx_bib_pages"> pp. 141–188</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Compositional distributional semantics ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib471" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. Zanzotto, I. Korkontzelos, F. Falucchi and S. Manandhar</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Estimating linear models for compositional distributional semantics</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Beijing, China</span>, <span class="ltx_text ltx_bib_pages"> pp. 1263–1271</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Compositional distributional semantics ‣ A practical and linguistically-motivated approach to&#10;compositional distributional semantics" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 17:15:05 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

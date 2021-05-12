@@ -1,0 +1,1052 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Automatic Keyphrase Extraction: A Survey of the State of the Art.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_abstract">
+      <h6 class="ltx_title ltx_title_abstract">
+       Abstract
+      </h6>
+      <p class="ltx_p">
+       While automatic keyphrase extraction has been examined extensively, state-of-the-art performance on this task is still much lower than that on many core natural language processing tasks.
+We present a survey of the state of the art in automatic keyphrase extraction, examining the major sources of errors
+made by existing systems and discussing the challenges ahead.
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Automatic keyphrase extraction concerns “the automatic selection of important and topical phrases from the body of a document”
+        [50]
+        .
+In other words, its goal
+is to extract a set of phrases that are related to the main topics discussed in a given document
+        [48, 33, 8, 64]
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        Document keyphrases have enabled fast and accurate searching for a given document from a large text collection, and have exhibited their potential in improving many natural language processing (NLP) and
+information retrieval (IR) tasks, such as text summarization
+        [62]
+        , text categorization
+        [19]
+        , opinion mining
+        [2]
+        , and document indexing
+        [14]
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        Owing to its importance, automatic
+keyphrase extraction has received a lot of attention. However, the task is far from
+being solved: state-of-the-art performance on keyphrase extraction is still much lower than that on many core NLP tasks
+        [32]
+        .
+Our goal in this paper is to survey
+the state of the art in keyphrase extraction, examining the major sources of errors made by existing systems and discussing the challenges ahead.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Corpora
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        Automatic keyphrase extraction systems have been evaluated on corpora
+from a variety of sources ranging from long scientific publications to short paper abstracts and email messages. Table
+        1
+        presents a listing of the corpora grouped by their sources as well as their statistics.
+        There are at least four corpus-related factors that affect the difficulty of
+keyphrase extraction.
+       </p>
+      </div>
+      <div class="ltx_paragraph" id="S2.SS0.SSS0.P1">
+       <h5 class="ltx_title ltx_title_paragraph">
+        Length
+       </h5>
+       <div class="ltx_para" id="S2.SS0.SSS0.P1.p1">
+        <p class="ltx_p">
+         The difficulty of the task increases with the length of the input document as longer documents yield more candidate keyphrases (i.e., phrases that are eligible to be keyphrases
+(see Section
+         3.1
+         )).
+For instance, each
+         Inspec
+         abstract has on average 10 annotator-assigned keyphrases and 34 candidate keyphrases. In contrast, a scientific paper typically has at least 10 keyphrases and hundreds of candidate keyphrases, yielding a much bigger search space
+         [16]
+         . Consequently, it is harder to extract keyphrases from scientific papers, technical reports, and meeting transcripts than abstracts, emails, and news articles.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S2.SS0.SSS0.P2">
+       <h5 class="ltx_title ltx_title_paragraph">
+        Structural consistency
+       </h5>
+       <div class="ltx_para" id="S2.SS0.SSS0.P2.p1">
+        <p class="ltx_p">
+         In a structured document, there are certain locations where a keyphrase is most likely to appear. For instance, most of a scientific paper’s keyphrases should appear in the abstract and the introduction. While structural information has been exploited to extract keyphrases from scientific papers (e.g., title, section information)
+         [28]
+         , web pages (e.g., metadata)
+         [58]
+         , and chats (e.g., dialogue acts)
+         [25]
+         , it is most useful when the documents from a source exhibit structural similarity. For this reason, structural information is likely to facilitate keyphrase extraction from scientific papers and technical reports
+because of their standard format (i.e., standard sections such as abstract, introduction, conclusion, etc.). In contrast, the lack of structural consistency in other types of structured documents (e.g., web pages, which can be blogs, forums, or reviews) may render structural information less useful.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S2.SS0.SSS0.P3">
+       <h5 class="ltx_title ltx_title_paragraph">
+        Topic change
+       </h5>
+       <div class="ltx_para" id="S2.SS0.SSS0.P3.p1">
+        <p class="ltx_p">
+         An observation commonly exploited in keyphrase extraction from
+scientific articles and news articles is that
+keyphrases typically appear not only at the beginning
+         [56]
+         but also at the end
+         [37]
+         of a document.
+This observation does not necessarily hold
+for conversational text (e.g., meetings, chats), however.
+The reason is simple: in a conversation, the topics (i.e., its talking points)
+change as the interaction moves forward in time, and so do the keyphrases
+associated with a topic.
+One way to address this complication is to detect a topic change in conversational text
+         [25]
+         .
+However, topic change detection is not always easy: while the topics listed
+in the form of an agenda at the beginning of formal meeting transcripts
+can be exploited, such clues are absent in casual conversations (e.g.,
+chats).
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S2.SS0.SSS0.P4">
+       <h5 class="ltx_title ltx_title_paragraph">
+        Topic correlation
+       </h5>
+       <div class="ltx_para" id="S2.SS0.SSS0.P4.p1">
+        <p class="ltx_p">
+         Another observation commonly exploited in keyphrase extraction from
+scientific articles and news articles is that the keyphrases in a document
+are typically
+         related
+         to each other
+         [51, 38]
+         .
+However, this observation does not necessarily hold
+for informal text (e.g., emails, chats, informal meetings, personal blogs),
+where people can talk about any number of potentially uncorrelated topics.
+The presence of uncorrelated topics implies that it may no longer be
+possible to exploit relatedness and therefore increases the difficulty
+of keyphrase extraction.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Keyphrase Extraction Approaches
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        A keyphrase extraction system typically operates in two steps: (1) extracting a list of words/phrases that serve as
+        candidate keyphrases
+        using some heuristics (Section
+        3.1
+        ); and (2) determining which of these candidate keyphrases are correct keyphrases using supervised (Section
+        3.2
+        ) or unsupervised (Section
+        3.3
+        ) approaches.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S3.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.1
+        </span>
+        Selecting Candidate Words and Phrases
+       </h3>
+       <div class="ltx_para" id="S3.SS1.p1">
+        <p class="ltx_p">
+         As noted before, a set of phrases and words is typically extracted as candidate keyphrases using heuristic rules. These rules are designed to avoid spurious instances and keep the number of candidates to a minimum. Typical heuristics include (1) using a stop word list to remove stop words
+         [33]
+         , (2) allowing words with certain part-of-speech tags (e.g., nouns, adjectives, verbs) to be candidate keywords
+         [38, 53, 30]
+         , (3) allowing n-grams that appear in Wikipedia article titles to be candidates
+         [13]
+         , and (4) extracting n-grams
+         [56, 20, 37]
+         or noun phrases
+         [1, 57]
+         that satisfy pre-defined lexico-syntactic pattern(s)
+         [41]
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p2">
+        <p class="ltx_p">
+         Many of these heuristics have proven effective with their high recall in extracting gold keyphrases from various sources. However, for a long document, the resulting list of candidates can be long. Consequently, different
+         pruning
+         heuristics have been designed to prune candidates that are unlikely to be keyphrases
+         [17, 29, 10, 59, 40]
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.2
+        </span>
+        Supervised Approaches
+       </h3>
+       <div class="ltx_para" id="S3.SS2.p1">
+        <p class="ltx_p">
+         Research on supervised approaches to keyphrase extraction has focused on two issues:
+         task reformulation
+         and
+         feature design
+         .
+        </p>
+       </div>
+       <div class="ltx_subsubsection" id="S3.SS2.SSS1">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          3.2.1
+         </span>
+         Task Reformulation
+        </h4>
+        <div class="ltx_para" id="S3.SS2.SSS1.p1">
+         <p class="ltx_p">
+          Early supervised approaches to keyphrase extraction recast this task as a
+binary
+          classification
+          problem
+          [12, 49, 56, 50]
+          .
+The goal is to train a classifier on documents annotated with keyphrases to determine whether a candidate phrase is a keyphrase. Keyphrases and non-keyphrases are used to generate positive and negative examples, respectively.
+Different learning algorithms have been used to train this classifier, including naïve Bayes
+          [12, 56]
+          , decision trees
+          [49, 50]
+          , bagging
+          [20]
+          , boosting
+          [18]
+          , maximum entropy
+          [58, 26]
+          , multi-layer perceptron
+          [35]
+          , and support vector machines
+          [22, 35]
+          .
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS2.SSS1.p2">
+         <p class="ltx_p">
+          Recasting keyphrase extraction as a classification problem has its weaknesses, however. Recall that the goal of keyphrase extraction is to identify the most representative phrases for a document. In other words, if a candidate phrase
+          c1
+          is more representative than another candidate phrase
+          c2
+          ,
+          c1
+          should be preferred to
+          c2
+          . Note that a binary classifier classifies each candidate keyphrase independently of the others, and consequently it does not allow us to determine which candidates are better than the others
+          [21, 55]
+          .
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS2.SSS1.p3">
+         <p class="ltx_p">
+          Motivated by this observation,
+          Jiang et al. (2009)
+          propose a
+          ranking
+          approach to keyphrase extraction, where the goal is to learn a ranker to rank two candidate keyphrases. This pairwise ranking approach therefore introduces competition between candidate keyphrases, and has been shown to significantly outperform KEA
+          [56, 12]
+          , a popular supervised baseline that adopts the traditional supervised classification approach
+          [46, 23]
+          .
+         </p>
+        </div>
+       </div>
+       <div class="ltx_subsubsection" id="S3.SS2.SSS2">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          3.2.2
+         </span>
+         Features
+        </h4>
+        <div class="ltx_para" id="S3.SS2.SSS2.p1">
+         <p class="ltx_p">
+          The features commonly used to represent an instance for supervised keyphrase extraction can be broadly divided into two categories.
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS2.SSS2.p2">
+         <p class="ltx_p">
+          3.2.2.1 Within-Collection Features
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS2.SSS2.p3">
+         <p class="ltx_p">
+          Within-collection features are computed based solely
+on the training documents. These features can be further divided into three types.
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS2.SSS2.p4">
+         <p class="ltx_p">
+          Statistical features
+          are computed based on statistical information gathered from the training documents. Three such features have been extensively used in supervised approaches. The first one,
+          tf*idf
+          [45]
+          , is computed based on candidate frequency in the given text and inverse document frequency (i.e., number of other documents where the candidate appears).
+          The second one, the
+          distance
+          of a phrase, is defined as the number of words preceding its first occurrence normalized by the number of words in the document. Its usefulness stems from the fact that keyphrases tend to appear early in a document. The third one,
+          supervised keyphraseness
+          , encodes the number of times a phrase appears as a keyphrase in the training set. This feature is designed based on the assumption that a phrase frequently tagged as a keyphrase is more likely to be a keyphrase in an unseen document. These three features form the feature set of KEA
+          [56, 12]
+          , and have been shown to perform consistently well on documents from various sources
+          [58, 28]
+          . Other statistical features include
+          phrase length
+          and
+          spread
+          (i.e., the number of words between the first and last occurrences of a phrase in the document).
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS2.SSS2.p5">
+         <p class="ltx_p">
+          Structural features
+          encode how different instances of a candidate keyphrase are located in different parts of a document. A phrase is more likely to be a keyphrase if it appears in the abstract or introduction of a paper or in the metadata section of a web page. In fact, features that encode how frequently a candidate keyphrase occurs in various sections of a scientific paper (e.g., introduction, conclusion)
+          [42]
+          and those that encode the location of a candidate keyphrase in a web page (e.g., whether it appears in the title)
+          [7, 58]
+          have been shown to be useful for the task.
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS2.SSS2.p6">
+         <p class="ltx_p">
+          Syntactic features
+          encode the syntactic patterns of a candidate keyphrase. For example, a candidate keyphrase has been encoded as (1) a
+          PoS tag sequence
+          , which denotes the sequence of part-of-speech tag(s) assigned to its word(s); and (2) a
+          suffix sequence
+          , which is the sequence of morphological suffixes of its words
+          [58, 42, 26]
+          .
+However, ablation studies conducted on web pages
+          [58]
+          and
+scientific articles
+          [26]
+          reveal that syntactic features are not
+useful for keyphrase extraction in the presence of other feature types.
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS2.SSS2.p7">
+         <p class="ltx_p">
+          3.2.2.2 External Resource-Based Features
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS2.SSS2.p8">
+         <p class="ltx_p">
+          External resource-based features are computed based on information
+gathered from resources other than the training documents, such as lexical
+knowledge bases (e.g., Wikipedia) or the Web, with the goal of improving
+keyphrase extraction performance by exploiting external knowledge.
+Below we give an overview of the external resource-based features
+that have proven useful for keyphrase extraction.
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS2.SSS2.p9">
+         <p class="ltx_p">
+          Wikipedia-based keyphraseness
+          is computed as a candidate’s document frequency multiplied by the ratio of the number of Wikipedia articles where the candidate appears as a link to the number of articles where it appears
+          [37]
+          .
+This feature is motivated by the observation that a candidate
+is likely to be a keyphrase if it occurs frequently as a link in Wikipedia. Unlike supervised keyphraseness, Wikipedia-based keyphraseness can be computed without using documents annotated with keyphrases and can work even if there is a mismatch between the training domain and the test domain.
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS2.SSS2.p10">
+         <p class="ltx_p">
+          Yih et al. (2006)
+          employ a feature that encodes
+whether a candidate keyphrase appears in the
+          query log
+          of a search engine, exploiting the observation that a candidate is potentially important if it was used as a search query.
+Terminological databases have been similarly exploited to encode the salience
+of candidate keyphrases in scientific papers
+          [35]
+          .
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS2.SSS2.p11">
+         <p class="ltx_p">
+          While the aforementioned external resource-based features attempt to encode
+how salient a candidate keyphrase is,
+          Turney (2003)
+          proposes features that encode the semantic relatedness
+between two candidate keyphrases.
+Noting that candidate keyphrases that
+are not semantically related to the predicted keyphrases are unlikely to be
+keyphrases in technical reports, Turney employs
+          coherence features
+          to identify such candidate keyphrases.
+Semantic relatedness is encoded in the coherence features as
+two candidate keyphrases’ pointwise mutual information, which Turney computes
+by using the Web as a corpus.
+         </p>
+        </div>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.3
+        </span>
+        Unsupervised Approaches
+       </h3>
+       <div class="ltx_para" id="S3.SS3.p1">
+        <p class="ltx_p">
+         Existing unsupervised approaches to keyphrase extraction can be categorized into four groups.
+        </p>
+       </div>
+       <div class="ltx_subsubsection" id="S3.SS3.SSS1">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          3.3.1
+         </span>
+         Graph-Based Ranking
+        </h4>
+        <div class="ltx_para" id="S3.SS3.SSS1.p1">
+         <p class="ltx_p">
+          Intuitively, keyphrase extraction is about finding the important words and phrases from a document. Traditionally, the
+          importance
+          of a candidate has often been defined in terms of how related it is to other candidates in the document. Informally, a candidate is important if it is related to (1) a large number of candidates and (2) candidates that are important.
+Researchers have computed
+          relatedness
+          between candidates using co-occurrence counts
+          [38, 36]
+          and semantic relatedness
+          [13]
+          , and represented the relatedness information collected from a document as a graph
+          [38, 52, 53, 5]
+          .
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS3.SSS1.p2">
+         <p class="ltx_p">
+          The basic idea behind a graph-based approach is to build a graph from the input document and rank its nodes according to their importance using a graph-based ranking method (e.g.,
+          Brin and Page (1998)
+          ). Each node of the graph corresponds to a candidate keyphrase from the document and an edge connects two
+          related
+          candidates. The edge weight is proportional to the syntactic and/or semantic relevance between the connected candidates. For each node, each of its edges is treated as a “vote” from the other node connected by the edge. A node’s score in the graph is defined recursively in terms of the edges it has and the scores of the neighboring nodes. The top-ranked candidates from the graph are then selected as keyphrases for the input document. TextRank
+          [38]
+          is one of the most well-known graph-based approaches to keyphrase extraction.
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS3.SSS1.p3">
+         <p class="ltx_p">
+          This instantiation of a graph-based approach overlooks an important aspect of keyphrase extraction, however. A set of keyphrases for a document should ideally cover the main topics discussed in it, but this instantiation
+does not guarantee that all the main topics will be represented by the extracted keyphrases. Despite this weakness, a graph-based representation of text was adopted by many approaches that propose different ways of computing the similarity between two candidates.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_subsubsection" id="S3.SS3.SSS2">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          3.3.2
+         </span>
+         Topic-Based Clustering
+        </h4>
+        <div class="ltx_para" id="S3.SS3.SSS2.p1">
+         <p class="ltx_p">
+          Another unsupervised approach to keyphrase extraction involves grouping the candidate keyphrases in a document into
+          topics
+          , such that each topic is composed of all and only those candidate keyphrases that are related to that topic
+          [13, 33, 32]
+          . There are several motivations behind this topic-based clustering approach. First, a keyphrase should ideally be relevant to one or more main topic(s) discussed in a document
+          [32, 34]
+          . Second, the extracted keyphrases should be comprehensive in the sense that they should cover all the main topics in a document
+          [33, 32, 34]
+          .
+Below we examine three representative systems that adopt
+this approach.
+         </p>
+        </div>
+        <div class="ltx_paragraph" id="S3.SS3.SSS2.P1">
+         <h5 class="ltx_title ltx_title_paragraph">
+          KeyCluster
+         </h5>
+         <div class="ltx_para" id="S3.SS3.SSS2.P1.p1">
+          <p class="ltx_p">
+           Liu et al. (2009b)
+           adopt a clustering-based approach (henceforth KeyCluster) that clusters
+semantically similar candidates using Wikipedia and co-occurrence-based statistics. The underlying hypothesis is that each of these clusters corresponds to a topic covered in the document, and selecting the candidates close to the centroid of each cluster as keyphrases ensures that the resulting set of keyphrases covers all the topics of the document.
+          </p>
+         </div>
+         <div class="ltx_para" id="S3.SS3.SSS2.P1.p2">
+          <p class="ltx_p">
+           While empirical results show that KeyCluster performs better than both TextRank and Hulth’s
+           [20]
+           supervised system, KeyCluster has a potential drawback: by extracting keyphrases from each topic cluster, it essentially gives each topic equal importance. In practice, however, there could be topics that are not important and these topics should not have keyphrase(s) representing them.
+          </p>
+         </div>
+        </div>
+        <div class="ltx_paragraph" id="S3.SS3.SSS2.P2">
+         <h5 class="ltx_title ltx_title_paragraph">
+          Topical PageRank (TPR)
+         </h5>
+         <div class="ltx_para" id="S3.SS3.SSS2.P2.p1">
+          <p class="ltx_p">
+           Liu et al. (2010)
+           propose TPR, an approach that overcomes the aforementioned weakness of KeyCluster. It runs TextRank multiple times for a document, once for each of its topics induced by
+a Latent Dirichlet Allocation
+           [3]
+           .
+By running TextRank once for each topic,
+TPR ensures that the extracted keyphrases cover the main topics of the document.
+The final score of a candidate is computed as the sum of its scores for each of the topics, weighted by the probability of that topic in that document.
+Hence, unlike KeyCluster, candidates belonging to a less probable topic are given less importance.
+          </p>
+         </div>
+         <div class="ltx_para" id="S3.SS3.SSS2.P2.p2">
+          <p class="ltx_p">
+           TPR performs significantly better than both tf*idf and TextRank on the DUC-2001 and
+           Inspec
+           datasets. TPR’s superior performance strengthens the hypothesis of using topic clustering for keyphrase extraction. However, though TPR is conceptually better than KeyCluster, Liu et al. did not compare TPR against KeyCluster.
+          </p>
+         </div>
+        </div>
+        <div class="ltx_paragraph" id="S3.SS3.SSS2.P3">
+         <h5 class="ltx_title ltx_title_paragraph">
+          CommunityCluster
+         </h5>
+         <div class="ltx_para" id="S3.SS3.SSS2.P3.p1">
+          <p class="ltx_p">
+           Grineva et al. (2009)
+           propose CommunityCluster, a variant of the topic clustering approach to keyphrase extraction. Like TPR, CommunityCluster gives more weight to more important topics, but unlike TPR, it extracts
+           all
+           candidate keyphrases from an important topic, assuming that a candidate that receives little focus in the text should still be extracted as a keyphrase as long as it is related to an important topic.
+CommunityCluster yields much
+better recall (without losing precision) than extractors such as tf*idf, TextRank, and the Yahoo! term extractor.
+          </p>
+         </div>
+        </div>
+       </div>
+       <div class="ltx_subsubsection" id="S3.SS3.SSS3">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          3.3.3
+         </span>
+         Simultaneous Learning
+        </h4>
+        <div class="ltx_para" id="S3.SS3.SSS3.p1">
+         <p class="ltx_p">
+          Since keyphrases represent a dense summary of a document, researchers hypothesized that text summarization and keyphrase extraction can potentially benefit from each other if these tasks are performed simultaneously.
+          Zha (2002)
+          proposes the first graph-based approach for simultaneous summarization and keyphrase extraction, motivated by a key observation:
+a sentence is important if it contains important words, and important words appear in important sentences.
+          Wan et al. (2007)
+          extend Zha’s work by adding two assumptions: (1) an important sentence is connected to other important sentences, and (2) an important word is linked to other important words, a TextRank-like assumption. Based on these
+assumptions,
+          Wan et al. (2007)
+          build three graphs to capture the association between the sentences (S) and the words (W) in an input document, namely, a S–S graph, a bipartite S–W graph, and a W–W graph. The weight of an edge connecting two sentence nodes in a S–S graph corresponds to their content similarity. An edge weight in a S–W graph denotes the word’s importance in the sentence it appears. Finally, an edge weight in a W–W graph denotes the
+co-occurrence or knowledge-based similarity between the two connected words. Once the graphs are constructed for an input document, an iterative reinforcement algorithm is applied to assign scores to each sentence and word. The top-scored words are used to form keyphrases.
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS3.SSS3.p2">
+         <p class="ltx_p">
+          The main advantage of this approach is that it combines the strengths of both Zha’s approach (i.e., bipartite S–W graphs) and TextRank (i.e., W–W graphs) and performs better than both of them.
+However, it has a weakness: like TextRank, it does not ensure that the extracted keyphrases will cover all the main topics. To address this problem, one can employ a topic clustering algorithm on the W–W graph to produce the topic clusters, and then ensure
+that keyphrases are chosen from every main topic cluster.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_subsubsection" id="S3.SS3.SSS4">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          3.3.4
+         </span>
+         Language Modeling
+        </h4>
+        <div class="ltx_para" id="S3.SS3.SSS4.p1">
+         <p class="ltx_p">
+          Many existing approaches have a separate, heuristic module for extracting candidate keyphrases prior to keyphrase ranking/extraction. In contrast,
+          Tomokiyo and Hurst (2003)
+          propose an approach (henceforth LMA) that combines these two steps.
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS3.SSS4.p2">
+         <p class="ltx_p">
+          LMA scores a candidate keyphrase based on two features, namely,
+          phraseness
+          (i.e., the extent to which a word sequence can be treated as a phrase) and
+          informativeness
+          (i.e., the extent to which a word sequence captures the central idea of the document it appears in). Intuitively, a phrase that has high scores for phraseness and informativeness is likely to be a keyphrase. These feature values are estimated using language models (LMs) trained on a
+          foreground
+          corpus and a
+          background
+          corpus. The foreground corpus is composed of the set of documents from which keyphrases are to be extracted. The background corpus is a large corpus that encodes general knowledge about the world (e.g., the Web). A unigram LM and an n-gram LM are constructed for each of these two corpora. Phraseness, defined using the foreground LM, is calculated as the loss of information incurred as a result of assuming a unigram LM (i.e., conditional independence among the words of the phrase) instead of an n-gram LM (i.e., the phrase is drawn from an n-gram LM). Informativeness is computed as the loss that results because of the assumption that the candidate is sampled from the background LM rather than the foreground LM. The loss values are computed using Kullback-Leibler divergence.
+Candidates are ranked according to the sum of these two feature values.
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS3.SSS4.p3">
+         <p class="ltx_p">
+          In sum, LMA uses a language model rather than heuristics to identify phrases, and relies on the language model trained on the background corpus to determine how “unique” a candidate keyphrase is to the domain represented by the foreground corpus. The more unique it is to the foreground’s domain, the more likely it is a keyphrase for that domain. While the use of language models to identify phrases cannot be considered a major strength of this approach (because heuristics can identify phrases fairly reliably), the use of a background corpus to identify candidates that are unique to the foreground’s domain is a unique aspect of this approach. We believe that this idea deserves further investigation, as it would allow us to discover a keyphrase that is unique to the foreground’s domain but may have a low tf*idf value.
+         </p>
+        </div>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Evaluation
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        In this section, we describe metrics for evaluating keyphrase extraction systems as well as state-of-the-art results on commonly-used datasets.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S4.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.1
+        </span>
+        Evaluation Metrics
+       </h3>
+       <div class="ltx_para" id="S4.SS1.p1">
+        <p class="ltx_p">
+         Designing evaluation metrics for keyphrase extraction is by no means an easy task.
+To score the output of a keyphrase extraction system, the typical approach, which is also adopted by the SemEval-2010 shared task on keyphrase extraction, is (1) to create a mapping between the keyphrases in the gold standard and those in the system output using
+         exact match
+         , and then (2) score the output using evaluation metrics such as precision (P), recall (R), and F-score (F).
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p2">
+        <p class="ltx_p">
+         Conceivably, exact match is an overly strict condition, considering a predicted keyphrase incorrect even if it is a variant of a gold keyphrase. For instance, given the gold keyphrase “neural network”, exact match will consider a predicted phrase incorrect even if it is an expanded version of the gold keyphrase (“artificial neural network”) or one of its morphological (“neural networks”) or lexical (“neural net”) variants. While morphological variations can be handled using a stemmer
+         [10]
+         , other variations may not be handled easily and reliably.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p3">
+        <p class="ltx_p">
+         Human evaluation has been suggested as a possibility
+         [36]
+         , but it is time-consuming and expensive. For this reason,
+researchers have experimented with two types of automatic evaluation metrics. The first type of metrics addresses the problem with exact match. These metrics reward a partial match between a predicted keyphrase and a gold keyphrase (i.e., overlapping
+         n
+         -grams) and are commonly used in machine translation (MT) and summarization evaluations. They include
+         Bleu
+         ,
+         Meteor
+         ,
+         Nist
+         , and
+         Rouge
+         .
+Nevertheless, experiments show that these MT metrics only offer a partial solution to problem with exact match: they can only detect a subset of the near-misses
+         [24]
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p4">
+        <p class="ltx_p">
+         The second type of metrics focuses on how a system ranks its predictions.
+Given that two systems
+         A
+         and
+         B
+         have the same number of correct predictions,
+binary preference measure (Bpref) and mean reciprocal rank (MRR)
+         [32]
+         will award more credit to
+         A
+         than to
+         B
+         if the ranks of the correct predictions in
+         A
+         ’s output are higher than those in
+         B
+         ’s output.
+R-precision (
+         Rp
+         ) is an IR metric that focuses on ranking: given a document with
+         n
+         gold keyphrases, it computes the precision of a system over its
+         n
+         highest-ranked candidates
+         [60]
+         . The motivation behind the design of
+         Rp
+         is simple: a system will achieve a perfect
+         Rp
+         value if it ranks all the keyphrases above the non-keyphrases.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.2
+        </span>
+        The State of the Art
+       </h3>
+       <div class="ltx_para" id="S4.SS2.p1">
+        <p class="ltx_p">
+         Table
+         2
+         lists the best scores on some popular evaluation datasets and the corresponding systems. For example, the best F-scores on
+the
+         Inspec
+         test set, the DUC-2001 dataset, and the SemEval-2010 test set are 45.7, 31.7, and 27.5, respectively.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p2">
+        <p class="ltx_p">
+         Two points deserve mention. First, F-scores decrease as document length increases.
+These results are consistent with the observation we made in Section 2 that
+it is more difficult to extract keyphrases correctly from longer documents. Second, recent unsupervised approaches have rivaled their supervised counterparts in performance
+         [38, 10, 33]
+         . For example, KP-Miner
+         [11]
+         , an unsupervised system, ranked third in the SemEval-2010 shared task with an F-score of 25.2, which is comparable to the best supervised system scoring 27.5.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Analysis
+      </h2>
+      <div class="ltx_para" id="S5.p1">
+       <p class="ltx_p">
+        With the goal of providing directions for future work,
+we identify the errors commonly made by
+state-of-the-art keyphrase extractors below.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S5.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.1
+        </span>
+        Error Analysis
+       </h3>
+       <div class="ltx_para" id="S5.SS1.p1">
+        <p class="ltx_p">
+         Although a few researchers have presented a sample of their systems’ output and the corresponding gold keyphrases to show the differences between them
+         [56, 42, 37]
+         , a systematic analysis of the major types of errors made by state-of-the-art keyphrase extraction systems is missing.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p2">
+        <p class="ltx_p">
+         To fill this gap, we ran four keyphrase extraction systems on four commonly-used datasets of varying sources, including
+         Inspec
+         abstracts
+         [20]
+         , DUC-2001 news articles
+         [43]
+         , scientific papers
+         [27]
+         , and meeting transcripts
+         [30]
+         .
+Specifically, we randomly selected 25 documents from each of these four datasets and manually analyzed the output of the four systems, including tf*idf, the most frequently used baseline, as well as three state-of-the-art keyphrase extractors, of which two are unsupervised
+         [53, 33]
+         and one is supervised
+         [37]
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p3">
+        <p class="ltx_p">
+         Our analysis reveals that the errors fall into four major types, each of which contributes significantly to the overall errors made by the four systems, despite the fact that the contribution of each of these error types varies from system to system.
+Moreover, we do not observe any significant difference between the types of errors made by the four systems other than the fact that the supervised system has the expected tendency to predict keyphrases seen in the training data. Below we describe these four major types of errors.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p4">
+        <p class="ltx_p">
+         Overgeneration errors
+         are a major type of precision error, contributing to 28–37% of the overall error.
+Overgeneration errors occur when a system correctly predicts a candidate as a keyphrase because it contains a word that appears frequently in the associated document, but at the same time erroneously outputs other candidates as keyphrases because they contain the same word.
+Recall that for many systems, it is not easy to reject a non-keyphrase containing a word with a high term frequency:
+many unsupervised systems score a candidate by summing the score of each of its component words, and many supervised systems use unigrams as features to represent a candidate. To be more concrete, consider the news article on athlete
+         Ben Johnson
+         in Figure 1, where the keyphrases are boldfaced.
+As we can see, the word
+         Olympic(s)
+         has a significant presence in the document.
+Consequently, many systems not only correctly predict
+         Olympics
+         as a keyphrase, but also erroneously predict
+         Olympic movement
+         as a keyphrase,
+yielding overgeneration errors.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p5">
+        <p class="ltx_p">
+         Infrequency errors
+         are a major type of recall error contributing to 24–27% of the overall error.
+Infrequency errors occur when a system fails to identify a keyphrase owing to its infrequent presence in the associated document
+         [31]
+         .
+Handling infrequency errors is a challenge because state-of-the-art keyphrase extractors rarely predict candidates that appear only once or twice in a document.
+In the
+         Ben Johnson
+         example, many keyphrase extractors fail to identify
+         100-meter dash
+         and
+         gold medal
+         as keyphrases, resulting in infrequency errors.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p6">
+        <p class="ltx_p">
+         Redundancy errors
+         are a type of precision error contributing to 8–12% of the overall error.
+Redundancy errors occur when a system correctly identifies a candidate as a keyphrase, but at the same time outputs a semantically equivalent candidate (e.g., its alias) as a keyphrase. This type of error can be attributed to a system’s failure to determine that two candidates are semantically equivalent. Nevertheless, some researchers may argue that a system should not be penalized for redundancy errors because the extracted candidates are in fact keyphrases. In our example,
+         Olympics
+         and
+         Olympic games
+         refer to the same concept, so a system that predicts both of them as keyphrases commits a redundancy error.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p7">
+        <p class="ltx_p">
+         Evaluation errors
+         are a type of recall error contributing to 7–10% of the overall error.
+An evaluation error occurs when a system outputs a candidate that is semantically equivalent to a gold keyphrase, but is considered erroneous by a scoring program because of its failure to recognize that the predicted phrase and the corresponding gold keyphrase are semantically equivalent.
+In other words, an evaluation error is not an error made by a keyphrase extractor, but an error due to the naivety of a scoring program. In our example, while
+         Olympics
+         and
+         Olympic games
+         refer to the same concept, only the former is annotated as keyphrase. Hence, an evaluation error occurs if a system predicts
+         Olympic games
+         but not
+         Olympics
+         as a keyphrase and the scoring program fails to identify them as semantically equivalent.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.2
+        </span>
+        Recommendations
+       </h3>
+       <div class="ltx_para" id="S5.SS2.p1">
+        <p class="ltx_p">
+         We recommend that
+         background knowledge
+         be extracted from external lexical databases (e.g., YAGO2
+         [47]
+         , Freebase
+         [4]
+         , BabelNet
+         [39]
+         )
+to address the four types of errors discussed above.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p2">
+        <p class="ltx_p">
+         First, we discuss how
+         redundancy errors
+         could be addressed by using the background knowledge extracted from external databases.
+Note that if we can identify semantically equivalent candidates, then we can reduce redundancy errors.
+The question, then, is: can background knowledge be used to help us identify semantically equivalent candidates?
+To answer this question, note that Freebase, for instance, has over 40 million
+         topics
+         (i.e., real-world entities such as people, places, and things) from over 70 domains (e.g., music, business, education).
+Hence, before a system outputs a set of candidates as keyphrases, it can use Freebase to determine whether any of them is mapped to the same Freebase topic.
+Referring back to our running example, both
+         Olympics
+         and
+         Olympic games
+         are mapped to a Freebase topic called
+         Olympic games
+         . Based on this information, a keyphrase extractor can determine that the two candidates are aliases and should output only one of them, thus preventing a redundancy error.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p3">
+        <p class="ltx_p">
+         Next, we discuss how
+         infrequency errors
+         could be addressed using background knowledge.
+A natural way to handle this problem would be to make an infrequent keyphrase frequent.
+To accomplish this, we suggest exploiting an influential idea in the keyphrase extraction literature: the importance of a candidate is defined in terms of how related it is to other candidates in the text (see Section 3.3.1).
+In other words, if we could relate an infrequent keyphrase to other candidates in the text, we could boost its importance.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p4">
+        <p class="ltx_p">
+         We believe that this could be accomplished using background knowledge. The idea is to boost the importance of infrequent keyphrases using their frequent counterparts. Consider again our running example. All four systems have managed to identify
+         Ben Johnson
+         as a keyphrase due to its significant presence.
+Hence, we can boost the importance of
+         100-meter dash
+         and
+         gold medal
+         if we can relate them to
+         Ben Johnson
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p5">
+        <p class="ltx_p">
+         To do so, note that Freebase maps a candidate to one or more pre-defined topics, each of which is associated with one or more types. Types are similar to entity classes. For instance, the candidate
+         Ben Johnson
+         is mapped to a Freebase topic with the same name, which is associated with Freebase types such as
+         Person
+         ,
+         Athlete
+         , and
+         Olympic athlete
+         . Types are defined for a specific domain in Freebase. For instance,
+         Person
+         ,
+         Athlete
+         , and
+         Olympic athlete
+         are defined in the
+         People
+         ,
+         Sports
+         , and
+         Olympics
+         domains, respectively. Next, consider the two infrequent candidates,
+         100-meter dash
+         and
+         gold medal
+         .
+         100-meter dash
+         is mapped to the topic
+         Sprint
+         of type
+         Sports
+         in the
+         Sports
+         domain, whereas
+         gold medal
+         is mapped to a topic with the same name of type
+         Olympic medal
+         in the
+         Olympics
+         domain. Consequently, we can relate
+         100-meter dash
+         to
+         Ben Johnson
+         via the
+         Sports
+         domain (i.e., they belong to different types under the same domain). Additionally,
+         gold medal
+         can be related to
+         Ben Johnson
+         via the
+         Olympics
+         domain.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p6">
+        <p class="ltx_p">
+         As discussed before, the relationship between two candidates is traditionally established using co-occurrence information.
+However, using co-occurrence windows has its shortcomings.
+First, an
+         ad-hoc
+         window size cannot capture related candidates that are not inside the window. So it is difficult to predict
+         100-meter dash
+         and
+         gold medal
+         as keyphrases: they are more than 10 tokens away from frequent words such as
+         Johnson
+         and
+         Olympics
+         . Second, the candidates inside a window are all assumed to be related to each other, but it is apparently an overly simplistic assumption. There have been a few attempts to design Wikipedia-based relatedness measures, with promising initial results
+         [13, 33, 37]
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p7">
+        <p class="ltx_p">
+         Overgeneration errors
+         could similarly be addressed using background knowledge.
+Recall that
+         Olympic movement
+         is not a keyphrase in our example although it includes an important word (i.e.,
+         Olympic
+         ). Freebase maps
+         Olympic movement
+         to a topic with the same name, which is associated with a type called
+         Musical Recording
+         in the
+         Music
+         domain.
+However, it does not map
+         Olympic movement
+         to any topic in the
+         Olympics
+         domain.
+The absence of such a mapping in the
+         Olympics
+         domain could be used by a keyphrase extractor as a supporting evidence against predicting
+         Olympic movement
+         as a keyphrase.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p8">
+        <p class="ltx_p">
+         Finally, as mentioned before,
+         evaluation errors
+         should not be considered errors made by a system. Nevertheless, they reveal a problem with the way keyphrase extractors are currently evaluated.
+To address this problem, one possibility is to conduct human evaluations. Cheaper alternatives include
+having human annotators identify semantically equivalent keyphrases during manual labeling, and designing scoring programs that can automatically identify such semantic equivalences.
+        </p>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

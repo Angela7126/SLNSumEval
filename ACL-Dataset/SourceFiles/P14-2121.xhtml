@@ -1,0 +1,881 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Measuring metaphoricity</title>
+<!--Generated on Wed Jun 11 18:25:41 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Measuring metaphoricity</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Jonathan Dunn 
+<br class="ltx_break"/>Department of Computer Science / Illinois Institute of Technology 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">jonathan.edwin.dunn@gmail.com</span> 
+<br class="ltx_break"/>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">This paper presents the first computationally-derived scalar measurement of metaphoricity. Each input sentence is given a value between 0 and 1 which represents how metaphoric that sentence is. This measure achieves a correlation of 0.450 (Pearson’s R, p &lt;0.01) with an experimental measure of metaphoricity involving human participants. While far from perfect, this scalar measure of metaphoricity allows different thresholds for metaphoricity so that metaphor identification can be fitted for specific tasks and datasets. When reduced to a binary classification evaluation using the VU Amsterdam Metaphor Corpus, the system achieves an F-Measure of 0.608, slightly lower than the comparable binary classification system’s 0.638 and competitive with existing approaches.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Metaphor is a cognitive phenomenon (Lakoff &amp; Johnson, 1980, 1999) which has a significant impact on human reasoning abilities (Casasanto &amp; Jasmin, 2012; Johansson Falk &amp; Gibbs, 2012) and which, as a result, commonly appears in language in the form of metaphoric expressions (e.g., Deignan, 2005). The most comprehensive non-computational study of metaphoric expressions in large corpora (Steen, et al., 2010) found that up to 18.5% of words in the British National Corpus were used metaphorically. This means that metaphorically used words not only have very different interpretations than literally used words, but they are also common enough to pose a significant challenge for computational linguistics.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Starting with Wilks (1978), the problem of metaphor has been approached as an identification task: first identify or detect metaphoric expressions and then (1) prevent them from interfering with computational treatments of literal expressions and (2) use them to gain additional insight about a text (e.g., Carbonell, 1980; Neuman &amp; Nave, 2009). The identification or detection task has been approached as a binary classification problem: for a given unit of language (e.g., word, phrase, sentence) decide whether it is metaphoric or non-metaphoric. Wilks (1978) used selectional restrictions for this purpose; Mason (2004) used hand-crafted knowledge resources to detect similar selectional mismatches; another approach is to detect selectional mismatches using statistically created resources (e.g., Shutova, et al. 2013; Shutova &amp; Sun, 2013). A second general approach to the binary classification problem has been to use mismatches in properties like abstractness (Gandy, et al., 2013; Assaf, et al., 2013; Tsvetkov, et al., 2013; Turney, et al., 2011), semantic similarity (Li &amp; Sporleder, 2010; Sporleder &amp; Li, 2010), and domain membership (Dunn, 2013a, 2013b) to identify metaphoric units of language. A third approach has been to use forms of topic modelling to identify linguistic units which represent both a metaphoric topic and a literal topic (Strzalkowski, 2013; Bracewell, et al, 2013; Mohler, et al., 2013).</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">The single constant across all of these approaches is that the task is viewed as a binary classification problem of distinguishing metaphoric language from non-metaphoric language. This binary distinction assumes a clear boundary between the two; in other words, it assumes that metaphoricity is a discrete property. However, three strands of theoretical research show that metaphoricity is not a discrete property. First, psycholinguistic studies of metaphor processing show that there is no difference between the processing of metaphoric and non-metaphoric language (Coulson &amp; Matlock, 2001; Gibbs, 2002; Evans, 2010). The most plausible interpretation of this psycholinguistic evidence is that most linguistic units fall somewhere between metaphoric and literal, so that metaphoricity is a scalar value which influences processing gradually (and is difficult to uncover because of related factors like salience; Giora, 2002). Second, linguistic studies of metaphor have found that the metaphoricity of a linguistic unit can be predicted given certain factors (Dunn, 2011, 2013c). Third, the high frequency of metaphorically used language implies that it is hard to set a boundary beyond which a word is used metaphorically. In other words, it seems clear that 18.5% of the BNC is not highly metaphoric, but rather is the sort of slightly metaphoric language that speakers are not consciously aware of because it is used so frequently.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">This paper introduces a system for producing a scalar measurement of metaphoricity which places sentences anywhere between 0 (literal) and 1 (highly metaphoric). The goal is to produce a computationally derived measurement that models the gradient nature of metaphoricity, with the result that metaphors which are clearly and consciously seen as metaphors score closer to 1 and metaphors which are not realized by speakers to be metaphoric score further from 1. This scalar measurement approach has two advantages: (1) it adheres more closely to the current theoretical understanding of metaphor, thus being more cognitively accurate; (2) it allows applications to control the threshold of metaphoricity when identifying metaphor, thus allowing the treatment of metaphor to be optimized for a given task.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Measuring Gradient Metaphoricity</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">An experiment was conducted to set a standard for evaluating scalar measurements of metaphoricity. A corpus of 60 sentences of varying metaphoricity, drawn equally from four top-level domains (<span class="ltx_text ltx_font_smallcaps">physical, mental, social</span>, and <span class="ltx_text ltx_font_smallcaps">abstract</span>), was created using the Corpus of Contemporary American English. Each domain was represented by five verbs and each verb by three sentences: one literal, one slightly metaphoric, and one very metaphoric (as judged by the author).</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">The selection of various domains, verbs, and hypothesized metaphoricity levels helps to control for other factors, like abstractness, which might be only indirectly related to metaphoricity. It also ensures that the experiment covers a wide-range of metaphors. It should be noted that the purpose of the experiment is not to (1) test a three-way distinction between metaphoricity levels (which is simply used to ensure a representative selection of metaphors) or (2) test the author’s intuitions of metaphoricity. Rather, the purpose is to have a representative selection of metaphors rated for metaphoricity against which to test scalar measurements of metaphoricity.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">Three survey tasks were used. The first tested speakers’ ability to consistently separate metaphoric and non-metaphoric sentences. Participants were given a sentence and asked to identify it as “Literal” or “Metaphoric.” The second task tested speakers’ ability to consistently label a given sentence as “Not Metaphoric”, “Slightly Metaphoric”, and “Very Metaphoric.” The additional label was added in order to provide participants with a middle ground between metaphoric and literal. The third task tested speakers’ ability to consistently rank three sentences according to their metaphoricity. In order to ensure comparability, each set of three sentences contained a literal, a slightly metaphoric, and a very metaphoric use of a single verb (e.g., three uses of “butcher”). The purpose of this task was to allow participants to directly compare different uses of the same verb.</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p">The surveys were conducted using the MechanicalTurk platform. Each participant took a particular survey only once and the sentences to be rated were drawn randomly from the corpus. Participants were given eight questions for the identification and labeling tasks and four questions for the ranking task. This was done in order to keep the survey short and prevent participants from losing interest. All participants were asked if they had attended a primary or elementary school conducted in English in order to ensure consistent language ability. Further, a test question was positioned part way through the survey to ensure that participants read the prompts correctly. Only answers valid according to these two tests are considered in the following results. Each task had 100 unique participants who gave valid answers, for a total of 300 participants. Participants did not see any domain information for the sentence prompts.</p>
+</div>
+<div id="S2.p5" class="ltx_para">
+<p class="ltx_p">For the first task, the binary identification task, the metaphoricity of a sentence was computed by taking the percentage of participants who identified it as metaphoric. Thus, if all participants agreed that a sentence was metaphoric, then it receives a 1, while if half of the participants agreed, then it receives a 0.5. The idea here is that high metaphoricity is consciously available to participants, so that the more agreement there is about metaphor the more the participants are aware of the sentence’s metaphoricity and thus the higher its metaphoricity value should be.
+The results of this first experiment are summarized in Table 1 with the mean, standard deviation, and range of the metaphoricity measurements. The results are strong on the low end of the scale, with every domain having sentences with either 0 values or close to 0 values. The high end is more problematic, with the highest values in each domain being below 0.9. This is a result of not having perfect agreement across all participants. However, in spite of this, the measure makes a good distinction between utterances. For example, it assigns the metaphoricity value of 0.833 to the sentence in (1), but a metaphoricity value of only 0.153 to the sentence in (2). This reflects a distinction in metaphoricity, although the extreme top and bottom of the scale are problematic.</p>
+</div>
+<div id="S2.p6" class="ltx_para">
+<p class="ltx_p">(1) “A lady on high heels clacked along, the type my mother says invests all of her brainpower in her looks.”</p>
+</div>
+<div id="S2.p7" class="ltx_para">
+<p class="ltx_p">(2) “The banks and the corporations in America today have lots of money that they can invest right now.”</p>
+</div>
+<div id="S2.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Domain</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Mean</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Std. Dev.</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Range</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Abstract</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.373</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.282</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.065–0.833</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Mental</th>
+<td class="ltx_td ltx_align_center ltx_border_r">0.289</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.278</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.000–0.888</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Physical</th>
+<td class="ltx_td ltx_align_center ltx_border_r">0.417</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.331</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.000–0.846</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Social</th>
+<td class="ltx_td ltx_align_center ltx_border_r">0.389</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.351</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.000–0.812</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r">All</th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">0.367</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">0.316</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">0.000–0.888</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span> Metaphoricity by identification. </div>
+</div>
+<div id="S2.p8" class="ltx_para">
+<p class="ltx_p">The second experiment asks participants to label metaphoricity, this time including a distinction between slightly metaphoric and highly metaphoric sentences. The purpose of this is not to test a three-way distinction in metaphoricity values, but rather to improve the scale by moving intermediate sentences out of the Literal or Metaphoric categories. The metaphoricity values for this experiment were calculated in the same way: the percentage of participants who rated a sentence as highly metaphoric. Thus, this measurement also is based on the idea that more participants will be consciously aware of highly metaphoric sentences, with a third category available to allow an extra distinction to be made. This measurement, summarized in Table 2, is more accurate at the lower end of the scale, with many sentences receiving a 0 because participants were able to choose a category other than metaphoric. At the same time, the values tend to be further from 1 at the upper end of the scale. The sentence in (2) above, for example, received a 0; however, the sentence in (1) above received only a 0.571, which, while high given the range of values, is still far from 1. Thus, while the measurement makes distinctions at the top of the scale, it does not approach 1.</p>
+</div>
+<div id="S2.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Domain</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Mean</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Std. Dev.</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Range</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Abstract</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.170</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.165</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.000–0.571</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Mental</th>
+<td class="ltx_td ltx_align_center ltx_border_r">0.096</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.119</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.000–0.455</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Physical</th>
+<td class="ltx_td ltx_align_center ltx_border_r">0.220</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.248</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.000–0.778</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Social</th>
+<td class="ltx_td ltx_align_center ltx_border_r">0.258</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.281</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.000–0.769</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r">All</th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">0.186</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">0.222</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">0.000–0.778</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 2: </span> Metaphoricity by labelling. </div>
+</div>
+<div id="S2.p9" class="ltx_para">
+<p class="ltx_p">The third task gathered ordering information by presenting participants with three sentences, all of which contained the same main verb. The participants were asked to order the sentences from the least metaphoric to the most metaphoric. The purpose of this experiment was to give participants context in the form of other uses of a given verb against which to make their judgments. The metaphoricity value was computed by taking the percentage of participants who identified a sentence as the most metaphoric of the three given sentences. This measurement, shown in Table 3, has similar averages across domains, unlike the previous measurements. It tends to be better than the previous measures on the upper bound, likely because of the contextual comparison it allows. However, because sentences with the same main verb were forced into a three-way ordering, participants could not, for example, label two of the sentences as equally metaphoric. Thus, it is possible that some of this advantage on the upper bound is a result of the task itself.</p>
+</div>
+<div id="S2.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Domain</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Mean</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Std. Dev.</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Range</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Abstract</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.333</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.211</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.056–0.773</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Mental</th>
+<td class="ltx_td ltx_align_center ltx_border_r">0.331</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.175</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.071–0.632</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Physical</th>
+<td class="ltx_td ltx_align_center ltx_border_r">0.331</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.235</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.050–0.941</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Social</th>
+<td class="ltx_td ltx_align_center ltx_border_r">0.327</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.280</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.050–0.783</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r">All</th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">0.331</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">0.227</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">0.050–0.941</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 3: </span> Metaphoricity by ordering. </div>
+</div>
+<div id="S2.p10" class="ltx_para">
+<p class="ltx_p">Given these three experiments for measuring the metaphoricity of sentences, Table 4 shows the correlations between each measure using Pearson’s R. Each correlation is significant at the 0.01 level (2-tailed). The highest correlation is between the first and second tasks, at 0.819. The lowest is between the first and third (which differ in the number of distinctions allowed) at 0.699. However, this is still a high correlation.</p>
+</div>
+<div id="S2.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Task</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Identify</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Label</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Order</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Identify</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">–</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.819</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.699</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Label</th>
+<td class="ltx_td ltx_align_center ltx_border_r">0.819</td>
+<td class="ltx_td ltx_align_center ltx_border_r">–</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.702</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r">Order</th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">0.699</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">0.702</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">–</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 4: </span> Correlation between measurements. </div>
+</div>
+<div id="S2.p11" class="ltx_para">
+<p class="ltx_p">This section has put forward a robust series of scalar measurements of metaphoricity. Each experiment had 100 participants and operationalized the task of rating metaphoricity in different ways across a representative section of domains, verbs, and metaphoricity levels. The resulting highly correlated measures show that we have a good standard of metaphoricity against which to evaluate computational models which produce scalar measurements of metaphoricity. The next section introduces such a system.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Description of the System</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">We approach the problem by starting with an existing binary identification system and converting it to a scalar system. In principle any of the property-based systems listed above could be converted in this way. We have chosen to start with the domain interaction system (Dunn, 2013a, 2013b), which performed competitively in an evaluation with other systems (Dunn, 2013b). The original system uses the properties of domain-membership and event-status of concepts to identify metaphors at the sentence-level using a logistic regression classifier. The scalar version of the system will have to evaluate the features in a different way.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">The first step is to increase the robustness of the system’s representation of sentences by adding additional properties. We split the original system’s domain membership feature into two: the domain of a word’s referent and the domain of a word’s sense. The idea is to capture cases like <span class="ltx_text ltx_font_smallcaps">minister</span>, in which a physical object (a human) is defined by its social role (being a minister). The event-status property is unchanged.</p>
+</div>
+<div id="S3.p3" class="ltx_para">
+<p class="ltx_p">Several additional properties are added; these properties were not used in the original system. First, animacy-status allows a distinction to be made between inanimate objects like rocks and stones and animate or human objects. Second, the fact-status property allows a distinction to be made between objects which exist as such independently of humans (e.g., rocks and stones) and those which exist to some degree dependent on human consciousness (e.g., laws and ideas). Third, the function-status property allows a distinction to be made between objects which encode a function (e.g., a screwdriver is specifically an object meant to turn screws) and those which do not encode a function (e.g., rocks are simply objects). A finer distinction within the function-status property distinguishes social functions (e.g., laws) from physical-use functions (e.g., screwdrivers).</p>
+</div>
+<div id="S3.p4" class="ltx_para">
+<p class="ltx_p">Following the original system, these properties are taken from a knowledge-base and used to create feature vectors. The text is first processed using Apache OpenNLP for tokenization, named entity recognition, and part of speech tagging. Morpha (Minnen, et al., 2001) is used for lemmatization. At this point word sense disambiguation is performed using SenseRelate (Pedersen &amp; Kolhatkar, 2009), mapping the lexical words to the corresponding WordNet senses. These WordNet senses are first mapped to SynSets and then to concepts in the <span class="ltx_text ltx_font_smallcaps">sumo</span> ontology, using existing mappings (Niles &amp; Pease, 2001, 2003).</p>
+</div>
+<div id="S3.p5" class="ltx_para">
+<p class="ltx_p">Thus, each sentence is represented by the <span class="ltx_text ltx_font_smallcaps">sumo</span> concepts which it contains and each concept is represented by its six concept properties. The features used are computed as follows: First, the relative frequency of each value of each concept property in the sentence is determined; Second, the number of instances of the most common value for each property is determined, as well as the number of instances of all other values (both relativized to the number of concepts present in the sentence). Third, the number of types of values for each concept property is determined, relative to the number of possible types. This gives a total of 41 features for each sentence.</p>
+</div>
+<div id="S3.p6" class="ltx_para">
+<p class="ltx_p">These features were computed for each of the sentences used in the experiments and then the correlation between the features and the metaphoricity measurements were computed using Pearson’s R. Those features which had a significant positive relationship with the experimental results, shown in Table 5, were added together to create a rough computational measure of metaphoricity and then converted so that they fall between 0 and 1. The resulting computationally-derived measure correlates significantly with each of the experiments: 0.450, 0.416, and 0.337.</p>
+</div>
+<div id="S3.T5" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Properties</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Values</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Domain of the Referent</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">Mental</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Domain of the Referent</td>
+<td class="ltx_td ltx_align_left ltx_border_r">Other / Concepts</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Event-Status</td>
+<td class="ltx_td ltx_align_left ltx_border_r">State</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Animacy-Status</td>
+<td class="ltx_td ltx_align_left ltx_border_r">Undetermined</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Animacy-Status</td>
+<td class="ltx_td ltx_align_left ltx_border_r">Other / Concepts</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Fact-Status</td>
+<td class="ltx_td ltx_align_left ltx_border_r">Physical</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Function-Status</td>
+<td class="ltx_td ltx_align_left ltx_border_r">None</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Domain of the Referent</td>
+<td class="ltx_td ltx_align_left ltx_border_r">Types / Possible</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Event-Status</td>
+<td class="ltx_td ltx_align_left ltx_border_r">Types / Possible</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Animacy-Status</td>
+<td class="ltx_td ltx_align_left ltx_border_r">Types / Possible</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r">Function-Status (negative)</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r">Types / Possible</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 5: </span> Predictive features. </div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Evaluation</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">A scalar measurement of metaphoricity allows the threshold for metaphor in metaphor identification tasks to be fitted for specific purposes and datasets. The scalar system was evaluated on the VU Amsterdam Metaphor Corpus (Steen, et al., 2010) which consists of 200,000 words from the British National Corpus divided into four genres (academic, news, fiction, and spoken; performance on the spoken genre was not evaluated for this task because it consists of many short fragmentary utterances) and manually annotated for metaphor by five raters. Previous evaluations using this corpus (Dunn, 2013b) concluded that prepositions annotated as metaphoric in the corpus should not be considered metaphoric for computational purposes. Thus, metaphorically used prepositions have been untagged as metaphoric. Further, we have also untagged the ambiguously metaphoric sentences. Sentences with an insufficiently robust conceptual representation were removed (e.g., fragments). The evaluation dataset thus consists of 6,893 sentences, distributed as shown in Table 6.</p>
+</div>
+<div id="S4.T6" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Subset</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Literal</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Metaphor</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Total</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Academic</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">759</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">1,550</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">2,309</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Fiction</th>
+<td class="ltx_td ltx_align_center ltx_border_r">1,215</td>
+<td class="ltx_td ltx_align_center ltx_border_r">1,389</td>
+<td class="ltx_td ltx_align_center ltx_border_r">2,604</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">News</th>
+<td class="ltx_td ltx_align_center ltx_border_r">366</td>
+<td class="ltx_td ltx_align_center ltx_border_r">1,614</td>
+<td class="ltx_td ltx_align_center ltx_border_r">1,980</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r">Total</th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">2,340</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">4,553</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">6,893</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 6: </span> Size of evaluation dataset in sentences. </div>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">For the purposes of this evaluation, the threshold for metaphor was set independently for each genre and tied to the number of sentences containing metaphorically used words, as rated by the annotators of the corpus. Thus, for the number <span class="ltx_text ltx_font_italic">x</span> of metaphors in the genre, the <span class="ltx_text ltx_font_italic">x</span> sentences with the top metaphoricity values were identified as metaphoric. This illustrates the flexibility of such a scalar approach to metaphor identification. The baseline results are taken from a binary classification evaluation of the corpus using the full set of 41 features produced by the system and evaluated using the logistic regression algorithm with 100-fold cross-validation.</p>
+</div>
+<div id="S4.T7" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">System</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Subset</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Prec.</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Recall</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">F-Meas.</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Scalar</th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">Acad.</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.578</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.686</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.578</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Binary</th>
+<th class="ltx_td ltx_align_left ltx_border_r">Acad.</th>
+<td class="ltx_td ltx_align_center ltx_border_r">0.649</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.682</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.623</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Scalar</th>
+<th class="ltx_td ltx_align_left ltx_border_r">News</th>
+<td class="ltx_td ltx_align_center ltx_border_r">0.712</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.822</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.712</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Binary</th>
+<th class="ltx_td ltx_align_left ltx_border_r">News</th>
+<td class="ltx_td ltx_align_center ltx_border_r">0.750</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.812</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.748</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Scalar</th>
+<th class="ltx_td ltx_align_left ltx_border_r">Fict.</th>
+<td class="ltx_td ltx_align_center ltx_border_r">0.554</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.582</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.554</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Binary</th>
+<th class="ltx_td ltx_align_left ltx_border_r">Fict.</th>
+<td class="ltx_td ltx_align_center ltx_border_r">0.632</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.633</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.630</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Scalar</th>
+<th class="ltx_td ltx_align_left ltx_border_r">All</th>
+<td class="ltx_td ltx_align_center ltx_border_r">0.608</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.703</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.608</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r">Binary</th>
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_r">All</th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">0.663</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">0.685</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">0.638</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 7: </span> Evaluation results. </div>
+</div>
+<div id="S4.p3" class="ltx_para">
+<p class="ltx_p">The binary classification system, with access to the full range of features, out-performs the scalar measurement in most cases. It is important to note, however, that the binary classification system requires labelled training data and is restricted to a single threshold of metaphoricity, in this case the threshold embedded in the corpus by the raters. The scalar system, however, was trained only on the experimental data and was not influenced by the evaluation corpus (except, of course, that it had access to the number of metaphoric sentences in the dataset, which is a parameter and not part of the model itself). Further, it can be applied to any English text without the need for labelled training data. Thus, the scalar approach performs competitively on a binary task (0.608 vs. 0.638 F-Measure) but can also produce scalar identifications, which binary systems cannot produce.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul class="ltx_biblist">
+<li id="bib.bib1" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">1</span>
+<span class="ltx_bibblock">
+Assaf, D., Neuman, Y., Cohen, Y., Argamon, S., Howard, N., Last, M., Koppel, M.
+
+</span>
+<span class="ltx_bibblock">2013.
+
+</span>
+<span class="ltx_bibblock">Why “dark thoughts” aren’t really dark: A novel algorithm for metaphor identification.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">2013 IEEE Symposium on Computational Intelligence, Cognitive Algorithms, Mind, and Brain</span>: 60–65. Institute of Electrical and Electronics Engineers.
+
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">2</span>
+<span class="ltx_bibblock">
+Bracewell, D. B., Tomlinson, M. T., Mohler, M.
+
+</span>
+<span class="ltx_bibblock">2013.
+
+</span>
+<span class="ltx_bibblock">Determining the Conceptual Space of Metaphoric Expressions.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Proceedings of the 14th International Conference on Computational Linguistics and Intelligent Text Processing, Volume I</span>: 487–500. Berlin, Heidelberg: Springer-Verlag.
+
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">3</span>
+<span class="ltx_bibblock">
+Carbonell, J.
+
+</span>
+<span class="ltx_bibblock">1980.
+
+</span>
+<span class="ltx_bibblock">Metaphor - A Key to Extensible Semantic Analysis.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Proceedings of the 18th Meeting of the Association for Computational Linguistics</span>: 17–21. Association for Computational Linguistics.
+
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">4</span>
+<span class="ltx_bibblock">
+Casasanto, D., Jasmin, K.
+
+</span>
+<span class="ltx_bibblock">2012.
+
+</span>
+<span class="ltx_bibblock">The Hands of Time: Temporal gestures in English speakers.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Cognitive Linguistics</span>, 23(4): 643–674.
+
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">5</span>
+<span class="ltx_bibblock">
+Coulson, S., Matlock, T.
+
+</span>
+<span class="ltx_bibblock">2001.
+
+</span>
+<span class="ltx_bibblock">Metaphor and the space structuring model.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Metaphor &amp; Symbol</span>, 16(3), 295â-316.
+
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">6</span>
+<span class="ltx_bibblock">
+Deignan, A.
+
+</span>
+<span class="ltx_bibblock">2005.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Metaphor and Corpus Linguistics</span>.
+
+</span>
+<span class="ltx_bibblock">Amsterdam: John Benjamins.
+
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">7</span>
+<span class="ltx_bibblock">
+Dunn, J.
+
+</span>
+<span class="ltx_bibblock">2011.
+
+</span>
+<span class="ltx_bibblock">Gradient Semantic Intuitions of Metaphoric Expressions.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Metaphor &amp; Symbol</span>, 26(1), 53-â67.
+
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">8</span>
+<span class="ltx_bibblock">
+Dunn, J.
+
+</span>
+<span class="ltx_bibblock">2013a.
+
+</span>
+<span class="ltx_bibblock">Evaluating the premises and results of four metaphor identification systems.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Proceedings of the 14th International Conference on Computational Linguistics and Intelligent Text Processing, Volume I</span>: 471â-486. Berlin, Heidelberg: Springer-Verlag.
+
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">9</span>
+<span class="ltx_bibblock">
+Dunn, J.
+
+</span>
+<span class="ltx_bibblock">2013b.
+
+</span>
+<span class="ltx_bibblock">What metaphor identification systems can tell us about metaphor-in-language.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Proceedings of the First Workshop on Metaphor in NLP</span>: 1â-10. Association for Computational Linguistics.
+
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">10</span>
+<span class="ltx_bibblock">
+Dunn, J.
+
+</span>
+<span class="ltx_bibblock">2013c.
+
+</span>
+<span class="ltx_bibblock">How linguistic structure influences and helps to predict metaphoric meaning.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Cognitive Linguistics</span>, 24(1), 33â-66.
+
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">11</span>
+<span class="ltx_bibblock">
+Evans, V.
+
+</span>
+<span class="ltx_bibblock">2010.
+
+</span>
+<span class="ltx_bibblock">Figurative language understanding in LCCM Theory.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Cognitive Linguistics</span>, 21(4), 601â-662.
+
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">12</span>
+<span class="ltx_bibblock">
+Gandy, L., Allan, N., Atallah, M., Frieder, O., Howard, N., Kanareykin, S., Argamon, S.
+
+</span>
+<span class="ltx_bibblock">2013.
+
+</span>
+<span class="ltx_bibblock">Automatic Identification of Conceptual Metaphors With Limited Knowledge.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Proceedings of the 27th Conference on Artificial Intelligence</span>: 328–334. Association for the Advancement of Artificial Intelligence.
+
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">13</span>
+<span class="ltx_bibblock">
+Gibbs Jr., R. W.
+
+</span>
+<span class="ltx_bibblock">2002.
+
+</span>
+<span class="ltx_bibblock">A new look at literal meaning in understanding what is said and implicated.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Journal of Pragmatics</span>, 34(4), 457-â486.
+
+</span></li>
+<li id="bib.bib14" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">14</span>
+<span class="ltx_bibblock">
+Giora, R.
+
+</span>
+<span class="ltx_bibblock">2002.
+
+</span>
+<span class="ltx_bibblock">Literal vs. figurative language: Different or equal?
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Journal of Pragmatics</span>, 34(4), 487-â506.
+
+</span></li>
+<li id="bib.bib15" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">15</span>
+<span class="ltx_bibblock">
+Johansson Falck, M., Gibbs, Jr., R. W.
+
+</span>
+<span class="ltx_bibblock">2012.
+
+</span>
+<span class="ltx_bibblock">Embodied motivations for metaphorical meanings.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Cognitive Linguistics</span>, 23(2): 251–272.
+
+</span></li>
+<li id="bib.bib16" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">16</span>
+<span class="ltx_bibblock">
+Lakoff, G., Johnson, M.
+
+</span>
+<span class="ltx_bibblock">1980.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Metaphors we live by</span>.
+
+</span>
+<span class="ltx_bibblock">Chicago: University Of Chicago Press.
+
+</span></li>
+<li id="bib.bib17" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">17</span>
+<span class="ltx_bibblock">
+Lakoff, G., Johnson, M.
+
+</span>
+<span class="ltx_bibblock">1999.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Philosophy in the flesh: The embodied mind and its challenge to western thought</span>.
+
+</span>
+<span class="ltx_bibblock">Chicago: University Of Chicago Press.
+
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">18</span>
+<span class="ltx_bibblock">
+Li, L., Sporleder, C.
+
+</span>
+<span class="ltx_bibblock">2010a.
+
+</span>
+<span class="ltx_bibblock">Linguistic Cues for Distinguishing Literal and Non-literal Usages.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Proceedings of the 23rd International Conference on Computational Linguistics: Posters</span>: 683â-691. Association for Computational Linguistics.
+
+</span></li>
+<li id="bib.bib19" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">19</span>
+<span class="ltx_bibblock">
+Li, L., Sporleder, C.
+
+</span>
+<span class="ltx_bibblock">2010b.
+
+</span>
+<span class="ltx_bibblock">Using Gaussian Mixture Models to Detect Figurative Language in Context.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Human Language Technologies: The 2010 Annual Conference of the North American Chapter of the Association for Computational Linguistics</span>: 297–300. Association for Computational Linguistics.
+
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">20</span>
+<span class="ltx_bibblock">
+Mason, Z.
+
+</span>
+<span class="ltx_bibblock">2004.
+
+</span>
+<span class="ltx_bibblock">CorMet: A Computational, Corpus-Based Conventional Metaphor Extraction System.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Computational Linguistics</span>, 30(1), 23-â44.
+
+</span></li>
+<li id="bib.bib21" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">21</span>
+<span class="ltx_bibblock">
+Minnen, G., Carroll, J., Pearce, D.
+
+</span>
+<span class="ltx_bibblock">2001.
+
+</span>
+<span class="ltx_bibblock">Applied morphological processing of English.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Natural Language Engineering</span>, 7(3), 207â-223.
+
+</span></li>
+<li id="bib.bib22" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">22</span>
+<span class="ltx_bibblock">
+Mohler, M., Bracewell, D., Tomlinson, M., Hinote, D.
+
+</span>
+<span class="ltx_bibblock">2013.
+
+</span>
+<span class="ltx_bibblock">Semantic Signatures for Example-Based Linguistic Metaphor Detection.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Proceedings of the First Workshop on Metaphor in NLP</span>: 27â-35. Association for Computational Linguistics.
+
+</span></li>
+<li id="bib.bib23" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">23</span>
+<span class="ltx_bibblock">
+Neuman, Y., Nave, O.
+
+</span>
+<span class="ltx_bibblock">2009.
+
+</span>
+<span class="ltx_bibblock">Metaphor-based meaning excavation.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Information Sciences</span>, 179, 2719â-2728.
+
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">24</span>
+<span class="ltx_bibblock">
+Niles, I., Pease, A.
+
+</span>
+<span class="ltx_bibblock">2001.
+
+</span>
+<span class="ltx_bibblock">Towards a standard upper ontology.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Proceedings of the International Conference on Formal Ontology in Information Systems</span>: 2-â9. Association for Computing Machinery.
+
+</span></li>
+<li id="bib.bib25" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">25</span>
+<span class="ltx_bibblock">
+Niles, I., Pease, A.
+
+</span>
+<span class="ltx_bibblock">2003.
+
+</span>
+<span class="ltx_bibblock">Linking lexicons and ontologies: Mapping WordNet to the Suggested Upper Merged Ontology.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Proceedings of the 2003 International Conference on Information and Knowledge Engineering</span>: 412-â416. World Congress in Computer Science, Computer Engineering, and Applied Computing.
+
+</span></li>
+<li id="bib.bib26" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">26</span>
+<span class="ltx_bibblock">
+Pedersen, T., Kolhatkar, V.
+
+</span>
+<span class="ltx_bibblock">2009.
+
+</span>
+<span class="ltx_bibblock">WordNet::SenseRelate::AllWords - A broad coverage word sense tagger that maximimizes semantic relatedness.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Proceedings of Human Language Technologies: The 2009 Annual Conference of the North American Chapter of the Association for Computational Linguistics, Companion Volume: Demonstration Session</span>: 17â-20. Association for Computational Linguistics.
+
+</span></li>
+<li id="bib.bib27" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">27</span>
+<span class="ltx_bibblock">
+Shutova, E., Sun, L.
+
+</span>
+<span class="ltx_bibblock">2013.
+
+</span>
+<span class="ltx_bibblock">Unsupervised Metaphor Identification using Hierarchical Graph Factorization Clustering.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Proceedings of Human Language Technologies: The 2013 Annual Conference of the North American Chapter of the Association for Computational Linguistics</span>: 978â-988. Association for Computational Linguistics.
+
+</span></li>
+<li id="bib.bib28" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">28</span>
+<span class="ltx_bibblock">
+Shutova, E., Teufel, S., Korhonen, A.
+
+</span>
+<span class="ltx_bibblock">2013.
+
+</span>
+<span class="ltx_bibblock">Statistical Metaphor Processing.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Computational Linguistics</span>, 39(2), 301â-353.
+
+</span></li>
+<li id="bib.bib29" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">29</span>
+<span class="ltx_bibblock">
+Steen, G. J., Dorst, A. G., Herrmann, J. B., Kaal, A. A., Krennmayr, T.
+
+</span>
+<span class="ltx_bibblock">2010.
+
+</span>
+<span class="ltx_bibblock">Metaphor in usage.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Cognitive Linguistics</span>, 21(4), 765-â796.
+
+</span></li>
+<li id="bib.bib30" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">30</span>
+<span class="ltx_bibblock">
+Strzalkowski, T., Broadwell, G. A., Taylor, S., Feldman, L., Shaikh, S., Liu, T., Elliot, K.
+
+</span>
+<span class="ltx_bibblock">2013.
+
+</span>
+<span class="ltx_bibblock">Robust Extraction of Metaphor from Novel Data.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Proceedings of the First Workshop on Metaphor in NLP</span>: 67-â76. Association for Computational Linguistics.
+
+</span></li>
+<li id="bib.bib31" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">31</span>
+<span class="ltx_bibblock">
+Tsvetkov, Y., Mukomel, E., Gershman, A.
+
+</span>
+<span class="ltx_bibblock">2013.
+
+</span>
+<span class="ltx_bibblock">Cross-Lingual Metaphor Detection Using Common Semantic Features.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Proceedings of the First Workshop on Metaphor in NLP</span>: 45â-51. Association for Computational Linguistics.
+
+</span></li>
+<li id="bib.bib32" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">32</span>
+<span class="ltx_bibblock">
+Turney, P. D., Neuman, Y., Assaf, D., Cohen, Y.
+
+</span>
+<span class="ltx_bibblock">2011.
+
+</span>
+<span class="ltx_bibblock">Literal and Metaphorical Sense Identification Through Concrete and Abstract Context.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Proceedings of the Conference on Empirical Methods in Natural Language Processing</span>: 680-â690. Association for Computational Linguistics.
+
+</span></li>
+<li id="bib.bib33" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">33</span>
+<span class="ltx_bibblock">
+Wilks, Y.
+
+</span>
+<span class="ltx_bibblock">1978.
+
+</span>
+<span class="ltx_bibblock">Making preferences more active.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Artificial Intelligence</span>, 11(3), 197-â223.
+
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 18:25:41 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

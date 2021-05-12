@@ -1,0 +1,857 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Domain-independent planning for services in uncertain and dynamic environments.
+   </title>
+   <abstract>
+    Research in automated planning provides novel insights into service composition and contributes towards the provision of automatic compositions which adapt to changing user needs and environmental conditions. Most of the existing planning approaches to aggregating services, however, suffer from one or more of the following limitations: they are not domain-independent, cannot efficiently deal with numeric-valued variables, especially sensing outcomes or operator inputs, and they disregard recovery from runtime contingencies due to erroneous service behavior or exogenous events that interfere with plan execution. We present the RuGPlanner, which models the planning task as a Constraint Satisfaction Problem. In order to address the requirements put forward by service domains, the RuGPlanner is endowed with a number of special features. These include a knowledge-level representation to model uncertainty about the initial state and the outcome of sensing actions, and efficient handling of numeric-valued variables, inputs to actions or observational effects. In addition, it generates plans with a high level of parallelism, it supports a rich declarative language for expressing extended goals, and allows for continual plan revision to deal with sensing outputs, failures, long response times or timeouts, as well as the activities of external agents. The proposed planning framework is evaluated based on a number of scenarios to demonstrate its feasibility and efficiency in several planning domains and execution circumstances which reflect concerns from different service environments.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Software service infrastructures enable the large scale integration of heterogeneous systems and solve a number of interoperability issues. A prototypical example is that of Web Services (WS) where programmatic access to Web resources is guaranteed via standardized XML interfaces, such as those defined by the Web Service Description Language (WSDL) (www.w3.org/TR/wsdl). Automated planning can contribute to the realization of service infrastructures that go beyond basic interoperation and ad hoc process specifications, offering highly automated functionalities that are adaptable to changing user needs and environmental conditions. The goal is to compose and interact automatically with several service providers in order to offer value added functionalities. More precisely, a service composition is a combination of operations provided by different services to satisfy complex objectives which cannot be fulfilled by a single service instance. Planning is the process of “choosing and organizing actions by anticipating their expected outcomes,” with the aim of achieving a pre-stated goal [42]. The analogies between the problem of Web Service composition (WSC) and automated planning are evident and have been exploited before (e.g., [1], [108], [98], [110], [15]): actions correspond to functionalities offered by different services, and the goal is derived from a user request or inferred by a situation that calls for a combination of services.
+     </paragraph>
+     <paragraph>
+      The composition method advocated herein is driven by the general aim of combining services automatically and on-demand, relying solely on individual descriptions of loosely-coupled software components, and a declarative goal language. The idea is to maintain a generic and modular repository that comprises a number of atomic service operations, from booking flights to arranging appointments with a doctor, and that can serve a variety of objectives with minimal request-specific configuration. We use domain-independent planning and propose an extended language for expressing complex goals in a declarative fashion, detached from the particularities and interdependencies of the available services. This is unlike most previous approaches that restrict the applicability of the domain to a set of anticipated user needs, predefined in the form of some procedural template, e.g., [90], [108].
+     </paragraph>
+     <section label="1.1">
+      <section-title>
+       Characteristics of service domains
+      </section-title>
+      <paragraph>
+       Service domains are data intensive, i.e., they deal with variables ranging over very large domains, such as prices, dates, product quantities, and so on. If the behavior of a service operation is to be modeled by a planning operator, then this must quite frequently involve fluents with numeric-valued input arguments. For example, an operation to reserve an airline ticket is parametrized by data associated with the flight. Whether or not the application of such an operation has the intended effect depends on the choice of the correct value of the input parameters. One must also take into account numeric properties (e.g., the temperature must be greater than 0) both in preconditions and in the goal, and be able to apply arithmetic operations (e.g., increase an account balance by a certain amount). Things become more complicated when one considers that numeric information is very often the output of sensing operations. Due to the many operators involving variables taking values in domains with large cardinality, either as input parameters or as outputs, the number of ground operators and, as a consequence, the size of the search space can increase enormously.
+      </paragraph>
+      <paragraph>
+       In a service environment, the planner must deal with uncertainty about the initial state, i.e., consider that there is a number of possibilities about the actual values of certain variables. The actual value of an unknown variable can be returned after the invocation of a sensing operator, referred to as knowledge-gathering or observational, which returns exactly one outcome out of a (possibly very large) set of choices. In fact, marketplaces consisting of services publicly available on the Web are usually dominated by services that are data sources [31], which in a planning context are modeled as sensing operators. A successful plan may be conditioned on the outcomes of such actions, e.g., the user may want to go ahead with buying a book from amazon.com if this costs less than a maximum price. In a domain-independent setting, the planning agent is required to plan for sensing; the planner should be able to identify which knowledge it lacks for satisfying the goal, and reason about how to find it, instead of relying on pre-specified queries [110], [76], [4]. The planner should also proactively see to the data flow of the plan, i.e., the way the service return values are used by subsequent actions. For example, a user may want to mail a parcel to someone whose address he does not already know. The plan should thus first consult a white pages service, and then give the order for posting by passing the right address value to the respective input parameter. For data intensive service domains, determining the parameters for an action can be just as difficult as determining which actions belong to the plan. Since almost all state-of-the-art planners resort to some kind of pre-processing for compiling the PDDL [87] domain into a fully grounded encoding, on-the-fly handling of runtime outputs is difficult to implement.
+      </paragraph>
+      <paragraph>
+       Uncertainty applies, however, not only to the initial state and the non-determinism of the many possible values of the outputs of sensing actions. In fact, a service invocation may behave in unexpected ways: i mat return a failure, not respond at all, or even act in a way different from the one prescribed by its description. The actual outcomes of a service invocation only become visible at runtime, when the plan is exposed to the actual environmental conditions. Thus, the problem of uncertainty is directly related to the interaction between planning and execution.
+      </paragraph>
+      <paragraph>
+       The state of a service domain may not only change as a result of the deliberate actions executed by the planning agent, but also due to the activity of other exogenous agents which are active in the same environment. The activity of other actors may have repercussions for the composition-plan under execution, and render it invalid, either because information own which it relies has meanwhile become obsolete, or because certain scheduled actions are no longer applicable under the new circumstances. For example, considering a partially executed composition which involves circumnavigation of a robot, if an external actor puts an obstacle in the robot's way in the middle of execution, the robot may fall unless it revises its decisions about how to move. With a few notable exceptions [4], [17], [73], context dynamicity has largely been overlooked by existing planning approaches to WSC. Moreover, in many service environments, dynamicity also applies to the availability of information and services; e.g., the services offered by a mobile phone may appear and disappear depending on the location of the phone.
+      </paragraph>
+     </section>
+     <section label="1.2">
+      <section-title>
+       Approach
+      </section-title>
+      <paragraph>
+       We choose to work directly at the schematic level of the planning domain, i.e., without performing any grounding. Following the so-called Multi-Valued Task (MPT) paradigm [53], we use state variables rather than predicates as the basic elements for describing the world. According to that view, a state is a tuple of values to variables, leading to a more compact encoding. In the remainder of the paper, we use the terms planning operator and action interchangeably. This should be kept in mind when comparing with other planning approaches to service composition, which use “number of actions” to refer to the number of grounded operators (the grounded task is exponentially larger than the schematic one).
+      </paragraph>
+      <paragraph>
+       Our proposal is realized in the RuGPlanner, which is based on translating the domain and the goal into a Constraint Satisfaction Problem (CSP) and applying a state of the art constraint solver to compute a solution-plan. Planning as CSP fits well with many aspects that are of particular concern for service domains. The encoding expected from the constraint solver suits the MPT-like schematic planning representation, and constraint solving supports the efficient handling of numeric expressions and variables ranging over large domains. Moreover, such an encoding is well suited to most standard WS description languages, such as WSDL, which are based on state variables rather than predicates; complex goals can also be expressed in the form of constraints. Finally, plans can include parallel actions, which are particularly useful at execution time.
+      </paragraph>
+      <paragraph>
+       To deal with uncertainty and the possible mismatch between off-line planning and actual execution results, our proposal relies on continual planning: upcoming plan steps anticipated offline can be revised as execution proceeds in the face of inconsistencies that stem either from the newly sensed information, erroneous service behavior or the actions of exogenous agents. We describe this alternating sequence of offline planning and online execution as orchestration, a well-known concept in the service-oriented computing community which denotes how the execution of a composition is managed. In a service infrastructure, the orchestration engine is a central coordinator which interacts with the component WSs in accordance with the composite process specifications. We reserve a similar role for an orchestration component that interacts with the environment, informs the planner about the data it has collected, and decides when to switch from planning to execution and vice versa. Depending on the situation, re-using parts of the existing plan may speed up the process of plan revision. Moreover, a non-blocking strategy is adopted with respect to waiting for the response of sensing actions, so that the framework can go on with the planning and execution of actions that do not depend on the expected response. Continual planning can be nicely incorporated into CSP. In fact, dynamic constraint solving allows for the efficient addition and removal of constraints. This enables the planner to constantly incorporate new facts about the environment or remove obsolete ones, check for possible inconsistencies, and react accordingly.
+      </paragraph>
+     </section>
+     <section label="1.3">
+      <section-title>
+       A motivating example
+      </section-title>
+      <paragraph>
+       Suppose that a user is happy to learn that in the coming days a singer she likes is making a tour in the country where she lives. She would like to book a ticket and a hotel room for the nearest upcoming concert whose date and location meet criteria including weather conditions, the distance from her hometown, her availability according to her on-line agenda, and the price she is willing to pay for an overnight stay.
+      </paragraph>
+      <paragraph>
+       These requirements are expressed in the form of a declarative extended goal. Satisfaction of this goal requires collaboration of services coming from diverse business domains—related to traveling, entertainment events, maps, calendars and weather services—in a manner that can hardly be anticipated. Depending on the information returned at runtime, there are clearly many possible ways for this goal to be fulfilled. For example, it may turn out that the location of the first upcoming concert is too far, or that on that date there is no hotel available within her budget. In such cases, the original plan must be interrupted and revised; the conditions regarding the whereabouts and date of the next concert will need to be looked up. To further complicate things, at any moment a service may fail. So, if, e.g., the booking service of the first hotel that meets the user's criteria happens to be in a permanent state of failure, an alternative hotel will need to be looked for, and, depending on the result, the goal may finally be satisfied or not.
+      </paragraph>
+     </section>
+     <section label="1.4">
+      <section-title>
+       Content and organization
+      </section-title>
+      <paragraph>
+       This paper provides a unified and comprehensive approach to domain-independent planning via CSP, with applications to service composition in uncertain and dynamic environments. The manuscript extends preliminary ideas about service composition via CSP-based planning with extended goals which were first presented in [66]. An orchestration algorithm based on replanning from scratch has been described in [67]. The offline planning framework has been used and evaluated in two diverse settings: an infrastructure for smart homes with intelligent devices exposed as services [69], [119], [24], [68], and a platform for Business Process recovery in case of processes interference [114]. However, these papers do not present the methodological foundations of the planning system, which is treated as a “black box” being part of a service-oriented architecture, but rather describe specific applications. In the present paper, we set the foundation for the applications presented in our previous papers and we describe, for the first time, the formal methods (algorithms, syntax, semantics) behind the RuG planning system. We also introduce a novel orchestration algorithm based on plan revision by continually altering the CSP. Finally, a new and extensive set of evaluation experiments that provides an insight into the behavior and performance of the RuGPlanner is presented here.
+      </paragraph>
+      <paragraph>
+       The remainder of this paper is organized as follows. Section 2 contains the basic definitions and algorithms that pertain to the offline working of the RuGPlanner system. We describe the representation of the planning domain extended with additional variables to model the knowledge-level representation, its transformation into a CSP, as well as the syntax and the semantics of the language for expressing extended goals. How the resulting CSP is solved by a constraint solver and an example of an optimistic plan produced by the offline planner are presented in Section 3. The interesting case where offline planning has to be interleaved with execution is investigated in Section 4. The focus is the design and implementation of an orchestration framework, which is characterized by a high level of non-blocking concurrency and can deal with a number of inconsistencies that arise due to the uncertain and dynamic nature of service environment: with sensing outputs that violate the optimistic offline assumptions, with erroneous service behaviors that contradict the expected effects, with long response times, and with exogenous events that interfere with the plan execution. A discussion of the orchestration policies and of the implementation is provided in Section 5. The overall framework is evaluated on a number of scenarios in Section 6, which demonstrate the instantiation of output-to-input parameters matchings, the tradeoff between plan refinement and planning from scratch, and the case of dealing with actions that take too long to respond. To conclude, Section 7 gives an overview of the related work and concluding remarks are presented in Section 8. Appendix A details the orchestration algorithm.
+      </paragraph>
+     </section>
+    </section>
+    <section label="2">
+     <section-title>
+      The RuGPlanner
+     </section-title>
+     <paragraph>
+      In general, under conditions of uncertainty about the initial state, the search space is no longer the set of states of the domain, but its power set. The planner can resort to sensing operations to acquire all the knowledge it misses and which is necessary to fulfill a goal. Sensing operations return exactly one outcome amongst a (possibly very large) set of deterministic choices. In that respect, a plan computed offline represents a traversal between sets of states rather than complete descriptions of states, and has only the potential to achieve the goal, if there is some state sequence that could arise from the plan's execution and satisfies the goal. Such a plan is usually referred to as weak[27]. Finding such a context-dependent plan is a much simpler task than computing a strong contingent plan with conditional branches which would satisfy the goal in all possible state sequences that could arise from observational effects. Postponing the computation of alternative contingent branches till more information is acquired from the environment is a more feasible approach for WS scenarios that involve many numeric variables and output-to-input mappings, and being optimistic is likely to be paid off. Thus, all sources of non-determinism, where the actual behavior of actions at execution time contradicts the expected effects as modeled in the planning domain or external agents alter the world in unanticipated ways, are left to be treated by interleaving planning with execution and performing continual planning as described in Section 4.
+     </paragraph>
+     <paragraph>
+      Although planning as CSP is not yet as competitive as modern best-performing domain-independent planners in the International Planning Competitions (IPC), it should be noted that service environments put forward rather different challenges than the domains used in the IPC. In service environments, complexity does not usually stem from the need for complex combinatorial propositional reasoning, since there are fewer interdependencies between different actions/service operations [31] – for example, contrast the broadly used travel domain [1] with the PDDL domains in IPC (ipc.icaps-conference.org). The main challenges come rather from other sources, such as uncertainty and sensing regarding numeric-valued variables, the expressive power of the domain representation, the dynamic nature of context, and the support for complex goals. In the following, we present how the CSP-based RuGPlanner meets these requirements, providing for a highly expressive action schema, endowed with a number of features, mostly overlooked up to now. These include the support for parallel actions, which are very important given the large response times of many operations (especially sensing ones), handling of numeric variables and input parameters, numeric preconditions, and a large variety of effects. A powerful language for expressing complex goals, which accommodate for ordering constraints, maintainability properties, numeric expressions and hands-off requirements, is supported. The planning problem modeling accommodates for incomplete knowledge and information-gathering, which is realized by an intuitive knowledge-level representation which is automatically generated, given the high-level description of the domain and the goal.
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       Planning domain
+      </section-title>
+      <paragraph>
+       To deal with incomplete knowledge and sensing, the planning domain description is enriched with a knowledge-level representation to model observational actions (sensing effects). Conditional effects are also provided. Moreover, the planning formalism accommodates for numeric functions and effects beyond mere assignments, such as increase/decrease. Another characteristic of the planning schema is that input arguments to actions may range over numeric-valued domains just as all other variables. Since the planning problem is translated into a constraint solver, the supported variable domains (integer, real, lower and upper bounds) depend on the underlying constraint solver that is used (see Section 5.5 for more details). The planning domain accommodated by the RuGPlanner is described in Definition 1.
+      </paragraph>
+      <paragraph label="Definition 1">
+       Planning Domain (PD)A Planning Domain is a triple {a mathematical formula}PD=〈Var,Par,Act〉, where:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Var is a finite non-empty set of variables. Each variable {a mathematical formula}v∈Var ranges over a finite domain {a mathematical formula}Dv.
+       </list-item>
+       <list-item label="•">
+        Par is a finite non-empty set of variables that play the role of input parameters to members of Act. Each variable {a mathematical formula}p∈Par ranges over a finite domain {a mathematical formula}Dp. Par and Var are disjoint sets.
+       </list-item>
+       <list-item label="•">
+        Act is the set of actions. An action {a mathematical formula}a∈Act is a quadruple {a mathematical formula}a=〈id(a),in(a),precond(a),effects(a)〉, where:
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}effects(a) is a conjunction of any of the following elements:
+       </list-item>
+      </list>
+      <paragraph>
+       Example 1 illustrates three examples of actions expressed in terms of preconditions and effects. Variables in Var can only change values as the result of an action, while input parameters are left free to be assigned any value by the planner. A planning state s is defined as a relation {a mathematical formula}s={(x,Dsx)|∀x∈Var∪Par}, where {a mathematical formula}Dsx⊆Dx, and {a mathematical formula}Dx is the domain of x. Thus, the notion of state adopted herein encompasses a set of traditional states representing assignments of values to the variables, and allows us to accommodate for incomplete knowledge. The domain of x at s is given by the state-variable function {a mathematical formula}〚x〛(s), so that {a mathematical formula}〚x〛(s)=Dsx if {a mathematical formula}(x,Dsx)∈s. If {a mathematical formula}|Dsx|=1, x at s has a specific value. An action a is applicable on s if its preconditions hold at s, and its execution leads to a successor state {a mathematical formula}s′. The propositions in {a mathematical formula}precond(a) refer to the values of variables Var and parameters Par at state s, whereas the updates instructed by {a mathematical formula}effects(a) refer to the variables Var at state {a mathematical formula}s′. We say that {a mathematical formula}precond(a) holds at s (or alternatively that s satisfies{a mathematical formula}precond(a)) if {a mathematical formula}precond(a) evaluates to true for all possible assignments to values consistent with the domains of the variables at s. This implies for example that given a state {a mathematical formula}s={(v1,{1}),(v2,{1,2})} and an action a which has a precondition {a mathematical formula}v1=v2, a is not applicable at s. As we see in Section 2.2, {a mathematical formula}effects(a) also amount to a conjunction of propositions that should hold at {a mathematical formula}s′.
+      </paragraph>
+      <paragraph>
+       The effects {a mathematical formula}sense(var) are called observational or knowledge-providing, i.e., they observe the current value of a variable, while the other effects are world-altering, i.e., they change the value of a variable. Variables that are part of sensing effects correspond to WS outputs (e.g., indicated with respective annotations in WSDL documents). An action may have both observational and world-altering effects. To provide for incomplete information and sensing, the domain is extended by additional variables to model the knowledge-level representation and distinguish between sensing and world-altering actions. These variables are generated automatically given a planning domain {a mathematical formula}PD. First, for each {a mathematical formula}var∈Var∪Par, a new boolean variable var_known is introduced, which indicates whether var is known at state s ({a mathematical formula}〚var_known〛(s)=true) or not ({a mathematical formula}〚var_known〛(s)=false). If {a mathematical formula}known(var) holds at state s, this is equivalent to {a mathematical formula}〚var_known〛(s)=true. The role of these knowledge-base variables becomes evident when looking at how effects and goals are translated into constraints. For every {a mathematical formula}kvar∈Var that participates in an observational effect, we introduce a new variable {a mathematical formula}kvar_response, which is a placeholder for the value returned by the respective sensing operation. Since this value is unknown until execution time, {a mathematical formula}kvar_response ranges over kvar's domain ({a mathematical formula}kvar_response∈Dkvar). We also maintain for every variable {a mathematical formula}cvar∈Var that is part of at least one world-altering effect a boolean flag var_changed, which becomes true whenever this effect takes place. Thus, we end up with an extended set of variables {a mathematical formula}V=Var∪Kb∪Cv∪Rv, where Kb is the set of knowledge-base variables, Cv the set of the change-indicative variables, and Rv the response variables. States are also extended to include all variables in {a mathematical formula}V∪Par.
+      </paragraph>
+      <paragraph>
+       On top of the action descriptions in PD, there may be a set of general constraints, which capture a simple aspect of the ramification problem [33], i.e., indirect effects of actions on variables. For the RuGPlanner, a general constraint is an implication constraint stating that if a variable {a mathematical formula}var1∈Var has some specific value(s), then a unique value of {a mathematical formula}var2∈Var can be concluded as well. A general constraint has the form {a mathematical formula}⋁ivar1=vi⇒var2=v, where {a mathematical formula}vi are some constants {a mathematical formula}vi∈Dvar1 and {a mathematical formula}v∈Dvar2. For example, let us consider an action which moves an actor between certain rooms (see Example 1). The effect of the action refers to an assignment to the variable robotLoc which indicates the location of the moving robot that may also imply a change to variable robotRoom. The latter can be modeled as a function of the former, since knowing the location, we can infer the room.
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Encoding the planning domain into a CSP
+      </section-title>
+      <paragraph label="Definition 2">
+       Following a common practice, we consider a bounded planning problem, i.e., we restrict our target to finding a plan of length at most k. Next, we illustrate how the service domain is encoded into a CSP, for some given integer k. The process is similar to the one described in [42] (alternative encodings based on the planning graph are proposed in [70], [29]). A constraint satisfaction problem and its solution are defined as follows: CSPA Constraint Satisfaction Problem is a triple {a mathematical formula}CSP=〈X,D,C〉 where:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}X={x1,…,xn} is a finite set of n variables.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}D={D1,…,Dn} is the set of finite domains of the variables in X, so that {a mathematical formula}xi∈Di.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}C={c1,…,cm} is a finite set of constraints over the variables in X. A constraint {a mathematical formula}ci involving a subset of variables in X is a proposition that restricts the allowable values of its variables.
+       </list-item>
+      </list>
+      <paragraph label="Definition 3">
+       Solution to a CSPA solution to a {a mathematical formula}CSP=〈X,D,C〉 is an assignment of values to the variables in X, {a mathematical formula}{x1=v1,…,xn=vn}, with {a mathematical formula}vi∈Di, that satisfies all constraints in {a mathematical formula}C.
+      </paragraph>
+      <paragraph>
+       Given a planning domain extended with the knowledge-level representation {a mathematical formula}PD′=〈V,Par,Act〉, the aim is to encode {a mathematical formula}PD′ into a {a mathematical formula}CSP=〈X,D,C〉. First, the variables X are derived as follows: for each variable {a mathematical formula}x∈V∪Par ranging over {a mathematical formula}Dx, and for each {a mathematical formula}0≤i≤k, we define a CSP variable {a mathematical formula}x[i] in CSP with domain {a mathematical formula}Dx. Actions are also represented as variables: for each action {a mathematical formula}a∈Act and for each {a mathematical formula}0≤i≤k−1, a boolean variable {a mathematical formula}a[i] is defined. This way the computed plan can include parallel actions, a fact that saves time at execution.
+      </paragraph>
+      <paragraph>
+       After having derived the CSP state variables X, the actions' preconditions and effects are encoded into constraints. Given an action {a mathematical formula}a=(id(a),in(a),precond(a),effects(a)), we use the notation {a mathematical formula}precond(a)[i],prop[i] and {a mathematical formula}effect(a)[i] to indicate the preconditions, propositions and effects on the state variables corresponding to state i. Thus, {a mathematical formula}precond(a)[i] ({a mathematical formula}effect(a)[i] respectively) results from substituting every variable {a mathematical formula}x∈X which appears in {a mathematical formula}precond(a){a mathematical formula}(effect(a)) by its corresponding state variable {a mathematical formula}x[i].
+      </paragraph>
+      <paragraph>
+       {a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The translation of effects into constraints may entail the addition of constraints that should hold at the previous state (precondition). For example, to assign some variable v to some other variable var, v should already be known. In cases where {a mathematical formula}precond[i] includes a Boolean relation {a mathematical formula}brel(var1,…,varn)[i], this is substituted by a proposition on these variables, according to translation rules specific to the relation brel. Depending on the relation, the resulting constraints may be less or more complex. For example, adjacent_same_room(loc1, loc2) (see Example 1) is translated into a disjunction which includes all possible allowed value pairs of variables {a mathematical formula}loc1,loc2: {a mathematical formula}⋁c1i,c2j(loc1=c1i∧loc2=c2j), for all location values {a mathematical formula}c1i,c2j which are adjacent and belong to the same room. Thus, in cases of boolean relations whose evaluation to true or false requires the knowledge of all the possible combinations of value assignments, and can only be expressed in the form of constraints by an exhaustive enumeration of these combinations, grounding is not avoided.
+      </paragraph>
+      <paragraph>
+       On top of the domain description, restrictions referring to the initial state are expressed in the form of a conjunction of propositions {a mathematical formula}⋀iprop_initi, where {a mathematical formula}prop_initi are propositions on the variables {a mathematical formula}x∈X. The encoding of the (partial) description of the initial state corresponds to the addition of the constraints {a mathematical formula}prop_init[0] for each proposition {a mathematical formula}prop_init that refers to the initial state.
+      </paragraph>
+      <paragraph>
+       A strong requirement of knowing all variables involved in the preconditions is also added as part of the precondition constraints. This ensures that the preconditions hold for all possible assignments to variables consistent with their allowed domain at a given state. On the other hand, this excludes the applicability of an action in some cases in which it would be admissible. For example, given a state {a mathematical formula}s={(v,{1,2}),(v_known,{false})} and an action a with precondition {a mathematical formula}v&lt;3, a cannot be applied at s. This restriction is necessary to prohibit undesirable situations, such as allowing the application of a at {a mathematical formula}s={(v,{1,2,3}),(v_known,{false})}. In this case, the constraint solver would be able to find some assignment that satisfies the constraints, which, however, is undesirable, since we cannot be sure if the application of a is safe, given the uncertainty about v's actual value. Only if there is a way to sense v, should the application of a be permitted. This restriction implies that the RuGPlanner is not able to handle problems with partial observability such as the ones illustrated in [99], where actions can be applied even if some variable in the preconditions is unknown.
+      </paragraph>
+      <paragraph>
+       The general constraints are also translated at the level of CSP variables as constraints that should hold at all states.{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Example 1 shows the constraints associated with three actions, as a result of the constraint encoding process.
+      </paragraph>
+      <paragraph>
+       {a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Frame axiom constraints guaranteeing that variables cannot change between subsequent states, unless an action that affects them takes place, are added.
+      </paragraph>
+      <paragraph>
+       {a mathematical formula}
+      </paragraph>
+      <paragraph>
+       If v appears in the right side of the implication of a general constraint, then actions whose effects involve the variable on the left side of the respective general constraint are also included in {a mathematical formula}actionAff(v)j. The set of constraints that comprise CSP are further extended by additional constraints that constitute the goal, yielding the planning problem in the form of a CSP that are passed to the constraint solver. The handling of the sensing effects allows the offline solver to assign arbitrary values to unknown variables, however, if the corresponding knowledge variable {a mathematical formula}var_known is false, this value is of no validity. This way the planner always generates an optimistic plan, i.e., anticipating that all knowledge-gathering actions return information that is in accordance with the user's requirements.
+      </paragraph>
+      <section label="2.2.1">
+       <section-title>
+        Implicit predicates in the knowledge base
+       </section-title>
+       <paragraph>
+        Although knowledge-level variables reflect whether a state variable is known or not, they cannot capture the presence or absence of information about functions. The question is how to model the fact that the planner knows that. E.g., a hotel room has been booked for a specific location and room parameters, in other words that bookedHotel is true for some values of hPlacePar and hDatePar. Grounding the domain is not a feasible option because of the many input parameters which range over large domains. Therefore, a separate modeling is required, to allow distinguishing between information that refers to input parameters, and enables the planner to make the appropriate output-to-input assignments. As new observations are made at execution time, the knowledge base facts and the constraints change.
+       </paragraph>
+       <paragraph>
+        The planner maintains two structures to store its knowledge about the values of variables. knowlBase is a map that keeps the values of variables predicated on certain parameter values, i.e., the fact that {a mathematical formula}var=val, where {a mathematical formula}var∈Var and {a mathematical formula}val∈Dvar, given a set {a mathematical formula}{(p1=c1),…,(pn=cn)}, where {a mathematical formula}pi∈Par and {a mathematical formula}ci∈Dpi. knownVars stores the known values of variables which do not depend on any parameters.
+       </paragraph>
+       <paragraph>
+        For each entry of knowlBase{a mathematical formula}{(p1=c1),…,(pn=cn)}↦(var,val), a virtual KB action is added to the planning domain. This virtual action has the list {a mathematical formula}{p1,…,pn}, preconditions {a mathematical formula}⋀i(pi=ci), and an effect called virtual assign {a mathematical formula}virtAssign(var,val) as input parameters. The constraints capturing this assignment are the same as the ones of the standard {a mathematical formula}assign(var,val), except that the change denoting action var_changed is not set to true. Thus, a virtual KB action simulates a sensing action whose output is known in advance. In this way, grounding is performed only with respect to what the planner knows, which is expected to be limited, especially in comparison with the number of all possible configurations that could exist. Virtual KB actions are considered in the formation of frame axioms just like other actions. The planner will always try virtual actions before actual actions.
+       </paragraph>
+       <paragraph>
+        Regarding the knownVars list, for each {a mathematical formula}(var=val)∈knownVars, the CSP variable {a mathematical formula}var[0] is assigned to val, and {a mathematical formula}var_known[0] to true. The planner always starts from an initial state where all variables which are not part of knownVars are unknown. This implies that the plan has to include virtual actions, to transition to a state that represents what it actually already knows. The information included in knowlBase and knownVars may be annotated by a timestamp and expiration time, after which it is removed from the map, i.e., considered not to be known anymore. Therefore, the initial state and the set of virtual KB is constructed anew every time the planner is triggered.
+       </paragraph>
+       <paragraph>
+        The CSP solver may choose any virtual action reflecting the knowlBase map suiting its purposes, and assign input parameters accordingly. For example, consider a goal about delivering a parcel to the address where a given person, “Peter Pan”, lives. If knowlBase already contains entry {a mathematical formula}namePar=“PeterPan”↦catalAddress=“Neverland”, then the planner chooses the respective virtual action KBSense1 with input parameters {a mathematical formula}namePar=“PeterPan” to retrieve the desired value for catalAddress, and then proceed to the reservation action.
+       </paragraph>
+      </section>
+     </section>
+     <section label="2.3">
+      <section-title>
+       Goal language
+      </section-title>
+      <paragraph>
+       The goal language supported by the RuGPlanner provides the user with expressive constructs for stating complex goals, beyond the mere statement of properties that should hold in the final state. Conditions over state traversals, maintainability properties, and distinguishing between wish to observe the environment and wish to change it are some of the features this language supports. The goal language shares many common concerns with the aspects presented in [48], such as the distinction between hands-off observations and accomplishment goals. The goals are translated into a set of constraints which together with the constraints formulating the planning domain and initial state constitute the final CSP which is passed to the constraint solver.
+      </paragraph>
+      <paragraph>
+       {a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The final subgoal is satisfied if props holds at the last state, while achieve requires that props should be true at some state over the state traversal. The maint annotation adds the requirement that once the respective propositions become true at some state, they should remain true in all subsequent states of the plan till the final one. all_states imposes that props should be true at all states of the plan, and is usually applied on input parameters whose values are by the user. The find_out type of subgoals enforces a hands-off requirement on the variables the respective propositions involve, i.e., the planner tries to satisfy the propositions at some state without allowing any world-altering effect on these variables before that state. find_out-maint extends the hands-off requirement on the involved variables till the final state, i.e., they should remain intact at all states of the plan. For instance, the goal find_out{a mathematical formula}(account_balance&gt;100) will be satisfied if the sensed value of the variable {a mathematical formula}account_balance is greater than 100, without however allowing any action to alter the variable's value before the sensing action. On the other hand, if the goal is achieve{a mathematical formula}(account_balance&gt;100), the planner will do everything possible in order to fulfill the proposition, e.g., it might invoke a {a mathematical formula}pay_in action that increases the {a mathematical formula}account_balance by some amount.
+      </paragraph>
+      <paragraph>
+       Subgoals can be further on combined through the condition goal constructs, which impose conditions that should be assured before the fulfillment of the subsequent subgoal. {a mathematical formula}subgoal0under_condition{a mathematical formula}goal1 is satisfied if {a mathematical formula}subgoal0 is satisfied for the first time at some state s (see Definition 7) and {a mathematical formula}goali is satisfied in the state sequence preceding s. under_condition thus imposes a before-then relation between goals over the state traversal, and is particularly useful in cases where the user would like to go ahead with altering a variable, only if its sensed value satisfies a property beforehand. under_condition_or_not allows the expression of what can be seen as a sort of soft requirements: {a mathematical formula}subgoal0under_condition_or_not{a mathematical formula}goal1 will also be fulfilled if {a mathematical formula}goal1 is not satisfiable; if however it is, then {a mathematical formula}subgoal0 has to be as well.
+      </paragraph>
+      <section label="2.3.1">
+       <section-title>
+        Goal examples
+       </section-title>
+       <paragraph>
+        Next, we present two simple examples to demonstrate the use of the goal language. More examples of goals that express the requirements of different scenarios can be found in [68], [114].
+       </paragraph>
+       <paragraph>
+        {a mathematical formula}
+       </paragraph>
+       <paragraph>
+        Goal 1 is accomplished if s is the first state at which {a mathematical formula}bookedConcert=TRUE is satisfied, and find_out-maint{a mathematical formula}(temperature&gt;0) holds in the state sequence preceding s (in this example, the maintainability requirement imposed by find_out-maint is in practice redundant because there is no way to change the weather). If {a mathematical formula}temperature&lt;0, Goal 1 fails. On the other hand, Goal 2 ensures that {a mathematical formula}bookedConcert=TRUE will be satisfied if the temperature is not below zero, while if it is, then only {a mathematical formula}bookedHotel=TRUE will be looked after. Goal 3 states that a robot should visit all rooms in a house, leaving the order of visits to be computed by the planner, depending on the house structure.
+       </paragraph>
+      </section>
+      <section label="2.3.2">
+       <section-title>
+        Goals with parameters
+       </section-title>
+       <paragraph>
+        We now face the problem of representing functions in the goal, e.g., how to say that {a mathematical formula}bookedHotel(hPlacePar,hDatePar) is desired, where hPlacePar and hDatePar can be either a specific value or refer to another variable. In approaches where actions and propositional functions are grounded, in order to reach a final state that satisfies {a mathematical formula}bookedHotel(“Groningen”,“12-02-2014”), the respective propositional variable should appear in the effects of an operator's grounded instance (e.g., {a mathematical formula}bookHotel_Groningen_12022014). But how can such a goal be expressed and satisfied in a variable-based ungrounded context? Actually, what the expression {a mathematical formula}bookedHotel(“Groningen”,“12-02-2014”) implies is that the input arguments of the action that fulfills bookedHotel should be set to {a mathematical formula}“Groningen”, and {a mathematical formula}“12-02-2014” respectively. The effects of this action satisfy the proposition by setting the variable bookedHotel to true.
+       </paragraph>
+       <paragraph>
+        To capture such expressions we introduce the notation propwithParams{a mathematical formula}⋀jparj=vj where prop refers to a proposition that should hold at state i, and {a mathematical formula}⋀jparj=vj with {a mathematical formula}parj∈Par should hold at state {a mathematical formula}i−1. {a mathematical formula}vj can be either a constant {a mathematical formula}vj∈Dparj or a variable {a mathematical formula}vj∈Var. According to this notation we would thus write as in Example 3.
+       </paragraph>
+       <paragraph>
+        {a mathematical formula}
+       </paragraph>
+       <paragraph>
+        The second goal in Example 3 expresses the request to deliver to the address of “Peter Pan”, which can be retrieved for example from a sensing action provided by an online catalog. That sensing action should be performed with the right assignment {a mathematical formula}(namePar=“PeterPan”), and the delivery should be performed on the respective output, otherwise the goal cannot be satisfied (see also the concrete semantics of the goal constructs in Section 2.4).
+       </paragraph>
+       <paragraph>
+        If the knowledge base already includes the entries {a mathematical formula}(namePar=“PeterPan”)↦(catalAddress=“Neverland”), and {a mathematical formula}(namePar=“Alice”)↦(catalAddress=“Wonderland”), then the following two virtual KB actions are added to the planning domain, as described in Section 2.2.1:
+       </paragraph>
+       <paragraph>
+        {a mathematical formula}
+       </paragraph>
+       <paragraph>
+        Given these facts, the planner produces the plan: {a mathematical formula}KB1(namePar=“PeterPan”),deliver(destinationPar=“Neverland”). A goal which requests a delivery to both Alice and Peter Pan is also satisfiable, by a plan like:
+       </paragraph>
+       <paragraph>
+        {a mathematical formula}KB1(“PeterPan”),deliver(“Neverland”),KB2(“Alice”),deliver(“Wonderland”)
+       </paragraph>
+       <paragraph>
+        (for readability reasons, we put directly the input parameters values along with the actions). The applicability of knowlBase becomes more evident in Section 4, where the entries in the knowledge base change according to the observations made during execution.
+       </paragraph>
+      </section>
+     </section>
+     <section label="2.4">
+      <section-title>
+       Representing the planning problem
+      </section-title>
+      <paragraph>
+       Based on the planning domain as described in Definition 1, a State Transition System (STS) Σ evolves by specifying a state-transition function γ on the state and action sets. γ is applied to a state and leads to a set of states. This is due to the fact that {a mathematical formula}effects(a) do not only model assignments to values, but also outcomes that are unknown offline. As described in the process of constraints derivation in Section 2.2, {a mathematical formula}effects(a) entail a conjunction of propositions {a mathematical formula}constr_effectj that should hold at the successor state. Recalling that a state s satisfies a formula props only if all possible combinations of values that are members of the domains of the variables at s satisfy props, it follows that an effect of type {a mathematical formula}sense(var) leads to a set of states: the proposition {a mathematical formula}var=var_response should hold at the successor state, with {a mathematical formula}var_response∈Dvar, which amounts to {a mathematical formula}|Dvar| different states. This way, the function γ captures incomplete knowledge and offline non-determinism in the case of knowledge-gathering actions. To support the possibility of applying multiple concurrent actions at a single transition, and to be able to give a definition of plan including parallel actions, the function γ takes a set of actions as argument.
+      </paragraph>
+      <paragraph label="Definition 4">
+       State transition systemA state transition system based on a planning domain extended with the knowledge-level representation {a mathematical formula}PD′=〈V,Par,Act〉 is a triple {a mathematical formula}Σ=〈S,Act,γ〉, such that:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        S is a set of states {a mathematical formula}S={s={(x1,Dsx1),…,(xn,Dsxn)}, with {a mathematical formula}x∈V∪Par and {a mathematical formula}Dsxi⊆Dxi}.
+       </list-item>
+       <list-item label="•">
+        Act is the set of all actions in PD.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}γ:S×℘(Act)→℘(S) (where ℘ denotes the powerset) is a transition function such that given a state s and a set of actions {a mathematical formula}A={a1,…,an}⊆Act such that {a mathematical formula}precond(ai) hold at s for all {a mathematical formula}ai∈A, then the application of all {a mathematical formula}effects(ai) on s leads to a set of successor states {a mathematical formula}Ss. If for some {a mathematical formula}ai, {a mathematical formula}precond(ai) do not hold at s, or if {a mathematical formula}A=∅, then {a mathematical formula}γ(s,A)=∅.
+       </list-item>
+      </list>
+      <paragraph>
+       By generalizing on sets of states S, we define {a mathematical formula}Γˆ(S,A)=⋃s∈Sγ(s,A). We can now proceed to the definition of the planning problem and plan.
+      </paragraph>
+      <paragraph label="Definition 5">
+       Planning problemA planning problem is a triple {a mathematical formula}P=〈Σ,S0,g〉, where Σ is a transition system as in Definition 4, {a mathematical formula}S0 is the set of all states which satisfy a conjunction of propositions {a mathematical formula}prop_initi, and g is a goal.
+      </paragraph>
+      <paragraph label="Definition 6">
+       PlanA plan consists of a sequence of action sets {a mathematical formula}π=〈A0,… , {a mathematical formula}Ak−1〉, where k is the length of the plan, and a sequence inPars of assignment relations {a mathematical formula}inParsi for each {a mathematical formula}Ai∈π. {a mathematical formula}inParsi is defined as {a mathematical formula}{(p:=cp)|∀p∈in(a)∀a∈Ai}, where {a mathematical formula}cp∈Dp.
+      </paragraph>
+      <paragraph>
+       A plan which instructs sensing the balance of an account first, and then increasing it by a certain amount (in line with the actions of Example 1) is represented in Example 4.
+      </paragraph>
+      <paragraph>
+       {a mathematical formula}
+      </paragraph>
+      <paragraph>
+       We extend the function {a mathematical formula}Γˆ to capture the set of states that are brought forth by applying the actions in π, starting from {a mathematical formula}S0[inPars0], where {a mathematical formula}S0[inPars0] is {a mathematical formula}S0 with the domains of input parameters updated according to {a mathematical formula}inPars0. Given an action sequence {a mathematical formula}π=〈A0,…,Ak−1〉, and an {a mathematical formula}inPars=〈inPars0,…,inParsk−1〉 we use the notation: {a mathematical formula}Γ(S)=Γˆ(S[inPars0],A0), {a mathematical formula}Γ2(S)=Γˆ(Γ(S)[inPars1],A1), and similarly for {a mathematical formula}Γ3(S),…,Γk(S). Thus, a plan consisting of π and inPars imposes a sequence of state sets {a mathematical formula}S˜=〈S0,Γ(S0),Γ2(S0),…,Γk(S0)〉. We call {a mathematical formula}S˜ the execution path computed offline. Note that the transition function is applied on a subset of the state set resulting from the previous transition, as induced by the sequence of input parameter assignments in the plan. In the next section, we formally describe when a plan π has the potential to solve the planning problem P, i.e., when the application of π yields an {a mathematical formula}S˜ that satisfies the goal g.
+      </paragraph>
+      <section label="2.4.1">
+       <section-title>
+        Semantics of the goal
+       </section-title>
+       <paragraph>
+        The notion of goal satisfaction is defined in terms of the execution path {a mathematical formula}S˜={a mathematical formula}〈S0[inPars0],…,Sk〉 induced by a planning problem {a mathematical formula}P=〈Σ,S0,g〉, input parameters assignment inPars, and a sequence of action sets {a mathematical formula}π=〈A0,…,Ak−1〉. We will use the notation {a mathematical formula}S⊇props if there is at least one state {a mathematical formula}s∈S that satisfies the propositional formula props. We say that a plan has the potential to solve the planning problem, if it corresponds to an execution path which subsumes a sequence of states that satisfy the propositions inferred by the goal. We denote the index of the last state set in an execution path with {a mathematical formula}last(S˜). We first introduce the notion of the minimal execution path.
+       </paragraph>
+       <paragraph label="Definition 7">
+        Minimal execution path{a mathematical formula}min(S˜,props)=〈S0,…,Sn〉 is a subsequence of {a mathematical formula}S˜, so that {a mathematical formula}(Sn⊇props)∧(∀i,0≤i≤n−1:¬(Si⊇props)). Thus, {a mathematical formula}min(S˜,props) represents the execution path whose final state set {a mathematical formula}Sn is the first one in the sequence that contains a state that satisfies props.
+       </paragraph>
+       <paragraph>
+        For example, given the execution path {a mathematical formula}〈S0,S1,S2〉 imposed by the plan of Example 4, the minimal execution path which satisfies the proposition {a mathematical formula}accBalance_known=true is {a mathematical formula}〈S0,S1〉, since the state {a mathematical formula}S1 is the first state in which the proposition holds.
+       </paragraph>
+       <paragraph>
+        We say that an execution path {a mathematical formula}S˜=〈S0,Γ(S0),…,Γk(S0)〉has the potential to solve the planning problem P given a set of initial states {a mathematical formula}S0 and a goal g, and we write {a mathematical formula}S˜⊨g if:
+       </paragraph>
+       <paragraph>
+        {a mathematical formula}S˜⊨final(props):{a mathematical formula}Sk⊇props_and_known where {a mathematical formula}props_and_known=props∧⋀vari∈propsvari_known=true
+       </paragraph>
+       <paragraph>
+        {a mathematical formula}S˜⊨all_states(props):{a mathematical formula}∀Sj∈S˜:Sj⊇props_and_known
+       </paragraph>
+       <paragraph>
+        {a mathematical formula}S˜⊨achieve(props):{a mathematical formula}∃Sj∈S˜ such that Sj⊇props_and_known
+       </paragraph>
+       <paragraph>
+        {a mathematical formula}S˜⊨achieve−maint(props):{a mathematical formula}S˜⊨achieve(props)∧
+       </paragraph>
+       <paragraph>
+        {a mathematical formula}∀j,k≥j≥last(min(S˜,props_and_known)):{a mathematical formula}Sj⊇props_and_known
+       </paragraph>
+       <paragraph>
+        {a mathematical formula}S˜⊨find_out(props):{a mathematical formula}S˜⊨achieve{a mathematical formula}(props∧
+       </paragraph>
+       <paragraph>
+        {a mathematical formula}⋀vari∈propsand appear in world-altering effectsvari_changed=false)
+       </paragraph>
+       <paragraph>
+        {a mathematical formula}S˜⊨find_out−maint(props):{a mathematical formula}S˜⊨find_out(props)∧{a mathematical formula}∀j,k≥j≥last(min(S˜,props_and_known)):
+       </paragraph>
+       <paragraph>
+        {a mathematical formula}Sj⊇(props∧⋀vari∈propsand appear inworld-altering effectsvari_changed=false)
+       </paragraph>
+       <paragraph>
+        {a mathematical formula}S˜⊨sgunder_condition{a mathematical formula}goal:{a mathematical formula}S˜⊨sg∧min(S˜,props_and_known(sg))⊨goal
+       </paragraph>
+       <paragraph>
+        where {a mathematical formula}props_and_known(sg) are the propositions corresponding to sg plus the requirement that all variables
+       </paragraph>
+       <paragraph>
+        involved in them are known
+       </paragraph>
+       <paragraph>
+        {a mathematical formula}S˜⊨sgunder_condition_or_not{a mathematical formula}goal:{a mathematical formula}(S˜⊨goal)⇒S˜⊨(sgunder_condition{a mathematical formula}goal)
+       </paragraph>
+       <paragraph>
+        {a mathematical formula}∧∃Sj∈S˜:Sj⊇known(goal) where {a mathematical formula}known(goal) means {a mathematical formula}⋀vari∈props(goal)vari_known=true
+       </paragraph>
+       <paragraph>
+        {a mathematical formula}S˜⊨⋀igoali:{a mathematical formula}⋀i(S˜⊨goali)
+       </paragraph>
+       <paragraph>
+        As in the case of the constraints entailed by the preconditions presented in Section 2.2, an extra requirement that all variables involved in props should be known is added. This implies that, setting aside uncertainty stemming from sensing effects, a plan has the potential to solve the planning problem if the goal is satisfied for all possible assignments to variables allowed by {a mathematical formula}prop_init. Thus, given some {a mathematical formula}prop_init that imply {a mathematical formula}(1≤v≤2), an empty action set and the goal {a mathematical formula}g=final(v=1), g is not satisfiable. If, on the other hand, there is a sensing action with effect {a mathematical formula}sense(v), there is a plan that has the potential to satisfy the goal. However, this extra requirement that all variables in the goal should be known may exclude plans that would otherwise be considered acceptable. For example, given the same {a mathematical formula}prop_init and an empty action set, the goal final{a mathematical formula}(v&lt;3) is also not satisfiable, despite the fact that it holds for all possible assignments to v. This strong restriction is necessary to prevent the constraint solver from presenting trivial assignments as acceptable solutions. Thus, the term potential to solve refers to the uncertainty of outcomes during sensing, but not to the uncertainty due to the incomplete knowledge about the initial state.
+       </paragraph>
+       <paragraph>
+        The goal is translated into a set of constraints on the CSP-level state variables, which are added to the set of constraints formulating the planning domain. The details of this translation process can be found in [65]. A web-based graphical goal editor, which is designed to assist the user in specifying an extended declarative goal given a planning domain has been implemented in [125].
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      Planning by solving the CSP
+     </section-title>
+     <paragraph>
+      The set of constraints resulting from the translation of the planning domain, the propositions referring to the initial state and the goal form the CSP are passed to the constraint solver. The constraint solver computes a valid assignment to the CSP variables that model the planning actions, and this assignment corresponds to an optimistic plan that has the potential to solve the planning problem.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Solving the CSP
+      </section-title>
+      <paragraph>
+       Prior to calling the solver, the planner prunes from its search space the actions about which it knows in advance they have no potential to contribute to the goal satisfaction, in a fashion similar to [94]. This preliminary process identifies all actions {a mathematical formula}ai that include at least one of the goal variables in their effects, and then recursively finds all actions which include in their effects variables that are involved in the preconditions of the actions {a mathematical formula}ai that are directly related to the goal. The search for applicable actions during solving is thus limited to this set of possible candidates, an effect that may considerably facilitate the solver's work in situations where there are many actions available. Along with this preliminary pruning, a value selection strategy that first tries to assign false values to the action variables is employed. In this way, the inclusion of redundant sensing or even unwanted world-altering actions in the produced plans is usually avoided. Yet, it does not guarantee that the computed plans are optimal, i.e., that they include the least possible number of actions which fulfill the goal.
+      </paragraph>
+      <paragraph>
+       The solving process proceeds through a combination of consistency techniques and search (branching) algorithms. Constraints are propagated using the GAC3rm algorithm [82]. Usually, search strategies that yield good-quality plans have worse performance than strategies which lead to plans that include redundant actions, e.g., by applying a random value assignment. In the remainder of this work, a “most constrained” variable selection heuristic and an “increasing domain” value iteration strategy is employed in the testing process, unless stated otherwise. Most constrained implies selecting the variable involved in the largest number of constraints. Variables modeling virtual KB actions are selected before all others. Then an iteration over values in increasing order takes place.
+      </paragraph>
+      <paragraph>
+       Regarding the choice of k, this is selected depending on the planning domain. It could be restricted by the number of grounded action instances, however since this can be very high (given the potentially large domains of the input parameters), k is set by the domain designer, based on the maximum size of expected plans. For example, given a domain, where a robot has to move between locations, k could be set to 3 times the number of locations. Due to the high degree of parallelism that characterizes the produced plans, many solutions which require considerably more than k actions will be found.
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       A planning example
+      </section-title>
+      <paragraph>
+       Let us now consider a planning problem which models the scenario described in Section 1.3. The planning operators simulate the functionality of services that reside on the Web, and provide information about entertainment events, maps, calendar, weather, and hotels as well as offering the possibility for booking concert tickets and hotel rooms. The actions can be mapped to the APIs of real services, as we showed in [67]. Let us consider a user who lives in Groningen and wants to book a ticket and a hotel room for the nearest upcoming concert of the band “Neutral Milk Hotel” whose date and location meet criteria about weather conditions, the distance from Groningen, his availability on the performance day according to his agenda, as well as about the price he is willing to pay for his overnight stay. This wish is captured by the nested goal presented in Example 5.
+      </paragraph>
+      <paragraph>
+       {a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The variables eventPlace and eventDate on which the performance will take place are unknown offline, and it is up to some knowledge gathering service (namely the eventful.com service) to provide them. In the initial optimistic plan these are assigned some convenient value by the solver, however, the respective knowledge-level variables indicate that this value is not a valid one. An assignment to a variable {a mathematical formula}var=value for which {a mathematical formula}var_known=false is signaled in the optimistic plan by a “defaultVar” mark.
+      </paragraph>
+      <paragraph>
+       By employing the conservative combination of most constrained and increasing domain selection strategies, the plan is generated offline for the entertainment goal, Example 6.
+      </paragraph>
+      <paragraph>
+       {a mathematical formula}
+      </paragraph>
+      <paragraph>
+       For readability reasons, we put the assignment to the input parameters together with the actions. Actions within curly brackets correspond to a set of actions which are applied in parallel. The values “defaultPlace”, “defaultDate” and “defaultHotel” all correspond to the same values, i.e., to the yet unknown eventPlace, eventDate and hotelId sensed by getNextEvent and getNextHotelInfo. getEventsList computes the list of performances for a given band ordered by date. The service for dealing with hotels provides aggregated searching and booking facilities over a wide range of hotel providers (like services as booking.com do), and orders the results according to some criteria (e.g., price). getNextHotelInfo returns the information (price, hotel id) of the next hotel in the formed list.
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Plan orchestration via alteration of the CSP
+     </section-title>
+     <paragraph>
+      The suitability of the RuGPlanner for dynamic service environments lies in the idea of delaying the computation of alternative plans until this is called for by the new information acquired during execution. Continual planning is performed, so that the upcoming plan steps anticipated offline can be revised as execution progresses, in face of inconsistencies that arise either from the newly acquired information, from services' inconsistent behaviors or from the actions of exogenous agents that interfere with the plan. In such a setting, the goal is considered to have been accomplished, if all individual actions in this sequence of updated plans are successfully executed. We call the process that starts from an initial plan and moves on by interweaving action invocations with plan revisions an orchestration. Orchestration is performed by applying gradual modifications to the CSP instance which models the planning domain, the goal and the constantly changing contextual state. The modifications correspond to the incorporation of new facts about the state of the world or the removal of obsolete ones, to refinements of the sequence of actions included in the already computed plan, or to useful information about the behavior of services that is collected by inspecting how they operate. The orchestration algorithm is characterized by the following traits:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       It exploits the high degree of parallelism in the plan, by performing concurrent invocations and handling the responses in a non-blocking way. Since the execution time of some service operations may be very long, the orchestrator is able to continue planning and proceed to the execution of subsequent actions if this is allowed by the domain and goal restrictions, while waiting for the response of a service invocation.
+      </list-item>
+      <list-item label="•">
+       It provides the means to recover from failure responses and timeouts. Other arbitrary service outcomes that contradict its expected behavior can also be tolerated under the assumption of a consistent and timely publish-subscribe mechanism.
+      </list-item>
+      <list-item label="•">
+       It can cope with possible discrepancies due to the activity of exogenous agents, which may act in parallel with the plan execution and interfere with it.
+      </list-item>
+      <list-item label="•">
+       It seeks to keep a balance between the effort spent in computing a new plan from scratch and in refining an existing one.
+      </list-item>
+      <list-item label="•">
+       It takes care of the data flow by instantiating numeric-valued input parameters to the actually sensed output parameters. This is performed through plan refinement, by considering the history of known facts in the form of constraints and the goal requirements.
+      </list-item>
+     </list>
+     <section label="4.1">
+      <section-title>
+       Architectural overview
+      </section-title>
+      <paragraph>
+       The architecture that realizes the interweaving between synthesis and execution-time coordination is presented in Fig. 1. Whenever a request about computing a plan for a new goal is issued, the orchestrator asks the planner to compute an initial optimistic plan. This entails adding dynamically the constraints that follow from the goal to the model kept by the RuGPlanner, i.e., the constraint network that models the planning domain. The solver takes into consideration the current model along with some assignments to CSP-level variables that reflect the initial planning state, as delivered by the current context. The solution to the CSP which amounts to an offline plan (if one exists) is passed to the orchestrator, whose task is to gradually execute and update it, according to the information it acquires through its interaction with the environment. Every step of the plan involves a set of parallel actions, which are mapped to a set of respective concrete service operations executed concurrently.
+      </paragraph>
+      <paragraph>
+       Requests for refinement are addressed directly at the solver level of the RuGPlanner, as long as the basic model remains the same (i.e., changes refer only to the initial state). In this way, the search process can start from an already propagated instance of the model, and proceed from a state where some variables are already instantiated according to the most up-to-date context.
+      </paragraph>
+      <paragraph>
+       Dashed arrows in Fig. 1 correspond to interactions that are only available under certain assumptions. Change events can be received asynchronously if this is supported by an underlying publish/subscribe mechanism (as, e.g., in the OSGi framework [68]). The instantiation of an action to the operation offered by a specific service provider is taken care by an external component, which is responsible for discovering and selecting the appropriate service instances. The process of service discovery and selection is an interesting and difficult problem by itself, e.g., see [109], [101], and is out of the scope of the current work.
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Execution-time transition system and orchestration path
+      </section-title>
+      <paragraph>
+       Recalling Definition 4, the STS Σ has to be extended in order to capture observations and external events. For simplicity, we assume that: (i) if an action is applied, all of its effects take place as prescribed, (ii) observations and events refer to disjoint sets of variables, and (iii) all observations corresponding to a set of actions are retrieved timely, i.e., before the application of the next sets of actions in a plan. Failed actions and byzantine behaviors can be modeled indirectly, by introducing events which assign certain variables after the application of an action.
+      </paragraph>
+      <paragraph label="Definition 8">
+       Execution-level state transition systemAn execution-level state transition system based on a planning domain {a mathematical formula}PD′=〈V,Par,Act〉 (where {a mathematical formula}V=Var∪Kb∪Cv∪Rv) is a tuple {a mathematical formula}Σe=〈S,Act,Ev,Obv,ζ〉, where:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        S is a set of states {a mathematical formula}S={s={(x1,Dsx1),…,(xn,Dsxn)}, with {a mathematical formula}x∈V∪Par and {a mathematical formula}Dsxi⊆Dxi}.
+       </list-item>
+       <list-item label="•">
+        Act is a set of actions.
+       </list-item>
+       <list-item label="•">
+        Ev is a set of events. An event is an assignment to some variable {a mathematical formula}(var:=val), where {a mathematical formula}var∈Var does not participate in any observational effect, and {a mathematical formula}val∈Dvari.
+       </list-item>
+       <list-item label="•">
+        Obv is a set of observations. An observation is an assignment to a response variable {a mathematical formula}(var_response=:val), where {a mathematical formula}var_response∈Rv and {a mathematical formula}val∈Dvar.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}ζ:S×℘(Act)×℘(Obv)×℘(Ev)→℘(S) is the execution-level state transition function {a mathematical formula}ζ(s,A,O,E)={δ(s′,O,E)|∀s′∈γ(s,A)}, where {a mathematical formula}A⊂Act, {a mathematical formula}O⊂Obv, {a mathematical formula}E⊂Ev, and:
+       </list-item>
+      </list>
+      <paragraph>
+       Generalizing on sets of states S, we define: {a mathematical formula}Zˆ(S,A,O,E)=⋃s∈Sζ(s,A,O,E).
+      </paragraph>
+      <paragraph label="Definition 9">
+       Orchestration problemAn orchestration problem is a triple {a mathematical formula}OP={a mathematical formula}〈Σe,S0,g〉, where {a mathematical formula}Σe is an execution-level state transition system, {a mathematical formula}S0 is the set of all states that satisfy a conjunction of propositions {a mathematical formula}⋀iprop_init_i, and g is a goal as specified in Section 2.3.
+      </paragraph>
+      <paragraph label="Definition 10">
+       OrchestrationAn orchestration is a sequence of triples of sets of actions, events and observations {a mathematical formula}orch=〈(A0,O0,E0),…,(An,On,En)〉, and a sequence inPars of assignment relations {a mathematical formula}inParsi as defined in Definition 6 for each {a mathematical formula}Ai that appears in orch.
+      </paragraph>
+      <paragraph>
+       In an orchestration, the sequence of events and observations is uncontrollable, and the sequence of actions and input parameters is selected by the planner. We call the sequence of actions {a mathematical formula}〈A0,…,An〉 in orch along with inPars the execution-level plan {a mathematical formula}πe. Similarly to Section 2.4, we extend the {a mathematical formula}Zˆ function to capture the sequence of set of states that are brought forth by orch and inPars, starting from {a mathematical formula}S0. Given an orchestration
+      </paragraph>
+      <paragraph>
+       {a mathematical formula}orch=〈(A0,O0,E0),…,(An,On,En)〉,
+      </paragraph>
+      <paragraph>
+       we use the notation: {a mathematical formula}Z(S)=Zˆ(S[inPars0],A0,O0,E0), {a mathematical formula}Z2(S)=Zˆ(Z(S)[inPars1],A1,O1,E1) etc. Thus, an orchestration comprising {a mathematical formula}πe induces a sequence of state sets
+      </paragraph>
+      <paragraph>
+       {a mathematical formula}Se˜=〈S0,{a mathematical formula}Z(S0),Z2(S0),…,Zn(S0)〉.
+      </paragraph>
+      <paragraph>
+       We call {a mathematical formula}Se˜ the orchestration path or run. An orchestration path {a mathematical formula}Se˜=〈S0,Z(S0),…,Zn(S0)〉 is a solution to the orchestration problem {a mathematical formula}OP=〈Σe,S0,g〉, and we write {a mathematical formula}Se˜⊨g, if {a mathematical formula}Se˜ satisfies the properties described in Section 2.4. We say that an execution-level plan {a mathematical formula}πe is a weak or optimistic solution to the orchestration problem OP, if there is some sequence {a mathematical formula}{(O0,E0),…,(On,En)} where {a mathematical formula}E0=…=En=∅, which leads to an orchestration path that is a solution. That is, if no events occur during the orchestration and there is some convenient assignment to response variables that satisfies the goal. We say that {a mathematical formula}πe is a strong plan, if it leads to an orchestration path that is a solution for any sequence {a mathematical formula}{(O0,E0),…,(On,En)}. Since the sequence of events and observations is unknown at planning time, we cannot say whether a plan is a solution or not before all transitions actually take place. Strong plans, i.e., plans that are a solution no matter how the execution behaves, do not exist in the systems we are interested in, since any event may occur at any transition point.
+      </paragraph>
+      <paragraph>
+       Due to the uncontrollable nature of events, dead-ends cannot be avoided, i.e., the orchestration may bring the world to a state from which the goal is no longer satisfiable. Given a partially executed plan {a mathematical formula}{A0,…,Ai−1}, considering the current set of states {a mathematical formula}Si, an event {a mathematical formula}ei may lead to a set of states {a mathematical formula}Si′={δ(s,∅,{ei})|∀s∈Si}, from which no plan {a mathematical formula}{Ai,…,An} that is an optimistic solution to the problem {a mathematical formula}OP=〈Σe,Si′,g〉 can be computed.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Orchestration properties and policies
+     </section-title>
+     <paragraph>
+      Next, we describe the properties and main policies of the orchestration algorithm. The algorithm constructs an execution plan incrementally, by taking the first set of actions of each offline optimistic plan computed by the RuGPlanner. Each optimistic plan is computed considering the states that result from the application of the δ function at each step. At each revision step, the planner considers a new CSP instance following from the current version of the knowledge base, which incorporates the information included in the latest sets of observations and events. The behavior of the orchestrator, which encompasses the following policies, is presented in pseudocode in Appendix A.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Soundness and completeness of the orchestration algorithm
+      </section-title>
+      <paragraph>
+       Soundness. The orchestration algorithm of Appendix A is sound for goals that respect certain properties concerning soft goals and maintainability goals with variables affected by observations or events, as illustrated by Theorem 1.
+      </paragraph>
+      <paragraph label="Theorem 1">
+       The orchestration algorithm is sound, if the goal does not include (i) maintainability goals which involve variables affected by events or observations and (ii) under_condition_or_not goals.
+      </paragraph>
+      <paragraph label="Proof">
+       We prove that the execution-level plan {a mathematical formula}πe=〈A0,…,An〉 computed by the orchestration algorithm corresponds to an orchestration {a mathematical formula}orch=〈(A0,O0,E0),…,(An,On,En)〉 which is a solution to the orchestration problem {a mathematical formula}OP={a mathematical formula}〈Σe,S0,g〉. The algorithm proceeds by solving a sequence of planning problems {a mathematical formula}〈P0,…,Pk〉, one at each round of the replanning/plan update phase of the orchestrator, and executing a respective sequence of plan prefixes: {a mathematical formula}Π=〈pre(π0),…,pre(πk−1),πk〉, where {a mathematical formula}πi is the solution to {a mathematical formula}Pi, and {a mathematical formula}pre(πi) the prefix of {a mathematical formula}πi executed before a new plan is computed. Since {a mathematical formula}πk=〈Ak0,…,Akm〉 is the last plan computed by the algorithm, this means that the orchestration path {a mathematical formula}Sek˜=〈Sk0,Zˆ(Sk0,Ak0,Ok0,Ek0),…,Zˆ(Skm,Akm,Okm,Ekm)〉⊨g. If {a mathematical formula}Sei˜ is the orchestration path corresponding to {a mathematical formula}pre(πi), we need to prove that {a mathematical formula}Se˜=〈Se0˜,…,Sek˜〉⊨g. This holds because of Lemma 1. □
+      </paragraph>
+      <paragraph label="Lemma 1">
+       Let{a mathematical formula}S0˜,S1˜be two sequences of state sets, with{a mathematical formula}S0˜⊨gand{a mathematical formula}S1˜⊨g, where g is a goal respecting the assumptions ofTheorem 1. Let{a mathematical formula}pre(S0˜)be a prefix of{a mathematical formula}S0˜, whose last state is the initial state of{a mathematical formula}S1˜. Then the sequence{a mathematical formula}S˜=〈pre(S0˜),S1˜〉⊨g.
+      </paragraph>
+      <paragraph label="Proof">
+       Let us define {a mathematical formula}Δˆ(S,O,E)=⋃s∈Sδ(s,O,E). Let {a mathematical formula}pre(S0˜)=〈S0,S1=Γˆ(S0,A0),S1′=Δˆ(S1,O0,E0),…,Sk=Γˆ(Sk−1,Ak)〉 and {a mathematical formula}Sk′=Δˆ(Sk,Ok,Ek) be the first state of {a mathematical formula}S1˜. We perform a case analysis on all types of goals and their semantics as described in Section 2.4.1: {a mathematical formula}g=final(props)Trivial since {a mathematical formula}S1˜⊨g.{a mathematical formula}g=achieve(props)Trivial since {a mathematical formula}S1˜⊨g. Similarly for find_out{a mathematical formula}(props).{a mathematical formula}g=all_states(propsIf {a mathematical formula}Sk′⊇props, then {a mathematical formula}S˜⊨g. If {a mathematical formula}Sk′⊉props, then {a mathematical formula}S1˜⊭g, contradiction.{a mathematical formula}g=achieve-maint(props)If {a mathematical formula}Sk′⊇props, then {a mathematical formula}〈pre(S0˜),Sk′〉⊨g, so {a mathematical formula}S˜⊨g. If {a mathematical formula}Sk′⊉props then either (i) {a mathematical formula}Sk⊉props, i.e., {a mathematical formula}pre(S0˜)⊨g and thus {a mathematical formula}S˜⊨g or (ii) {a mathematical formula}Sk⊇props, which can only happen if props include variables that are affected by {a mathematical formula}Ok or {a mathematical formula}Ek, contradiction. Similarly for find_out-maint{a mathematical formula}(props).{a mathematical formula}g=sgunder_conditioncgThere are two cases:
+      </paragraph>
+      <list label="Remark">
+       <list-item label="(a)">
+        If {a mathematical formula}pre(S0˜)⊨g, then let us assume, ad absurdum, that {a mathematical formula}S˜⊭g. This means that either (i) {a mathematical formula}S˜⊭sg, contradiction (since if {a mathematical formula}pre(S0˜)⊨sg and {a mathematical formula}S1˜⊨sg then {a mathematical formula}S˜=〈pre(S0˜,S1˜)〉⊨sg as shown for all types of sg above) or (ii) {a mathematical formula}min(S˜,props_and_known(sg))⊭cg, contradiction, since {a mathematical formula}pre(S0˜)⊨g.
+       </list-item>
+       <list-item label="(b)">
+        If {a mathematical formula}pre(S0˜)⊭g then either (i) {a mathematical formula}pre(S0˜)⊭sg, in which case {a mathematical formula}min(S˜,props_and_known(sg))={a mathematical formula}min(S1˜,props_and_known(sg)) and because {a mathematical formula}S1˜⊨g{a mathematical formula}S˜⊨g or (ii) {a mathematical formula}min(pre(S0˜),props_and_known(sg))⊭cg which would imply that {a mathematical formula}S0˜⊭g, contradiction.
+       </list-item>
+       <paragraph>
+        under_condition_or_not goal does not satisfy the lemma in case it is satisfied by {a mathematical formula}S0˜ through {a mathematical formula}S0˜⊭cg. Then, if {a mathematical formula}S0˜ achieves {a mathematical formula}props(sg) at some state, and {a mathematical formula}¬props(sg) holds in a subsequent state, {a mathematical formula}min(S˜,props_and_known(sg)⊭cg. □
+       </paragraph>
+      </list>
+      <paragraph>
+       If the goal includes the soft (disjunctive) under_condition_or_not goal or maintainability goals on variables that are affected by sensing actions or events, the algorithm may wrongly report that it fulfilled the goal, while its semantics are violated if considering the complete execution path. In order to avoid such situations, the whole execution history should be passed to the CSP for validation and solving, which, however, would result in decreasing performance as the execution path grows.
+      </paragraph>
+      <paragraph>
+       Completeness. Given the non-determinism following from observations and external events, the orchestration algorithm may be trapped in a dead-end, and is thus incomplete. Dead-ends cannot be avoided, because the planner cannot predict the actual state and the evolution of the environment, and during the orchestration any event and observation may occur. If there are alternative offline plans, there is no bias in favor of a specific plan based on a model of the execution-level and environmental behavior. In many practical situations, a slight change in the goal may entail an outlet from the dead-end. For example if the user is flexible with respect to time, a plan which chooses a date close to the user's first preference may be acceptable. The support for soft constraints and preferences in the goal in combination with replanning is an interesting line of future research. Some simple situations can be currently addressed via disjunctions which are allowed to be part of the goal.
+      </paragraph>
+      <paragraph>
+       The orchestration algorithm remains incomplete even if one assumes that there are no external events and that an action's execution leads to a set of states which satisfy the propositions entailed by the action's effects. To give an example, let us consider a goal final{a mathematical formula}(var=true), and two actions {a mathematical formula}a2,a3 having an effect {a mathematical formula}assign(var,true). {a mathematical formula}a2 has a precondition {a mathematical formula}v2=1 and {a mathematical formula}a3 a precondition {a mathematical formula}v3=true. Let us also assume that there is an action {a mathematical formula}a0 with no preconditions and with effects {a mathematical formula}sense(v2) and {a mathematical formula}assign(vb,false), and another action {a mathematical formula}a1 with effect {a mathematical formula}sense(v3) and precondition {a mathematical formula}vb=true. Starting from a situation where {a mathematical formula}v2,v3 are unknown and {a mathematical formula}vb=true, there are two offline plans (of equal length) that have the potential to satisfy the goal: {a mathematical formula}〈a0,a2〉, and {a mathematical formula}〈a1,a3〉. If in the actual world, which is sensed at execution time, {a mathematical formula}v2=false and {a mathematical formula}v3=true, then the execution of the first plan ends up in a dead-end, since after the execution of {a mathematical formula}a0, {a mathematical formula}a1 is not applicable anymore. Similar situations can result from settings where actions have either exclusively observational or exclusively world-altering effects. In order to avoid being trapped in dead-ends, and under the assumption that knowledge persists, it is a good practice to perform sensing actions as early as possible, and wait for their response before proceeding to world-altering actions. However, this practice may come at the cost of performance, as demonstrated in the example of Section 6.3.2.
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Plan repair vs. replanning
+      </section-title>
+      <paragraph>
+       The time spent in consistency checks, i.e., checks to establish whether the plan is still valid under the new context, and plan updates becomes dominant in the overall planning and execution time till the goal is satisfied (see, e.g., the evaluation results in [67]). Even in the most common case when an output is being sensed, the time for instantiating subsequent input arguments which depend on newly acquired information and inspecting whether this leads to a conflict may be considerable. One way to perform the necessary plan updates is to completely disregard the previous solution-plan and perform replanning from scratch (this is the approach we initially adopted [67]). Another way is to try to reuse parts of the existing plan as the building blocks for constructing a new plan, as in the strategies adopted by [35], [118], [115]. However, under certain circumstances the effort spent on modifying a plan can be larger than the effort required to generate a new one [95]. It should be noted that in the scenarios we are interested in, maintaining minimal perturbation or plan stability [35] of the original plan is not a concern per se. We are rather interested in computing good quality plans in short time from the current state onwards.
+      </paragraph>
+      <paragraph>
+       In the orchestration approach we adopt, we try to establish a middle-ground between investing too much effort in adjusting the current plan suffix, and directly proceeding into computing a new one from scratch. We therefore try within a time limit, usually a fraction of the time required to compute the original plan, to perform a fast search for refining the plan. In terms of the CSP representation, plan repair amounts to dealing with the dynamic CSP problem, where a CSP is subject to a sequence of alterations, i.e., additions and removals of value assignments and constraints. There are several methods which rely on CSP solution reuse to speed up the task of finding a consistent assignment to the altered CSP, e.g., [115] which exploits no-good learning. These methods, however, are beneficial under certain assumptions, e.g., when context changes correspond to constraints/value additions and deletions that pertain to a few variables (scope), or when the changes to the CSP are monotonic (relaxation through removal of a constraint or restriction through addition of a constraint).
+      </paragraph>
+      <paragraph>
+       The refining process we adopt attempts to construct within a time limit a new plan by adding extra actions at the beginning, the end or in parallel with actions of the existing plan, and allows input parameters of the actions in the current plan to take different values. In this way, output collected at the last step of execution is taken into account, so that input arguments to subsequent actions which depend on that output can be instantiated accordingly in the updated plan. At the CSP level, this approach amounts to constructing a partial assignment consisting of the action variables participating in the original plan, while leaving the rest of the variables to be assigned by the search strategy. Performing un-refinement, i.e., determining certain actions in the original plan as being redundant or even hinder the goal fulfillment given the new initial state, can be particularly difficult and time-consuming (repeatedly reserving old assignments can lead to tremendous thrashing [118]), and therefore we directly resort to replanning from scratch if no augmented plan can be found.
+      </paragraph>
+      <paragraph>
+       Every time a bundle of concurrent actions in the current plan is executed, and all respective responses are received or an average expected response time elapses, it may be necessary to check whether the remainder of the plan is still valid under the new context. Consistency checks are performed at every step if a notification mechanism is available, giving the opportunity to the planning agent to compare the expected planning state with the actual state. In such a case, the context encapsulates all the world-altering results of the services invoked by the planning agent, independently of whether these are in conformance with the expected effects or not, as well as the world-altering behavior of probable exogenous agents. Consistency inspection is very quick, since it amounts to passing to the solver a complete assignment. After the phase of the parallel execution of some actions at step i completes, the solver is passed a full assignment to variables and parameters, which is the same as the assignment corresponding to the current plan, except that variables at state {a mathematical formula}i+1 are assigned the values delivered by the current environmental state. If there is no notification mechanism, then all world-altering effects are materialized as prescribed in the planning domain, and no consistency check is performed. In this case, validity has to be checked only when new information is sensed.
+      </paragraph>
+      <paragraph>
+       Regarding the new information accumulated by possible sensed outputs, this is incorporated into the knowledge base knowlBase (see Section 2.2.1). At each plan revision, the respective virtual KB actions are extracted, and the respective constraints are added to the CSP, after removing the ones referring to the obsolete knowledge base. The constraints induced by the knowledge base ensure that the refinement process leads to the appropriate output-to-input assignments. If the plan suffix is found to be invalid with respect to the current environmental state, then an attempt to extend the plan is made. The maximum plan length is prespecified (see Section 2.2) and is the same for all planning attempts. More specifically, let us consider a plan {a mathematical formula}π=〈A0′,A1′,…,Ak−1′〉 (see Definition 6), and define {a mathematical formula}πˆ=〈A0,A1,…,An−1〉, {a mathematical formula}n≤k, as the sequence of non-empty action sets in π, respecting order. Assuming that k is always selected to be quite larger than the maximum number of plan steps, after the phase of parallel execution of {a mathematical formula}A0 completes, and depending on the collected outcomes, {a mathematical formula}πˆ can be augmented by adding extra actions before, after or in parallel with the actions in the suffix {a mathematical formula}〈A1,…,An−1〉. The refining process shifts the plan suffix leaving {a mathematical formula}d=⌈(k−n)/2⌉ “empty” places before it, and the rest after it. To do so, it constructs a partial assignment at the solver level: {a mathematical formula}{a[d+i−1]=1|∀a∈Ai,1≤i&lt;n}, where {a mathematical formula}a[j] is the CSP-level action variable representing a at state j. Input parameters are left open to be assigned by the solver, depending on the updated initial state, which includes the most up-to-date variables about the world. Any new observation (value of some {a mathematical formula}var_response) returned after the completion of {a mathematical formula}A0 is added to knowlBase, predicated on the specific input parameter values with which {a mathematical formula}A0 were called. This entails a modification to the CSP model, through the addition of the respective virtual KB actions. The updated model and partial solution are passed to the solver, and the search process attempts to find an assignment for the remaining variables. If this process fails to find a valid solution within some limited time, then the instantiations to the action variables are removed, the search retracts to the generic model instance, and a new solution is sought with a partial assignment reflecting only the initial state.
+      </paragraph>
+     </section>
+     <section label="5.3">
+      <section-title>
+       Executing parallel actions and dealing with timeouts
+      </section-title>
+      <paragraph>
+       One of the advantages of the RuGPlanner is that the produced plans are distinguished by a high degree of parallelism. This property can prove highly beneficial at execution time, especially since service compositions are likely to involve many sensing operations that can be performed in parallel. Moreover, even if only a subset of a bundle of concurrent actions complete successfully and within a time frame, this may be enough to enable the invocation of subsequent actions in the plan. This is an eager and optimistic strategy based on the assumption that fulfilling part of the goal is desirable, even if the goal as a whole is not satisfiable.
+      </paragraph>
+      <paragraph>
+       Actions which according to the domain and the goal depend on operations that are still pending are postponed till the effects of the slow operations on which these depend have been substantiated. If it turns out that there is no way (through invoking alternative service providers or by pursuing a different plan) to achieve the effects which are necessary for proceeding to the reliant actions, the orchestrator returns with an infeasibility notification, but the tasks that are independent of these unattainable effects have already been fulfilled. This eager-to-execute policy works in the following way. Considering a sequence {a mathematical formula}πˆ={A0,A1,…,An−1}, all actions in {a mathematical formula}Ai are invoked in parallel by generating an equal number of concurrent futures, i.e., containers which act as proxies for the yet unknown result of the respective action. The futures complete either when a response is received (indicating success or failure) or when some predefined timeout period expires. The timeout reflects a short delay within which an average, reasonably fast service is expected to respond. Services which justifiably need longer time for searching or processing data, are kept in a list of pending actors until they respond successfully or they expire, i.e., the respective expected long response time passes. In case an asynchronous mechanism for receiving notifications about environmental changes is available, the assumption is that this mechanism is reliable and timely, so that notifications regarding the effects of the completed futures are received within a few milliseconds after the short timeout period.
+      </paragraph>
+      <paragraph>
+       After the short timeout elapses, the collected information and context changes are processed to decide on plan refinement or replanning from scratch. The updated plan (refined or new) is computed starting from an initial state that reflects the new context, and assumes the successful completion of any pending actions. Thus, considering the invocation of the parallel actions {a mathematical formula}Ai at state i, and some actions {a mathematical formula}Ap⊆Ai which do not respond within the short time limit, the new initial state is formed by assigning all variables that participate in the effects of {a mathematical formula}Ap to the values they have at the solver state {a mathematical formula}i+1. The values of these variables at state i are stored for bookkeeping so that they can be later recovered in case of a failure response or timeout. An action a which is part of the updated plan is executed only if {a mathematical formula}precond(a) does not include any variable which is part of the effects pendEffects of any of the pending actions. Moreover, if (i) the goal comprises a goal of type g1 under_conditiong2, (ii) some variable in {a mathematical formula}precond(a) or {a mathematical formula}effects(a) is involved in any of the propositions within g1, and (iii) some variable which is part of pendEffects appears in g2, then a is prevented from being executed. In such a case, the orchestration process waits until the respective pending action either responds or expires, i.e., the expected delay time elapses. Expiration is interpreted as an indication of erroneous behavior and can be dealt with as described in Section 5.4.
+      </paragraph>
+     </section>
+     <section label="5.4">
+      <section-title>
+       Dealing with erratic behaviors, constraint violations, and persistent information
+      </section-title>
+      <paragraph>
+       Erroneous responses and expirations are handled depending on the type of the faulty service, the availability of alternative service implementations, and on the severity of reported failure. Accordingly, a second invocation attempt may be made, an alternative service provider may be looked for, or another plan which can lead to the same results may be computed. A planning action corresponds to an “abstract” service or service type, which can be translated to different concrete service operations at execution time. We assume this matchmaking process to be undertaken by a special-purpose discovery and selection component, e.g., [109], [101], which returns the set of functionally equivalent services and selects the next appropriate instance to invoke according to some criteria.
+      </paragraph>
+      <paragraph>
+       In cases where a sensed output leads to a constraint violation, one may seek another concrete instance, retry with the same provider or make a functionally different choice, depending on the nature of the service. For services whose output may differ depending on the selected provider, such as stores returning the availability or price of a requested item, it makes sense to try alternative instances. This is not the case for services that provide information that is not instance-specific, such as the weather, map etc.
+      </paragraph>
+      <paragraph>
+       If the received faulty response indicates a permanent failure, then there is no use in trying to invoke the same service instance again. The respective service implementation entry in the list of candidate services is marked accordingly, so that the specific instance is restrained from future selections. If no alternative implementation for the same action can be found, a constraint which forbids the action in question to be chosen by subsequent plans is added to the CSP. Depending on the policy and the type of the service, the ban may concern the action in general, i.e., for all {a mathematical formula}0≤i&lt;k, {a mathematical formula}a[i]=0, or the action in combination with the input parameters values {a mathematical formula}vp‾ it was invoked, i.e., for all {a mathematical formula}0≤i&lt;k, {a mathematical formula}⋀p∈in(a)p[i]=vp⇒a[i]=0. The underlying assumption is that the type of failure and reliability of a service can be inferred by the service's response (error code) in combination with a history of the service's behavior. An external diagnostic system [30], can be consulted for this purpose.
+      </paragraph>
+      <paragraph>
+       Byzantine services which indicate successful completion without delivering the expected results can be indirectly tolerated without threatening the consistency of the plan, if the orchestrator is consistently and timely informed about the actual state of the world. Consistency checks are performed on the basis of the latest change events, and thus, at each step. The preconditions of the next actions are checked towards the actual instead of the expected environmental state. In this way, for example, before trying to move through a door, the orchestrator will wait until receiving the change event that the door has been opened. Spotting which service is the abnormal one is a much more difficult task. Separate dedicated monitoring techniques are required to decide whether a service is byzantine or not, by inspecting the behavior of all services and infer unusual patterns, as e.g., in [91]. To prevent the orchestrator from repeating invocations to malicious services, an upper limit is set to the number of times that a certain operation can be consecutively called with the same input for the same planning state. This is a way of enforcing “fairness” [27], so as to eventually exit the execution loop.
+      </paragraph>
+     </section>
+     <section label="5.5">
+      <section-title>
+       Implementation
+      </section-title>
+      <paragraph>
+       The framework for interleaving planning, monitoring and execution has been implemented by using the akka library in Scala (akka.io), which builds upon the theory of actor models [49], [54]. Akka provides the means for building scalable and fault-tolerant concurrent applications at a high abstraction level, based on an asynchronous, non-blocking and lightweight event-driven programming model. The orchestration component, the RuGPlanner and the service environment correspond to different actors, which are independent entities that operate concurrently and communicate with each other by asynchronously exchanging messages. Each component-actor may supervise a set of smaller actors-children, each of which represents a lower-level constituent entity and is responsible for certain functions that are assigned to it.
+      </paragraph>
+      <paragraph>
+       All services that participate in the service environment are modeled as individual actors, which are overseen by the parent environment actor. The parent actor delegates the requests for service calls it receives from the orchestration component to the respective child-actor, which simulates the requested service. The service-level actor processes the message and reacts accordingly, depending on the behavior that we wish to simulate, e.g., by replying with a message that includes output values or indicates a failure, by raising an exception, taking too long to respond or sending no message at all. Each child is treated separately, and several fault handling directives (e.g., stop, resume, restart, escalate) can be implemented by the parent actor, depending on the type of failure and the failing service actor. Service-level actors can be connected to real services, e.g., an OSGi bundle interfacing a physical domotic device [68], or the API of a service available on the Web [120]. Concurrency is dealt with through futures, which are used to retrieve the results of parallel invocations in a non-blocking way, as described in Algorithm 1. Each future's lifecycle is treated by a separate callback, which amounts to a generated special-purpose actor that waits and reacts to the future's completion. These callbacks, which may be executed in any order or in parallel depending on the service behavior, entail specific modifications to the CSP, which is shared among them. Atomicity on the operations on the CSP is ensured through the Scala Software Transactional Memory library (nbronson.github.com/scala-stm), which takes care of coordinating access to shared data from concurrent threads.
+      </paragraph>
+      <paragraph>
+       Regarding constraint solving, we use the Choco version 2 constraint programming library [25], which provides a large choice of implemented constraints, a variety of pre-defined but also custom search methods, and supports the dynamic addition and removal of constraints. In the current implementation, the supported types for state variables are enumerations and integers. In Choco, variables with large domains are only represented by their lower and upper bounds, so that propagation events only concern bound updates. An integer variable with undefined bounds corresponds to an interval from {a mathematical formula}−21474836 to 21 474 836. Real variables are also supported by Choco, however, investigating their impact on planning performance is left as future work.
+      </paragraph>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Evaluation
+     </section-title>
+     <paragraph>
+      To evaluate the time performance of the planning and orchestration framework of several complex goals, planning domains, and execution circumstances, we consider two test cases: (i) a marketplace of services on the Web, where the planning agent communicates with the execution environment in a synchronous manner, and (ii) a setting where exogenous events are present, about which the planning agent is asynchronously notified. We also perform a number of tests regarding the scalability of the system with respect to a number of factors, such as the number of grounded actions, the variables domain size, and the need for sensing. All scenarios presented in the followings were tested on a Core i5 @2.50 GHz computer with 4 GB of RAM, running Ubuntu 12.10.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       WS marketplace
+      </section-title>
+      <paragraph>
+       Consider the example about attending a concert presented in Section 3.2. In such a setting, the only source of information about the context changes are the responses of the service invocations, and one can safely assume that no external actor interferes with the plan. The scenario involves many sensing actions and the plan refinement process has to repeatedly take care of the appropriate instantiation of input parameters. For example, when the information about the upcoming band's performance is acquired, the input parameters of all actions which depend on the concert's date and place have to be instantiated to the outputs of the “getNextEvent” action (instead of the random convenient values they were assigned offline).
+      </paragraph>
+      <paragraph>
+       We presented a run using actual services on the Web and employing an orchestration algorithm that plans from scratch at every step in [67]. The run shows a situation for which the place of the first upcoming concert turns out to be too far. At the initial state all variables referring to the weather, distance etc., are unknown, since they are not included in knownVars (their knowledge is predicated on input parameter values as stated in knowlBase).
+      </paragraph>
+      <paragraph>
+       Since retrieving the facts included in the knowledge base does not lead to a solution, the planner adds the following sensing actions to the plan: first the retrieval of the next performance, and then the respective actions for sensing the new distance, weather, hotel list etc. Refinement is performed once more, after the information about the next performance is instantiated. Then the information about the weather, calendar availability, distance and hotel rooms regarding the new whereabouts is collected in parallel. Since the new information does not violate the goal requirements, the existing plan is found to be consistent, and a ticket is booked. However, when proceeding to hotel room reservation, the first hotel provider in the list (the default order is by increasing price) returns a permanent failure. The policy for dealing with a bookHotel's failure response in this case is to forbid it to be called again with the same input arguments. Thus, the refinement process enforces the investigation of the next provider in the list of available hotels.
+      </paragraph>
+      <paragraph>
+       The sequence of steps taken by the orchestrator are summarized Example 7.
+      </paragraph>
+      <paragraph>
+       {a mathematical formula} The plan is refined whenever the response of an action invocation includes newly sensed output, and the consistency check of the existing plan suffix fails. This happens either because the input parameters of subsequent actions have to be updated, or because the new information violates a constraint. If the response indicates success (ok) and the action does not include any knowledge-providing effects, then the next action(s) are executed. A response which indicates a failure (null) also calls for plan refinement.
+      </paragraph>
+      <paragraph>
+       The travel and shopping scenario is a widely used example [110], [78], [102], [67], which we adapt by using real and virtual services, derived from a variety of application domains: making online appointments, shopping, shipping, traveling, learning about entertainment events, and obtaining general purpose information. In such test cases, there are not many structurally different plan-compositions that can achieve a given goal. E.g., when planning for an item's purchase and shipment, the main steps of the composition, like selecting a seller, ordering, paying, are more or less the same for all providers that offer the respective services. If an inconsistency occurs during execution, this can be usually resolved by some extra actions invocations, such as looking for another shop or shipping service. Therefore, time performance is better than a planning-from-scratch approach, e.g., as in [67]. Moreover, the support of parallel execution also contributes to reducing overall orchestration time.
+      </paragraph>
+      <paragraph>
+       In total, the domain we used consists of 42 operators (amounting to millions of grounded operators), 33 of which are knowledge-providing. The results of running a number of diverse scenarios (combination of goals and execution behaviors) are summarized in Table 1 (the goal “goToConcert” corresponds to the motivation scenario described above). In order to avoid irregularities due to actual response times, all invocations to WSs are simulated. Service responses (sensed information and erroneous behavior) can thus be controlled to test several execution behaviors. All operations are simulated to respond after 1 second, and 1 second is the extra waiting time within which the change events implied by the invocations are expected to be received. The upper time limit for refinement (i.e., before resorting to replanning from scratch) is set to half the time of the last planning from scratch invocation. The time for bootstrapping and transforming the planning domain and goal into a CSP is 1.4 seconds.
+      </paragraph>
+     </section>
+     <section label="6.2">
+      <section-title>
+       Scalability tests
+      </section-title>
+      <paragraph>
+       We test the scalability of the off-line planner with respect to an increasing number of (ungrounded) actions, and an increasing size of input parameters (i.e., grounded operators) and variables. The experiments run on variations of the domain used in Section 6.1, which is typical of service descriptions in a WS marketplace. The goal is a combination of going to a concert, renting a car, and booking an appointment with the doctor, and the plan that satisfies it consists of 14 actions. In Fig. 2, the CSP and plan creation time vs. the number of actions in the domain is plotted. For the evaluation, we create copies of the base domain's variables and actions, i.e., actions with the same logic of preconditions and effects, but on different variables. One notices that for 510 operators and 690 variables, 9 seconds are required to construct the CSP and 96 seconds to compute the plan. It should be emphasized that the size of this domain amounts to an order of 10{sup:12} grounded actions.
+      </paragraph>
+      <paragraph>
+       To test the effect of the number of grounded operators on the planning time, we keep the number of operators constant (and equal to 42, as in Section 6.1), and increase the domain size of input arguments and other variables of type integer. The experiments show that the domain size of input arguments as well as of other variables, including knowledge variables, has no impact on planning time. The planning time for a domain with 37 variables having the maximum domain range advised by the underlying constraint solver {a mathematical formula}([−21474836,21474836]) is 3.8 seconds (the same as for variables with domains of range 10). Considering that an action in the WS marketplace domain has up to three input parameters of type integer, the number of grounded actions in this case is in the order of 10{sup:343}. Dealing with such a scenario would be infeasible for a planner resorting to a compilation into a fully grounded encoding.
+      </paragraph>
+      <paragraph>
+       To further explore the impact of variable domain size, we perform tests for increasing plan lengths. For the evaluation, we construct a domain consisting of an increasing number of interdependent actions, which have to be performed in sequence to achieve the goal. The experiments show that up to a limit of 50 in the number of variables and actions in plan, the planning time is not affected by variables domain range. In a domain consisting of 80 variables and respective actions which affect them, the planning time is 54 seconds for a domain range of {a mathematical formula}[1,10] and 125.5 for a domain range of {a mathematical formula}[1,104]. This result confirms that the most constrained/increasing domain selection strategy is but little influenced by the fact that the number of possible assignments to the CSP is exponential with the variable domain size. An interesting line of future research is the investigation of the planner's performance in case of domains with real variables.
+      </paragraph>
+      <paragraph>
+       To investigate the impact of the amount of unknown variables in the initial state, we have designed a domain where each knowledge variable is being observed by a distinct sensing action. Fig. 3 shows plan computation time with respect to an increasing number of variables with domain range {a mathematical formula}[1,100], which all have to be sensed to fulfill the goal. Sensing actions are dependent on each other, so that they have to be performed in sequence in the plan (i.e., plan length is equal to the number of unknowns). Because the notion of state for the RuGPlanner encloses a set of fully instantiated states, the number of possible initial (instantiated) states of knowledge variables and their domain size affects planning time only with respect to the number of sensing actions which have to be included in the plan, their interdependencies, and entailed constraints. This is important, considering that the compilation of the contingent planning problem to a problem which can be solved by a classical planner [2] is, in the general case, linear in the number of possible initial states, and exponential in the number of uncertain fluents. On the other hand, approaches which rely on such translations take advantage of the high efficiency of classical planners.
+      </paragraph>
+      <paragraph>
+       In order to test the planner's behavior under continual calls for plan revision, we have designed a situation where actions fail consecutively. The domain instance consists of copies of actions with the same preconditions and effects, involving the same variables. At each step of execution, the action responds with a failure, and either plan refinement or replanning is consecutively required. In the first case, each failure can be addressed by adding a different equivalent action copy at the beginning of the plan, while, in the second case, the new plan consists of different action copies. In both cases, the number of failures does not affect the time required for plan repair or for replanning. For a situation of 50 consecutive failures (and equivalent number of action copies), the time for refining the plan is between 0.8 and 1.1 seconds. Similarly, the time for computing each new plan from scratch is the same as the time for computing the original plan.
+      </paragraph>
+      <paragraph>
+       To sum up, we have tested the performance of the RuGPlanner with respect to different factors. The evaluation demonstrates that RuGPlanner can efficiently deal with very high cardinalities (in the order of 10{sup:7}) of input parameters to operators for typical data-intensive WS domains. The benefits of non-grounding become clear when considering that the same domain would translate into a prohibitive number of grounded action instances. Moreover, working at the level of set of states enables RuGPlanner to accommodate for a large amount of uncertainty, i.e., the number of fully instantiated states that correspond to the uncertain state and the number of unknown variables.
+      </paragraph>
+     </section>
+     <section label="6.3">
+      <section-title>
+       Robot moving in a grid
+      </section-title>
+      <paragraph>
+       To further investigate the behavior of the RuGPlanner in an environment which calls for continuous plan revisions, we use an example that combines in a single run of the orchestrator three types of run-time contingencies: an exogenous action which interferes with the plan, a malicious service with byzantine behavior, and an operation with a long response time. The example concerns a robot moving around in a house setting as depicted in Fig. 4. The setting is an IPC-like domain, in which the RuGPlanner cannot compete with approaches which translate the contingent version of the problem into a classical planning problem, and, therefore, scale more efficiently with the size of the grid. However, the experiments on such a domain demonstrate the generality of RuGPlanner  which can deal with all kinds of contingencies which previous approaches ignore, and help us explore the tradeoff between plan refinement and replanning from scratch.
+      </paragraph>
+      <paragraph>
+       The rooms in the grid domain are connected through doors which can be open, closed or locked. The robot can open a door only if it stands in front of it on either of the two sides, and only if the door is unlocked. For opening the two doors leading to room R22, the robot needs to have at hand a special password to be retrieve by invoking a slow sensing operation that requires 40 seconds to respond. The robot can move as instructed by the action presented in Example 1, that is, between locations which are adjacent to each other (connected through the dashed lines in Fig. 4), with the additional requirement that if the locations belong to separate rooms, the intermediate door should be open.
+      </paragraph>
+      <paragraph>
+       Initially, the robot resides at location {a mathematical formula}R00_R01, and the goal is to reach location {a mathematical formula}R22_R21 at the final state (where RX_RY is the location at room RX and is connected with a location in room RY). All doors are initially closed and unlocked. The initial plan guides the robot to R22 through R01, R11 and R21, and instructs calling the sensing action for retrieving the necessary password at the second state of the plan. Since the sensing action takes long to respond, it is checked whether there are any actions in the plan suffix that do not depend on the password retrieval. Indeed, the robot can keep on moving till the door leading to R22. However, while the robot is still in R01, someone locks the door leading from R11 to R21. Such a contingency requires a drastic change in the robot's planned route, and cannot be dealt with by just augmenting the plan. The refinement process fails, and replanning from scratch is performed.
+      </paragraph>
+      <paragraph>
+       The new plan leads the robot through R02 and R12. Due to bad luck though, it turns out that the door that connects R02 and R12 behaves unreliably: although the opening operation responds with a success, the door is actually not opened. As a result, an augmented plan which includes a second attempt is computed. The door behaves the same way for a second time, and thus a new refined plan is produced. However, the opening door operation is not invoked again, since already two invocations corresponding to the same planning state have been attempted, and the action is in turn forbidden from any subsequent plans. Since no refined plan can be found given the prohibition of the specific door opening operation, a new plan is computed from scratch. The alternative route directs the robot back to R01, then to R11 and then to R12. However, as the robot stands before the door leading to R22, the password sensing action expires (it has not responded within the expected maximum timeout), and is thus treated as a failed action. Since there is no other way to collect the password, it is impossible to satisfy the goal. An alternative policy could be to try re-invoking the expired actions, with the hope that they would provide the required output.
+      </paragraph>
+      <paragraph>
+       During the above orchestration run, there are 14 validation checks and 4 attempts to refine the plan (including the failed ones), taking 6.6 seconds in total, while 3 plans are computed from scratch (including the initial one), taking 18 seconds altogether. One notes that the evolution of the orchestration run actually highly depends on the structure of the generated plans. For example, in the above example, assuming that doors can be opened remotely, independently of the location of the robot, it makes a difference whether the opening of the doors is scheduled in parallel at the beginning of the plan, or delayed till later steps. Although both plans consist of the same number of actions (i.e., are equally “good”), it is desirable to push actions as early as possible in the plan, since in this way any erroneous service execution can be detected earlier. Moreover, operations which are expected to take a long time to complete should be preferably scheduled at an early stage of the plan.
+      </paragraph>
+      <section label="6.3.1">
+       <section-title>
+        Refinement towards replanning from scratch
+       </section-title>
+       <paragraph>
+        The test cases presented in Table 2 investigate the tradeoff between attempting a plan refinement versus planning from scratch. All tests are variations of a planning domain which represents a robot moving between adjacent rooms connected by doors, which can be open, closed or locked. In all tests, the goal is for the robot to move from the top leftmost room to the bottom rightmost room, starting from an initial state where all doors are closed and unlocked. Execution times are expressed in seconds and the total orchestration time counts the time elapsed between issuing the goal and its satisfaction or failure. Plan from scratch time includes the time for computing the initial plan. The numbers 3–5 indicate the dimension of the grid, i.e., refer to a {a mathematical formula}3×3, {a mathematical formula}4×4 and a {a mathematical formula}5×5 grid, respectively. Tests marked by “*”, no attempt for plan refinement is made, and all updated plans at every step of the orchestration process are computed by resorting directly to replanning from scratch. The upper time limit that the refinement process may take is set to half the time required by the last planning from scratch invocation.
+       </paragraph>
+       <paragraph>
+        In all runs, as the robot proceeds, an external actor repeatedly hinders its route: just before the robot is about to cross an open door, the troublesome agent locks that door. All operations are simulated to respond within 4 seconds, with 2 seconds of extra waiting time, within which the change events implied by the invocations are expected to be received. The conservative most-constrained/increasing domain strategy is used for planning from scratch in the {a mathematical formula}3×3 and {a mathematical formula}4×4 grid tests, and for the refinement process in all cases. For the tests in the {a mathematical formula}5×5 grid, the initial plan takes more than 15 minutes to complete with the default search strategy, and therefore a random value assignment approach is employed whenever planning from scratch, with the search restarting every time a fixed increasing node limit is reached. The resulting plans are not always the optimal ones, and may include redundant actions.
+       </paragraph>
+       <paragraph>
+        In the tests signified by “unlock”, the robot can open as well as unlock rooms. Thus, every time the robot unexpectedly encounters a locked door, it has to update its plan by first unlocking and then opening the door targeted by the exogenous agent. In these cases, attempting a plan refinement instead of directly planning from scratch saves a considerable amount of time, at least for the {a mathematical formula}4×4 and {a mathematical formula}5×5 grids. As expected, the longer time plan generation takes, the more benefit is gained by employing plan extension, since in these simulations the updated plan should just involve the addition of two more actions at the beginning, which is very fast to compute. The two approaches also lead to slightly different overall sequences of steps, since some redundant actions may be included at times, especially when employing the random value assignment strategy.
+       </paragraph>
+       <paragraph>
+        To investigate the performance of the orchestration in situations where a more elaborate plan refinement is required, let us assume that the robot can unlock a door only if it resides in a room different from the ones the door connects. Whenever the exogenous agent locks a door that the robot is about to cross, the robot has to first move to some adjacent room, unlock the door, then move back, open it and go on with its route. This situation is reflected by the “unlock-notInRoom” tests in Table 2. Also in these tests resorting to plan refinement leads to considerably better performance. However, in cases where there is no way to augment the plan to tackle the new contextual situation, the time devoted to attempting plan refinement is wasted. This case is simulated by the “permanent-lock” tests, which concern the same planning domain as in “unlock”, except that the robot has no capability to unlock doors. Thus, every time the robot has to deal with an unexpectedly locked door, the refinement attempt fails, since a drastically different plan has to be found. In this case, resorting directly to replanning from scratch actually saves time.
+       </paragraph>
+       <paragraph>
+        The experiments confirm that the balanced approach between attempting plan refinement and planning from scratch yields best results when minor changes to the already existing plan are enough to resolve the inconsistencies due to incomplete knowledge or external events. In cases where radical plan revision is required, skipping over the plan refinement phase yields better time performance. The RuGPlanner adopts a middle-ground approach based on the following rule of thumb: if the plan revision process takes too long, this is probably an indication that the new situation calls for a plan that looks quite different from the original one, and should therefore give up in favor of replanning from scratch.
+       </paragraph>
+      </section>
+      <section label="6.3.2">
+       <section-title>
+        Timeout of sensing actions
+       </section-title>
+       <paragraph>
+        The next tests simulate situations where some actions take justifiably long time to respond, and aim at demonstrating how different plan structures affect the overall orchestration process. In these tests, to open a door the robot should know a 3-digits password specific for that door, which it can retrieve by invoking a sensing action from any location. The robot has to move from the uppermost left room to the bottom rightmost one, starting from an initial state where all doors are closed and all passwords are unknown to the robot. In all tests simulating the execution behavior, the password sensing actions take 40 seconds to respond, moving actions take 8 seconds, opening the door takes 1 second, and the average waiting time for a bundle of parallel actions to execute is 10 seconds.
+       </paragraph>
+       <paragraph>
+        Depending on which planning states sensing actions are scheduled, the robot may end up waiting for a shorter or longer time for a sensing action to respond. Table 3 summarizes the results for three different structures of initial plans passed for execution and monitoring to the orchestration algorithm. All plans consist of the same number of actions, however the state at which actions are placed varies: “opt” refers to the optimal situation where all the password sensing actions in the plan are concentrated at the first state, “subOpt” to the plan actually generated by the RuGPlanner by employing the random values assignment with restarts searching strategy, and “worst” to a plan where each password sensing action is scheduled just before the respective door opening. After the invocation of some parallel actions sets, a validation check and possibly a refinement attempt is performed when all actions respond or the short timeout expires. Given the validated or updated plan, it is checked whether it is possible to proceed with any plan actions which do not require the knowledge of the specific password. Thus, the robot can move further if possible, while the password is being sensed (this happens with the “subOpt” simulations). Whenever a pending action responds, the orchestration goes on with executing the updated plan suffix. The results in Table 3 demonstrate the large gain in time when the actions which take long to respond are scheduled as early as possible in the plan. The larger the domain, i.e., the more slow actions are involved, the larger the difference between the optimal and the worst approach is.
+       </paragraph>
+      </section>
+      <section label="6.3.3">
+       <section-title>
+        Discussion
+       </section-title>
+       <paragraph>
+        The evaluation demonstrates that the RuGPlanner performs well in domains which are too large to ground, and which involve variables, and especially observation variables, with large domains.
+       </paragraph>
+       <paragraph>
+        Producing the shortest plan is not enough to lead to the optimal orchestration runs. The plans that are opted for should be the ones which include actions as much in parallel and as early as possible. However, the RuGPlanner does not always produce the desired structure of plans, and in some cases it even computes suboptimal ones. Moreover, the orchestrator may be trapped into repeating a sequence of steps without managing to reach the goal. This “stuck in a loop” situation may arise in cases where suboptimal plans of a certain pattern are repeatedly produced, or due to the malicious behavior of external actions which may lead a certain execution into a deadlock. To give an example, assume a robot that wants to move from R00 to R02 of Fig. 1, and that the door leading from R01 to R02 can be opened only if the robot resides in R00. If an external actor closes the door leading from R01 to R02 every time before the robot tries to pass through it, a revised plan instructing the robot to go back to R00, reopen the door and move forth again will be repeatedly generated. The orchestrator has no way to identify that it is trapped in a loop due to the consistent behavior of an exogenous actor, so as to make the decision to follow an alternative plan, e.g., reach R02 through rooms R10, R11, and R12, with the hope that the doors in that route will not be blocked. A similar deadlock may result in any case in which there is need for replanning when the robot resides in R01 and the planner generates a suboptimal plan, which directs the robot first back to R00, and then forward to R01 and further. To avoid such situations, some randomness should be inserted in cases where the orchestrator repeats the same sequence of actions, and this repetition is not included in the current plan. For example, the orchestrator may try to randomly choose from the set of actions applicable at the current state, with the hope that from that new state the planner will escape the deadlock situation.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      Related work
+     </section-title>
+     <paragraph>
+      A great number of approaches have been proposed in the literature about describing, constructing, executing and maintaining Web Service compositions, with research approaching the topic from different viewpoints, including issues related to service discovery and matchmaking, e.g., [109], [101], Quality of Service requirements, e.g., [5], [51], [124], and support for dynamic reconfiguration, e.g., using the channel-based coordination language Reo [81], [75]. Several methodologies inspired from work in AI planing have been applied to deal with WSCs. However, because there is no commonly agreed definition of service composition as a planning problem, it is difficult to compare quantitatively approaches proposed in the literature. Some proposals use domain-independent planners [107], [88], however their applicability is limited to very simple service domains. The PKS [100] (Planning with Knowledge and Sensing) planning system is used for generating compositions at the knowledge level [85]. Services are modeled as primitive actions specified in a STRIPS-like formalism, however domain-specific design rules are required to capture additional effects triggered by sensing actions and search control constraints. A Partial Order Planning approach is adopted in [98], while in [60] an adaptation of the FF (Fast Forward) planner [59] is used to construct Business Processes from atomic IT entities described in a planning-like manner.
+     </paragraph>
+     <paragraph>
+      Another line of research builds on modeling the WS domain in the Situation Calculus [89], [90], [110], [111]. The idea is to describe a set of user objectives in terms of a sufficiently generic Golog program, and, the task of composition amounts to the customization of this generic template at runtime with respect to specific user constraints and preferences. Hierarchical Task Networks (HTN) [37] have also been used as a means to represent generic procedures, e.g., [121], [108], [76], [4], [83]. SHOP2, a highly optimized HTN planning system, is used to decompose process models into primitive operators/atomic services. SHOP2 does support numeric variables, however, no tests regarding scalability in terms of domain cardinality, especially with regard to unknowns, are provided. In [76], information gathering is performed at planning time, by issuing a list of appropriate queries to collect all the information that is missing in the initial state. Non-blocking strategies for performing search while waiting for queries to respond, similar in principle to the approach employed by the RuGPlanner, are utilized to improve the time for computing a plan. An extension of the algorithm for dealing with information that may change during the operation of the composition is presented in [4], by considering that a solution is correct only within an expiration time. A hybrid approach which combines domain-independent planning with HTN is adopted in [71], [72].
+     </paragraph>
+     <paragraph>
+      As opposed to approaches that view services as atomic planning operators, there is a research track which considers stateful services, where behavioral descriptions impose constraints on the possible interactions that a service can be engaged with. In [113], [104], [102], [103], [18], [19] component services are seen as state transition systems, e.g., derived from a BPEL description as explained in [113], [104], where transitions correspond to asynchronous message exchanges resulting from an atomic action execution. The requirements of the desired composite service are expressed in a temporal logic-like language, and symbolic techniques inspired by model checking are used for computing an executable process. In [17], the approach is extended to support requirements about how to handle uncontrollable events, such as a flight delay.
+     </paragraph>
+     <paragraph>
+      Another interesting approach which abstracts services as transition systems is the so-called “roman model” presented in [13], [16], [14], [15], [28]. From that perspective, the composition problem is treated as a problem of coordinating the executions of a given set of available services described as finite state automata. The objective itself is described in terms of a target service-transition diagram that conforms to some desired interactions.
+     </paragraph>
+     <section label="7.1">
+      <section-title>
+       Planning domains and goal specifications
+      </section-title>
+      <paragraph>
+       PDDL (Planning Domain Description Language) has become the standard language for defining planning problems. It is used in the International Planning Competitions since 1998 [87], and has undergone several extensions [36], [39]. PDDL and its extensions represent the world using objects and predicates, and numeric expressions are constructed by using functions which associate objects with numeric values. Preconditions on numeric fluents are comparisons, and effects can assign, increase, decrease or scale-up/down the values of numeric functions, however, numeric expressions are not allowed to appear as arguments to predicates or values of action parameters. In contrast, the RuG planner is based on a variable/value domain representation which is similar in concept with the Multi-valued Planning Task (MPT) encoding [53], [52]. An algorithm for automatically translating a PDDL domain description into a MPT one is described in [53].
+      </paragraph>
+      <paragraph>
+       The extended declarative goal language supported by the RuGPlanneras described in Section 2.3 enhances the traditional specification of a goal as a set of final states by providing a number of additional features that allow the expression of constraints over state trajectories and hands-off observational requirements. A short overview of its basic operators has been presented in [66]. Many elements of the language are inspired by XSRL (XML Service Request Language) [1], [78] for formulating complex requests against standard business processes.
+      </paragraph>
+      <paragraph>
+       PDDL3 [38] extends PDDL, by supporting a richer goal language which provides for state trajectory constraints which should be respected by the entire sequence of plan states, as well as with soft goals which are desired but not necessary to achieve. The goal language supported by the RuG planner is less expressive than PDDL3, and does not capture preference goals (although the under_condition_or_not goal operator could be seen as a form of soft requirement), but several parallels can be drawn with some of PDDL3 modal operators, such as always, sometime, and sometime-before.
+      </paragraph>
+      <paragraph>
+       The RuGPlannergoal language shares many concerns with the work presented in [48], [44], [46], which deals with meeting user goals in environments similar to the Unix operating system. Since incomplete information is intrinsic in such domains, distinguishing between satisfaction and mere observational goals is essential. A clear distinction between achievement and information gathering goals is also kept in [98], for the purpose of composing semantically annotated WSs transformed into PDDL operators.
+      </paragraph>
+      <paragraph>
+       Systems that follow the planning as Model Checking approach have built-in support for temporally extended goals, which allow imposing constraints on the state trajectory, e.g., specification of safety or liveness properties. In [113], [104], the EAGLE goal language, based on temporal logics extended with preferences, is used for composing WSs modeled as state transition systems. Several goal specifications for composing WSs move away from the purely domain-independent declarative spirit, and require that the set of possible solutions is pre-defined in some form of procedural template, either in the form of HTN methods, e.g., [4], as a Golog program, e.g., [110], or as a target state automaton, e.g., [12]. In such a context, runtime synthesis is responsible for customizing the high-level procedural specification with respect to user constraints and preferences. From that perspective, the work in [110], [111] extends the approach presented in [110], so that Golog generic procedures can be customized not only based on hard but also on soft constraints, yielding compositions which are optimal with respect to the latter. An interesting proposal for fusing procedural and declarative goals to allow greater flexibility in expressing goals is made in [106]. The goal language supported by the RuGPlanner, on the other hand, only specifies what has to be achieved but not how, i.e., no search control knowledge is used to guide the planning process, neither in the form of control rules or in the form of task decomposition.
+      </paragraph>
+     </section>
+     <section label="7.2">
+      <section-title>
+       Planning with incomplete information and sensing
+      </section-title>
+      <paragraph>
+       Service environments are inherently uncertain about the initial state and unpredictable in their run-time behavior. In the XLPLAN planning system [71], [72], external procedure calls are implemented through linked call-back functions, which return a Boolean indication of whether a predicate has been added or deleted from the next world state. In [60] non-determinism stemming from the set of alternative action outcomes is treated through “determinization”, i.e., each non-deterministic action is compiled into a set of deterministic actions, one for each possible outcome. Although performance may be acceptable for binary variables, strategies that resort to determinization are not effective when the cardinality of possible outcomes increases.
+      </paragraph>
+      <paragraph>
+       Some approaches address the problem of incomplete information by only simulating world-altering effects during the composition process, assuming complete independence between sensing and world-altering actions and setting limitations on the interleaving between knowledge-providing and world-altering actions. In [90], [110], information providing services are modeled as external function calls within the Golog programs. The approach relies on the assumption that information persists for a reasonable amount of time (until all actions that make use of it are executed), and that it is not altered by any subsequent action inside or outside the composition. It is also taken for granted that all sensing actions can be performed even if the world-altering effects of actions that precede them in the plan have not been materialized (but only simulated). Similarly, in [76], [4], information gathering and execution is treated as a task disconnected from planning, and execution is ceased until all sensing actions return. Analogous assumptions are made in [97], [98], where the subset of the plan consisting exclusively of sensing actions is extracted and executed first.
+      </paragraph>
+      <paragraph>
+       Algorithms for searching at the knowledge level have been proposed by the research line focusing on composing services as state transition diagrams, based on the use of Binary Decision Diagrams. One of the shortcomings of the initial algorithm presented in [104] is that it can only deal with Boolean-valued data. Extensions for non-Boolean data are considered in [102], [18], which however suffer from degrading performance as cardinality grows. As shown in [19], belief-level construction grows exponentially with the branching factor of the conditional solution. Given the large number of possible outcomes of sensing actions and unforeseen contingencies, planning for all potential circumstances that may appear during execution is not a recommended strategy for most service domains.
+      </paragraph>
+      <paragraph>
+       A different knowledge-level formulation as instructed by PKS is used in [85]. Although the version of PKS used in [85] cannot deal with high ranges of possible outcomes, it would be interesting to investigate the performance of the extended PKS presented in [99], which allows the generation of conditional plans that cover numeric-valued outcomes by means of interval-valued functions.
+      </paragraph>
+      <paragraph>
+       Since almost all state-of-the-art planners resort to some kind pre-processing for compiling the PDDL domain into a fully grounded encoding, on-the-fly handling of runtime outputs is difficult to implement. The problem of incorporating data production and flow into a plan has been investigated in [45], [47]. Although [47] considers a planning graph approach, its basic idea of adopting a CSP encoding which amounts to a lifted (not grounded) representation is also adopted by the RuGPlanner. In [56], data production is addressed by considering sets of additional potential constants to instantiate outputs, and by applying an adapted version of conformant FF [22]. Input-output matchings are dealt with based on axiomatizations [57], [55] describing the ramifications entailed by sensing, i.e., implications entailed by the outputs/newly created constants of services/operators. However, the approach is limited to propositional effects, and the problem of search space explosion when considering many output constants remains.
+      </paragraph>
+      <paragraph>
+       Independently of the problem of WSC, there have been large advances in the performance of contingent planners which operate under uncertainty. For example, subtle logical formulas have also been applied for the compact representation, pruning and search in AND/OR graphs at the belief state space [112]. Instead of an explicit encoding of all possible states, some approaches advocate an implicit representation of beliefs by keeping a history of actions and observations made, and inferring from them whether or not a proposition holds, e.g., [58], [105]. Interestingly, an approach for translating both contingent and conformant problems (i.e., the case where no sensing is available) into a classical planning problem over the state space rather than the belief state has been proposed [96], [2], [3]. However, these contingent planners are not tested in domains where the outcome of sensing actions ranges over large domains and may be passed as input to subsequent actions, while erroneous situations and interference by external actions are not considered. An action language that provides for sensing actions with probabilistically and qualitatively non-deterministic effects is proposed in [63], and belief graphs are used to compute conditional plans. However, to the best of our knowledge, all these versions of contingent planning only consider observational effects that are propositional. If the application domain is characterized by an intractably large set of contingencies, a plan monitoring and repair approach is probably more appropriate.
+      </paragraph>
+     </section>
+     <section label="7.3">
+      <section-title>
+       Replanning and interactions with the environment
+      </section-title>
+      <paragraph>
+       In dynamic and uncertain domains, acting, sensing and planning have to be intertwined, imposing that the plan is continuously adapted to the knowledge acquired during execution. CIRCA [93] is one of the earlies implementations of reactive planning systems, based on a nondeterministic finite automaton derived from a world model representation of safety conditions and possible state transitions. State changes entailed by events are prespecified as part of the world model. To deal with the state explosion problem, a method of abstracting variables and states is used [92], without, however, providing any evaluation or considering domains with numeric aspects. SimPlan [64] models the set of possible execution sequences as a stochastic automaton, with exogenous events being represented as non-deterministic transitions associated with a probability. The method makes use of extra guidelines, expressed in temporal logic formulas, for avoiding unnecessary state expansions. Although no evaluation is provided, the model is expected to suffer from state explosion.
+      </paragraph>
+      <paragraph>
+       Some planning approaches to WSC provide simple reaction mechanisms to contingencies, which are usually hand-coded and domain dependent. In [98], a partial order planner is used, and success conditions are included in actions' effects specifications. Replanning is triggered whenever a causal link indicating an interdependency between actions is violated due to an inconvenient outcome at runtime, and those violated links are avoided by the replanning search process. In [73], the XLPLAN planning system is extended with an event listener about new facts, and offers some replanning capabilities, relying however on a closed-world assumption. In [17], exogenous events are treated via reaction goals, which state what should be done when certain actions take place. The computed composition is a conditional, tree-structured plan, including branches regarding recoverable goal states. The approach suffers from performance problems when the branching factor grows. Markov Decision Processes (MDP) constitute an established mathematical model for probabilistic planning problems, and there are many planners which deal with probabilistic models, e.g., [20], [122], [43]. Replanning has been extensively employed by approaches which work on the determinized version of probabilistic domains, like FF-Replan first presented in [59], and further extended, e.g., in [123]. A common principle that is shared between FF-Replan and the RuG planner is that both rely on optimistic assumptions about the future, i.e., they compute a solution by selecting the most convenient outcome. A strategy for identifying actions with unrecoverable outcomes, and adding precautionary actions to the optimistic plan so as to avoid dead-ends is described in [34]. A Monte Carlo technique and an approach of casting the problem to a Partially Observed MDP, for re-evaluating the utility function of the continuous multi-dimensional resource space in face of execution-level contingencies is proposed in [11].
+      </paragraph>
+      <paragraph>
+       There are several approaches that work on probabilistic domains with partial observability and sensing actions. In [105], the replanning approach for the determinized representation is extended for such domains. During plan execution, belief states are updated accordingly, and replanning is triggered if the initial belief state sampling is not consistent with the world. The approach has not been tested in domains with numeric observation effects. A framework that switches from classical planning to planning in small abstractions of the problem when encountering a sensing action with uncertain outcome is proposed in [43]. This approach can deal with noisy sensors, but the set of outcomes is kept small.
+      </paragraph>
+      <paragraph>
+       Many approaches to replanning try to reuse parts of the existing plan to guide the search for the new one. The idea is that under certain circumstances the work of adapting the current plan requires less time than planning from scratch, without sacrificing quality. A refinement heuristic for partial order plans is proposed in [115], which involves removing potentially problematic actions from the current plan, and incrementally adding extra actions to it, until reaching a valid plan. An approach that focuses on preserving plan stability, i.e., replanning with minimum changes to previous plans, is presented in [35]. However, depending on circumstances and the kind of changes in the state of the world, the work required for repairing an old solution may be greater than planning by completely disregarding the previous solution [95]. A balanced approach between replanning from scratch and plan repair is proposed in [21], where the plan is used as a bias to the heuristic search for the new problem. In this case, search expands by probabilistically choosing between heuristic search for the new goal and reuse of actions and goals of the past plan. The approach is used to speed up the planning time for classical deterministic domains. All above approaches are propositional.
+      </paragraph>
+      <paragraph>
+       Previous frameworks that tightly integrate planning, monitoring, execution and information gathering include [48], [44], [46], [74], which are concerned with building planning agents for dynamic and uncertain environments. The RuGPlanner shares many principles with this work, regarding tractable closed world reasoning with updates, knowledge preconditions, and observation effects that assign values to runtime variables. In [86], a framework which combines a temporal planner, ixTex [41], with an execution controller and plan repair and replanning mechanisms is presented. The idea of balancing between plan repair and replanning is in principle similar to ours. The ixTex planner uses CSP techniques to deal with timepoints, numeric variables and execution-level constraint violations, although starting from a different action and change model than ours. The use of a Partial-Order Causal Link approach limits the efficiency of the framework as the search space grows. In the context of WSC, a generic algorithm which performs continual replanning from scratch after every invocation of a knowledge-providing action is described in [79], [80].
+      </paragraph>
+      <paragraph>
+       More recently, a continual planning framework for multi-agent planning under incomplete knowledge has been presented in [23]. Decisions depending on yet unknown facts are postponed through the use of assertions, special virtual actions that trigger replanning whenever their knowledge preconditions are achieved at execution time. Replanning annotations in that context lead into postponing sensing till just before the actions that need the information to be observed, which can be inefficient in terms of total execution time if a lot of time-consuming sensing is required. Interestingly, assertions can also be used to learn new operators that become available to the planning agent during execution. Similarly to the representation adopted by the RuGPlanner, multi-valued state variables are used to model the domain rather than a propositional encoding.
+      </paragraph>
+     </section>
+     <section label="7.4">
+      <section-title>
+       Planning as CSP
+      </section-title>
+      <paragraph>
+       Constraint-based techniques have been used extensively for scheduling problems that reason about time and resources, e.g., [26], [10], [77]. Applications of constraint satisfaction approaches to planning, like the one we use herein, are less mature [7]. A direct transformation of the planning problem into a CSP has been presented in [42], where constraints describe the preconditions and effects of actions along with frame axioms. Alternatively, in [84] the authors propose a formulation based on successor state constraints similar to the ones captured by the planning graph, yielding improved performance. In [8], enhanced reformulations based on multi-valued state variables and transformations to ad-hoc tabular constraints are applied. Several techniques that aim at reducing search space and improving the efficiency of search strategies have been investigated in [9]. A CSP encoding for producing parallel plans is proposed in [6], through the use of constraints that model the synchronization transitions that are possible between assignments to the same state variable. A compilation of GraphPlan's planning graph into a CSP and the use of constraint satisfaction search techniques to improve Graphplan's backward search has been proposed in [70], [29]. Constraints have also been used in the context of partial order planners [116].
+      </paragraph>
+      <paragraph>
+       Mixed CSPs, which distinguish between controllable decision variables and uncontrollable parameters corresponding to environmental uncertainty and contingent events, have been used for modeling domains with incomplete knowledge and contingent events [32], [50]. In [50] mixed CSP is used for solving a control problem for the aerospace domain. Although the planning problem is rather particular and defined in terms of constraint-based automata and environmental constraints, an interesting online solution is followed. New contingent plans are built from scratch incrementally for increasing planning horizons/points in time, and these plans provide decisions for an increasing subset of possible world states. A CSP encoding for the conformant probabilistic planning problem, with no observability and probabilistic actions, is used in [61], [62]. An approach that integrates constraint-based reasoning into the planning graph for temporal domains with predictable exogenous events that happen at known times is described in [40].
+      </paragraph>
+      <paragraph>
+       To the best of our knowledge, CSP-based planners have been used so far for generating offline plans for grounded propositional domains, and are decoupled from the execution environment. The suitability of constraint solving techniques for domain-independent planning in a setting that combines uncertainty, sensing, and unpredictable external events has not yet been investigated. In such a context, dynamic CSP and solution reuse/repair techniques, which use information collected from previous searches to speed up the search in the altered CSP, may prove helpful. This method, which makes use of no-good recording, is proposed in [115]. Performance improves when solving a CSP that differs by one constraint (added or removed) from a previously solved one. In [118], [117], heuristics that exploit information about certain important features of the CSP that are not affected by the alterations are used, yielding considerably better performance for randomly changed CSPs.
+      </paragraph>
+     </section>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     <section-title>
+      Orchestration algorithm
+     </section-title>
+     <paragraph>
+      The orchestrator is realized as an actor [49], [54], i.e., an object which seamlessly reacts in a concurrent manner to messages it receives asynchronously (Algorithm 1). The message newModel(domain) is related to the construction of a new CSP model which encodes the planning domain domain. The resulting constraints are propagated, and the propagated generic world instance is stored as a starting point for all subsequent solving requests (as long as no service with new functionalities is installed, in which case the model has to be re-constructed). Each time a request for satisfying a new goal is issued (newPlan(goal)), the constraints modeling the goal are added to the constraint network (after removing any constraints modeling previously handled goals), and the CSP is propagated and stored as the goal-specific world instance from which search will start in all refinement and replanning attempts, till the goal is satisfied or no solution can be found.
+     </paragraph>
+     <paragraph>
+      Other messages concern the receipt of a change event, an indication that some service type has become unavailable, and the appearance of a new service type {a mathematical formula}contextChange(var,val), {a mathematical formula}removeAction(a), and {a mathematical formula}addAction(a) respectively. In the latter case, if the description of the respective action a already exists in the planning domain, i.e., the constraints which represent its preconditions and effects are part of the CSP, then it is enough to remove the constraint that had banned it at the solver level. Otherwise, if the new service type offers new functionalities, which have not been encountered before, the addition cannot take place in a dynamic manner: the whole CSP has to be reconstructed, so that the state variables and frame axioms associated with the new action are taken into account.
+     </paragraph>
+     <paragraph>
+      The message monitor({a mathematical formula}plan,si) refers to the core part of the orchestrating process. The algorithm represents the most general case, i.e., it considers asynchronous context changes, accommodates for a particular kind of byzantine behavior, and maintains an evolving set of alternative service instances for the same action. The pieces of code which are within curly brackets ({}) indicate critical sections. Since all concurrent futures work on the same CSP and context, only one such entity at a time is allowed to access the CSP or context, and any other critical requests from other actors are suspended until the lock on the respective object is released.
+     </paragraph>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

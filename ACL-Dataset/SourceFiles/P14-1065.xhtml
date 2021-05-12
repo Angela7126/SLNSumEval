@@ -1,0 +1,1322 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Using Discourse Structure Improves Machine Translation Evaluation</title>
+<!--Generated on Wed Jun 11 19:24:40 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Using Discourse Structure Improves Machine Translation Evaluation</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Francisco Guzmán 
+Shafiq Joty 
+Lluís Màrquez and Preslav Nakov
+<br class="ltx_break"/>ALT Research Group
+<br class="ltx_break"/>Qatar Computing Research Institute — Qatar Foundation
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">fguzman,sjoty,lmarquez,pnakov</span>}<span class="ltx_text ltx_font_typewriter">@qf.org.qa</span>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">We present experiments in using discourse structure for improving
+machine translation evaluation. We first design two
+discourse-aware similarity measures, which use all-subtree
+kernels to compare discourse parse trees in accordance with the
+Rhetorical Structure Theory. Then, we show that these measures
+can help improve a number of existing machine translation
+evaluation metrics both at the segment- and at the system-level.
+Rather than proposing a single new metric, we show that
+discourse information is complementary to the state-of-the-art
+evaluation metrics, and thus should be taken into account in the
+development of future richer evaluation metrics.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">From its foundations, Statistical Machine Translation (SMT) had two defining characteristics:
+first, translation was modeled as a generative process <em class="ltx_emph">at the sentence-level</em>.
+Second, it was purely statistical over words or word sequences
+and made <em class="ltx_emph">little to no use of linguistic information</em>.
+Although modern SMT systems have switched to a discriminative log-linear framework,
+which allows for additional sources as features,
+it is generally hard to incorporate dependencies beyond a small window of adjacent words,
+thus making it difficult to use linguistically-rich models.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Recently, there have been two promising research directions for improving SMT and its evaluation:
+(<span class="ltx_text ltx_font_italic">a</span>)  by using more structured linguistic information,
+such as syntax <cite class="ltx_cite">[]</cite>,
+hierarchical structures <cite class="ltx_cite">[]</cite>, and semantic roles <cite class="ltx_cite">[]</cite>,
+and (<span class="ltx_text ltx_font_italic">b</span>)  by going beyond the sentence-level, e.g., translating at the document level <cite class="ltx_cite">[]</cite>.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">Going beyond the sentence-level is important since
+sentences rarely stand on their own in a well-written text.
+Rather, each sentence follows smoothly from the ones before it, and leads into the ones that come afterwards.
+The logical relationship between sentences carries important information that allows the text to express a meaning as a whole beyond the sum of its separate parts.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">Note that sentences can be made of several clauses,
+which in turn can be interrelated through the same logical relations.
+Thus, in a coherent text, discourse units (sentences or clauses) are logically connected:
+the meaning of a unit relates to that of the previous and the following units.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">Discourse analysis seeks to uncover this coherence structure underneath the text.
+Several formal theories of discourse have been proposed to describe the coherence
+structure <cite class="ltx_cite">[]</cite>.
+For example, the Rhetorical Structure Theory <cite class="ltx_cite">[]</cite>, or RST,
+represents text by labeled hierarchical structures called Discourse Trees (DTs),
+which can incorporate several layers of other linguistic information,
+e.g., syntax, predicate-argument structure, etc.</p>
+</div>
+<div id="S1.p6" class="ltx_para">
+<p class="ltx_p">Modeling discourse brings together the above research directions (a) and (b),
+which makes it an attractive goal for MT.
+This is demonstrated by the establishment of a recent workshop dedicated to Discourse in Machine
+Translation <cite class="ltx_cite">[]</cite>, collocated with the 2013 annual meeting of the Association of
+Computational Linguistics.</p>
+</div>
+<div id="S1.p7" class="ltx_para">
+<p class="ltx_p">The area of discourse analysis for SMT is still nascent and, to the best of our knowledge,
+no previous research has attempted to use rhetorical structure for SMT or machine translation
+evaluation. One possible reason could be the unavailability of accurate discourse parsers.
+However, this situation is likely to change given the most recent advances in automatic
+discourse analysis <cite class="ltx_cite">[]</cite>.</p>
+</div>
+<div id="S1.p8" class="ltx_para">
+<p class="ltx_p">We believe that the semantic and pragmatic information captured in the form of DTs
+(<span class="ltx_text ltx_font_italic">i</span>)  can help develop discourse-aware SMT systems that produce coherent translations,
+and
+(<span class="ltx_text ltx_font_italic">ii</span>)  can yield better MT evaluation metrics.
+While in this work we focus on the latter, we think that the former is also within reach, and that SMT systems would benefit from preserving the coherence relations in the source language when generating target-language translations.</p>
+</div>
+<div id="S1.p9" class="ltx_para">
+<p class="ltx_p">In this paper, rather than proposing yet another MT evaluation metric,
+we show that discourse information is complementary to many existing
+evaluation metrics,
+and thus should not be ignored.
+We first design two discourse-aware similarity measures,
+which use DTs generated by a publicly-available discourse parser <cite class="ltx_cite">[]</cite>;
+then, we show that they can help improve a number of MT evaluation metrics at the segment- and at the system-level
+in the context of the WMT11 and the WMT12 metrics shared tasks
+<cite class="ltx_cite">[]</cite>.</p>
+</div>
+<div id="S1.p10" class="ltx_para">
+<p class="ltx_p">These metrics tasks are based on sentence-level evaluation,
+which arguably can limit the benefits of using global discourse properties.
+Fortunately, several sentences are long and complex enough to present
+rich discourse structures connecting their basic clauses.
+Thus, although limited, this setting is able to demonstrate the potential of
+discourse-level information for MT evaluation.
+Furthermore, sentence-level scoring
+(<span class="ltx_text ltx_font_italic">i</span>)  is compatible with most translation systems, which work on a
+sentence-by-sentence basis,
+(<span class="ltx_text ltx_font_italic">ii</span>)  could be beneficial to modern MT tuning mechanisms
+such as PRO <cite class="ltx_cite">[]</cite> and MIRA <cite class="ltx_cite">[]</cite>,
+which also work at the sentence-level, and
+(<span class="ltx_text ltx_font_italic">iii</span>)  could be used for re-ranking <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p10.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-best lists of translation hypotheses.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related Work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">Addressing discourse-level phenomena in machine translation is relatively new as a research direction.
+Some recent work has looked at anaphora resolution <cite class="ltx_cite">[<a href="#bib.bib13" title="Modelling pronominal anaphora in statistical machine translation" class="ltx_ref">5</a>]</cite>
+and discourse connectives <cite class="ltx_cite">[<a href="#bib.bib8" title="How comparable are parallel corpora? measuring the distribution of general vocabulary and connectives" class="ltx_ref">1</a>]</cite>,
+to mention two examples.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>We refer the reader to <cite class="ltx_cite">[<a href="#bib.bib12" title="Discourse in statistical machine translation. a survey and a case study" class="ltx_ref">6</a>]</cite>
+for an in-depth overview of discourse-related research for MT.</span></span></span>
+However, so far the attempts to incorporate discourse-related knowledge in MT
+have been only moderately successful, at best.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">A common argument, is that current automatic evaluation metrics such as BLEU are inadequate to capture discourse-related aspects of translation quality <cite class="ltx_cite">[<a href="#bib.bib13" title="Modelling pronominal anaphora in statistical machine translation" class="ltx_ref">5</a>]</cite>.
+Thus, there is consensus that discourse-informed MT evaluation metrics are needed
+in order to advance research in this direction.
+Here we suggest some simple ways to create such metrics, and
+we also show that they yield better correlation with human judgments.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">The field of automatic evaluation metrics for MT is very active, and new metrics are
+continuously being proposed, especially in the context of the evaluation campaigns
+that run as part of the
+Workshops on Statistical Machine Translation (WMT 2008-2012),
+and NIST Metrics for Machine Translation Challenge (MetricsMATR), among others.
+For example, at WMT12, 12 metrics were compared <cite class="ltx_cite">[]</cite>, most of them new.</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p">There have been several attempts to incorporate
+syntactic and semantic linguistic knowledge into MT evaluation.
+For instance, at the syntactic level, we find metrics that measure the structural similarity between
+shallow syntactic sequences <cite class="ltx_cite">[<a href="#bib.bib14" title="Linguistic features for automatic evaluation of heterogenous MT systems" class="ltx_ref">3</a>]</cite> or between constituency trees <cite class="ltx_cite">[<a href="#bib.bib5" title="Syntactic features for evaluation of machine translation" class="ltx_ref">7</a>]</cite>.
+In the semantic case, there are metrics that exploit the similarity over named entities
+and predicate-argument structures <cite class="ltx_cite">[<a href="#bib.bib14" title="Linguistic features for automatic evaluation of heterogenous MT systems" class="ltx_ref">3</a>]</cite>.</p>
+</div>
+<div id="S2.p5" class="ltx_para">
+<p class="ltx_p">In this work, instead of proposing a new metric, we
+focus on enriching current
+MT evaluation metrics with discourse information. Our
+experiments show
+that
+many existing metrics can benefit from additional knowledge about discourse structure.</p>
+</div>
+<div id="S2.p6" class="ltx_para">
+<p class="ltx_p">In comparison to the syntactic and semantic extensions of MT metrics,
+there have been very few attempts to incorporate discourse information so far.
+One example are the semantics-aware metrics of <cite class="ltx_cite">Giménez and Màrquez (<a href="#bib.bib15" title="On the robustness of syntactic and semantic features for automatic MT evaluation" class="ltx_ref">2009</a>)</cite> and <cite class="ltx_cite">Comelles<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib2" title="Document-level automatic mt evaluation based on discourse representations" class="ltx_ref">2010</a>)</cite>,
+which use the Discourse Representation Theory <cite class="ltx_cite">[]</cite>
+and tree-based discourse representation structures (DRS) produced by a semantic parser.
+They calculate the similarity between the MT output and references
+based on DRS subtree matching, as defined in <cite class="ltx_cite">[<a href="#bib.bib5" title="Syntactic features for evaluation of machine translation" class="ltx_ref">7</a>]</cite>,
+DRS lexical overlap,
+and DRS morpho-syntactic overlap.
+However, they could not improve correlation with human judgments,
+as evaluated on the MetricsMATR dataset.</p>
+</div>
+<div id="S2.p7" class="ltx_para">
+<p class="ltx_p">Compared to the previous work,
+(<span class="ltx_text ltx_font_italic">i</span>)  we use a different discourse representation (RST),
+(<span class="ltx_text ltx_font_italic">ii</span>)  we compare discourse parses using <em class="ltx_emph">all-subtree</em> kernels <cite class="ltx_cite">[]</cite>,
+(<span class="ltx_text ltx_font_italic">iii</span>)  we evaluate on much larger datasets, for several language pairs and for multiple metrics,
+and
+(<span class="ltx_text ltx_font_italic">iv</span>)  we do demonstrate better correlation with human judgments.</p>
+</div>
+<div id="S2.p8" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Wong and Kit (<a href="#bib.bib6" title="Extending machine translation evaluation metrics with lexical cohesion to document level" class="ltx_ref">2012</a>)</cite> recently proposed an extension of MT metrics
+with a measure of document-level <em class="ltx_emph">lexical cohesion</em> <cite class="ltx_cite">[]</cite>.
+Lexical cohesion is achieved using word repetitions
+and semantically similar words such as synonyms, hypernyms, and hyponyms.
+For BLEU and TER, they observed improved correlation with human judgments on the MTC4 dataset when linearly interpolating these metrics with their <em class="ltx_emph">lexical cohesion</em> score.
+Unlike their work, which measures lexical cohesion at the document-level,
+here we are concerned with <em class="ltx_emph">coherence (rhetorical) structure</em>,
+primarily at the sentence-level.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Our Discourse-Based Measures</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">Our working hypothesis is that the similarity between the discourse structures of an automatic and of a reference translation provides additional information that can be valuable for evaluating MT systems.
+In particular, we believe that good translations should tend to preserve discourse relations.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">As an example, consider the three discourse trees (DTs) shown in Figure <a href="#S3.F4" title="Figure 4 ‣ 3 Our Discourse-Based Measures ‣ Using Discourse Structure Improves Machine Translation Evaluation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>: (<em class="ltx_emph">a</em>) for a reference (human) translation, and (<em class="ltx_emph">b</em>) and (<em class="ltx_emph">c</em>) for translations of two different systems
+on the WMT12 test dataset.
+The leaves of a DT correspond to contiguous atomic text spans, called <em class="ltx_emph">Elementary Discourse Units</em> or EDUs (three in Figure <a href="#S3.F4" title="Figure 4 ‣ 3 Our Discourse-Based Measures ‣ Using Discourse Structure Improves Machine Translation Evaluation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>). Adjacent spans are connected by certain coherence relations (e.g., <em class="ltx_emph">Elaboration</em>, <em class="ltx_emph">Attribution</em>), forming larger discourse units, which in turn are also subject to this relation linking. Discourse units linked by a relation are further distinguished based on their relative importance in the text: <em class="ltx_emph">nuclei</em> are the core parts of the relation while <em class="ltx_emph">satellites</em> are supportive ones. Note that the nuclearity and relation labels in the reference translation are also realized in the system translation in (b), but not in (c), which makes (b) a better translation compared to (c), according to our hypothesis. We argue that existing metrics that only use lexical and syntactic information
+cannot distinguish well between (b) and (c).</p>
+</div>
+<div id="S3.F4" class="ltx_figure"><span class="ltx_ERROR undefined">{subfigure}</span>
+<p class="ltx_p">.8
+  
+<img src="P14-1065/image001.png" id="S3.F4.g1" class="ltx_graphics" width="412" height="100" alt=""/></p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 1: </span><span class="ltx_text ltx_font_bold">A reference (human) translation.</span></div><span class="ltx_ERROR undefined">{subfigure}</span>
+<p class="ltx_p">.5
+
+<img src="P14-1065/image002.png" id="S3.F4.g2" class="ltx_graphics" width="446" height="632" alt=""/></p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 2: </span><span class="ltx_text ltx_font_bold">A higher quality system translation.</span></div><span class="ltx_ERROR undefined">{subfigure}</span>
+<p class="ltx_p">.6
+
+<img src="P14-1065/image003.png" id="S3.F4.g3" class="ltx_graphics" width="272" height="57" alt=""/></p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 3: </span><span class="ltx_text ltx_font_bold">A lower quality system translation.</span></div>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 4: </span>Example of three different discourse trees for the translations of a source sentence. (a) The reference, (b) A higher quality translation, (c) A lower quality translation.</div>
+</div>
+<div id="S3.p3" class="ltx_para">
+<p class="ltx_p">In order to develop a discourse-aware evaluation metric,
+we first generate discourse trees for the reference and the system-translated sentences
+using a discourse parser, and then we measure the similarity between the two discourse trees.
+We describe these two steps below.</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Generating Discourse Trees</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">In Rhetorical Structure Theory, discourse analysis involves two subtasks: (<span class="ltx_text ltx_font_italic">i</span>) <span class="ltx_text ltx_font_italic">discourse segmentation</span>, or breaking the text into a sequence of EDUs, and (<span class="ltx_text ltx_font_italic">ii</span>) <span class="ltx_text ltx_font_italic">discourse parsing</span>, or the task of linking the units (EDUs and larger discourse units) into labeled discourse trees. Recently, <cite class="ltx_cite"/> proposed discriminative models for both discourse segmentation and discourse parsing at the sentence level. The segmenter uses a maximum entropy model that achieves state-of-the-art accuracy on this task, having an <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m1" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math>-score of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m2" class="ltx_Math" alttext="90.5\%" display="inline"><mrow><mn>90.5</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math>, while human agreement is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m3" class="ltx_Math" alttext="98.3\%" display="inline"><mrow><mn>98.3</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math>.</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">The discourse parser uses a dynamic Conditional Random Field <cite class="ltx_cite">[]</cite> as a parsing model in order to infer the probability of all possible discourse tree constituents. The inferred (posterior) probabilities are then used in a probabilistic CKY-like bottom-up parsing algorithm to find the most likely DT. Using the standard set of 18 coarse-grained relations defined in <cite class="ltx_cite">[]</cite>, the parser achieved an <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m1" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math>-score of 79.8%, which is very close to the human agreement of 83%. These high scores allowed us to develop successful discourse similarity metrics.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>The discourse parser is freely available from http://alt.qcri.org/tools/</span></span></span></p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Measuring Similarity</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">A number of metrics have been proposed to measure the similarity between two labeled trees, e.g., Tree Edit Distance <cite class="ltx_cite">[]</cite> and Tree Kernels <cite class="ltx_cite">[]</cite>. Tree kernels (TKs) provide an effective way to integrate arbitrary tree structures in kernel-based machine learning algorithms like SVMs.</p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p">In the present work, we use the convolution TK defined in <cite class="ltx_cite">[]</cite>, which efficiently calculates the number of common subtrees in two trees. Note that this kernel was originally designed for syntactic parsing, where the subtrees are subject to the constraint that their nodes are taken with either all or none of the children. This constraint of the TK imposes some limitations on the type of substructures that can be compared.</p>
+</div>
+<div id="S3.SS2.p3" class="ltx_para">
+<p class="ltx_p">One way to cope with the limitations of the TK is to change the representation of the trees to a form that is suitable to capture the relevant information for our task. We experiment with TKs applied to two different representations of the discourse tree: non-lexicalized (DR), and lexicalized (DR-<span class="ltx_text ltx_font_smallcaps">lex</span>). In Figure <a href="#S3.F7" title="Figure 7 ‣ 3.2 Measuring Similarity ‣ 3 Our Discourse-Based Measures ‣ Using Discourse Structure Improves Machine Translation Evaluation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a> we show the two representations for the subtree that spans the text: <em class="ltx_emph">“suggest the ECB should be the lender of last resort”</em>, which is highlighted in Figure <a href="#S3.F4" title="Figure 4 ‣ 3 Our Discourse-Based Measures ‣ Using Discourse Structure Improves Machine Translation Evaluation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.</p>
+</div>
+<div id="S3.SS2.p4" class="ltx_para">
+<p class="ltx_p">As shown in Figure <a href="#S3.F7" title="Figure 7 ‣ 3.2 Measuring Similarity ‣ 3 Our Discourse-Based Measures ‣ Using Discourse Structure Improves Machine Translation Evaluation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>, DR does not include any lexical item, and therefore measures the similarity between two translations in terms of their discourse structures only.
+On the contrary, DR-<span class="ltx_text ltx_font_smallcaps">lex</span> includes the lexical items to account for lexical matching;
+moreover, it separates the structure (the skeleton) of the tree from its labels, i.e. the nuclearity and the relations, in order to allow the tree kernel to give partial credit to subtrees that differ in labels but match in their skeletons.
+More specifically, it uses the tags SPAN and EDU to build the skeleton of the tree, and considers the nuclearity and/or the relation labels as properties, added as children, of these tags.</p>
+</div>
+<div id="S3.SS2.p5" class="ltx_para">
+<p class="ltx_p">For example, a SPAN has two properties (its nuclearity and its relation), and an EDU has one property (its nuclearity). The words of an EDU are placed under the predefined children NGRAM. In order to allow the tree kernel to find subtree matches at the word level, we include an additional layer of <em class="ltx_emph">dummy</em> leaves as was done in <cite class="ltx_cite">[]</cite>;
+not shown in Figure <a href="#S3.F7" title="Figure 7 ‣ 3.2 Measuring Similarity ‣ 3 Our Discourse-Based Measures ‣ Using Discourse Structure Improves Machine Translation Evaluation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>, for simplicity.</p>
+</div>
+<div id="S3.F7" class="ltx_figure"><span class="ltx_ERROR undefined">{subfigure}</span>
+<p class="ltx_p">[t]0.25
+<img src="P14-1065/image004.png" id="S3.F7.g1" class="ltx_graphics" width="135" height="54" alt=""/></p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 5: </span>DT for DR</div><span class="ltx_ERROR undefined">{subfigure}</span>
+<p class="ltx_p">[t].5
+<img src="P14-1065/image005.png" id="S3.F7.g2" class="ltx_graphics" width="432" height="115" alt=""/></p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 6: </span>DT for DR-<span class="ltx_text ltx_font_smallcaps">lex</span></div>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 7: </span>Two different DT representations for the highlighted subtree shown in Figure <a href="#S3.F4" title="Figure 4 ‣ 3 Our Discourse-Based Measures ‣ Using Discourse Structure Improves Machine Translation Evaluation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.</div>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Experimental Setup</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">In our experiments, we used the data available for the WMT12
+and the WMT11 metrics shared tasks for translations into English.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>http://www.statmt.org/wmt{11,12}/results.html</span></span></span> This included the output from the systems that participated in the WMT12 and the WMT11 MT evaluation campaigns, both consisting of 3,003 sentences, for four different language pairs: Czech-English (<span class="ltx_text ltx_font_smallcaps">cs-en</span>), French-English (<span class="ltx_text ltx_font_smallcaps">fr-en</span>), German-English (<span class="ltx_text ltx_font_smallcaps">de-en</span>), and Spanish-English (<span class="ltx_text ltx_font_smallcaps">es-en</span>); as well as a dataset with the English references.</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">We measured the correlation of the metrics with the human judgments provided by the organizers.
+The judgments represent rankings of the output of five systems chosen at random, for a particular
+sentence, also chosen at random. Note that each judgment effectively constitutes 10 pairwise
+system rankings. The overall coverage, i.e. the number of unique sentences that were evaluated,
+was only a fraction of the total; the total number of judgments, along with other information of the datasets are shown in Table <a href="#S4.T1" title="Table 1 ‣ 4 Experimental Setup ‣ Using Discourse Structure Improves Machine Translation Evaluation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.</p>
+</div>
+<div id="S4.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td"><span class="ltx_text ltx_font_small"></span></td>
+<th class="ltx_td ltx_align_center" colspan="4"><span class="ltx_text ltx_font_bold ltx_font_small">WMT12</span></th>
+<th class="ltx_td"/>
+<th class="ltx_td ltx_align_center" colspan="4"><span class="ltx_text ltx_font_bold ltx_font_small">WMT11</span></th></tr>
+<tr class="ltx_tr">
+<td class="ltx_td"><span class="ltx_text ltx_font_small"></span></td>
+<th class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">systs</span></th>
+<th class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">ranks</span></th>
+<th class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">sents</span></th>
+<th class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">judges</span></th>
+<th class="ltx_td"/>
+<th class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">systs</span></th>
+<th class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">ranks</span></th>
+<th class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">sents</span></th>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">judges</span></th></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right ltx_border_tt ltx_border_tt"><span class="ltx_text ltx_font_small">i2-5i7-10
+</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">cs-en</span><span class="ltx_text ltx_font_bold ltx_font_small"></span></td>
+<td class="ltx_td ltx_align_right ltx_border_tt ltx_border_tt"><span class="ltx_text ltx_font_small">6</span></td>
+<td class="ltx_td ltx_align_right ltx_border_tt ltx_border_tt"><span class="ltx_text ltx_font_small">1,294</span></td>
+<td class="ltx_td ltx_align_right ltx_border_tt ltx_border_tt"><span class="ltx_text ltx_font_small">951</span></td>
+<td class="ltx_td ltx_align_right ltx_border_tt ltx_border_tt"><span class="ltx_text ltx_font_small">45</span></td>
+<td class="ltx_td ltx_border_tt ltx_border_tt"/>
+<td class="ltx_td ltx_align_right ltx_border_tt ltx_border_tt"><span class="ltx_text ltx_font_small">8</span></td>
+<td class="ltx_td ltx_align_right ltx_border_tt ltx_border_tt"><span class="ltx_text ltx_font_small">498</span></td>
+<td class="ltx_td ltx_align_right ltx_border_tt ltx_border_tt"><span class="ltx_text ltx_font_small">171</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt ltx_border_tt"><span class="ltx_text ltx_font_small">20</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_smallcaps ltx_font_small">de-en</span><span class="ltx_text ltx_font_bold ltx_font_small"></span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">16</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">1,427</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">975</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">47</span></td>
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">20</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">924</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">303</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">31</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_smallcaps ltx_font_small">es-en</span><span class="ltx_text ltx_font_bold ltx_font_small"></span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">12</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">1,141</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">923</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">45</span></td>
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">15</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">570</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">207</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">18</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right ltx_border_bb"><span class="ltx_text ltx_font_smallcaps ltx_font_small">fr-en</span><span class="ltx_text ltx_font_bold ltx_font_small"></span></td>
+<td class="ltx_td ltx_align_right ltx_border_bb"><span class="ltx_text ltx_font_small">15</span></td>
+<td class="ltx_td ltx_align_right ltx_border_bb"><span class="ltx_text ltx_font_small">1,395</span></td>
+<td class="ltx_td ltx_align_right ltx_border_bb"><span class="ltx_text ltx_font_small">949</span></td>
+<td class="ltx_td ltx_align_right ltx_border_bb"><span class="ltx_text ltx_font_small">44</span></td>
+<td class="ltx_td ltx_border_bb"/>
+<td class="ltx_td ltx_align_right ltx_border_bb"><span class="ltx_text ltx_font_small">18</span></td>
+<td class="ltx_td ltx_align_right ltx_border_bb"><span class="ltx_text ltx_font_small">708</span></td>
+<td class="ltx_td ltx_align_right ltx_border_bb"><span class="ltx_text ltx_font_small">249</span></td>
+<td class="ltx_td ltx_align_center ltx_border_bb"><span class="ltx_text ltx_font_small">32</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 1: </span> Number of systems (systs), judgments (ranks), unique sentences (sents),
+and different judges (judges) for the different language pairs, for the human evaluation of the WMT12
+and WMT11 shared tasks.</div>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>MT Evaluation Metrics</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">In this study, we evaluate to what extent existing evaluation metrics can benefit from additional
+discourse information. To do so, we contrast different MT evaluation metrics with and without discourse
+information. The evaluation metrics we used are described below.</p>
+</div>
+<div id="S4.SS1.SSS0.P1" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Metrics from WMT12.</h5>
+
+<div id="S4.SS1.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">We used the publicly available scores for all metrics that participated in the WMT12 metrics task <cite class="ltx_cite">[]</cite>:
+<span class="ltx_text ltx_font_smallcaps">spede07pP</span>, AMBER, <span class="ltx_text ltx_font_smallcaps">Meteor</span>, <span class="ltx_text ltx_font_smallcaps">TerrorCat</span>, SIMPBLEU, <span class="ltx_text ltx_font_smallcaps">XEnErrCats</span>, <span class="ltx_text ltx_font_smallcaps">WordBlockEC</span>, <span class="ltx_text ltx_font_smallcaps">BlockErrCats</span>, and <span class="ltx_text ltx_font_smallcaps">posF</span>.</p>
+</div>
+</div>
+<div id="S4.SS1.SSS0.P2" class="ltx_paragraph">
+<h5 class="ltx_title ltx_title_paragraph">Metrics from <span class="ltx_text ltx_font_smallcaps">Asiya</span>.</h5>
+
+<div id="S4.SS1.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">We used the freely available version of the <span class="ltx_text ltx_font_smallcaps">Asiya</span> toolkit<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>http://nlp.lsi.upc.edu/asiya/</span></span></span>
+in order to extend the set of evaluation measures
+contrasted in this study beyond those from the WMT12 metrics task.
+<span class="ltx_text ltx_font_smallcaps">Asiya</span> <cite class="ltx_cite">[]</cite> is a suite for MT evaluation
+that provides a large set of metrics that use different levels of linguistic
+information.
+For reproducibility, below we explain the individual metrics with the exact names required by the toolkit to calculate them.</p>
+</div>
+<div id="S4.SS1.SSS0.P2.p2" class="ltx_para">
+<p class="ltx_p">First, we used <span class="ltx_text ltx_font_smallcaps">Asiya</span>’s ULC <cite class="ltx_cite">[]</cite>, which was the
+best performing metric at the system and the segment levels at the WMT08 and WMT09
+metrics tasks. This is a uniform linear combination of 12 individual metrics.
+From the original ULC, we only replaced TER and Meteor individual metrics by newer versions taking into account
+synonymy lookup and paraphrasing: TERp-A and <span class="ltx_text ltx_font_smallcaps">Meteor</span>-pa in <span class="ltx_text ltx_font_smallcaps">Asiya</span>’s terminology.
+We will call this combined metric Asiya-<span class="ltx_text ltx_font_smallcaps">0809</span> in our experiments.</p>
+</div>
+<div id="S4.SS1.SSS0.P2.p3" class="ltx_para">
+<p class="ltx_p">To complement the set of individual metrics that participated at the WMT12 metrics task,
+we also computed the scores of other commonly-used evaluation metrics: BLEU <cite class="ltx_cite">[]</cite>, NIST <cite class="ltx_cite">[]</cite>,
+TER <cite class="ltx_cite">[]</cite>, <span class="ltx_text ltx_font_smallcaps">Rouge</span>-W <cite class="ltx_cite">[]</cite>, and three <span class="ltx_text ltx_font_smallcaps">Meteor</span> variants <cite class="ltx_cite">[]</cite>:
+<span class="ltx_text ltx_font_smallcaps">Meteor</span>-ex (exact match), <span class="ltx_text ltx_font_smallcaps">Meteor</span>-st (+stemming) and <span class="ltx_text ltx_font_smallcaps">Meteor</span>-sy (+synonyms).
+The uniform linear combination of the previous 7 individual metrics plus the 12 from Asiya-<span class="ltx_text ltx_font_smallcaps">0809</span> is reported as Asiya-<span class="ltx_text ltx_font_smallcaps">all</span> in the experimental section.</p>
+</div>
+<div id="S4.SS1.SSS0.P2.p4" class="ltx_para">
+<p class="ltx_p">The individual metrics combined in Asiya-<span class="ltx_text ltx_font_smallcaps">all</span> can be naturally categorized according to the
+type of linguistic information they use to compute the quality scores. We grouped
+them in the following four families and calculated the uniform linear
+combination of the metrics in each group:<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup>A detailed description of every individual
+metric can be found at <cite class="ltx_cite">[]</cite>. For a more up-to-date description,
+see the User Manual from <span class="ltx_text ltx_font_smallcaps">Asiya</span>’s website.</span></span></span></p>
+<ol id="I1" class="ltx_enumerate">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">1.</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p">Asiya-<span class="ltx_text ltx_font_smallcaps">lex</span>. Combination of five metrics based on lexical similarity:
+BLEU, NIST, <span class="ltx_text ltx_font_smallcaps">Meteor</span>-ex, <span class="ltx_text ltx_font_smallcaps">Rouge</span>-W, and TERp-A.</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">2.</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p">Asiya-<span class="ltx_text ltx_font_smallcaps">syn</span>. Combination of four metrics ba-sed on syntactic information
+from constituency and dependency parse trees:
+‘CP-STM-4’, ‘DP-HWCM_c-4’, ‘DP-HWCM_r-4’, and ‘DP-Or(*)’.</p>
+</div></li>
+<li id="I1.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">3.</span> 
+<div id="I1.i3.p1" class="ltx_para">
+<p class="ltx_p">Asiya-<span class="ltx_text ltx_font_smallcaps">srl</span>. Combination of three metric variants based on predicate argument structures
+(semantic role labeling): ‘SR-Mr(*)’, ‘SR-Or(*)’, and ‘SR-Or’.</p>
+</div></li>
+<li id="I1.i4" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">4.</span> 
+<div id="I1.i4.p1" class="ltx_para">
+<p class="ltx_p">Asiya-<span class="ltx_text ltx_font_smallcaps">sem</span>. Combination of two metrics variants based on semantic parsing:<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">6</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">6</sup>In <span class="ltx_text ltx_font_smallcaps">Asiya</span> the metrics from this family are referred to as “Discourse Representation” metrics. However, the
+structures they consider are actually very different from the discourse structures exploited
+in this paper. See the discussion in Section <a href="#S2" title="2 Related Work ‣ Using Discourse Structure Improves Machine Translation Evaluation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+For clarity, we will refer to them as <em class="ltx_emph">semantic parsing</em> metrics.</span></span></span>
+‘DR-Or(*)’ and ‘DR-Orp(*)’.</p>
+</div></li>
+</ol>
+</div>
+<div id="S4.SS1.SSS0.P2.p5" class="ltx_para">
+<p class="ltx_p">All uniform linear combinations are calculated outside <span class="ltx_text ltx_font_smallcaps">Asiya</span>. In order to make the scores of the different metrics comparable,
+we performed a <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P2.p5.m1" class="ltx_Math" alttext="\min" display="inline"><mo>min</mo></math>–<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.SSS0.P2.p5.m2" class="ltx_Math" alttext="\max" display="inline"><mo>max</mo></math> normalization, for each metric, and for each language pair combination.</p>
+</div>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Human Judgements and Learning</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">The human-annotated data from the WMT campaigns encompasses series of rankings on the output of different MT systems for every source sentence. Annotators rank the output of five systems according to perceived translation quality.
+The organizers relied on a random selection of systems, and a large number of comparisons between pairs of them, to make comparisons across systems feasible <cite class="ltx_cite">[]</cite>. As a result, for each source sentence, only relative rankings were available.
+As in the WMT12 experimental setup, we use these rankings to calculate correlation with human judgments
+at the sentence-level, i.e. Kendall’s Tau; see <cite class="ltx_cite">[]</cite> for details.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">For the experiments reported in Section <a href="#S5" title="5 Experimental Results ‣ Using Discourse Structure Improves Machine Translation Evaluation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.4, we used pairwise rankings
+to discriminatively learn the weights of the linear combinations of individual metrics.
+In order to use the WMT12 data for training a learning-to-rank model, we transformed the five-way relative rankings into ten pairwise comparisons. For instance, if a judge ranked the output of systems <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m1" class="ltx_Math" alttext="A" display="inline"><mi>A</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m2" class="ltx_Math" alttext="B" display="inline"><mi>B</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m3" class="ltx_Math" alttext="C" display="inline"><mi>C</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m4" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m5" class="ltx_Math" alttext="E" display="inline"><mi>E</mi></math> as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m6" class="ltx_Math" alttext="{A&gt;B&gt;C&gt;D&gt;E}" display="inline"><mrow><mi>A</mi><mo>&gt;</mo><mi>B</mi><mo>&gt;</mo><mi>C</mi><mo>&gt;</mo><mi>D</mi><mo>&gt;</mo><mi>E</mi></mrow></math>, this would entail that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m7" class="ltx_Math" alttext="{A&gt;B}" display="inline"><mrow><mi>A</mi><mo>&gt;</mo><mi>B</mi></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m8" class="ltx_Math" alttext="{A&gt;C}" display="inline"><mrow><mi>A</mi><mo>&gt;</mo><mi>C</mi></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m9" class="ltx_Math" alttext="{A&gt;D}" display="inline"><mrow><mi>A</mi><mo>&gt;</mo><mi>D</mi></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m10" class="ltx_Math" alttext="{A&gt;E}" display="inline"><mrow><mi>A</mi><mo>&gt;</mo><mi>E</mi></mrow></math>, etc.</p>
+</div>
+<div id="S4.SS2.p3" class="ltx_para">
+<p class="ltx_p">To determine the relative weights for the tuned combinations, we followed a similar approach to the one used by PRO to tune the relative weights
+of the components of a log-linear SMT model <cite class="ltx_cite">[]</cite>, also using Maximum Entropy as the
+base learning algorithm. Unlike PRO,
+(<span class="ltx_text ltx_font_italic">i</span>)  we use <em class="ltx_emph">human judgments</em>, not automatic scores, and
+(<span class="ltx_text ltx_font_italic">ii</span>)  we train on <em class="ltx_emph">all pairs</em>, not on a subsample.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Experimental Results</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">In this section, we explore how discourse information can be used to improve machine translation evaluation metrics. Below we present the evaluation results at the system- and segment-level,
+using our two basic metrics on discourse trees (Section <a href="#S3.SS1" title="3.1 Generating Discourse Trees ‣ 3 Our Discourse-Based Measures ‣ Using Discourse Structure Improves Machine Translation Evaluation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>), which are
+referred to as DR and DR-<span class="ltx_text ltx_font_smallcaps">lex</span>.</p>
+</div>
+<div id="S5.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.1 </span>Evaluation</h3>
+
+<div id="S5.SS1.p1" class="ltx_para">
+<p class="ltx_p">In our experiments, we only consider translation into English, and use the data described in Table <a href="#S4.T1" title="Table 1 ‣ 4 Experimental Setup ‣ Using Discourse Structure Improves Machine Translation Evaluation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>. For evaluation, we follow the setup of the metrics task of WMT12 <cite class="ltx_cite">[]</cite>: at the system-level, we use the official script from WMT12 to calculate the Spearman’s correlation, where higher <em class="ltx_emph">absolute</em> values indicate better metrics performance;
+at the segment-level, we use Kendall’s Tau for measuring correlation, where
+negative values are worse than positive ones.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">7</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">7</sup>We have fixed a bug in the scoring tool from WMT12,
+which was making all scores positive.
+This made <span class="ltx_text ltx_font_smallcaps">TerrorCat</span>’s score negative, as we present it in Table <a href="#S5.T3" title="Table 3 ‣ 5.1 Evaluation ‣ 5 Experimental Results ‣ Using Discourse Structure Improves Machine Translation Evaluation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.</span></span></span></p>
+</div>
+<div id="S5.SS1.p2" class="ltx_para">
+<p class="ltx_p">In our experiments, we combine DR and DR-<span class="ltx_text ltx_font_smallcaps">lex</span> to other metrics in two different ways: using uniform linear interpolation (at system- and segment-level), and using a tuned linear interpolation for the segment-level. We only present the average results over all four language pairs. For simplicity, in our tables we show results divided into evaluation groups:</p>
+</div>
+<div id="S5.SS1.p3" class="ltx_para">
+<ol id="I2" class="ltx_enumerate">
+<li id="I2.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">1.</span> 
+<div id="I2.i1.p1" class="ltx_para">
+<p class="ltx_p">Group I: contains our evaluation metrics, DR and DR-<span class="ltx_text ltx_font_smallcaps">lex</span>.</p>
+</div></li>
+<li id="I2.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">2.</span> 
+<div id="I2.i2.p1" class="ltx_para">
+<p class="ltx_p">Group II: includes the metrics that participated in the WMT12 metrics task, excluding
+metrics which did not have results for all language pairs.</p>
+</div></li>
+<li id="I2.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">3.</span> 
+<div id="I2.i3.p1" class="ltx_para">
+<p class="ltx_p">Group III: contains other important evaluation metrics,
+which were not considered in the WMT12 metrics task: NIST and <span class="ltx_text ltx_font_smallcaps">Rouge</span> for both system- and segment-level, and BLEU and TER at segment-level.</p>
+</div></li>
+<li id="I2.i4" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">4.</span> 
+<div id="I2.i4.p1" class="ltx_para">
+<p class="ltx_p">Group IV: includes the metric combinations calculated with <span class="ltx_text ltx_font_smallcaps">Asiya</span> and
+described in Section <a href="#S4" title="4 Experimental Setup ‣ Using Discourse Structure Improves Machine Translation Evaluation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.</p>
+</div></li>
+</ol>
+</div>
+<div id="S5.SS1.p4" class="ltx_para">
+<p class="ltx_p">For each metric in groups II, III and IV, we present the results for the original metric
+as well for the linear interpolation of that metric with DR and with DR-<span class="ltx_text ltx_font_smallcaps">lex</span>.
+The combinations with DR and DR-<span class="ltx_text ltx_font_smallcaps">lex</span> that improve over the original metrics are
+shown in <span class="ltx_text ltx_font_bold">bold</span>, and those that degrade are in <em class="ltx_emph">italic</em>.
+Furthermore, we also present overall results for: (<span class="ltx_text ltx_font_italic">i</span>) the average score over all metrics,
+excluding DR and DR-<span class="ltx_text ltx_font_smallcaps">lex</span>, and (<span class="ltx_text ltx_font_italic">ii</span>) the differences in the correlations for the
+DR/DR-<span class="ltx_text ltx_font_smallcaps">lex</span>-combined and the original metrics.</p>
+</div>
+<div id="S5.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td"/>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">Metrics</span></td>
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">+</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">dr</span><span class="ltx_text ltx_font_small"></span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">+</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">dr-<span class="ltx_text ltx_font_script">lex</span></span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_tt" rowspan="2"><span class="ltx_text ltx_font_bold ltx_font_small">I</span></th>
+<td class="ltx_td ltx_align_right ltx_border_tt"><span class="ltx_text ltx_font_small">DR</span></td>
+<td class="ltx_td ltx_align_right ltx_border_tt"><span class="ltx_text ltx_font_small">.807</span></td>
+<td class="ltx_td ltx_align_right ltx_border_tt"><span class="ltx_text ltx_font_small">–</span></td>
+<td class="ltx_td ltx_align_right ltx_border_tt"><span class="ltx_text ltx_font_small">–</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">DR-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">lex</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.876</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">–</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">–</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t" rowspan="11"><span class="ltx_text ltx_font_bold ltx_font_small">II</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">SEMPOS</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">.902</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">.853</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">.903</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">AMBER</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.857</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_italic ltx_font_small">.829</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.869</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Meteor</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.834</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.861</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.888</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_smallcaps ltx_font_small">TerrorCat</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.831</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.854</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.889</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">SIMPBLEU</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.823</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.826</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.859</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">TER</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.812</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.836</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.848</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">BLEU</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.810</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.830</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.846</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_smallcaps ltx_font_small">posF</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.754</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.841</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.857</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_smallcaps ltx_font_small">BlockErrCats</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.751</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.859</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.855</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_smallcaps ltx_font_small">WordBlockEC</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.738</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.822</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.843</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_smallcaps ltx_font_small">XEnErrCats</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.735</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.819</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.843</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t" rowspan="2"><span class="ltx_text ltx_font_bold ltx_font_small">III</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">NIST</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">.817</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">.842</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">.875</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Rouge</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.884</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.899</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_italic ltx_font_small">.869</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t" rowspan="6"><span class="ltx_text ltx_font_bold ltx_font_small">IV</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">Asiya-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">lex</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">.879</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">.881</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">.882</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">Asiya-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">syn</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.891</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.913</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_italic ltx_font_small">.883</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">Asiya-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">srl</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.917</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_italic ltx_font_small">.911</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_italic ltx_font_small">.909</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">Asiya-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">sem</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.891</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_italic ltx_font_small">.889</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_italic ltx_font_small">.886</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">Asiya-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">0809</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.905</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.914</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.905</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">Asiya-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">all</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.899</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.907</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_italic ltx_font_small">.896</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">average</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">.839</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">.862</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">.874</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_bb"/>
+<td class="ltx_td ltx_align_right ltx_border_bb"><span class="ltx_text ltx_font_bold ltx_font_small">diff.</span></td>
+<td class="ltx_td ltx_border_bb"/>
+<td class="ltx_td ltx_align_right ltx_border_bb"><span class="ltx_text ltx_font_bold ltx_font_small">+.024</span></td>
+<td class="ltx_td ltx_align_right ltx_border_bb"><span class="ltx_text ltx_font_bold ltx_font_small">+.035</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 2: </span>Results on WMT12 at the system-level. Spearman’s correlation with human judgments.</div>
+</div>
+<div id="S5.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"/>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">Metrics</span></td>
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">+</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">dr</span><span class="ltx_text ltx_font_small"></span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">+</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">dr-<span class="ltx_text ltx_font_script">lex</span></span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_tt" rowspan="2"><span class="ltx_text ltx_font_bold ltx_font_small">I</span></th>
+<td class="ltx_td ltx_align_right ltx_border_tt"><span class="ltx_text ltx_font_small">DR</span></td>
+<td class="ltx_td ltx_align_right ltx_border_tt"><span class="ltx_text ltx_font_small">-.433</span></td>
+<td class="ltx_td ltx_align_right ltx_border_tt"><span class="ltx_text ltx_font_small">–</span></td>
+<td class="ltx_td ltx_align_right ltx_border_tt"><span class="ltx_text ltx_font_small">–</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">DR-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">lex</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.133</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">–</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">–</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t" rowspan="9"><span class="ltx_text ltx_font_bold ltx_font_small">II</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">spede07pP</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">.254</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">.190</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">.223</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Meteor</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.247</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_italic ltx_font_small">.178</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_italic ltx_font_small">.217</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">AMBER</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.229</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_italic ltx_font_small">.180</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_italic ltx_font_small">.216</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">SIMPBLEU</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.172</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_italic ltx_font_small">.141</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.191</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_smallcaps ltx_font_small">XEnErrCats</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.165</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_italic ltx_font_small">.132</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.185</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_smallcaps ltx_font_small">posF</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.154</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_italic ltx_font_small">.125</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.201</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_smallcaps ltx_font_small">WordBlockEC</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.153</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_italic ltx_font_small">.122</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.181</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_smallcaps ltx_font_small">BlockErrCats</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.074</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_italic ltx_font_small">.068</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.151</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_smallcaps ltx_font_small">TerrorCat</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">-.186</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">-.111</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">-.104</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t" rowspan="4"><span class="ltx_text ltx_font_bold ltx_font_small">III</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">NIST</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">.214</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">.172</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">.206</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Rouge</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.185</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_italic ltx_font_small">.144</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.201</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">TER</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.217</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_italic ltx_font_small">.179</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.229</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">BLEU</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.185</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_italic ltx_font_small">.154</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.190</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t" rowspan="6"><span class="ltx_text ltx_font_bold ltx_font_small">IV</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">Asiya-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">lex</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">.254</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">.237</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">.253</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">Asiya-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">syn</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.177</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_italic ltx_font_small">.169</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.191</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">Asiya-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">srl</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">-.023</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.015</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.161</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">Asiya-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">sem</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.134</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.152</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.197</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">Asiya-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">0809</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.254</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_italic ltx_font_small">.250</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.258</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">Asiya-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">all</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.268</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_italic ltx_font_small">.265</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.270</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">average</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">.165</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">.145</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">.190</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_bb"/>
+<td class="ltx_td ltx_align_right ltx_border_bb"><span class="ltx_text ltx_font_bold ltx_font_small">diff.</span></td>
+<td class="ltx_td ltx_border_bb"/>
+<td class="ltx_td ltx_align_right ltx_border_bb"><span class="ltx_text ltx_font_italic ltx_font_small">-.019</span></td>
+<td class="ltx_td ltx_align_right ltx_border_bb"><span class="ltx_text ltx_font_bold ltx_font_small">+.026</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 3: </span>Results on WMT12 at the segment-level. Kendall’s Tau with human judgments.</div>
+</div>
+</div>
+<div id="S5.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.2 </span>System-level Results</h3>
+
+<div id="S5.SS2.p1" class="ltx_para">
+<p class="ltx_p">Table <a href="#S5.T2" title="Table 2 ‣ 5.1 Evaluation ‣ 5 Experimental Results ‣ Using Discourse Structure Improves Machine Translation Evaluation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> shows the system-level experimental results for WMT12.
+We can see that DR is already competitive by itself: on average, it has a correlation of .807, very close to BLEU and TER scores (.810 and .812, respectively). Moreover, DR yields improvements when combined with 15 of the 19 metrics;
+worsening only four of the metrics. Overall, we observe an average improvement of +.024, in the correlation with the human judgments.
+This suggests that DR contains information that is complementary to that used by the other metrics.
+Note that this is true both for the individual metrics from groups II and III,
+as well as for the metric combinations in group IV.
+Combinations in the last group involve several metrics that already use linguistic information at different levels and are hard to improve over; yet, adding DR does improve, which shows that it has some
+complementary information to offer.</p>
+</div>
+<div id="S5.SS2.p2" class="ltx_para">
+<p class="ltx_p">As expected, DR-<span class="ltx_text ltx_font_smallcaps">lex</span> performs better than DR since it is lexicalized (at the
+unigram level), and also gives partial credit to correct structures.
+Individually, DR-<span class="ltx_text ltx_font_smallcaps">lex</span> outperforms most of the metrics from group II, and ranks as the second best metric in that group. Furthermore, when combined with individual metrics in group II, DR-<span class="ltx_text ltx_font_smallcaps">lex</span> is able to improve consistently over each one of them.</p>
+</div>
+<div id="S5.SS2.p3" class="ltx_para">
+<p class="ltx_p">Note that, even though DR-<span class="ltx_text ltx_font_smallcaps">lex</span> has better individual performance than DR,
+it does not yield improvements when combined with most of the metrics in group IV.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">8</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">8</sup>In this work, we have not investigated the reasons behind this phenomenon. We speculate that this might be caused by the fact that the lexical information in DR-<span class="ltx_text ltx_font_smallcaps">lex</span> is incorporated only in the form of unigram matching at the sentence-level, while the metrics in group IV are already complex combined metrics, which take into account stronger lexical models. Note, however, that the variations are very small and might not be significant.</span></span></span>
+However, over all metrics and all language pairs, DR-<span class="ltx_text ltx_font_smallcaps">lex</span> is able to obtain an average
+improvement in correlation of +.035, which is remarkably higher than that of DR.
+Thus, we can conclude that at the system-level, adding discourse information to a metric, even using the simplest of the combination schemes, is a good idea for most of the metrics, and can help to significantly improve the correlation
+with human judgments.</p>
+</div>
+</div>
+<div id="S5.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.3 </span>Segment-level Results: Non-tuned</h3>
+
+<div id="S5.SS3.p1" class="ltx_para">
+<p class="ltx_p">Table <a href="#S5.T3" title="Table 3 ‣ 5.1 Evaluation ‣ 5 Experimental Results ‣ Using Discourse Structure Improves Machine Translation Evaluation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> shows the results for WMT12 at the segment-level.
+We can see that DR performs badly, with a high negative Kendall’s Tau of -.433.
+This should not be surprising:
+(a) the discourse tree structure alone does not contain enough information for a good evaluation at the segment-level, and (b) this metric is more sensitive to the quality of the DT, which can be wrong or void.</p>
+</div>
+<div id="S5.SS3.p2" class="ltx_para">
+<p class="ltx_p">Additionally, DR is more likely to produce a high number of ties, which is harshly penalized by WMT12’s definition of Kendall’s Tau.
+Conversely, ties and incomplete discourse analysis were not a problem at the system-level, where evidence from all 3,003 test sentences is aggregated, and allows to rank systems more precisely.
+Due to the low score of DR as an individual metric,
+it fails to yield improvements when uniformly combined with other metrics.</p>
+</div>
+<div id="S5.SS3.p3" class="ltx_para">
+<p class="ltx_p">Again, DR-<span class="ltx_text ltx_font_smallcaps">lex</span> is better than DR; with a positive Tau of +.133,
+yet as an individual metric, it ranks poorly compared to other metrics in group II.
+However, when linearly combined with other metrics, DR-<span class="ltx_text ltx_font_smallcaps">lex</span> outperforms 14 of the 19 metrics in Table <a href="#S5.T3" title="Table 3 ‣ 5.1 Evaluation ‣ 5 Experimental Results ‣ Using Discourse Structure Improves Machine Translation Evaluation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+Across all metrics, DR-<span class="ltx_text ltx_font_smallcaps">lex</span> yields an average Tau improvement of +.026,
+i.e. from .165 to .190. This is a large improvement, taking into account that the combinations are just
+uniform linear combinations. In subsection <a href="#S5.SS4" title="5.4 Segment-level Results: Tuned ‣ 5 Experimental Results ‣ Using Discourse Structure Improves Machine Translation Evaluation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.4</span></a>, we present the results of tuning the linear combination
+in a discriminative way.</p>
+</div>
+</div>
+<div id="S5.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.4 </span>Segment-level Results: Tuned</h3>
+
+<div id="S5.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_center" colspan="3"><span class="ltx_text ltx_font_bold ltx_font_small">Tuned</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_text ltx_font_small">i4-6</span></th>
+<td class="ltx_td ltx_align_right ltx_border_tt"><span class="ltx_text ltx_font_bold ltx_font_small">Metrics</span></td>
+<td class="ltx_td ltx_align_right ltx_border_tt"><span class="ltx_text ltx_font_bold ltx_font_small">Orig.</span></td>
+<td class="ltx_td ltx_border_tt"/>
+<td class="ltx_td ltx_align_right ltx_border_tt"><span class="ltx_text ltx_font_small">+</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">dr</span><span class="ltx_text ltx_font_small"></span></td>
+<td class="ltx_td ltx_align_right ltx_border_tt"><span class="ltx_text ltx_font_small">+</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">dr-<span class="ltx_text ltx_font_script">lex</span></span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_tt" rowspan="2"><span class="ltx_text ltx_font_bold ltx_font_small">I</span></th>
+<td class="ltx_td ltx_align_right ltx_border_tt"><span class="ltx_text ltx_font_small">DR</span></td>
+<td class="ltx_td ltx_align_right ltx_border_tt"><span class="ltx_text ltx_font_small">-.433</span></td>
+<td class="ltx_td ltx_align_right ltx_border_tt"><span class="ltx_text ltx_font_small">–</span></td>
+<td class="ltx_td ltx_align_right ltx_border_tt"><span class="ltx_text ltx_font_small">–</span></td>
+<td class="ltx_td ltx_align_right ltx_border_tt"><span class="ltx_text ltx_font_small">–</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">DR-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">lex</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.133</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">–</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">–</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">–</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t" rowspan="9"><span class="ltx_text ltx_font_bold ltx_font_small">II</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">spede07pP</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">.254</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">–</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">.253</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">.254</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Meteor</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.247</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">–</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.250</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.251</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">AMBER</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.229</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">–</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.230</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.232</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">SIMPBLEU</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.172</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">–</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.181</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.199</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_smallcaps ltx_font_small">TerrorCat</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">-.186</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">–</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.181</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.196</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_smallcaps ltx_font_small">XEnErrCats</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.165</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">–</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.175</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.194</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_smallcaps ltx_font_small">posF</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.154</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">–</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.160</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.201</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_smallcaps ltx_font_small">WordBlockEC</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.153</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">–</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.161</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.189</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_smallcaps ltx_font_small">BlockErrCats</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.074</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">–</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.087</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.150</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t" rowspan="4"><span class="ltx_text ltx_font_bold ltx_font_small">III</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">NIST</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">.214</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">–</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">.222</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">.224</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Rouge</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.185</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">–</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.196</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.218</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">TER</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.217</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">–</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.229</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.246</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">BLEU</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.185</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">–</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.189</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.194</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t" rowspan="6"><span class="ltx_text ltx_font_bold ltx_font_small">IV</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">Asiya-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">lex</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">.254</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">.266</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">.269</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">.270</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">Asiya-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">syn</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.177</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.229</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.228</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.232</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">Asiya-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">srl</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">-.023</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">-.004</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.039</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.181</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">Asiya-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">sem</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.134</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.146</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.179</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.202</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">Asiya-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">0809</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.254</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.295</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.295</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.295</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">Asiya-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">all</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.268</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.296</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.295</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.295</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">average</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">.165</span></td>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">.201</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">.222</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_bb"/>
+<td class="ltx_td ltx_align_right ltx_border_bb"><span class="ltx_text ltx_font_bold ltx_font_small">diff.</span></td>
+<td class="ltx_td ltx_border_bb"/>
+<td class="ltx_td ltx_border_bb"/>
+<td class="ltx_td ltx_align_right ltx_border_bb"><span class="ltx_text ltx_font_bold ltx_font_small">+.036</span></td>
+<td class="ltx_td ltx_align_right ltx_border_bb"><span class="ltx_text ltx_font_bold ltx_font_small">+.057</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 4: </span>Results on WMT12 at the segment-level: tuning with cross-validation on WMT12. Kendall’s Tau with human judgments.</div>
+</div>
+<div id="S5.SS4.p1" class="ltx_para">
+<p class="ltx_p">We experimented with tuning the weights of the individual metrics in the metric combinations,
+using the learning method described in Section <a href="#S4.SS2" title="4.2 Human Judgements and Learning ‣ 4 Experimental Setup ‣ Using Discourse Structure Improves Machine Translation Evaluation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+First, we did this using cross-validation to tune and test on WMT12. Later we tuned on WMT12 and evaluated on WMT11.
+For cross-validation in WMT12, we used ten folds of approximately equal sizes,
+each containing about 300 sentences: we constructed the folds by putting together entire documents,
+thus not allowing sentences from a document to be split over two different folds.
+During each cross-validation run, we trained our pairwise ranker using the human judgments corresponding to nine of the ten folds. We aggregated the data for different language pairs, and produced a single set of tuning weights for all language pairs.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">9</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">9</sup>Tuning separately
+for each language pair yielded slightly lower results.</span></span></span> We then used the remaining fold for evaluation</p>
+</div>
+<div id="S5.SS4.p2" class="ltx_para">
+<p class="ltx_p">The results are shown in Table <a href="#S5.T4" title="Table 4 ‣ 5.4 Segment-level Results: Tuned ‣ 5 Experimental Results ‣ Using Discourse Structure Improves Machine Translation Evaluation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>. As in previous sections we
+present the average results over all four language pairs.
+We can see that the tuned combinations with DR-<span class="ltx_text ltx_font_smallcaps">lex</span> improve over most of the individual metrics in groups II and III. Interestingly, the tuned combinations that include the much weaker metric DR now improve over 12 out of 13
+of the individual metrics in groups II and III, and only slightly degrades the score of the 13th one (<span class="ltx_text ltx_font_smallcaps">spede07pP</span>).</p>
+</div>
+<div id="S5.SS4.p3" class="ltx_para">
+<p class="ltx_p">Note that the <span class="ltx_text ltx_font_smallcaps">Asiya</span> metrics are combinations of several metrics, and these combinations (which exclude DR and DR-<span class="ltx_text ltx_font_smallcaps">lex</span>)
+can be also tuned;
+this yields sizable improvements over the untuned versions as column three in the table shows.
+Compared to this baseline, DR improves for three of the six <span class="ltx_text ltx_font_smallcaps">Asiya</span> metrics,
+while DR-<span class="ltx_text ltx_font_smallcaps">lex</span> improves for four of them.
+Note that improving over the last two <span class="ltx_text ltx_font_smallcaps">Asiya</span> metrics is very hard:
+they have very high scores of .296 and .295;
+for comparison, the best segment-level system at WMT12 (<span class="ltx_text ltx_font_smallcaps">spede07pP</span>) achieved a Tau of .254.</p>
+</div>
+<div id="S5.SS4.p4" class="ltx_para">
+<p class="ltx_p">On average, DR improves Tau from .165 to .201, which is +.036,
+while DR-<span class="ltx_text ltx_font_smallcaps">lex</span> improves to .222, or +.057. These much larger improvements highlight
+the importance of tuning the linear combination when working at the segment-level.</p>
+</div>
+<div id="S5.SS4.SSS1" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">5.4.1 </span>Testing on WMT11</h4>
+
+<div id="S5.SS4.SSS1.p1" class="ltx_para">
+<p class="ltx_p">In order to rule out the possibility that the improvement of the tuned metrics on WMT12 comes from over-fitting, and to verify that the tuned metrics do generalize when applied to other sentences, we also tested on a new test set: WMT11.</p>
+</div>
+<div id="S5.SS4.SSS1.p2" class="ltx_para">
+<p class="ltx_p">Therefore, we tuned the weights on <em class="ltx_emph">all</em> WMT12 pairwise judgments (no cross-validation), and we evaluated on WMT11.
+Since the metrics that participated in WMT11 and WMT12 are different
+(and even when they have the same name, there is no guarantee that they have not changed from 2011 to 2012),
+we only report results for the versions of NIST, <span class="ltx_text ltx_font_smallcaps">Rouge</span>, TER, and BLEU available in <span class="ltx_text ltx_font_smallcaps">Asiya</span>,
+as well as for the <span class="ltx_text ltx_font_smallcaps">Asiya</span> metrics, thus ensuring that the metrics in the experiments are consistent for 2011 and 2012.</p>
+</div>
+<div id="S5.SS4.SSS1.p3" class="ltx_para">
+<p class="ltx_p">The results are shown in Table <a href="#S5.T5" title="Table 5 ‣ 5.4.1 Testing on WMT11 ‣ 5.4 Segment-level Results: Tuned ‣ 5 Experimental Results ‣ Using Discourse Structure Improves Machine Translation Evaluation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>. Once again, tuning yields sizable improvements over the simple combination for the <span class="ltx_text ltx_font_smallcaps">Asiya</span> metrics (third column in Table <a href="#S5.T5" title="Table 5 ‣ 5.4.1 Testing on WMT11 ‣ 5.4 Segment-level Results: Tuned ‣ 5 Experimental Results ‣ Using Discourse Structure Improves Machine Translation Evaluation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>). Adding DR and DR-<span class="ltx_text ltx_font_smallcaps">lex</span> to the combinations manages to improve over five and four of the six tuned <span class="ltx_text ltx_font_smallcaps">Asiya</span> metrics, respectively. However, some of the differences are very small.
+On the contrary, DR and DR-<span class="ltx_text ltx_font_smallcaps">lex</span> significantly improve over NIST, <span class="ltx_text ltx_font_smallcaps">Rouge</span>, TER, and BLEU.
+Overall, DR improves the average Tau from .207 to .244, which is +.037,
+while DR-<span class="ltx_text ltx_font_smallcaps">lex</span> improves to .267 or +.061.
+These improvements are very close to those for the WMT12 cross-validation.
+This shows that the weights learned on WMT12 generalize well,
+as they are also good for WMT11.</p>
+</div>
+<div id="S5.SS4.SSS1.p4" class="ltx_para">
+<p class="ltx_p">What is also interesting to note is that when tuning is used, DR helps achieve sizeable improvements,
+even if not as strong as for DR-<span class="ltx_text ltx_font_smallcaps">lex</span>. This is remarkable given that DR has a strong negative
+Tau as an individual metric at the sentence-level. This suggests that both DR and DR-<span class="ltx_text ltx_font_smallcaps">lex</span> contain information that is complementary to that of the individual metrics that we experimented with.</p>
+</div>
+<div id="S5.SS4.SSS1.p5" class="ltx_para">
+<p class="ltx_p">Overall, from the experimental results in this section, we can conclude that discourse structure
+is an important information source to be taken into account in the automatic evaluation of machine
+translation output.</p>
+</div>
+<div id="S5.T5" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"/>
+<th class="ltx_td"/>
+<th class="ltx_td"/>
+<th class="ltx_td ltx_align_center" colspan="3"><span class="ltx_text ltx_font_bold ltx_font_small">Tuned</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_text ltx_font_small">i4-6</span></th>
+<th class="ltx_td ltx_align_right ltx_border_tt"><span class="ltx_text ltx_font_bold ltx_font_small">Metrics</span></th>
+<th class="ltx_td ltx_align_right ltx_border_tt"><span class="ltx_text ltx_font_bold ltx_font_small">Orig.</span></th>
+<th class="ltx_td ltx_border_tt"/>
+<th class="ltx_td ltx_align_right ltx_border_tt"><span class="ltx_text ltx_font_small">+</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">dr</span><span class="ltx_text ltx_font_small"></span></th>
+<th class="ltx_td ltx_align_right ltx_border_tt"><span class="ltx_text ltx_font_small">+</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">dr-<span class="ltx_text ltx_font_script">lex</span></span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_tt" rowspan="2"><span class="ltx_text ltx_font_bold ltx_font_small">I</span></th>
+<td class="ltx_td ltx_align_right ltx_border_tt"><span class="ltx_text ltx_font_small">DR</span></td>
+<td class="ltx_td ltx_align_right ltx_border_tt"><span class="ltx_text ltx_font_small">-.447</span></td>
+<td class="ltx_td ltx_align_right ltx_border_tt"><span class="ltx_text ltx_font_small">–</span></td>
+<td class="ltx_td ltx_align_right ltx_border_tt"><span class="ltx_text ltx_font_small">–</span></td>
+<td class="ltx_td ltx_align_right ltx_border_tt"><span class="ltx_text ltx_font_small">–</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">DR-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">lex</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.146</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">–</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">–</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">–</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t" rowspan="4"><span class="ltx_text ltx_font_bold ltx_font_small">III</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">NIST</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">.219</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">–</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">.226</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">.232</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Rouge</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.205</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">–</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.218</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.242</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">TER</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.262</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">–</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.274</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.296</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">BLEU</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.186</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">–</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.192</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.207</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t" rowspan="6"><span class="ltx_text ltx_font_bold ltx_font_small">IV</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">Asiya-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">lex</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">.282</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">.301</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">.302</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">.303</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">Asiya-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">syn</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.216</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.259</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.260</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.260</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">Asiya-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">srl</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">-.004</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.017</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.051</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.200</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">Asiya-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">sem</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.189</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.194</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.220</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.239</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">Asiya-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">0809</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.300</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.348</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">.349</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.348</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">Asiya-</span><span class="ltx_text ltx_font_smallcaps ltx_font_small">all</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.313</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.347</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.347</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">.347</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">average</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">.207</span></td>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">.244</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">.267</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_bb"/>
+<td class="ltx_td ltx_align_right ltx_border_bb"><span class="ltx_text ltx_font_bold ltx_font_small">diff.</span></td>
+<td class="ltx_td ltx_border_bb"/>
+<td class="ltx_td ltx_border_bb"/>
+<td class="ltx_td ltx_align_right ltx_border_bb"><span class="ltx_text ltx_font_bold ltx_font_small">+.037</span></td>
+<td class="ltx_td ltx_align_right ltx_border_bb"><span class="ltx_text ltx_font_bold ltx_font_small">+.061</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 5: </span>Results on WMT11 at the segment-level: tuning on the entire WMT12.
+Kendall’s Tau with human judgments.</div>
+</div>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Conclusions and Future Work</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">In this paper we have shown that discourse structure can be used to improve
+automatic MT evaluation. First, we defined two simple discourse-aware similarity
+metrics (lexicalized and un-lexicalized), which use the all-subtree kernel to compute
+similarity between discourse parse trees in accordance with the Rhetorical Structure Theory.
+Then, after extensive experimentation on WMT12 and WMT11 data, we showed
+that a variety of existing evaluation metrics can benefit from our discourse-based
+metrics, both at the segment- and the system-level, especially when the discourse
+information is incorporated in an informed way (i.e. using supervised tuning). Our results show
+that discourse-based metrics can improve the state-of-the-art MT metrics, by increasing
+correlation with human judgments, even when only sentence-level discourse information
+is used.</p>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p class="ltx_p">Addressing discourse-level phenomena in MT is a relatively new research direction.
+Yet, many of the ongoing efforts have been moderately successful according to traditional
+evaluation metrics. There is a consensus in the MT community that more discourse-aware
+metrics need to be proposed for this area to move forward. We believe this work is a
+valuable contribution towards this longer-term goal.</p>
+</div>
+<div id="S6.p3" class="ltx_para">
+<p class="ltx_p">The tuned combined metrics tested in this paper are just an initial proposal, i.e. a simple adjustment of the relative weights for the individual metrics in a linear combination.
+In the future, we plan to work on integrated representations of syntactic, semantic and
+discourse-based structures, which would allow us to train evaluation metrics based on more
+fine-grained features. Additionally, we propose to use the discourse information for
+MT in two different ways. First, at the sentence-level, we can use discourse information
+to re-rank alternative MT hypotheses; this could be applied either for MT parameter tuning,
+or as a post-processing step for the MT output. Second, we propose to move in the direction of using discourse
+information beyond the sentence-level.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Cartoni, S. Zufferey, T. Meyer and A. Popescu-Belis</span><span class="ltx_text ltx_bib_year">(2011-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">How comparable are parallel corpora? measuring the distribution of general vocabulary and connectives</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Portland, Oregon</span>, <span class="ltx_text ltx_bib_pages"> pp. 78–86</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W11-1211" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Using Discourse Structure Improves Machine Translation Evaluation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Comelles, J. Gimenez, L. Marquez, I. Castellon and V. Arranz</span><span class="ltx_text ltx_bib_year">(2010-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Document-level automatic mt evaluation based on discourse representations</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Uppsala, Sweden</span>, <span class="ltx_text ltx_bib_pages"> pp. 333–338</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W10-1750" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p6" title="2 Related Work ‣ Using Discourse Structure Improves Machine Translation Evaluation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib14" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Giménez and L. Màrquez</span><span class="ltx_text ltx_bib_year">(2007-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Linguistic features for automatic evaluation of heterogenous MT systems</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Prague, Czech Republic</span>, <span class="ltx_text ltx_bib_pages"> pp. 256–264</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W/W07/W07-0738" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Related Work ‣ Using Discourse Structure Improves Machine Translation Evaluation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib15" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Giménez and L. Màrquez</span><span class="ltx_text ltx_bib_year">(2009-03)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">On the robustness of syntactic and semantic features for automatic MT evaluation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Athens, Greece</span>, <span class="ltx_text ltx_bib_pages"> pp. 250–258</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W09-0440" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p6" title="2 Related Work ‣ Using Discourse Structure Improves Machine Translation Evaluation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Hardmeier and M. Federico</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Modelling pronominal anaphora in statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 283–289</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Using Discourse Structure Improves Machine Translation Evaluation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.p2" title="2 Related Work ‣ Using Discourse Structure Improves Machine Translation Evaluation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Hardmeier</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Discourse in statistical machine translation. a survey and a case study</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Discours. Revue de linguistique, psycholinguistique et informatique</span> (<span class="ltx_text ltx_bib_number">11</span>).
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Using Discourse Structure Improves Machine Translation Evaluation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Liu and D. Gildea</span><span class="ltx_text ltx_bib_year">(2005-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Syntactic features for evaluation of machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Ann Arbor, Michigan</span>, <span class="ltx_text ltx_bib_pages"> pp. 25–32</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W/W05/W05-0904" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Related Work ‣ Using Discourse Structure Improves Machine Translation Evaluation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.p6" title="2 Related Work ‣ Using Discourse Structure Improves Machine Translation Evaluation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. T. M. Wong and C. Kit</span><span class="ltx_text ltx_bib_year">(2012-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Extending machine translation evaluation metrics with lexical cohesion to document level</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Jeju Island, Korea</span>, <span class="ltx_text ltx_bib_pages"> pp. 1060–1068</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/D12-1097" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p8" title="2 Related Work ‣ Using Discourse Structure Improves Machine Translation Evaluation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 19:24:40 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

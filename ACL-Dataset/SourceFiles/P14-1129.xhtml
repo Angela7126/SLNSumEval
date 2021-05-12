@@ -1,0 +1,1227 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Fast and Robust Neural Network Joint Models for Statistical Machine Translation</title>
+<!--Generated on Tue Jun 10 19:15:49 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Fast and Robust Neural Network Joint Models for Statistical Machine Translation</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Jacob Devlin, Rabih Zbib, Zhongqiang Huang, 
+<br class="ltx_break"/><span class="ltx_text ltx_font_bold">Thomas Lamar, Richard Schwartz,</span> and <span class="ltx_text ltx_font_bold">John Makhoul</span> 
+<br class="ltx_break"/>Raytheon BBN Technologies, 10 Moulton St, Cambridge, MA 02138, USA
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">jdevlin,rzbib,zhuang,tlamar,schwartz,makhoul</span>}<span class="ltx_text ltx_font_typewriter">@bbn.com</span> 
+<br class="ltx_break"/>
+</span><span class="ltx_author_notes"><span>This work was supported by DARPA/I2O Contract No. HR0011-12-C-0014 under the BOLT program (Approved for Public Release, Distribution Unlimited). The views, opinions, and/or findings contained in this article are those of the author and should not be interpreted as representing the official views or policies, either expressed or implied, of the Defense Advanced Research Projects Agency or the Department of Defense.</span></span></span></div>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Recent work has shown success in using neural network language models (NNLMs) as features in MT systems. Here, we present a novel formulation for a neural network <span class="ltx_text ltx_font_italic">joint</span> model (NNJM), which augments the NNLM with a source context window. Our model is purely lexicalized and can be integrated into any MT decoder. We also present several variations of the NNJM which provide significant additive improvements.</p>
+<p class="ltx_p">Although the model is quite simple, it yields strong empirical results. On the NIST OpenMT12 Arabic-English condition, the NNJM features produce a gain of +3.0 BLEU on top of a powerful, feature-rich baseline which already includes a target-only NNLM. The NNJM features also produce a gain of +6.3 BLEU on top of a simpler baseline equivalent to Chiang’s <cite class="ltx_cite">[<a href="#bib.bib1" title="Hierarchical phrase-based translation" class="ltx_ref">5</a>]</cite> original Hiero implementation.</p>
+<p class="ltx_p">Additionally, we describe two novel techniques for overcoming the historically high cost of using NNLM-style models in MT decoding. These techniques speed up NNJM computation by a factor of 10,000x, making the model as fast as a standard back-off LM.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">In recent years, neural network models have become increasingly popular in NLP. Initially, these models were primarily used to create <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p1.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-gram neural network language models (NNLMs) for speech recognition and machine translation <cite class="ltx_cite">[<a href="#bib.bib5" title="A neural probabilistic language model" class="ltx_ref">2</a>, <a href="#bib.bib15" title="Continuous-space language models for statistical machine translation" class="ltx_ref">23</a>]</cite>. They have since been extended to translation modeling, parsing, and many other NLP tasks.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">In this paper we use a basic neural network architecture and a lexicalized probability model to create a powerful MT decoding feature. Specifically, we introduce a novel formulation for a neural network joint model (NNJM), which augments an <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-gram target language model with an <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m2" class="ltx_Math" alttext="m" display="inline"><mi>m</mi></math>-word source window. Unlike previous approaches to joint modeling <cite class="ltx_cite">[<a href="#bib.bib3" title="Continuous space translation models with neural networks" class="ltx_ref">13</a>]</cite>, our feature can be easily integrated into any statistical machine translation (SMT) decoder, which leads to substantially larger improvements than <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m3" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>-best rescoring only. Additionally, we present several variations of this model which provide significant additive BLEU gains.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">We also present a novel technique for training the neural network to be <span class="ltx_text ltx_font_italic">self-normalized</span>, which avoids the costly step of posteriorizing over the entire vocabulary in decoding. When used in conjunction with a <span class="ltx_text ltx_font_italic">pre-computed</span> hidden layer, these techniques speed up NNJM computation by a factor of 10,000x, with only a small reduction on MT accuracy.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">Although our model is quite simple, we obtain strong empirical results. We show primary results on the NIST OpenMT12 Arabic-English condition. The NNJM features produce an improvement of +3.0 BLEU on top of a baseline that is already better than the 1st place MT12 result and includes a powerful NNLM. Additionally, on top of a simpler decoder equivalent to Chiang’s <cite class="ltx_cite">[<a href="#bib.bib1" title="Hierarchical phrase-based translation" class="ltx_ref">5</a>]</cite> original Hiero implementation, our NNJM features are able to produce an improvement of +6.3 BLEU – as much as all of the other features in our strong baseline system combined.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">We also show strong improvements on the NIST OpenMT12 Chinese-English task, as well as the DARPA BOLT (Broad Operational Language Translation) Arabic-English and Chinese-English conditions.</p>
+</div>
+<div id="S1.F1" class="ltx_figure"><img src="P14-1129/image001.png" id="S1.F1.g1" class="ltx_graphics ltx_centering" width="284" height="91" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Context vector for target word “the”, using a 3-word target history and a 5-word source window (i.e., <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m3" class="ltx_Math" alttext="n=4" display="inline"><mrow><mi>n</mi><mo>=</mo><mn>4</mn></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m4" class="ltx_Math" alttext="m=5" display="inline"><mrow><mi>m</mi><mo>=</mo><mn>5</mn></mrow></math>). Here, “the” inherits its affiliation from “money” because this is the first aligned word to its right. The number in each box denotes the index of the word in the context vector. This indexing must be consistent across samples, but the absolute ordering does not affect results.</div>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Neural Network Joint Model (NNJM) </h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">Formally, our model approximates the probability of target hypothesis <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m1" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math> conditioned on source sentence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m2" class="ltx_Math" alttext="S" display="inline"><mi>S</mi></math>. We follow the standard <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m3" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-gram LM decomposition of the target, where each target word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m4" class="ltx_Math" alttext="t_{i}" display="inline"><msub><mi>t</mi><mi>i</mi></msub></math> is conditioned on the previous <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m5" class="ltx_Math" alttext="n-1" display="inline"><mrow><mi>n</mi><mo>-</mo><mn>1</mn></mrow></math> target words. To make this a <span class="ltx_text ltx_font_italic">joint</span> model, we also condition on source context vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m6" class="ltx_Math" alttext="\mathscr{S}_{i}" display="inline"><msub><mi class="ltx_font_mathscript">𝒮</mi><mi>i</mi></msub></math>:</p>
+<table id="S8.EGx1" class="ltx_equationgroup ltx_eqn_eqnarray">
+
+<tr id="S2.Ex1" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex1.m1" class="ltx_Math" alttext="\displaystyle P(T|S)" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><mi>T</mi><mo>|</mo><mi>S</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex1.m2" class="ltx_Math" alttext="\displaystyle\approx" display="inline"><mo>≈</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex1.m3" class="ltx_Math" alttext="\displaystyle\Pi_{i=1}^{|T|}P(t_{i}|t_{i-1},\cdots,t_{i-n+1},\mathscr{S}_{i})" display="inline"><mrow><msubsup><mi mathvariant="normal">Π</mi><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mrow><mo fence="true">|</mo><mi>T</mi><mo fence="true">|</mo></mrow></msubsup><mi>P</mi><mrow><mo>(</mo><msub><mi>t</mi><mi>i</mi></msub><mo>|</mo><msub><mi>t</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>,</mo><mi mathvariant="normal">⋯</mi><mo>,</mo><msub><mi>t</mi><mrow><mi>i</mi><mo>-</mo><mi>n</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi class="ltx_font_mathscript">𝒮</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">Intuitively, we want to define <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m1" class="ltx_Math" alttext="\mathscr{S}_{i}" display="inline"><msub><mi class="ltx_font_mathscript">𝒮</mi><mi>i</mi></msub></math> as the window that is most relevant to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m2" class="ltx_Math" alttext="t_{i}" display="inline"><msub><mi>t</mi><mi>i</mi></msub></math>. To do this, we first say that each target word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m3" class="ltx_Math" alttext="t_{i}" display="inline"><msub><mi>t</mi><mi>i</mi></msub></math> is <span class="ltx_text ltx_font_italic">affiliated</span> with exactly one source word at index <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m4" class="ltx_Math" alttext="a_{i}" display="inline"><msub><mi>a</mi><mi>i</mi></msub></math>. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m5" class="ltx_Math" alttext="\mathscr{S}_{i}" display="inline"><msub><mi class="ltx_font_mathscript">𝒮</mi><mi>i</mi></msub></math> is then the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m6" class="ltx_Math" alttext="m" display="inline"><mi>m</mi></math>-word source window centered at <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m7" class="ltx_Math" alttext="a_{i}" display="inline"><msub><mi>a</mi><mi>i</mi></msub></math>:</p>
+<table id="S8.EGx2" class="ltx_equationgroup ltx_eqn_eqnarray">
+
+<tr id="S2.Ex2" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex2.m1" class="ltx_Math" alttext="\displaystyle\mathscr{S}_{i}" display="inline"><msub><mi class="ltx_font_mathscript">𝒮</mi><mi>i</mi></msub></math></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex2.m2" class="ltx_Math" alttext="\displaystyle=" display="inline"><mo>=</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex2.m3" class="ltx_Math" alttext="\displaystyle s_{a_{i}-\frac{m-1}{2}},\cdots,s_{a_{i}},\cdots,s_{{a_{i}}+\frac%&#10;{m-1}{2}}" display="inline"><mrow><msub><mi>s</mi><mrow><msub><mi>a</mi><mi>i</mi></msub><mo>-</mo><mfrac><mrow><mi>m</mi><mo>-</mo><mn>1</mn></mrow><mn>2</mn></mfrac></mrow></msub><mo>,</mo><mi mathvariant="normal">⋯</mi><mo>,</mo><msub><mi>s</mi><msub><mi>a</mi><mi>i</mi></msub></msub><mo>,</mo><mi mathvariant="normal">⋯</mi><mo>,</mo><msub><mi>s</mi><mrow><msub><mi>a</mi><mi>i</mi></msub><mo>+</mo><mfrac><mrow><mi>m</mi><mo>-</mo><mn>1</mn></mrow><mn>2</mn></mfrac></mrow></msub></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">This notion of <span class="ltx_text ltx_font_italic">affiliation</span> is derived from the word alignment, but unlike word alignment, each target word must be affiliated with exactly one non-NULL source word. The affiliation heuristic is very simple:</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<ol id="I1" class="ltx_enumerate">[label=(0),noitemsep]
+
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">1.</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p">If <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i1.p1.m1" class="ltx_Math" alttext="t_{i}" display="inline"><msub><mi>t</mi><mi>i</mi></msub></math> aligns to exactly one source word, <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i1.p1.m2" class="ltx_Math" alttext="a_{i}" display="inline"><msub><mi>a</mi><mi>i</mi></msub></math> is the index of the word it aligns to.</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">2.</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p">If <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i2.p1.m1" class="ltx_Math" alttext="t_{i}" display="inline"><msub><mi>t</mi><mi>i</mi></msub></math> align to multiple source words, <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i2.p1.m2" class="ltx_Math" alttext="a_{i}" display="inline"><msub><mi>a</mi><mi>i</mi></msub></math> is the index of the aligned word in the middle.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>We arbitrarily round down.</span></span></span></p>
+</div></li>
+<li id="I1.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">3.</span> 
+<div id="I1.i3.p1" class="ltx_para">
+<p class="ltx_p">If <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i3.p1.m1" class="ltx_Math" alttext="t_{i}" display="inline"><msub><mi>t</mi><mi>i</mi></msub></math> is unaligned, we inherit its affiliation from the closest aligned word, with preference given to the right.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>We have found that the affiliation heuristic is robust to small differences, such as left vs. right preference.</span></span></span></p>
+</div></li>
+</ol>
+</div>
+<div id="S2.p5" class="ltx_para">
+<p class="ltx_p">An example of the NNJM context model for a Chinese-English parallel sentence is given in Figure <a href="#S1.F1" title="Figure 1 ‣ 1 Introduction ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.</p>
+</div>
+<div id="S2.p6" class="ltx_para">
+<p class="ltx_p">For all of our experiments we use <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p6.m1" class="ltx_Math" alttext="n=4" display="inline"><mrow><mi>n</mi><mo>=</mo><mn>4</mn></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p6.m2" class="ltx_Math" alttext="m=11" display="inline"><mrow><mi>m</mi><mo>=</mo><mn>11</mn></mrow></math>. It is clear that this model is effectively an <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p6.m3" class="ltx_Math" alttext="(n+m)" display="inline"><mrow><mo>(</mo><mrow><mi>n</mi><mo>+</mo><mi>m</mi></mrow><mo>)</mo></mrow></math>-gram LM, and a 15-gram LM would be far too sparse for standard probability models such as Kneser-Ney back-off <cite class="ltx_cite">[<a href="#bib.bib18" title="Improved backing-off for m-gram language modeling" class="ltx_ref">12</a>]</cite> or Maximum Entropy <cite class="ltx_cite">[<a href="#bib.bib17" title="A maximum entropy approach to adaptive statistical language modeling" class="ltx_ref">21</a>]</cite>. Fortunately, neural network language models are able to elegantly scale up and take advantage of arbitrarily large context sizes.</p>
+</div>
+<div id="S2.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.1 </span>Neural Network Architecture </h3>
+
+<div id="S2.SS1.p1" class="ltx_para">
+<p class="ltx_p">Our neural network architecture is almost identical to the original feed-forward NNLM architecture described in <cite class="ltx_cite">Bengio<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib5" title="A neural probabilistic language model" class="ltx_ref">2003</a>)</cite>.</p>
+</div>
+<div id="S2.SS1.p2" class="ltx_para">
+<p class="ltx_p">The input vector is a 14-word context vector (3 target words, 11 source words), where each word is mapped to a 192-dimensional vector using a shared mapping layer. We use two 512-dimensional hidden layers with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p2.m1" class="ltx_Math" alttext="tanh" display="inline"><mrow><mi>t</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>h</mi></mrow></math> activation functions. The output layer is a softmax over the entire output vocabulary.</p>
+</div>
+<div id="S2.SS1.p3" class="ltx_para">
+<p class="ltx_p">The input vocabulary contains 16,000 source words and 16,000 target words, while the output vocabulary contains 32,000 target words. The vocabulary is selected by frequency-sorting the words in the parallel training data. Out-of-vocabulary words are mapped to their POS tag (or <span class="ltx_text ltx_font_typewriter">OOV</span>, if POS is not available), and in this case <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p3.m1" class="ltx_Math" alttext="P(POS_{i}|t_{i-1},\cdots)" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><mi>P</mi><mi>O</mi><msub><mi>S</mi><mi>i</mi></msub><mo>|</mo><msub><mi>t</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>,</mo><mi mathvariant="normal">⋯</mi><mo>)</mo></mrow></mrow></math> is used directly without further normalization. Out-of-bounds words are represented with special tokens <span class="ltx_text ltx_font_typewriter">&lt;src&gt;</span>, <span class="ltx_text ltx_font_typewriter">&lt;/src&gt;</span>, <span class="ltx_text ltx_font_typewriter">&lt;trg&gt;</span>, <span class="ltx_text ltx_font_typewriter">&lt;/trg&gt;</span>.</p>
+</div>
+<div id="S2.SS1.p4" class="ltx_para">
+<p class="ltx_p">We chose these values for the hidden layer size, vocabulary size, and source window size because they seemed to work best on our data sets – larger sizes did not improve results, while smaller sizes degraded results. Empirical comparisons are given in Section <a href="#S6.SS5" title="6.5 Effect of Neural Network Configuration ‣ 6 Experimental Results ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.5</span></a>.</p>
+</div>
+</div>
+<div id="S2.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.2 </span>Neural Network Training</h3>
+
+<div id="S2.SS2.p1" class="ltx_para">
+<p class="ltx_p">The training procedure is identical to that of an NNLM, except that the parallel corpus is used instead of a monolingual corpus. Formally, we seek to maximize the log-likelihood of the training data:</p>
+<table id="S2.Ex3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex3.m1" class="ltx_Math" alttext="L=\sum_{i}{\log(P(x_{i}))}" display="block"><mrow><mi>L</mi><mo>=</mo><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>i</mi></munder><mrow><mi>log</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><mi>P</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S2.SS2.p2" class="ltx_para">
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m1" class="ltx_Math" alttext="x_{i}" display="inline"><msub><mi>x</mi><mi>i</mi></msub></math> is the training sample, with one sample for every target word in the parallel corpus.</p>
+</div>
+<div id="S2.SS2.p3" class="ltx_para">
+<p class="ltx_p">Optimization is performed using standard back propagation with stochastic gradient ascent <cite class="ltx_cite">[<a href="#bib.bib21" title="Efficient backprop" class="ltx_ref">14</a>]</cite>. Weights are randomly initialized in the range of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m1" class="ltx_Math" alttext="[-0.05,0.05]" display="inline"><mrow><mo>[</mo><mrow><mrow><mo>-</mo><mn>0.05</mn></mrow><mo>,</mo><mn>0.05</mn></mrow><mo>]</mo></mrow></math>. We use an initial learning rate of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m2" class="ltx_Math" alttext="10^{-3}" display="inline"><msup><mn>10</mn><mrow><mo>-</mo><mn>3</mn></mrow></msup></math> and a minibatch size of 128.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>We do <span class="ltx_text ltx_font_italic">not</span> divide the gradient by the minibatch size. For those who do, this is equivalent to using an initial learning rate of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p3.m3" class="ltx_Math" alttext="10^{-3}*128\approx 10^{-1}" display="inline"><mrow><mrow><msup><mn>10</mn><mrow><mo>-</mo><mn>3</mn></mrow></msup><mo>*</mo><mn>128</mn></mrow><mo>≈</mo><msup><mn>10</mn><mrow><mo>-</mo><mn>1</mn></mrow></msup></mrow></math>.</span></span></span> At every epoch, which we define as 20,000 minibatches, the likelihood of a validation set is computed. If this likelihood is worse than the previous epoch, the learning rate is multiplied by 0.5. The training is run for 40 epochs. The training data ranges from 10-30M words, depending on the condition. We perform a basic weight update with no L2 regularization or momentum. However, we have found it beneficial to clip each weight update to the range of [-0.1, 0.1], to prevent the training from entering degenerate search spaces <cite class="ltx_cite">[<a href="#bib.bib30" title="On the difficulty of training recurrent neural networks" class="ltx_ref">19</a>]</cite>.</p>
+</div>
+<div id="S2.SS2.p4" class="ltx_para">
+<p class="ltx_p">Training is performed on a single Tesla K10 GPU, with each epoch (128*20k = 2.6M samples) taking roughly 1100 seconds to run, resulting in a total training time of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p4.m1" class="ltx_Math" alttext="{\sim}12" display="inline"><mrow><mi/><mo>∼</mo><mn>12</mn></mrow></math> hours. Decoding is performed on a CPU.</p>
+</div>
+</div>
+<div id="S2.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.3 </span>Self-Normalized Neural Network</h3>
+
+<div id="S2.SS3.p1" class="ltx_para">
+<p class="ltx_p">The computational cost of NNLMs is a significant issue in decoding, and this cost is dominated by the output softmax over the entire target vocabulary. Even class-based approaches such as <cite class="ltx_cite">Le<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib3" title="Continuous space translation models with neural networks" class="ltx_ref">2012</a>)</cite> require a 2-20k shortlist vocabulary, and are therefore still quite costly.</p>
+</div>
+<div id="S2.SS3.p2" class="ltx_para">
+<p class="ltx_p">Here, our goal is to be able to use a fairly large vocabulary without word classes, and to simply avoid computing the entire output layer at decode time.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>We are not concerned with speeding up training time, as we already find GPU training time to be adequate.</span></span></span> To do this, we present the novel technique of <span class="ltx_text ltx_font_italic">self-normalization</span>, where the output layer scores are close to being probabilities without explicitly performing a softmax.</p>
+</div>
+<div id="S2.SS3.p3" class="ltx_para">
+<p class="ltx_p">Formally, we define the standard softmax log likelihood as:</p>
+<table id="S8.EGx3" class="ltx_equationgroup ltx_eqn_eqnarray">
+
+<tr id="S2.Ex5" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex4.m1" class="ltx_Math" alttext="\displaystyle\log(P(x))" display="inline"><mrow><mi>log</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><mi>P</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex4.m2" class="ltx_Math" alttext="\displaystyle=" display="inline"><mo>=</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex4.m3" class="ltx_Math" alttext="\displaystyle\log\left(\frac{e^{U_{r}(x)}}{Z(x)}\right)" display="inline"><mrow><mi>log</mi><mo>⁡</mo><mrow><mo>(</mo><mstyle displaystyle="true"><mfrac><msup><mi>e</mi><mrow><msub><mi>U</mi><mi>r</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></msup><mrow><mi>Z</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mfrac></mstyle><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr class="ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex5.m2" class="ltx_Math" alttext="\displaystyle=" display="inline"><mo>=</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex5.m3" class="ltx_Math" alttext="\displaystyle U_{r}(x)-\log(Z(x))" display="inline"><mrow><mrow><msub><mi>U</mi><mi>r</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mi>log</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><mi>Z</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S2.Ex6" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex6.m1" class="ltx_Math" alttext="\displaystyle Z(x)" display="inline"><mrow><mi>Z</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex6.m2" class="ltx_Math" alttext="\displaystyle=" display="inline"><mo>=</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex6.m3" class="ltx_Math" alttext="\displaystyle\Sigma_{r^{\prime}=1}^{|V|}e^{U_{r^{\prime}}(x)}" display="inline"><mrow><msubsup><mi mathvariant="normal">Σ</mi><mrow><msup><mi>r</mi><mo>′</mo></msup><mo>=</mo><mn>1</mn></mrow><mrow><mo fence="true">|</mo><mi>V</mi><mo fence="true">|</mo></mrow></msubsup><mo>⁢</mo><msup><mi>e</mi><mrow><msub><mi>U</mi><msup><mi>r</mi><mo>′</mo></msup></msub><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></msup></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S2.SS3.p4" class="ltx_para">
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p4.m1" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> is the sample, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p4.m2" class="ltx_Math" alttext="U" display="inline"><mi>U</mi></math> is the raw output layer scores, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p4.m3" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math> is the output layer row corresponding to the observed target word, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p4.m4" class="ltx_Math" alttext="Z(x)" display="inline"><mrow><mi>Z</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></math> is the softmax normalizer.</p>
+</div>
+<div id="S2.SS3.p5" class="ltx_para">
+<p class="ltx_p">If we could guarantee that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p5.m1" class="ltx_Math" alttext="\log(Z(x))" display="inline"><mrow><mi>log</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><mi>Z</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></math> were always equal to 0 (i.e., <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p5.m2" class="ltx_Math" alttext="Z(x)" display="inline"><mrow><mi>Z</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></math> = 1) then at decode time we would only have to compute row <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p5.m3" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math> of the output layer instead of the whole matrix. While we cannot train a neural network with this guarantee, we can <span class="ltx_text ltx_font_italic">explicitly encourage</span> the log-softmax normalizer to be as close to 0 as possible by augmenting our training objective function:</p>
+<table id="S8.EGx4" class="ltx_equationgroup ltx_eqn_eqnarray">
+
+<tr id="S2.Ex8" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex7.m1" class="ltx_Math" alttext="\displaystyle L" display="inline"><mi>L</mi></math></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex7.m2" class="ltx_Math" alttext="\displaystyle=" display="inline"><mo>=</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex7.m3" class="ltx_Math" alttext="\displaystyle\sum_{i}{\left[\log(P(x_{i}))-\alpha(\log(Z(x_{i}))-0)^{2}\right]}" display="inline"><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>i</mi></munder></mstyle><mrow><mo>[</mo><mrow><mrow><mi>log</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><mi>P</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mi>α</mi><mo>⁢</mo><msup><mrow><mo>(</mo><mrow><mrow><mi>log</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><mi>Z</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow><mo>-</mo><mn>0</mn></mrow><mo>)</mo></mrow><mn>2</mn></msup></mrow></mrow><mo>]</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr class="ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex8.m2" class="ltx_Math" alttext="\displaystyle=" display="inline"><mo>=</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex8.m3" class="ltx_Math" alttext="\displaystyle\sum_{i}{\left[\log(P(x_{i}))-\alpha\log^{2}(Z(x_{i}))\right]}" display="inline"><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>i</mi></munder></mstyle><mrow><mo>[</mo><mrow><mrow><mi>log</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><mi>P</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mi>α</mi><mo>⁢</mo><mrow><msup><mi>log</mi><mn>2</mn></msup><mo>⁡</mo><mrow><mo>(</mo><mrow><mi>Z</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></mrow></mrow><mo>]</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S2.SS3.p6" class="ltx_para">
+<p class="ltx_p">In this case, the output layer bias weights are initialized to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p6.m1" class="ltx_Math" alttext="\log(1/|V|)" display="inline"><mrow><mi>log</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><mn>1</mn><mo>/</mo><mrow><mo fence="true">|</mo><mi>V</mi><mo fence="true">|</mo></mrow></mrow><mo>)</mo></mrow></mrow></math>, so that the initial network is self-normalized. At decode time, we simply use <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p6.m2" class="ltx_Math" alttext="U_{r}(x)" display="inline"><mrow><msub><mi>U</mi><mi>r</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></math> as the feature score, rather than <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p6.m3" class="ltx_Math" alttext="\log(P(x))" display="inline"><mrow><mi>log</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><mi>P</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></math>. For our NNJM architecture, self-normalization increases the lookup speed during decoding by a factor of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p6.m4" class="ltx_Math" alttext="\sim" display="inline"><mo>∼</mo></math>15x.</p>
+</div>
+<div id="S2.SS3.p7" class="ltx_para">
+<p class="ltx_p">Table <a href="#S2.T1" title="Table 1 ‣ 2.3 Self-Normalized Neural Network ‣ 2 Neural Network Joint Model (NNJM) ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> shows the neural network training results with various values of the free parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p7.m1" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math>. In all subsequent MT experiments, we use <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p7.m2" class="ltx_Math" alttext="\alpha=10^{-1}" display="inline"><mrow><mi>α</mi><mo>=</mo><msup><mn>10</mn><mrow><mo>-</mo><mn>1</mn></mrow></msup></mrow></math>.</p>
+</div>
+<div id="S2.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="3"><span class="ltx_text ltx_font_bold">Arabic BOLT Val</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m1" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math></th>
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m2" class="ltx_Math" alttext="\log(P(x))" display="inline"><mrow><mi>log</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><mi>P</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></math></th>
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m3" class="ltx_Math" alttext="|\log(Z(x))|" display="inline"><mrow><mo fence="true">|</mo><mrow><mi>log</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><mi>Z</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow><mo fence="true">|</mo></mrow></math></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m4" class="ltx_Math" alttext="0" display="inline"><mn>0</mn></math></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m5" class="ltx_Math" alttext="-1.82" display="inline"><mrow><mo>-</mo><mn>1.82</mn></mrow></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m6" class="ltx_Math" alttext="5.02" display="inline"><mn>5.02</mn></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m7" class="ltx_Math" alttext="10^{-2}" display="inline"><msup><mn>10</mn><mrow><mo>-</mo><mn>2</mn></mrow></msup></math></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m8" class="ltx_Math" alttext="-1.81" display="inline"><mrow><mo>-</mo><mn>1.81</mn></mrow></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m9" class="ltx_Math" alttext="1.35" display="inline"><mn>1.35</mn></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m10" class="ltx_Math" alttext="10^{-1}" display="inline"><msup><mn>10</mn><mrow><mo>-</mo><mn>1</mn></mrow></msup></math></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m11" class="ltx_Math" alttext="-1.83" display="inline"><mrow><mo>-</mo><mn>1.83</mn></mrow></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m12" class="ltx_Math" alttext="0.68" display="inline"><mn>0.68</mn></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m13" class="ltx_Math" alttext="1" display="inline"><mn>1</mn></math></th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m14" class="ltx_Math" alttext="-1.91" display="inline"><mrow><mo>-</mo><mn>1.91</mn></mrow></math></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m15" class="ltx_Math" alttext="0.28" display="inline"><mn>0.28</mn></math></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 1: </span> Comparison of neural network likelihood for various <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m22" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> values. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m23" class="ltx_Math" alttext="\log(P(x))" display="inline"><mrow><mi>log</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><mi>P</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></math> is the average log-likelihood on a held-out set. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m24" class="ltx_Math" alttext="|\log(Z(x))|" display="inline"><mrow><mo fence="true">|</mo><mrow><mi>log</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><mi>Z</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow><mo fence="true">|</mo></mrow></math> is the mean error in log-likelihood when using <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m25" class="ltx_Math" alttext="U_{r}(x)" display="inline"><mrow><msub><mi>U</mi><mi>r</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></math> directly instead of the true softmax probability <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m26" class="ltx_Math" alttext="\log(P(x))" display="inline"><mrow><mi>log</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><mi>P</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></math>. Note that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m27" class="ltx_Math" alttext="\alpha=0" display="inline"><mrow><mi>α</mi><mo>=</mo><mn>0</mn></mrow></math> is equivalent to the standard neural network objective function.</div>
+</div>
+<div id="S2.SS3.p8" class="ltx_para">
+<p class="ltx_p">We should note that <cite class="ltx_cite">Vaswani<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib4" title="Decoding with large-scale neural language models improves translation" class="ltx_ref">2013</a>)</cite> implements a method called Noise Contrastive Estimation (NCE) that is also used to train self-normalized NNLMs. Although NCE results in faster training time, it has the downside that there is no mechanism to control the degree of self-normalization. By contrast, our <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p8.m1" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> parameter allows us to carefully choose the optimal trade-off between neural network accuracy and mean self-normalization error. In future work, we will thoroughly compare self-normalization vs. NCE.</p>
+</div>
+</div>
+<div id="S2.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.4 </span>Pre-Computing the Hidden Layer </h3>
+
+<div id="S2.SS4.p1" class="ltx_para">
+<p class="ltx_p">Although self-normalization significantly improves the speed of NNJM lookups, the model is still several orders of magnitude slower than a back-off LM. Here, we present a “trick” for pre-computing the first hidden layer, which further increases the speed of NNJM lookups by a factor of 1,000x.</p>
+</div>
+<div id="S2.SS4.p2" class="ltx_para">
+<p class="ltx_p">Note that this technique only results in a significant speedup for self-normalized, feed-forward, NNLM-style networks with <span class="ltx_text ltx_font_italic">one</span> hidden layer. We demonstrate in Section <a href="#S6.SS6" title="6.6 Effect of Speedups ‣ 6 Experimental Results ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.6</span></a> that using one hidden layer instead of two has minimal effect on BLEU.</p>
+</div>
+<div id="S2.SS4.p3" class="ltx_para">
+<p class="ltx_p">For the neural network described in Section <a href="#S2.SS1" title="2.1 Neural Network Architecture ‣ 2 Neural Network Joint Model (NNJM) ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>, computing the first hidden layer requires multiplying a <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p3.m1" class="ltx_Math" alttext="2689" display="inline"><mn>2689</mn></math>-dimensional input vector<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup>2689 = 14 words <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p3.m2" class="ltx_Math" alttext="\times" display="inline"><mo>×</mo></math> 192 dimensions + 1 bias</span></span></span> with a <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p3.m3" class="ltx_Math" alttext="2689\times 512" display="inline"><mrow><mn>2689</mn><mo>×</mo><mn>512</mn></mrow></math> dimensional hidden layer matrix. However, note that there are only 3 possible positions for each target word, and 11 for each source word. Therefore, for every word in the vocabulary, and for each position, we can pre-compute the dot product between the word embedding and the first hidden layer. These are computed offline and stored in a lookup table, which is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p3.m4" class="ltx_Math" alttext="&lt;" display="inline"><mo>&lt;</mo></math>500MB in size.</p>
+</div>
+<div id="S2.SS4.p4" class="ltx_para">
+<p class="ltx_p">Computing the first hidden layer now only requires 15 scalar additions for each of the 512 hidden rows – one for each word in the input vector, plus the bias. This can be reduced to just 5 scalar additions by pre-summing each 11-word source window when starting a test sentence. If our neural network has only one hidden layer and is self-normalized, the only remaining computation is 512 calls to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p4.m1" class="ltx_Math" alttext="tanh()" display="inline"><mrow><mi>t</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mrow><mo>(</mo><mrow/><mo>)</mo></mrow></mrow></math> and a single 513-dimensional dot product for the final output score.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">6</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">6</sup><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p4.m2" class="ltx_Math" alttext="tanh()" display="inline"><mrow><mi>t</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mrow><mo>(</mo><mrow/><mo>)</mo></mrow></mrow></math> is implemented using a lookup table.</span></span></span> Thus, only <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p4.m3" class="ltx_Math" alttext="\sim" display="inline"><mo>∼</mo></math>3500 arithmetic operations are required per <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p4.m4" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-gram lookup, compared to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p4.m5" class="ltx_Math" alttext="\sim" display="inline"><mo>∼</mo></math>2.8M for self-normalized NNJM without pre-computation, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p4.m6" class="ltx_Math" alttext="\sim" display="inline"><mo>∼</mo></math>35M for the standard NNJM.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">7</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">7</sup>3500 <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p4.m7" class="ltx_Math" alttext="\approx 5\times 512+2\times 513" display="inline"><mrow><mi/><mo>≈</mo><mrow><mrow><mn>5</mn><mo>×</mo><mn>512</mn></mrow><mo>+</mo><mrow><mn>2</mn><mo>×</mo><mn>513</mn></mrow></mrow></mrow></math>; 2.8M <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p4.m8" class="ltx_Math" alttext="\approx 2\times 2689\times 512+2\times 513" display="inline"><mrow><mi/><mo>≈</mo><mrow><mrow><mn>2</mn><mo>×</mo><mn>2689</mn><mo>×</mo><mn>512</mn></mrow><mo>+</mo><mrow><mn>2</mn><mo>×</mo><mn>513</mn></mrow></mrow></mrow></math>; 35M <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p4.m9" class="ltx_Math" alttext="\approx 2\times 2689\times 512+2\times 513\times 32000" display="inline"><mrow><mi/><mo>≈</mo><mrow><mrow><mn>2</mn><mo>×</mo><mn>2689</mn><mo>×</mo><mn>512</mn></mrow><mo>+</mo><mrow><mn>2</mn><mo>×</mo><mn>513</mn><mo>×</mo><mn>32000</mn></mrow></mrow></mrow></math>. For the sake of a fair comparison, these all use one hidden layer. A second hidden layer adds 0.5M floating point operations.</span></span></span></p>
+</div>
+<div id="S2.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="3"><span class="ltx_text ltx_font_bold">Neural Network Speed</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">Condition</th>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">lookups/sec</td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">sec/word</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Standard</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">110</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">10.9</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">+ Self-Norm</th>
+<td class="ltx_td ltx_align_center ltx_border_r">1500</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.8</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r">+ Pre-Computation</th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">1,430,000</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">0.0008</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 2: </span> Speed of the neural network computation on a single CPU thread. “lookups/sec” is the number of unique <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T2.m2" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-gram probabilities that can be computed per second. “sec/word” is the amortized cost of unique NNJM lookups in decoding, per source word.</div>
+</div>
+<div id="S2.SS4.p5" class="ltx_para">
+<p class="ltx_p">Table <a href="#S2.T2" title="Table 2 ‣ 2.4 Pre-Computing the Hidden Layer ‣ 2 Neural Network Joint Model (NNJM) ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> shows the speed of self-normalization and pre-computation for the NNJM. The decoding cost is based on a measurement of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p5.m1" class="ltx_Math" alttext="\sim" display="inline"><mo>∼</mo></math>1200 unique NNJM lookups per source word for our Arabic-English system.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">8</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">8</sup>This does not include the cost of <span class="ltx_text ltx_font_italic">duplicate</span> lookups within the same test sentence, which are cached.</span></span></span></p>
+</div>
+<div id="S2.SS4.p6" class="ltx_para">
+<p class="ltx_p">By combining self-normalization and pre-computation, we can achieve a speed of 1.4M lookups/second, which is on par with fast back-off LM implementations <cite class="ltx_cite">[<a href="#bib.bib31" title="An efficient language model using double-array structures" class="ltx_ref">27</a>]</cite>. We demonstrate in Section <a href="#S6.SS6" title="6.6 Effect of Speedups ‣ 6 Experimental Results ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.6</span></a> that using the self-normalized/pre-computed NNJM results in only a very small BLEU degradation compared to the standard NNJM.</p>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Decoding with the NNJM</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">Because our NNJM is fundamentally an <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-gram NNLM with additional source context, it can easily be integrated into any SMT decoder. In this section, we describe the considerations that must be taken when integrating the NNJM into a hierarchical decoder.</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Hierarchical Parsing</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">When performing hierarchical decoding with an <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-gram LM, the leftmost and rightmost <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m2" class="ltx_Math" alttext="n-1" display="inline"><mrow><mi>n</mi><mo>-</mo><mn>1</mn></mrow></math> words from each constituent must be stored in the state space. Here, we extend the state space to also include the index of the affiliated source word for these edge words. This does not noticeably increase the search space. We also train a separate lower-order <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m3" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-gram model, which is necessary to compute estimate scores during hierarchical decoding.</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Affiliation Heuristic</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">For aligned target words, the normal affiliation heuristic can be used, since the word alignment is available within the rule. For unaligned words, the normal heuristic can also be used, <span class="ltx_text ltx_font_italic">except</span> when the word is on the edge of a rule, because then the target neighbor words are not necessarily known.</p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p">In this case, we infer the affiliation from the rule structure. Specifically, if unaligned target word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m1" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math> is on the right edge of an arc that covers source span <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m2" class="ltx_Math" alttext="[s_{i},s_{j}]" display="inline"><mrow><mo>[</mo><mrow><msub><mi>s</mi><mi>i</mi></msub><mo>,</mo><msub><mi>s</mi><mi>j</mi></msub></mrow><mo>]</mo></mrow></math>, we simply say that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m3" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math> is affiliated with source word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m4" class="ltx_Math" alttext="s_{j}" display="inline"><msub><mi>s</mi><mi>j</mi></msub></math>. If <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m5" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math> is on the left edge of the arc, we say it is affiliated with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m6" class="ltx_Math" alttext="s_{i}" display="inline"><msub><mi>s</mi><mi>i</mi></msub></math>.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Model Variations</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">Recall that our NNJM feature can be described with the following probability:</p>
+<table id="S4.Ex9" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex9.m1" class="ltx_Math" alttext="\Pi_{i=1}^{|T|}P(t_{i}|t_{i-1},t_{i-2},\cdots,s_{a_{i}},s_{{a_{i}}-1},s_{{a_{i%&#10;}}+1},\cdots)" display="block"><mrow><msubsup><mi mathvariant="normal">Π</mi><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mrow><mo fence="true">|</mo><mi>T</mi><mo fence="true">|</mo></mrow></msubsup><mi>P</mi><mrow><mo>(</mo><msub><mi>t</mi><mi>i</mi></msub><mo>|</mo><msub><mi>t</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi>t</mi><mrow><mi>i</mi><mo>-</mo><mn>2</mn></mrow></msub><mo>,</mo><mi mathvariant="normal">⋯</mi><mo>,</mo><msub><mi>s</mi><msub><mi>a</mi><mi>i</mi></msub></msub><mo>,</mo><msub><mi>s</mi><mrow><msub><mi>a</mi><mi>i</mi></msub><mo>-</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi>s</mi><mrow><msub><mi>a</mi><mi>i</mi></msub><mo>+</mo><mn>1</mn></mrow></msub><mo>,</mo><mi mathvariant="normal">⋯</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">This formulation lends itself to several natural variations. In particular, we can reverse the translation direction of the languages, as well as the direction of the language model.</p>
+</div>
+<div id="S4.p3" class="ltx_para">
+<p class="ltx_p">We denote our original formulation as a source-to-target, left-to-right model (<span class="ltx_text ltx_font_bold">S2T/L2R</span>). We can train three variations using target-to-source (T2S) and right-to-left (R2L) models:</p>
+</div>
+<div id="S4.p4" class="ltx_para">
+<p class="ltx_p ltx_align_center"><span class="ltx_text ltx_font_bold">S2T/R2L</span></p>
+</div>
+<div id="S4.p5" class="ltx_para">
+<table id="S4.Ex10" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex10.m1" class="ltx_Math" alttext="\Pi_{i=1}^{|T|}P(t_{i}|t_{i+1},t_{i+2},\cdots,s_{a_{i}},s_{{a_{i}}-1},s_{{a_{i%&#10;}}+1},\cdots)" display="block"><mrow><msubsup><mi mathvariant="normal">Π</mi><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mrow><mo fence="true">|</mo><mi>T</mi><mo fence="true">|</mo></mrow></msubsup><mi>P</mi><mrow><mo>(</mo><msub><mi>t</mi><mi>i</mi></msub><mo>|</mo><msub><mi>t</mi><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi>t</mi><mrow><mi>i</mi><mo>+</mo><mn>2</mn></mrow></msub><mo>,</mo><mi mathvariant="normal">⋯</mi><mo>,</mo><msub><mi>s</mi><msub><mi>a</mi><mi>i</mi></msub></msub><mo>,</mo><msub><mi>s</mi><mrow><msub><mi>a</mi><mi>i</mi></msub><mo>-</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi>s</mi><mrow><msub><mi>a</mi><mi>i</mi></msub><mo>+</mo><mn>1</mn></mrow></msub><mo>,</mo><mi mathvariant="normal">⋯</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p ltx_align_center"><span class="ltx_text ltx_font_bold">T2S/L2R</span></p>
+<table id="S4.Ex11" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex11.m1" class="ltx_Math" alttext="\Pi_{i=1}^{|S|}P(s_{i}|s_{i-1},s_{i-2},\cdots,t_{a^{\prime}_{i}},t_{{a^{\prime%&#10;}_{i}}-1},t_{{a^{\prime}_{i}}+1},\cdots)" display="block"><mrow><msubsup><mi mathvariant="normal">Π</mi><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mrow><mo fence="true">|</mo><mi>S</mi><mo fence="true">|</mo></mrow></msubsup><mi>P</mi><mrow><mo>(</mo><msub><mi>s</mi><mi>i</mi></msub><mo>|</mo><msub><mi>s</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi>s</mi><mrow><mi>i</mi><mo>-</mo><mn>2</mn></mrow></msub><mo>,</mo><mi mathvariant="normal">⋯</mi><mo>,</mo><msub><mi>t</mi><msubsup><mi>a</mi><mi>i</mi><mo>′</mo></msubsup></msub><mo>,</mo><msub><mi>t</mi><mrow><msubsup><mi>a</mi><mi>i</mi><mo>′</mo></msubsup><mo>-</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi>t</mi><mrow><msubsup><mi>a</mi><mi>i</mi><mo>′</mo></msubsup><mo>+</mo><mn>1</mn></mrow></msub><mo>,</mo><mi mathvariant="normal">⋯</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p ltx_align_center"><span class="ltx_text ltx_font_bold">T2S/R2L</span></p>
+<table id="S4.Ex12" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex12.m1" class="ltx_Math" alttext="\Pi_{i=1}^{|S|}P(s_{i}|s_{i+1},s_{i+2},\cdots,t_{a^{\prime}_{i}},t_{{a^{\prime%&#10;}_{i}}-1},t_{{a^{\prime}_{i}}+1},\cdots)" display="block"><mrow><msubsup><mi mathvariant="normal">Π</mi><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mrow><mo fence="true">|</mo><mi>S</mi><mo fence="true">|</mo></mrow></msubsup><mi>P</mi><mrow><mo>(</mo><msub><mi>s</mi><mi>i</mi></msub><mo>|</mo><msub><mi>s</mi><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi>s</mi><mrow><mi>i</mi><mo>+</mo><mn>2</mn></mrow></msub><mo>,</mo><mi mathvariant="normal">⋯</mi><mo>,</mo><msub><mi>t</mi><msubsup><mi>a</mi><mi>i</mi><mo>′</mo></msubsup></msub><mo>,</mo><msub><mi>t</mi><mrow><msubsup><mi>a</mi><mi>i</mi><mo>′</mo></msubsup><mo>-</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi>t</mi><mrow><msubsup><mi>a</mi><mi>i</mi><mo>′</mo></msubsup><mo>+</mo><mn>1</mn></mrow></msub><mo>,</mo><mi mathvariant="normal">⋯</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S4.p6" class="ltx_para">
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p6.m1" class="ltx_Math" alttext="a^{\prime}_{i}" display="inline"><msubsup><mi>a</mi><mi>i</mi><mo>′</mo></msubsup></math> is the target-to-source affiliation, defined analogously to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p6.m2" class="ltx_Math" alttext="a_{i}" display="inline"><msub><mi>a</mi><mi>i</mi></msub></math>.</p>
+</div>
+<div id="S4.p7" class="ltx_para">
+<p class="ltx_p">The T2S variations cannot be used in decoding due to the large target context required, and are thus only used in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p7.m1" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>-best rescoring. The S2T/R2L variant could be used in decoding, but we have not found this beneficial, so we only use it in rescoring.</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Neural Network Lexical Translation Model (NNLTM)</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">One issue with the S2T NNJM is that the probability is computed over every <span class="ltx_text ltx_font_italic">target</span> word, so it does not explicitly model NULL-aligned source words. In order to assign a probability to every source word during decoding, we also train a neural network lexical translation model (NNLMT).</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">Here, the input context is the 11-word source window centered at <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m1" class="ltx_Math" alttext="s_{i}" display="inline"><msub><mi>s</mi><mi>i</mi></msub></math>, and the output is the target token <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m2" class="ltx_Math" alttext="t_{s_{i}}" display="inline"><msub><mi>t</mi><msub><mi>s</mi><mi>i</mi></msub></msub></math> which <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m3" class="ltx_Math" alttext="s_{i}" display="inline"><msub><mi>s</mi><mi>i</mi></msub></math> aligns to. The probability is computed over every <span class="ltx_text ltx_font_italic">source</span> word in the input sentence. We treat NULL as a normal target word, and if a source word aligns to multiple target words, it is treated as a single concatenated token. Formally, the probability model is:</p>
+<table id="S4.Ex13" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex13.m1" class="ltx_Math" alttext="\Pi_{i=1}^{|S|}P(t_{s_{i}}|s_{i},s_{i-1},s_{i+1},\cdots)" display="block"><mrow><msubsup><mi mathvariant="normal">Π</mi><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mrow><mo fence="true">|</mo><mi>S</mi><mo fence="true">|</mo></mrow></msubsup><mi>P</mi><mrow><mo>(</mo><msub><mi>t</mi><msub><mi>s</mi><mi>i</mi></msub></msub><mo>|</mo><msub><mi>s</mi><mi>i</mi></msub><mo>,</mo><msub><mi>s</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi>s</mi><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>,</mo><mi mathvariant="normal">⋯</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S4.SS1.p3" class="ltx_para">
+<p class="ltx_p">This model is trained and evaluated like our NNJM. It is easy and computationally inexpensive to use this model in decoding, since only one neural network computation must be made for each source word.</p>
+</div>
+<div id="S4.SS1.p4" class="ltx_para">
+<p class="ltx_p">In rescoring, we also use a T2S NNLTM model computed over every target word:</p>
+<table id="S4.Ex14" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex14.m1" class="ltx_Math" alttext="\Pi_{i=1}^{|T|}P(s_{t_{i}}|t_{i},t_{i-1},t_{i+1},\cdots)" display="block"><mrow><msubsup><mi mathvariant="normal">Π</mi><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mrow><mo fence="true">|</mo><mi>T</mi><mo fence="true">|</mo></mrow></msubsup><mi>P</mi><mrow><mo>(</mo><msub><mi>s</mi><msub><mi>t</mi><mi>i</mi></msub></msub><mo>|</mo><msub><mi>t</mi><mi>i</mi></msub><mo>,</mo><msub><mi>t</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi>t</mi><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>,</mo><mi mathvariant="normal">⋯</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>MT System</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">In this section, we describe the MT system used in our experiments.</p>
+</div>
+<div id="S5.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.1 </span>MT Decoder </h3>
+
+<div id="S5.SS1.p1" class="ltx_para">
+<p class="ltx_p">We use a state-of-the-art string-to-dependency hierarchical decoder <cite class="ltx_cite">[<a href="#bib.bib10" title="String-to-dependency statistical machine translation" class="ltx_ref">25</a>]</cite>. Our baseline decoder contains a large and powerful set of features, which include:</p>
+</div>
+<div id="S5.SS1.p2" class="ltx_para">
+<ul id="I2" class="ltx_itemize">[noitemsep]
+
+<li id="I2.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i1.p1" class="ltx_para">
+<p class="ltx_p">Forward and backward rule probabilities</p>
+</div></li>
+<li id="I2.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i2.p1" class="ltx_para">
+<p class="ltx_p">4-gram Kneser-Ney LM</p>
+</div></li>
+<li id="I2.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i3.p1" class="ltx_para">
+<p class="ltx_p">Dependency LM <cite class="ltx_cite">[<a href="#bib.bib10" title="String-to-dependency statistical machine translation" class="ltx_ref">25</a>]</cite></p>
+</div></li>
+<li id="I2.i4" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i4.p1" class="ltx_para">
+<p class="ltx_p">Contextual lexical smoothing <cite class="ltx_cite">[<a href="#bib.bib6" title="Lexical features for statistical machine translation" class="ltx_ref">8</a>]</cite></p>
+</div></li>
+<li id="I2.i5" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i5.p1" class="ltx_para">
+<p class="ltx_p">Length distribution <cite class="ltx_cite">[<a href="#bib.bib10" title="String-to-dependency statistical machine translation" class="ltx_ref">25</a>]</cite></p>
+</div></li>
+<li id="I2.i6" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i6.p1" class="ltx_para">
+<p class="ltx_p">Trait features <cite class="ltx_cite">[<a href="#bib.bib9" title="Trait-based hypothesis selection for machine translation" class="ltx_ref">7</a>]</cite></p>
+</div></li>
+<li id="I2.i7" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i7.p1" class="ltx_para">
+<p class="ltx_p">Factored source syntax <cite class="ltx_cite">[<a href="#bib.bib11" title="Factored soft source syntactic constraints for hierarchical machine translation" class="ltx_ref">10</a>]</cite></p>
+</div></li>
+<li id="I2.i8" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i8.p1" class="ltx_para">
+<p class="ltx_p">7 sparse feature types, totaling 50k features <cite class="ltx_cite">[<a href="#bib.bib8" title="11,001 new features for statistical machine translation" class="ltx_ref">4</a>]</cite></p>
+</div></li>
+<li id="I2.i9" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i9.p1" class="ltx_para">
+<p class="ltx_p">LM adaptation <cite class="ltx_cite">[<a href="#bib.bib12" title="Language and translation model adaptation using comparable corpora" class="ltx_ref">26</a>]</cite></p>
+</div></li>
+</ul>
+</div>
+<div id="S5.SS1.p3" class="ltx_para">
+<p class="ltx_p">We also perform 1000-best rescoring with the following features:</p>
+<ul id="I3" class="ltx_itemize">[noitemsep]
+
+<li id="I3.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i1.p1" class="ltx_para">
+<p class="ltx_p">5-gram Kneser-Ney LM</p>
+</div></li>
+<li id="I3.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i2.p1" class="ltx_para">
+<p class="ltx_p">Recurrent neural network language model (RNNLM) <cite class="ltx_cite">[<a href="#bib.bib7" title="Recurrent neural network based language model" class="ltx_ref">16</a>]</cite></p>
+</div></li>
+</ul>
+</div>
+<div id="S5.SS1.p4" class="ltx_para">
+<p class="ltx_p">Although we consider the RNNLM to be part of our baseline, we give it special treatment in the results section because we would expect it to have the highest overlap with our NNJM.</p>
+</div>
+</div>
+<div id="S5.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.2 </span>Training and Optimization</h3>
+
+<div id="S5.SS2.p1" class="ltx_para">
+<p class="ltx_p">For Arabic word tokenization, we use the MADA-ARZ tokenizer <cite class="ltx_cite">[<a href="#bib.bib19" title="Morphological analysis and disambiguation for dialectal arabic" class="ltx_ref">9</a>]</cite> for the BOLT condition, and the Sakhr<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">9</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">9</sup>http://www.sakhr.com</span></span></span> tokenizer for the NIST condition. For Chinese tokenization, we use a simple longest-match-first lexicon-based approach.</p>
+</div>
+<div id="S5.SS2.p2" class="ltx_para">
+<p class="ltx_p">For word alignment, we align all of the training data with both GIZA++ <cite class="ltx_cite">[<a href="#bib.bib20" title="A systematic comparison of various statistical alignment models" class="ltx_ref">18</a>]</cite> and NILE <cite class="ltx_cite">[<a href="#bib.bib16" title="Feature-rich language-independent syntax-based alignment for statistical machine translation" class="ltx_ref">20</a>]</cite>, and concatenate the corpora together for rule extraction.</p>
+</div>
+<div id="S5.SS2.p3" class="ltx_para">
+<p class="ltx_p">For MT feature weight optimization, we use iterative <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p3.m1" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>-best optimization with an ExpectedBLEU objective function <cite class="ltx_cite">[<a href="#bib.bib14" title="BBN system description for WMT10 system combination task" class="ltx_ref">22</a>]</cite>.</p>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Experimental Results </h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">We present MT primary results on Arabic-English and Chinese-English for the NIST OpenMT12 and DARPA BOLT conditions. We also present a set of auxiliary results in order to further analyze our features.</p>
+</div>
+<div id="S6.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.1 </span>NIST OpenMT12 Results </h3>
+
+<div id="S6.SS1.p1" class="ltx_para">
+<p class="ltx_p">Our NIST system is fully compatible with the OpenMT12 constrained track, which consists of 10M words of high-quality parallel training for Arabic, and 25M words for Chinese.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">10</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">10</sup>We also make weak use of 30M-100M words of UN data + ISI comparable corpora, but this data provides almost no benefit.</span></span></span> The Kneser-Ney LM is trained on 5B words of data from English GigaWord. For test, we use the “Arabic-To-English Original Progress Test” (1378 segments) and “Chinese-to-English Original Progress Test + OpenMT12 Current Test” (2190 segments), which consists of a mix of newswire and web data.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">11</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">11</sup>http://www.nist.gov/itl/iad/mig/openmt12results.cfm</span></span></span> All test segments have 4 references. Our tuning set contains 5000 segments, and is a mix of the MT02-05 eval set as well as held-out parallel training.</p>
+</div>
+<div id="S6.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="3"><span class="ltx_text ltx_font_bold">NIST MT12 Test</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Ar-En</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Ch-En</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">BLEU</td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">BLEU</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">OpenMT12 - 1st Place</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m1" class="ltx_Math" alttext="49.5" display="inline"><mn>49.5</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m2" class="ltx_Math" alttext="32.6" display="inline"><mn>32.6</mn></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">OpenMT12 - 2nd Place</th>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m3" class="ltx_Math" alttext="47.5" display="inline"><mn>47.5</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m4" class="ltx_Math" alttext="32.2" display="inline"><mn>32.2</mn></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">OpenMT12 - 3rd Place</th>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m5" class="ltx_Math" alttext="47.4" display="inline"><mn>47.4</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m6" class="ltx_Math" alttext="30.8" display="inline"><mn>30.8</mn></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m7" class="ltx_Math" alttext="\cdots" display="inline"><mi mathvariant="normal">⋯</mi></math></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m8" class="ltx_Math" alttext="\cdots" display="inline"><mi mathvariant="normal">⋯</mi></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m9" class="ltx_Math" alttext="\cdots" display="inline"><mi mathvariant="normal">⋯</mi></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">OpenMT12 - 9th Place</th>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m10" class="ltx_Math" alttext="44.0" display="inline"><mn>44.0</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m11" class="ltx_Math" alttext="27.0" display="inline"><mn>27.0</mn></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">OpenMT12 - 10th Place</th>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m12" class="ltx_Math" alttext="41.2" display="inline"><mn>41.2</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m13" class="ltx_Math" alttext="25.7" display="inline"><mn>25.7</mn></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Baseline (w/o RNNLM)</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m14" class="ltx_Math" alttext="48.9" display="inline"><mn>48.9</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m15" class="ltx_Math" alttext="33.0" display="inline"><mn>33.0</mn></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Baseline (w/ RNNLM)</th>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m16" class="ltx_Math" alttext="49.8" display="inline"><mn>49.8</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m17" class="ltx_Math" alttext="33.4" display="inline"><mn>33.4</mn></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">+ S2T/L2R NNJM (Dec)</th>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m18" class="ltx_Math" alttext="51.2" display="inline"><mn>51.2</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m19" class="ltx_Math" alttext="34.2" display="inline"><mn>34.2</mn></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">+ S2T NNLTM (Dec)</th>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m20" class="ltx_Math" alttext="52.0" display="inline"><mn>52.0</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m21" class="ltx_Math" alttext="34.2" display="inline"><mn>34.2</mn></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">+ T2S NNLTM (Resc)</th>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m22" class="ltx_Math" alttext="51.9" display="inline"><mn>51.9</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m23" class="ltx_Math" alttext="34.2" display="inline"><mn>34.2</mn></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">+ S2T/R2L NNJM (Resc)</th>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m24" class="ltx_Math" alttext="52.2" display="inline"><mn>52.2</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m25" class="ltx_Math" alttext="34.3" display="inline"><mn>34.3</mn></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">+ T2S/L2R NNJM (Resc)</th>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m26" class="ltx_Math" alttext="52.3" display="inline"><mn>52.3</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m27" class="ltx_Math" alttext="34.5" display="inline"><mn>34.5</mn></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">+ T2S/R2L NNJM (Resc)</th>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m28" class="ltx_Math" alttext="52.8" display="inline"><mn>52.8</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m29" class="ltx_Math" alttext="34.7" display="inline"><mn>34.7</mn></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">“Simple Hier.” Baseline</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m30" class="ltx_Math" alttext="43.4" display="inline"><mn>43.4</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m31" class="ltx_Math" alttext="30.1" display="inline"><mn>30.1</mn></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">+ S2T/L2R NNJM (Dec)</th>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m32" class="ltx_Math" alttext="47.2" display="inline"><mn>47.2</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m33" class="ltx_Math" alttext="31.5" display="inline"><mn>31.5</mn></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">+ S2T NNLTM (Dec)</th>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m34" class="ltx_Math" alttext="48.5" display="inline"><mn>48.5</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m35" class="ltx_Math" alttext="31.8" display="inline"><mn>31.8</mn></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r">+ Other NNJMs (Resc)</th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m36" class="ltx_Math" alttext="49.7" display="inline"><mn>49.7</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T3.m37" class="ltx_Math" alttext="32.2" display="inline"><mn>32.2</mn></math></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 3: </span> Primary results on Arabic-English and Chinese-English NIST MT12 Test Set. The first section corresponds to the top and bottom ranked systems from the evaluation, and are taken from the NIST website. The second section corresponds to results on top of our strongest baseline. The third section corresponds to results on top of a simpler baseline. Within each section, each row includes all of the features from previous rows. BLEU scores are mixed-case.</div>
+</div>
+<div id="S6.SS1.p2" class="ltx_para">
+<p class="ltx_p">Results are shown in the second section of Table <a href="#S6.T3" title="Table 3 ‣ 6.1 NIST OpenMT12 Results ‣ 6 Experimental Results ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>. On Arabic-English, the primary S2T/L2R NNJM gains +1.4 BLEU on top of our baseline, while the S2T NNLTM gains another +0.8, and the directional variations gain +0.8 BLEU more. This leads to a total improvement of +3.0 BLEU from the NNJM and its variations. Considering that our baseline is already +0.3 BLEU better than the 1st place result of MT12 and contains a strong RNNLM, we consider this to be quite an extraordinary improvement.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">12</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">12</sup>Note that the official 1st place OpenMT12 result was our own system, so we can assure that these comparisons are accurate.</span></span></span></p>
+</div>
+<div id="S6.SS1.p3" class="ltx_para">
+<p class="ltx_p">For the Chinese-English condition, there is an improvement of +0.8 BLEU from the primary NNJM and +1.3 BLEU overall. Here, the baseline system is already +0.8 BLEU better than the best MT12 system. The smaller improvement on Chinese-English compared to Arabic-English is consistent with the behavior of our baseline features, as we show in the next section.</p>
+</div>
+</div>
+<div id="S6.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.2 </span>“Simple Hierarchical” NIST Results</h3>
+
+<div id="S6.SS2.p1" class="ltx_para">
+<p class="ltx_p">The baseline used in the last section is a highly-engineered research system, which uses a wide array of features that were refined over a number of years, and some of which require linguistic resources. Because of this, the baseline BLEU scores are much higher than a typical MT system – especially a real-time, production engine which must support many language pairs.</p>
+</div>
+<div id="S6.SS2.p2" class="ltx_para">
+<p class="ltx_p">Therefore, we also present results using a simpler version of our decoder which emulates Chiang’s original Hiero implementation <cite class="ltx_cite">[<a href="#bib.bib1" title="Hierarchical phrase-based translation" class="ltx_ref">5</a>]</cite>. Specifically, this means that we don’t use dependency-based rule extraction, and our decoder only contains the following MT features: (1) rule probabilities, (2) <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.p2.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-gram Kneser-Ney LM, (3) lexical smoothing, (4) target word count, (5) concat rule penalty.</p>
+</div>
+<div id="S6.SS2.p3" class="ltx_para">
+<p class="ltx_p">Results are shown in the third section of Table <a href="#S6.T3" title="Table 3 ‣ 6.1 NIST OpenMT12 Results ‣ 6 Experimental Results ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>. The “Simple Hierarchical” Arabic-English system is -6.4 BLEU worse than our strong baseline, and would have ranked 10th place out of 11 systems in the evaluation. When the NNJM features are added to this system, we see an improvement of +6.3 BLEU, which would have ranked 1st place in the evaluation.</p>
+</div>
+<div id="S6.SS2.p4" class="ltx_para">
+<p class="ltx_p">Effectively, this means that for Arabic-English, the NNJM features are equivalent to the combined improvements from the string-to-dependency model plus all of the features listed in Section <a href="#S5.SS1" title="5.1 MT Decoder ‣ 5 MT System ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>.</p>
+</div>
+<div id="S6.SS2.p5" class="ltx_para">
+<p class="ltx_p">For Chinese-English, the “Simple Hierarchical” system only degrades by -3.2 BLEU compared to our strongest baseline, and the NNJM features produce a gain of +2.1 BLEU on top of that.</p>
+</div>
+</div>
+<div id="S6.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.3 </span>BOLT Web Forum Results </h3>
+
+<div id="S6.SS3.p1" class="ltx_para">
+<p class="ltx_p">DARPA BOLT is a major research project with the goal of improving translation of informal, dialectical Arabic and Chinese into English. The BOLT domain presented here is “web forum,” which was crawled from various Chinese and Egyptian Internet forums by LDC. The BOLT parallel training consists of all of the high-quality NIST training, plus an additional 3 million words of translated forum data provided by LDC. The tuning and test sets consist of roughly 5000 segments each, with 2 references for Arabic and 3 for Chinese.</p>
+</div>
+<div id="S6.SS3.p2" class="ltx_para">
+<p class="ltx_p">Results are shown in Table <a href="#S6.T4" title="Table 4 ‣ 6.3 BOLT Web Forum Results ‣ 6 Experimental Results ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>. The baseline here uses the same feature set as the strong NIST system. On Arabic, the total gain is +2.6 BLEU, while on Chinese, the gain is +1.3 BLEU.</p>
+</div>
+<div id="S6.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="3"><span class="ltx_text ltx_font_bold">BOLT Test</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Ar-En</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Ch-En</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">BLEU</td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">BLEU</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Baseline (w/o RNNLM)</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m1" class="ltx_Math" alttext="40.2" display="inline"><mn>40.2</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m2" class="ltx_Math" alttext="30.6" display="inline"><mn>30.6</mn></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Baseline (w/ RNNLM)</th>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m3" class="ltx_Math" alttext="41.3" display="inline"><mn>41.3</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m4" class="ltx_Math" alttext="30.9" display="inline"><mn>30.9</mn></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">+ S2T/L2R NNJM (Dec)</th>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m5" class="ltx_Math" alttext="42.9" display="inline"><mn>42.9</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m6" class="ltx_Math" alttext="31.9" display="inline"><mn>31.9</mn></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">+ S2T NNLTM (Dec)</th>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m7" class="ltx_Math" alttext="43.2" display="inline"><mn>43.2</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m8" class="ltx_Math" alttext="31.9" display="inline"><mn>31.9</mn></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r">+ Other NNJMs (Resc)</th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m9" class="ltx_Math" alttext="43.9" display="inline"><mn>43.9</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T4.m10" class="ltx_Math" alttext="32.2" display="inline"><mn>32.2</mn></math></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 4: </span> Primary results on Arabic-English and Chinese-English BOLT Web Forum. Each row includes the aggregate features from all previous rows.</div>
+</div>
+</div>
+<div id="S6.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.4 </span>Effect of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS4.m1" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>-best Rescoring Only</h3>
+
+<div id="S6.SS4.p1" class="ltx_para">
+<p class="ltx_p">Table <a href="#S6.T5" title="Table 5 ‣ 6.4 Effect of k-best Rescoring Only ‣ 6 Experimental Results ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> shows performance when our S2T/L2R NNJM is used only in 1000-best rescoring, compared to decoding. The primary purpose of this is as a comparison to <cite class="ltx_cite">Le<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib3" title="Continuous space translation models with neural networks" class="ltx_ref">2012</a>)</cite>, whose model can only be used in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS4.p1.m1" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>-best rescoring.</p>
+</div>
+<div id="S6.T5" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="3"><span class="ltx_text ltx_font_bold">BOLT Test</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold">Ar-En</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Without</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">With</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">RNNLM</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">RNNLM</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">BLEU</td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">BLEU</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Baseline</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T5.m1" class="ltx_Math" alttext="40.2" display="inline"><mn>40.2</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T5.m2" class="ltx_Math" alttext="41.3" display="inline"><mn>41.3</mn></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">S2T/L2R NNJM (Resc)</th>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T5.m3" class="ltx_Math" alttext="41.7" display="inline"><mn>41.7</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T5.m4" class="ltx_Math" alttext="41.6" display="inline"><mn>41.6</mn></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r">S2T/L2R NNJM (Dec)</th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T5.m5" class="ltx_Math" alttext="42.8" display="inline"><mn>42.8</mn></math></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T5.m6" class="ltx_Math" alttext="42.9" display="inline"><mn>42.9</mn></math></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 5: </span> Comparison of our primary NNJM in decoding vs. 1000-best rescoring.</div>
+</div>
+<div id="S6.SS4.p2" class="ltx_para">
+<p class="ltx_p">We can see that the rescoring-only NNJM performs very well when used on top of a baseline without an RNNLM (+1.5 BLEU), but the gain on top of the RNNLM is very small (+0.3 BLEU). The gain from the decoding NNJM is large in both cases (+2.6 BLEU w/o RNNLM, +1.6 BLEU w/ RNNLM). This demonstrates that the full power of the NNJM can only be harnessed when it is used in decoding. It is also interesting to see that the RNNLM is no longer beneficial when the NNJM is used.</p>
+</div>
+</div>
+<div id="S6.SS5" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.5 </span>Effect of Neural Network Configuration</h3>
+
+<div id="S6.SS5.p1" class="ltx_para">
+<p class="ltx_p">Table <a href="#S6.T6" title="Table 6 ‣ 6.5 Effect of Neural Network Configuration ‣ 6 Experimental Results ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> shows results using the S2T/L2R NNJM with various configurations. We can see that reducing the source window size, layer size, or vocab size will all degrade results. Increasing the sizes beyond the default NNJM has almost no effect (102%). Also note that the target-only NNLM (i.e., Source Window=0) only obtains 33% of the improvements of the NNJM.</p>
+</div>
+<div id="S6.T6" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="3"><span class="ltx_text ltx_font_bold">BOLT Test</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold">Ar-En</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">BLEU</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">% Gain</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">“Simple Hier.” Baseline</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">33.8</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">-</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">S2T/L2R NNJM (Dec)</th>
+<td class="ltx_td ltx_align_center ltx_border_r">38.4</td>
+<td class="ltx_td ltx_align_center ltx_border_r">100%</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Source Window=7</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">38.3</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">98%</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Source Window=5</th>
+<td class="ltx_td ltx_align_center ltx_border_r">38.2</td>
+<td class="ltx_td ltx_align_center ltx_border_r">96%</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Source Window=3</th>
+<td class="ltx_td ltx_align_center ltx_border_r">37.8</td>
+<td class="ltx_td ltx_align_center ltx_border_r">87%</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Source Window=0</th>
+<td class="ltx_td ltx_align_center ltx_border_r">35.3</td>
+<td class="ltx_td ltx_align_center ltx_border_r">33%</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Layers=384x768x768</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">38.5</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">102%</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Layers=192x512</th>
+<td class="ltx_td ltx_align_center ltx_border_r">38.1</td>
+<td class="ltx_td ltx_align_center ltx_border_r">93%</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Layers=128x128</th>
+<td class="ltx_td ltx_align_center ltx_border_r">37.1</td>
+<td class="ltx_td ltx_align_center ltx_border_r">72%</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Vocab=64,000</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">38.5</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">102%</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Vocab=16,000</th>
+<td class="ltx_td ltx_align_center ltx_border_r">38.1</td>
+<td class="ltx_td ltx_align_center ltx_border_r">93%</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Vocab=8,000</th>
+<td class="ltx_td ltx_align_center ltx_border_r">37.3</td>
+<td class="ltx_td ltx_align_center ltx_border_r">83%</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Activation=Rectified Lin.</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">38.5</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">102%</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r">Activation=Linear</th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">37.3</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">76%</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 6: </span> Results with different neural network architectures. The “default” NNJM in the second row uses these parameters: SW=11, L=192x512x512, V=32,000, A=tanh. All models use a 3-word target history (i.e., 4-gram LM). “Layers” refers to the size of the word embedding followed by the hidden layers. “Vocab” refers to the size of the input and output vocabularies. “% Gain” is the BLEU gain over the baseline relative to the default NNJM.</div>
+</div>
+</div>
+<div id="S6.SS6" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.6 </span>Effect of Speedups</h3>
+
+<div id="S6.SS6.p1" class="ltx_para">
+<p class="ltx_p">All previous results use a self-normalized neural network with two hidden layers. In Table <a href="#S6.T7" title="Table 7 ‣ 6.6 Effect of Speedups ‣ 6 Experimental Results ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>, we compare this to using a standard network (with two hidden layers), as well as a pre-computed neural network.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">13</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">13</sup>The difference in score for self-normalized vs. pre-computed is <span class="ltx_text ltx_font_italic">entirely</span> due to two vs. one hidden layers.</span></span></span> The “Simple Hierarchical” baseline is used here because it more closely approximates a real-time MT engine. For the sake of speed, these experiments only use the S2T/L2R NNJM+S2T NNLTM.</p>
+</div>
+<div id="S6.SS6.p2" class="ltx_para">
+<p class="ltx_p">Each result from Table <a href="#S6.T7" title="Table 7 ‣ 6.6 Effect of Speedups ‣ 6 Experimental Results ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a> corresponds to a row in Table <a href="#S2.T2" title="Table 2 ‣ 2.4 Pre-Computing the Hidden Layer ‣ 2 Neural Network Joint Model (NNJM) ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> of Section <a href="#S2.SS4" title="2.4 Pre-Computing the Hidden Layer ‣ 2 Neural Network Joint Model (NNJM) ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.4</span></a>. We can see that going from the standard model to the pre-computed model only reduces the BLEU improvement from +6.4 to +6.1, while increasing the NNJM lookup speed by a factor of 10,000x.</p>
+</div>
+<div id="S6.T7" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="3"><span class="ltx_text ltx_font_bold">BOLT Test</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold">Ar-En</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">BLEU</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Gain</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">“Simple Hier.” Baseline</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">33.8</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">-</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Standard NNJM</th>
+<td class="ltx_td ltx_align_center ltx_border_r">40.2</td>
+<td class="ltx_td ltx_align_center ltx_border_r">+6.4</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Self-Norm NNJM</th>
+<td class="ltx_td ltx_align_center ltx_border_r">40.1</td>
+<td class="ltx_td ltx_align_center ltx_border_r">+6.3</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r">Pre-Computed NNJM</th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">39.9</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">+6.1</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 7: </span> Results for the standard NNs vs. self-normalized NNs vs. pre-computed NNs.</div>
+</div>
+<div id="S6.SS6.p3" class="ltx_para">
+<p class="ltx_p">In Table <a href="#S2.T2" title="Table 2 ‣ 2.4 Pre-Computing the Hidden Layer ‣ 2 Neural Network Joint Model (NNJM) ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> we showed that the cost of unique lookups for the pre-computed NNJM is only <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS6.p3.m1" class="ltx_Math" alttext="\sim" display="inline"><mo>∼</mo></math>0.001 seconds per source word. This does not include the cost of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS6.p3.m2" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-gram creation or cached lookups, which amount to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS6.p3.m3" class="ltx_Math" alttext="\sim" display="inline"><mo>∼</mo></math>0.03 seconds per source word in our current implementation.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">14</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">14</sup>In our decoder, roughly 95% of NNJM <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS6.p3.m4" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-gram lookups within the same sentence are duplicates.</span></span></span> However, the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS6.p3.m5" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-grams created for the NNJM can be shared with the Kneser-Ney LM, which reduces the cost of that feature. Thus, the total cost <span class="ltx_text ltx_font_italic">increase</span> of using the NNJM+NNLTM features in decoding is only <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS6.p3.m6" class="ltx_Math" alttext="\sim" display="inline"><mo>∼</mo></math>0.01 seconds per source word.</p>
+</div>
+<div id="S6.SS6.p4" class="ltx_para">
+<p class="ltx_p">In future work we will provide more detailed analysis regarding the usability of the NNJM in a low-latency, high-throughput MT engine.</p>
+</div>
+</div>
+</div>
+<div id="S7" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">7 </span>Related Work </h2>
+
+<div id="S7.p1" class="ltx_para">
+<p class="ltx_p">Although there has been a substantial amount of past work in lexicalized joint models <cite class="ltx_cite">[<a href="#bib.bib23" title="N-gram-based machine translation" class="ltx_ref">15</a>, <a href="#bib.bib22" title="Factored bilingual n-gram language models for statistical machine translation" class="ltx_ref">6</a>]</cite>, nearly all of these papers have used older statistical techniques such as Kneser-Ney or Maximum Entropy. However, not only are these techniques intractable to train with high-order context vectors, they also lack the neural network’s ability to semantically generalize <cite class="ltx_cite">[<a href="#bib.bib25" title="Linguistic regularities in continuous space word representations" class="ltx_ref">17</a>]</cite> and learn non-linear relationships.</p>
+</div>
+<div id="S7.p2" class="ltx_para">
+<p class="ltx_p">A number of recent papers have proposed methods for creating neural network translation/joint models, but nearly all of these works have obtained much smaller BLEU improvements than ours. For each related paper, we will briefly contrast their methodology with our own and summarize their BLEU improvements using scores taken directly from the cited paper.</p>
+</div>
+<div id="S7.p3" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Auli<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib2" title="Joint language and translation modeling with recurrent neural networks" class="ltx_ref">2013</a>)</cite> use a <span class="ltx_text ltx_font_italic">fixed</span> continuous-space source representation, obtained from LDA <cite class="ltx_cite">[<a href="#bib.bib27" title="Latent dirichlet allocation" class="ltx_ref">3</a>]</cite> or a source-only NNLM. Also, their model is recurrent, so it cannot be used in decoding. They obtain +0.2 BLEU improvement on top of a target-only NNLM (25.6 vs. 25.8).</p>
+</div>
+<div id="S7.p4" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Schwenk (<a href="#bib.bib13" title="Continuous space translation models for phrase-based statistical machine translation" class="ltx_ref">2012</a>)</cite> predicts an entire target phrase at a time, rather than a word at a time. He obtains +0.3 BLEU improvement (24.8 vs. 25.1).</p>
+</div>
+<div id="S7.p5" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Zou<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib26" title="Bilingual word embeddings for phrase-based machine translation" class="ltx_ref">2013</a>)</cite> estimate context-free bilingual lexical similarity scores, rather than using a large context. They obtain an +0.5 BLEU improvement on Chinese-English (30.0 vs. 30.5).</p>
+</div>
+<div id="S7.p6" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Kalchbrenner and Blunsom (<a href="#bib.bib24" title="Recurrent continuous translation models" class="ltx_ref">2013</a>)</cite> implement a convolutional recurrent NNJM. They score a 1000-best list using only their model and are able to achieve the same BLEU as using all 12 standard MT features (21.8 vs 21.7). However, additive results are not presented.</p>
+</div>
+<div id="S7.p7" class="ltx_para">
+<p class="ltx_p">The most similar work that we know of is <cite class="ltx_cite">Le<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib3" title="Continuous space translation models with neural networks" class="ltx_ref">2012</a>)</cite>. Le’s basic procedure is to re-order the source to match the linear order of the target, and then segment the hypothesis into minimal bilingual phrase pairs. Then, he predicts each target word given the previous bilingual phrases. However, Le’s formulation could only be used in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.p7.m1" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>-best rescoring, since it requires long-distance re-ordering and a large target context.</p>
+</div>
+<div id="S7.p8" class="ltx_para">
+<p class="ltx_p">Le’s model does obtain an impressive +1.7 BLEU gain on top of a baseline without an NNLM (25.8 vs. 27.5). However, when compared to the strongest baseline which includes an NNLM, Le’s best models (S2T + T2S) only obtain an +0.6 BLEU improvement (26.9 vs. 27.5). This is consistent with our rescoring-only result, which indicates that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.p8.m1" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>-best rescoring is too shallow to take advantage of the power of a joint model.</p>
+</div>
+<div id="S7.p9" class="ltx_para">
+<p class="ltx_p">Le’s model also uses minimal phrases rather than being purely lexicalized, which has two main downsides: (a) a number of complex, hand-crafted heuristics are required to define phrase boundaries, which may not transfer well to new languages, (b) the effective vocabulary size is much larger, which substantially increases data sparsity issues.</p>
+</div>
+<div id="S7.p10" class="ltx_para">
+<p class="ltx_p">We should note that our best results use six separate models, whereas all previous work only uses one or two models. However, we have demonstrated that we can obtain 50%-80% of the total improvement with only one model (S2T/L2R NNJM), and 70%-90% with only two models (S2T/L2R NNJM + S2T NNLTM). Thus, the one and two-model conditions still significantly outperform any past work.</p>
+</div>
+</div>
+<div id="S8" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">8 </span>Discussion</h2>
+
+<div id="S8.p1" class="ltx_para">
+<p class="ltx_p">We have described a novel formulation for a neural network-based machine translation joint model, along with several simple variations of this model. When used as MT decoding features, these models are able to produce a gain of +3.0 BLEU on top of a very strong and feature-rich baseline, as well as a +6.3 BLEU gain on top of a simpler system.</p>
+</div>
+<div id="S8.p2" class="ltx_para">
+<p class="ltx_p">Our model is remarkably simple – it requires no linguistic resources, no feature engineering, and only a handful of hyper-parameters. It also has no reliance on potentially fragile outside algorithms, such as unsupervised word clustering. We consider the simplicity to be a major advantage. Not only does this suggest that it will generalize well to new language pairs and domains, but it also suggests that it will be straightforward for others to replicate these results.</p>
+</div>
+<div id="S8.p3" class="ltx_para">
+<p class="ltx_p">Overall, we believe that the following factors set us apart from past work and allowed us to obtain such significant improvements:</p>
+<ol id="I4" class="ltx_enumerate">[noitemsep]
+
+<li id="I4.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">1.</span> 
+<div id="I4.i1.p1" class="ltx_para">
+<p class="ltx_p">The ability to use the NNJM in decoding rather than rescoring.</p>
+</div></li>
+<li id="I4.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">2.</span> 
+<div id="I4.i2.p1" class="ltx_para">
+<p class="ltx_p">The use of a large bilingual context vector, which is provided to the neural network in “raw” form, rather than as the output of some other algorithm.</p>
+</div></li>
+<li id="I4.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">3.</span> 
+<div id="I4.i3.p1" class="ltx_para">
+<p class="ltx_p">The fact that the model is purely lexicalized, which avoids both data sparsity and implementation complexity.</p>
+</div></li>
+<li id="I4.i4" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">4.</span> 
+<div id="I4.i4.p1" class="ltx_para">
+<p class="ltx_p">The large size of the network architecture.</p>
+</div></li>
+<li id="I4.i5" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">5.</span> 
+<div id="I4.i5.p1" class="ltx_para">
+<p class="ltx_p">The directional variation models.</p>
+</div></li>
+</ol>
+</div>
+<div id="S8.p4" class="ltx_para">
+<p class="ltx_p">One of the biggest goals of this work is to quell any remaining doubts about the utility of neural networks in machine translation. We believe that there are large areas of research yet to be explored. For example, creating a new type of decoder centered around a purely lexicalized neural network model. Our short term ideas include using more interesting types of context in our input vector (such as source syntax), or using the NNJM to model syntactic/semantic structure of the target.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Auli, M. Galley, C. Quirk and G. Zweig</span><span class="ltx_text ltx_bib_year">(2013-10)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Joint language and translation modeling with recurrent neural networks</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Seattle, Washington, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 1044–1054</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/D13-1106" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S7.p3" title="7 Related Work ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Bengio, R. Ducharme, P. Vincent and C. Jauvin</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A neural probabilistic language model</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">3</span>, <span class="ltx_text ltx_bib_pages"> pp. 1137–1155</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS1.p1" title="2.1 Neural Network Architecture ‣ 2 Neural Network Joint Model (NNJM) ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib27" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. M. Blei, A. Y. Ng and M. I. Jordan</span><span class="ltx_text ltx_bib_year">(2003-03)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Latent dirichlet allocation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">J. Mach. Learn. Res.</span> <span class="ltx_text ltx_bib_volume">3</span>, <span class="ltx_text ltx_bib_pages"> pp. 993–1022</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text issn ltx_bib_external">ISSN 1532-4435</span>,
+<a href="http://dl.acm.org/citation.cfm?id=944919.944937" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S7.p3" title="7 Related Work ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Chiang, K. Knight and W. Wang</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">11,001 new features for statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock">See <span class="ltx_text ltx_bib_crossref"><cite class="ltx_cite"/></span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 218–226</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I2.i8.p1" title="5.1 MT Decoder ‣ 5 MT System ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Chiang</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Hierarchical phrase-based translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">33</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 201–228</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <span class="ltx_ref ltx_ref_self"><span class="ltx_text ltx_ref_title">Fast and Robust Neural Network Joint Models for Statistical Machine Translation</span></span>,
+<a href="#S1.p4" title="1 Introduction ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S6.SS2.p2" title="6.2 “Simple Hierarchical” NIST Results ‣ 6 Experimental Results ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.2</span></a>.
+</span></li>
+<li id="bib.bib22" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. M. Crego and F. Yvon</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Factored bilingual <span class="ltx_text ltx_font_italic">n</span>-gram language models for statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Machine Translation</span> <span class="ltx_text ltx_bib_volume">24</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 159–175</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S7.p1" title="7 Related Work ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Devlin and S. Matsoukas</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Trait-based hypothesis selection for machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">NAACL HLT ’12</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 528–532</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-937284-20-6</span>,
+<a href="http://dl.acm.org/citation.cfm?id=2382029.2382107" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I2.i6.p1" title="5.1 MT Decoder ‣ 5 MT System ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_thesis"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Devlin</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Lexical features for statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_type">Master’s Thesis</span>, <span class="ltx_text ltx_bib_publisher">University of Maryland</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I2.i4.p1" title="5.1 MT Decoder ‣ 5 MT System ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>.
+</span></li>
+<li id="bib.bib19" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Habash, R. Roth, O. Rambow, R. Eskander and N. Tomeh</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Morphological analysis and disambiguation for dialectal arabic</span>.
+</span>
+<span class="ltx_bibblock">See <span class="ltx_text ltx_bib_crossref"><cite class="ltx_cite"/></span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 426–432</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS2.p1" title="5.2 Training and Optimization ‣ 5 MT System ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Z. Huang, J. Devlin and R. Zbib</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Factored soft source syntactic constraints for hierarchical machine translation</span>.
+</span>
+<span class="ltx_bibblock">See <span class="ltx_text ltx_bib_crossref"><cite class="ltx_cite"/></span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 556–566</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I2.i7.p1" title="5.1 MT Decoder ‣ 5 MT System ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Kalchbrenner and P. Blunsom</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Recurrent continuous translation models</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S7.p6" title="7 Related Work ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Kneser and H. Ney</span><span class="ltx_text ltx_bib_year">(1995)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Improved backing-off for m-gram language modeling</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">1</span>, <span class="ltx_text ltx_bib_pages"> pp. 181–184</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p6" title="2 Neural Network Joint Model (NNJM) ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Le, A. Allauzen and F. Yvon</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Continuous space translation models with neural networks</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">NAACL HLT ’12</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 39–48</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-937284-20-6</span>,
+<a href="http://dl.acm.org/citation.cfm?id=2382029.2382036" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS3.p1" title="2.3 Self-Normalized Neural Network ‣ 2 Neural Network Joint Model (NNJM) ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>,
+<a href="#S6.SS4.p1" title="6.4 Effect of k-best Rescoring Only ‣ 6 Experimental Results ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.4</span></a>,
+<a href="#S7.p7" title="7 Related Work ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+</span></li>
+<li id="bib.bib21" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. LeCun, L. Bottou, G. B. Orr and K. Müller</span><span class="ltx_text ltx_bib_year">(1998)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Efficient backprop</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_inbook">Neural networks: Tricks of the trade</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 9–50</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p3" title="2.2 Neural Network Training ‣ 2 Neural Network Joint Model (NNJM) ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib23" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. B. Marino, R. E. Banchs, J. M. Crego, A. De Gispert, P. Lambert, J. A. Fonollosa and M. R. Costa-Jussà</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">N-gram-based machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">32</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 527–549</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S7.p1" title="7 Related Work ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Mikolov, M. Karafiát, L. Burget, J. Cernocký and S. Khudanpur</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Recurrent neural network based language model</span>.
+</span>
+<span class="ltx_bibblock">See <span class="ltx_text ltx_bib_crossref"><cite class="ltx_cite"/></span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1045–1048</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I3.i2.p1" title="5.1 MT Decoder ‣ 5 MT System ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>.
+</span></li>
+<li id="bib.bib25" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Mikolov, W. Yih and G. Zweig</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Linguistic regularities in continuous space word representations</span>.
+</span>
+<span class="ltx_bibblock">See <span class="ltx_text ltx_bib_crossref"><cite class="ltx_cite"/></span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 746–751</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S7.p1" title="7 Related Work ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. J. Och and H. Ney</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A systematic comparison of various statistical alignment models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">29</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 19–51</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS2.p2" title="5.2 Training and Optimization ‣ 5 MT System ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>.
+</span></li>
+<li id="bib.bib30" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Pascanu, T. Mikolov and Y. Bengio</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">On the difficulty of training recurrent neural networks</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">arXiv preprint arXiv:1211.5063</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p3" title="2.2 Neural Network Training ‣ 2 Neural Network Joint Model (NNJM) ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib16" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Riesa, A. Irvine and D. Marcu</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Feature-rich language-independent syntax-based alignment for statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">EMNLP ’11</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 497–507</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-937284-11-4</span>,
+<a href="http://dl.acm.org/citation.cfm?id=2145432.2145490" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS2.p2" title="5.2 Training and Optimization ‣ 5 MT System ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>.
+</span></li>
+<li id="bib.bib17" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Rosenfeld</span><span class="ltx_text ltx_bib_year">(1996)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A maximum entropy approach to adaptive statistical language modeling</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computer, Speech and Language</span> <span class="ltx_text ltx_bib_volume">10</span>, <span class="ltx_text ltx_bib_pages"> pp. 187–228</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p6" title="2 Neural Network Joint Model (NNJM) ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib14" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Rosti, B. Zhang, S. Matsoukas and R. Schwartz</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">BBN system description for WMT10 system combination task</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 321–326</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS2.p3" title="5.2 Training and Optimization ‣ 5 MT System ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>.
+</span></li>
+<li id="bib.bib15" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Schwenk</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Continuous-space language models for statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Prague Bull. Math. Linguistics</span> <span class="ltx_text ltx_bib_volume">93</span>, <span class="ltx_text ltx_bib_pages"> pp. 137–146</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Schwenk</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Continuous space translation models for phrase-based statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock">See <span class="ltx_text ltx_bib_crossref"><cite class="ltx_cite"/></span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1071–1080</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S7.p4" title="7 Related Work ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Shen, J. Xu and R. Weischedel</span><span class="ltx_text ltx_bib_year">(2010-12)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">String-to-dependency statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">36</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 649–671</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text issn ltx_bib_external">ISSN 0891-2017</span>,
+<a href="http://dx.doi.org/10.1162/coli_a_00015" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1162/coli_a_00015" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I2.i3.p1" title="5.1 MT Decoder ‣ 5 MT System ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>,
+<a href="#I2.i5.p1" title="5.1 MT Decoder ‣ 5 MT System ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>,
+<a href="#S5.SS1.p1" title="5.1 MT Decoder ‣ 5 MT System ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Snover, B. Dorr and R. Schwartz</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Language and translation model adaptation using comparable corpora</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">EMNLP ’08</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 857–866</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dl.acm.org/citation.cfm?id=1613715.1613825" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#I2.i9.p1" title="5.1 MT Decoder ‣ 5 MT System ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>.
+</span></li>
+<li id="bib.bib31" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Tanaka, Y. Toru, J. Yamamoto and M. Norimatsu</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">An efficient language model using double-array structures</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS4.p6" title="2.4 Pre-Computing the Hidden Layer ‣ 2 Neural Network Joint Model (NNJM) ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.4</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[28]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Vaswani, Y. Zhao, V. Fossum and D. Chiang</span><span class="ltx_text ltx_bib_year">(2013-10)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Decoding with large-scale neural language models improves translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Seattle, Washington, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 1387–1392</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/D13-1140" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS3.p8" title="2.3 Self-Normalized Neural Network ‣ 2 Neural Network Joint Model (NNJM) ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>.
+</span></li>
+<li id="bib.bib26" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[29]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">W. Y. Zou, R. Socher, D. Cer and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Bilingual word embeddings for phrase-based machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1393–1398</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S7.p5" title="7 Related Work ‣ Fast and Robust Neural Network Joint Models for Statistical Machine Translation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 19:15:49 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,1250 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Encoding Relation Requirements for Relation Extraction via Joint Inference.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_abstract">
+      <h6 class="ltx_title ltx_title_abstract">
+       Abstract
+      </h6>
+      <p class="ltx_p">
+       Most existing relation extraction models make predictions for each entity pair locally and individually, while ignoring implicit
+global clues available in the knowledge base, sometimes leading to conflicts among local predictions
+from different entity pairs. In this paper, we propose a joint inference
+framework that utilizes these global clues to resolve disagreements among
+local predictions.
+We exploit two kinds of clues
+to generate constraints which can capture the implicit type and cardinality requirements of a relation.
+Experimental results on three datasets, in both English and Chinese,
+show that our framework outperforms the
+state-of-the-art relation extraction models when such clues are applicable to the datasets.
+And, we find that the clues learnt automatically from existing knowledge bases perform comparably to those refined by human.
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Identifying predefined kinds of relationship between pairs of entities
+is crucial for many knowledge base related applications
+        [13]
+        .
+In the literature, relation extraction (RE) is usually investigated
+in a classification style, where relations are simply treated as isolated class labels, while
+their definitions or background information are sometimes ignored. Take the relation
+        Capital
+        as an example,
+we can imagine that this relation will expect a country as its subject and a city as object,
+and in most cases, a city can be the capital of only one country.
+All these clues are no doubt helpful, for instance,
+        Yao et al. (2010)
+        explicitly modeled
+the expected types of a relation’s arguments with the help of Freebase’s type taxonomy
+and obtained promising results for RE.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        However, properly capturing and utilizing such typing clues are not trivial.
+One of the hurdles here is the lack of off-the-shelf resources
+and such clues often have to be coded by human experts.
+Many knowledge bases do not have a well-defined typing
+system, let alone fine-grained typing taxonomies with corresponding type recognizers,
+which are crucial to explicitly model the typing requirements for arguments of a relation,
+but rather expensive and time-consuming to collect.
+Similarly, the cardinality requirements of arguments, e.g., a person can have
+only one birthdate and a city can only be
+labeled as capital of one country, should be considered as a strong indicator
+to eliminate wrong predictions, but has
+to be coded manually as well.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        On the other hand, most previous relation extractors process each entity pair
+(we will use
+        entity pair
+        and
+        entity tuple
+        exchangeably in the rest of the
+paper) locally and individually, i.e., the extractor makes
+decisions solely based on the sentences
+containing the current entity pair and ignores other related pairs, therefore has difficulties to
+capture possible disagreements among different entity pairs.
+However, when looking at the output of a multi-class relation
+predictor globally, we can easily find possible incorrect predictions such as a university locates
+in two different cities, two different cities have been labeled as capital for one country, a country
+locates in a city and so on.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        In this paper, we will address how to derive and exploit two categories of these clues:
+the expected types and the cardinality requirements of a
+relation’s arguments, in the scenario of relation extraction.
+We propose to perform joint inference upon multiple local predictions by leveraging implicit
+clues that are encoded with relation specific requirements and can be learnt from existing knowledge bases. Specifically,
+the joint inference framework operates on the output of a sentence level relation extractor as input,
+derives 5 types of constraints from an existing KB to implicitly capture the expected
+type and cardinality requirements for a relation’s arguments, and
+jointly resolve the disagreements among candidate predictions.
+We formalize this procedure
+as a constrained optimization problem, which can be solved by many
+optimization frameworks.
+We use integer linear programming (ILP) as the solver and evaluate our framework on English and Chinese datasets.
+The experimental results show that our framework performs better than the state-of-the-art approaches
+when such clues are applicable to the datasets.
+We also show that the automatically learnt clues perform comparably to
+those refined manually.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p5">
+       <p class="ltx_p">
+        In the rest of the paper, we first review related work in Section
+        2
+        , and
+in Section
+        3
+        , we describe our framework in detail. Experimental setup and
+results are discussed in Section
+        4
+        . We conclude this paper in Section
+        5
+        .
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Related Work
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        Since traditional supervised relation extraction methods
+        [12, 20]
+        require manual annotations
+and are often domain-specific, nowadays many efforts focus on semi-supervised or unsupervised methods
+        [1, 5]
+        .
+Distant supervision (DS) is a semi-supervised RE framework
+and has attracted many attentions
+        [3, 9, 17, 14, 6, 15]
+        .
+DS approaches can predict canonicalized (predefined in KBs) relations for large amount of data and
+do not need much human involvement. Since the automatically generated training datasets in
+DS often contain noises, there are also research efforts focusing on
+reducing the noisy labels in the training data
+        [16]
+        .
+To bridge the gaps between the relations extracted from open information extraction
+and the canonicalized relations in KBs,
+        Yao et al. (2012)
+        and
+        Riedel et al. (2013)
+        propose a universal schema which is a union of KB schemas and natural language patterns,
+making it possible to integrate
+the unlimited set of uncanonicalized relations in open settings with the relations in existing KBs.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p2">
+       <p class="ltx_p">
+        As far as we know, few works have managed to take the relation specific requirements for arguments into
+account, and most existing works make predictions locally and individually.
+The MultiR system
+allows entity tuples to have more than one relations, but still predicts
+each entity tuple locally
+        [6]
+        .
+        Surdeanu et al. (2012)
+        propose a two-layer multi-instance multi-label (MIML)
+framework to capture the dependencies among relations. The first layer is
+a multi-class classifier making local predictions for single sentences, the output of which
+are aggregated by the second layer into the entity pair level. Their
+approach only captures relation dependencies,
+while we learn implicit relation backgrounds from knowledge bases,
+including argument type and cardinality requirements.
+        Riedel et al. (2013)
+        propose to use latent vectors to estimate the
+preferences between relations and entities. These can be considered
+as the latent type information of the relations’ arguments, which is learnt from various data sources.
+In contrast, our approach learn implicit clues from existing KBs, and jointly
+optimize local predictions among different entity tuples to capture
+both relation argument type clues and cardinality clues.
+        Li et al. (2011)
+        and
+        Li et al. (2013)
+        use co-occurring statistics among relations or events to
+jointly improve information extraction performances in ACE tasks, while we mine existing KBs to collect
+global clues to solve local conflicts and find the optimal aggregation assignments, regarding
+existing knowledge facts.
+        de Lacalle and Lapata (2013)
+        encode general domain knowledge as FOL rules in a topic model while our instantiated constraints are directly operated in an ILP model.
+        Zhang et al. (2013)
+        utilize relation cardinality to create negative
+samples for distant supervision while we use both implicit type clues and relation cardinality
+expectations to discover possible inconsistencies among local predictions.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       The Framework
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        Our framework takes a set of entity pairs and their supporting
+sentences as its input.
+We first train a preliminary sentence level extractor which can output confidence
+scores for its predictions, e.g., a maximum entropy or logistic regression model,
+and use this local extractor to produce local predictions.
+In order to implicitly capture the expected type and cardinality requirements for a relation’s arguments,
+we derive two kinds of clues from an existing KB, which are further
+utilized to discover the disagreements among local candidate predictions.
+Our objective is to maximize the overall confidence of
+all the selected predictions.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S3.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.1
+        </span>
+        Generating Candidate Relations
+       </h3>
+       <div class="ltx_para" id="S3.SS1.p1">
+        <p class="ltx_p">
+         Since we will focus on the open domain relation extraction, we still
+follow the distant supervision paradigm to collect our training data
+guided by a KB, and train the local extractor accordingly. Specifically,
+we train a sentence level extractor using the maximum entropy model.
+Given a sentence containing an entity pair, the model will output the confidence
+of this sentence representing certain relationship (from a predefined relation set) between the entity pair.
+Formally
+         ℛ
+         represents the relation set we are working on,
+         𝒯
+         is the set of entity tuples that we will predict in
+the test set.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p2">
+        <p class="ltx_p">
+         Keep in mind that our local extractor is trained
+on noisy training data, which, we admit, is not fully reliable.
+As we observed in a pilot experiment that there is a good chance that the
+predictions ranked in the second or third may still be correct,
+we select
+         top three
+         predictions as the
+candidate relations for each mention in order to introduce more
+potentially correct output.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p3">
+        <p class="ltx_p">
+         On the other hand, we should discard the predictions whose
+confidences are too low to be true, where we set up a threshold of 0.1.
+For a tuple
+         t
+         , we obtain its candidate relation set by combining
+the candidate relations of all its mentions, and represent it as
+         Rt
+         .
+For a candidate relation
+         r∈Rt
+         and a tuple
+         t
+         ,
+we define
+         Mtr
+         as all
+         t
+         ’s
+mentions whose candidate relations contain
+         r
+         .
+Now the confidence score of a relation
+         r∈Rt
+         being
+assigned to tuple
+         t
+         can be calculated as:
+        </p>
+        c⁢o⁢n⁢f⁢(t,r)=∑m∈MtrMEscore⁢(m,r)
+
+(1)
+        <p class="ltx_p">
+         where MEscore(
+         m,r
+         ) is the confidence of mention
+         m
+         representing relation
+         r
+         output by our preliminary extractor.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p4">
+        <p class="ltx_p">
+         Traditionally, both lexical features and syntactic features are
+used in relation extraction.
+Lexical features are the word chains between the subjects and
+objects in the sentences, while syntactic features are the
+dependency paths from the subjects to the objects on the dependency graphs of
+the supporting sentences. However, lexical features are usually too
+specific to frequently appear in the test data, while
+the reliability of syntactic features depends heavily on the quality of dependency parsing tools.
+Generally, we expect more potentially correct relations to be put into
+the candidate relation set for further consideration.
+So in addition to lexical
+and syntactic features, we also use n-gram features to train
+our preliminary relation extraction model.
+N-gram
+features are considered as more ambiguous compared to traditional lexical and syntactic
+features, and may introduce incorrect predictions, thus improving
+the recall at the cost of precision.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.2
+        </span>
+        Disagreements among the Candidates
+       </h3>
+       <div class="ltx_para" id="S3.SS2.p1">
+        <p class="ltx_p">
+         The candidate relations we obtained in the previous subsection inevitably include many
+incorrect predictions. Ideally we should discard those wrong predictions to
+produce more accurate results.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p2">
+        <p class="ltx_p">
+         As discussed earlier, we will exploit from the knowledge base two categories of clues that implicitly capture
+relations’ backgrounds: their expected argument types and argument cardinalities, based on which
+we can discover two categories of disagreements among the candidate predictions,
+summarized as argument type inconsistencies and violations of arguments’
+uniqueness, which have been rarely considered before.
+We will discuss them in detail, and describe how to
+learn the clues from a KB afterwards.
+        </p>
+       </div>
+       <div class="ltx_paragraph" id="S3.SS2.SSS0.P1">
+        <h4 class="ltx_title ltx_title_paragraph">
+         Implicit Argument Types Inconsistencies:
+        </h4>
+        <div class="ltx_para" id="S3.SS2.SSS0.P1.p1">
+         <p class="ltx_p">
+          Generally, the argument types of the correct predictions should be consistent with each other. Given a
+relation, its arguments sometimes are required to be certain types
+of entities. For example, in Figure
+          1
+          , the relation
+          LargestCity
+          restricts its subject to be either countries or states, and
+its object to be cities. If the predictions among different
+entity tuples require the same entity to belong to different types, we
+call this an argument type inconsistency. Take
+          &lt;
+          USA, New York
+          &gt;
+          and
+          &lt;
+          USA, Washington D.C.
+          &gt;
+          as an example. In Figure
+          1
+          ,
+          &lt;
+          USA, New York
+          &gt;
+          has a candidate relation
+          LargestCity
+          which restricts
+          USA
+          to be
+either countries or states, while
+          &lt;
+          USA, Washington D.C.
+          &gt;
+          has a prediction
+          LocationCity
+          which indicates a disagreement in terms of
+          USA
+          ’s
+type because the latter prediction expects
+          USA
+          to be an organization located in a city.
+This warns that at least one of the two candidate relations is incorrect.
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS2.SSS0.P1.p2">
+         <p class="ltx_p">
+          The previous scenario shows that the
+subjects of two candidate relations may disagree with each other. From Figure
+          1
+          ,
+we can observe two more situations: the first one is that the objects
+of the two candidate relations are inconsistent with each other, for example
+          &lt;
+          New York University, New York
+          &gt;
+          with the prediction
+          LocationCity
+          and
+          &lt;
+          Columbia University, New York
+          &gt;
+          with the prediction
+          LocationCountry
+          .
+The second one is that the subject of one candidate relation do not agree with another
+prediction’s object, for example
+          &lt;
+          Richard Fuld, USA
+          &gt;
+          with the prediction
+          Nationality
+          and
+          &lt;
+          USA, New York
+          &gt;
+          with the prediction
+          LocationCity
+          .
+Although we have not assigned explicit types to these entities, we can still exploit
+the inconsistencies implicitly with the help of shared entities.
+Note that the implicit argument typing clues here mean whether two relations
+can share arguments, but NOT enumate what types explicitly their arguments should have.
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS2.SSS0.P1.p3">
+         <p class="ltx_p">
+          We formalize all the relation pairs that disagree with each other as follows.
+These relation pairs can be divided into three subcategories.
+We represent the relation pairs
+          (ri,rj)
+          that are inconsistent in terms of subjects
+as
+          𝒞s⁢r
+          , the relations pairs that are inconsistent in terms of objects
+as
+          𝒞r⁢o
+          , the relation pairs that are inconsistent in terms of one’s subject
+and the other one’s object as
+          𝒞r⁢e⁢r
+          .
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS2.SSS0.P1.p4">
+         <p class="ltx_p">
+          It is worth mentioning that
+disagreements inside a tuple are also included here. For instance,
+an entity tuple
+          &lt;
+          USA, Washington D.C.
+          &gt;
+          in Figure
+          1
+          has two candidate relations,
+          Capital
+          and
+          LocationCity
+          . These two predictions are inconsistent with each other
+with respect to the type of
+          USA
+          . They implicitly consider
+          USA
+          as “country” and
+“organization”, respectively.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_paragraph" id="S3.SS2.SSS0.P2">
+        <h4 class="ltx_title ltx_title_paragraph">
+         Violations of Arguments’ Uniqueness:
+        </h4>
+        <div class="ltx_para" id="S3.SS2.SSS0.P2.p1">
+         <p class="ltx_p">
+          The previous categories of disagreements are all based on the implicit type
+information of the relations’ arguments,
+Now we make use of the clues of argument cardinality requirements.
+Given a subject, some relations should have unique objects. For
+example, in Figure
+          1
+          , given
+          USA
+          as the
+subject of the relation
+          Capital
+          , we can only accept one possible object,
+because there is great chance that a country only have one capital. On the other hand,
+given
+          Washington D.C.
+          as the object of the relation
+          Capital
+          , we can only accept
+one subject, since usually a city can only be the capital of one country or
+state.
+If these are violating in the candidates, we could know that there may be some
+incorrect predictions.
+We represent the relations expecting unique objects as
+          𝒞o⁢u
+          , and
+the relations expecting unique subjects as
+          𝒞s⁢u
+          .
+         </p>
+        </div>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.3
+        </span>
+        Obtaining the Global Clues
+       </h3>
+       <div class="ltx_para" id="S3.SS3.p1">
+        <p class="ltx_p">
+         Now, the issue is how to obtain the clues used in the previous subsection.
+That is, how we determine which relations
+expect certain types of subjects, which relations expect certain types of objects, etc.
+These knowledge can be definitely coded by human, or learnt from a KB.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS3.p2">
+        <p class="ltx_p">
+         Most existing knowledge bases represent their knowledge facts in the form of (
+         &lt;
+         subject, relation, object&gt;
+         ) triple, which
+can be seen as relational facts between entity tuples.
+Usually the triples in a KB are carefully defined by experts. It
+is rare to find inconsistencies among the triples in the knowledge base.
+The clues are therefore learnt from KBs, and further refined manually if needed.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS3.p3">
+        <p class="ltx_p">
+         Given two relations
+         r1
+         and
+         r2
+         , we query the KB for all tuples
+bearing the relation
+         r1
+         or
+         r2
+         . We use
+         Si
+         and
+         Oi
+         to represent
+         ri
+         ’s (
+         i∈{1,2}
+         ) subject set and object set, respectively.
+We adopt the pointwise mutual information (PMI) to
+estimate the dependency between the argument sets of two relations:
+        </p>
+        PMI⁢(A,B)=log⁡p⁢(A,B)p⁢(A)⁢p⁢(B)
+
+(2)
+        <p class="ltx_p">
+         where
+         p⁢(A,B)
+         is number of the entities both in
+         A
+         and
+         B
+         ,
+         p⁢(A)
+         and
+         p⁢(B)
+         are the numbers of the entities in
+         A
+         and
+         B
+         , respectively.
+For any pair of relations from
+         ℛ×ℛ
+         , we calculate four scores:
+PMI
+         (S1,S2)
+         , PMI
+         (O1,O2)
+         , PMI
+         (S1,O2)
+         and PMI
+         (S2,O1)
+         .
+To make more stable estimations,
+we set up a threshold for the PMI. If PMI
+         (S1,S2)
+         is lower than the threshold, we will consider that
+         r1
+         and
+         r2
+         cannot share a subject. Things are similar for the other
+three scores. The threshold is set to -3 in this paper.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS3.p4">
+        <p class="ltx_p">
+         We can also learn the uniqueness of arguments for relations. For each pre-defined
+relation in
+         ℛ
+         , we collect all the triples containing this
+relation, and count the portion of the triples which only have one object for
+each subject, and the portion of the triples which only have one subject for
+each object. The relations whose
+portions are higher than the threshold will be considered to have unique
+argument values. This threshold is set to 0.8 in this paper.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS4">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.4
+        </span>
+        Integer Linear Program Formulation
+       </h3>
+       <div class="ltx_para" id="S3.SS4.p1">
+        <p class="ltx_p">
+         As discussed above, given a set of entity pairs and their candidate
+relations output by a preliminary extractor, our goal is to find an optimal
+configuration for all those entities pairs jointly, solving the
+disagreements among those candidate predictions and maximizing the overall
+confidence of the selected predictions. This is an NP-hard optimization problem.
+Many optimization models can be used to obtain the approximate solutions.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS4.p2">
+        <p class="ltx_p">
+         In this paper, we propose to solve the problem by using an ILP
+tool, IBM ILOG Cplex
+         . Firstly,
+for each tuple
+         t
+         and one of its candidate relations
+         r
+         ,
+we define a binary decision variable
+         dtr
+         indicating whether
+the candidate relation
+         r
+         is selected
+by the solver.
+Our objective is to maximize the total confidence of all the selected candidates,
+and the objective function can be written as:
+        </p>
+        <table class="ltx_equationgroup ltx_eqn_eqnarray" id="Sx1.EGx1">
+         <tr class="ltx_equation ltx_align_baseline" id="S3.Ex1">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_left">
+           max⁡∑t∈𝒯,r∈Rtc⁢o⁢n⁢f⁢(t,r)⁢dtr
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S3.Ex2">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_left">
+           +∑∀t,r∈Rt,m∈Mtrmax⁡MEscore⁢(m,r)⁢dtr
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+        </table>
+        <p class="ltx_p">
+         where
+         c⁢o⁢n⁢f⁢(t,r)
+         is the confidence of the tuple
+         t
+         bearing the candidate relation
+         r
+         .
+The first component is the sum of
+the original confidence scores of all the selected candidates, and the second one is
+the sum of the maximal mention-level confidence scores of all the selected candidates.
+The latter is designed to
+encourage the model to select the candidates with higher individual mention-level confidence scores.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS4.p3">
+        <p class="ltx_p">
+         We add the constraints with respect to the disagreements described in Section
+         3.2
+         .
+For the sake of clarity, we describe the constraints derived from
+each scenario of the two categories of disagreements separately.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS4.p4">
+        <p class="ltx_p">
+         The subject-relation constraints avoid the disagreements
+between the predictions of two tuples sharing a subject.
+These constraints can be represented as:
+        </p>
+        <table class="ltx_equationgroup ltx_eqn_eqnarray" id="Sx1.EGx2">
+         <tr class="ltx_equation ltx_align_baseline" id="S3.E3">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           dtirti+dtjrtj≤1
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (3)
+           </span>
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S3.Ex3">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           ∀ti,tj:s⁢u⁢b⁢j⁢(ti)=s⁢u⁢b⁢j⁢(tj)∧(rti,rtj)∈𝒞s⁢r
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+        </table>
+        <p class="ltx_p">
+         where
+         ti
+         and
+         tj
+         are two tuples in
+         𝒯
+         ,
+         s⁢u⁢b⁢j⁢(ti)
+         is the subject of
+         ti
+         ,
+         rti
+         is a candidate relation of
+         ti
+         ,
+         rtj
+         is a candidate relation of
+         tj
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS4.p5">
+        <p class="ltx_p">
+         The object-relation constraints avoid the inconsistencies
+between the predictions of two tuples sharing an object.
+Formally we add the following constraints:
+        </p>
+        <table class="ltx_equationgroup ltx_eqn_eqnarray" id="Sx1.EGx3">
+         <tr class="ltx_equation ltx_align_baseline" id="S3.E4">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           dtirti+dtjrtj≤1
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (4)
+           </span>
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S3.Ex4">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           ∀ti,tj:o⁢b⁢j⁢(ti)=o⁢b⁢j⁢(tj)∧(rti,rtj)∈𝒞r⁢o
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+        </table>
+        <p class="ltx_p">
+         where
+         ti∈𝒯
+         and
+         tj∈𝒯
+         are two tuples,
+         o⁢b⁢j⁢(ti)
+         is the object of
+         ti
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS4.p6">
+        <p class="ltx_p">
+         The relation-entity-relation constraints ensure that if an entity
+works as subject and object in two tuples
+         ti
+         and
+         tj
+         respectively,
+their relations agree with each other. The constraints we add are:
+        </p>
+        <table class="ltx_equationgroup ltx_eqn_eqnarray" id="Sx1.EGx4">
+         <tr class="ltx_equation ltx_align_baseline" id="S3.E5">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           dtirti+dtjrtj≤1
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (5)
+           </span>
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S3.Ex5">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           ∀ti,tj:o⁢b⁢j⁢(ti)=s⁢u⁢b⁢j⁢(tj)∧(rti,rtj)∈𝒞r⁢e⁢r
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+        </table>
+       </div>
+       <div class="ltx_para" id="S3.SS4.p7">
+        <p class="ltx_p">
+         The object uniqueness constraints ensure that the relations requiring
+unique objects do not bear more than one object given a subject.
+        </p>
+        <table class="ltx_equationgroup ltx_eqn_eqnarray" id="Sx1.EGx5">
+         <tr class="ltx_equation ltx_align_baseline" id="S3.E6">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           ∑t∈T⁢u⁢p⁢l⁢e⁢(r),s⁢u⁢b⁢j⁢(t)=edtr≤1
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (6)
+           </span>
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S3.Ex6">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           ∀e∧r∈𝒞o⁢u
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+        </table>
+        <p class="ltx_p">
+         where
+         e
+         is an entity,
+         T⁢u⁢p⁢l⁢e⁢(r)
+         are the tuples whose candidate relations contain
+         r
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS4.p8">
+        <p class="ltx_p">
+         The subject uniqueness constraints ensure that given an object,
+the relations expecting unique subjects do not bear more than one subject.
+        </p>
+        <table class="ltx_equationgroup ltx_eqn_eqnarray" id="Sx1.EGx6">
+         <tr class="ltx_equation ltx_align_baseline" id="S3.E7">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           ∑t∈T⁢u⁢p⁢l⁢e⁢(r),o⁢b⁢j⁢(t)=edtr≤1
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (7)
+           </span>
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S3.Ex7">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           ∀e∧r∈𝒞s⁢u
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+        </table>
+       </div>
+       <div class="ltx_para" id="S3.SS4.p9">
+        <p class="ltx_p">
+         By adopting ILP, we can combine the local information including
+MaxEnt confidence scores and the implicit relation backgrounds
+that are embedded into
+global consistencies of the entity tuples together. After
+the optimization problem is solved, we will obtain a list of
+selected candidate relations for each tuple, which will be our final output.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Experiments
+      </h2>
+      <div class="ltx_subsection" id="S4.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.1
+        </span>
+        Datasets
+       </h3>
+       <div class="ltx_para" id="S4.SS1.p1">
+        <p class="ltx_p">
+         We evaluate our approach on three datasets, including two
+English datasets and one Chinese dataset.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p2">
+        <p class="ltx_p">
+         The first English dataset, Riedel’s dataset, is the one used in
+         [11, 6, 15]
+         , with the same split. It uses
+Freebase as the knowledge base and New York Time corpus as the text corpus,
+including about 60,000 entity tuples in the training set, and about 90,000
+entity tuples in the testing set.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p3">
+        <p class="ltx_p">
+         We generate the second English dataset, DBpedia dataset, by mapping the triples in
+DBpedia
+         [2]
+         to the sentences in New York Time corpus.
+We map 51 different relations to the corpus and result in about 50,000
+entity tuples, 134,000 sentences for training and 30,000 entity
+tuples, 53,000 sentences for testing.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p4">
+        <p class="ltx_p">
+         For the Chinese dataset, we derive knowledge facts and construct a Chinese KB
+from the Infoboxes of HudongBaike, one of the largest Chinese online encyclopedias.
+We collect four national economic newspapers in 2009 as our corpus.
+28 different relations are mapped to the corpus and this results in 60,000
+entity tuples, 120,000 sentences for training and
+40,000 tuples, 83,000 sentences for testing.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.2
+        </span>
+        Baselines and Competitors
+       </h3>
+       <div class="ltx_para" id="S4.SS2.p1">
+        <p class="ltx_p">
+         The baseline we use in this paper is Mintz++, which is described in
+         [15]
+         .
+It is a modification of the model proposed by
+         Mintz et al. (2009)
+         .
+The model predicts for each mention separately, and allows multi-label outputs
+for an entity tuple by OR-ing the outputs of its mentions.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p2">
+        <p class="ltx_p">
+         As we described in Section
+         3.1
+         , originally we select the top three predicted relations as
+the candidates for each mention. In order to investigate whether it is necessary to use up to three
+candidates, we implement two variants of our approach, which select the top one and top two
+relations as candidates for each mention, and represented as ILP-1cand and ILP-2cand, respectively.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p3">
+        <p class="ltx_p">
+         We also use two distant supervision approaches for the comparison. The first one is
+MultiR
+         [6]
+         , a novel
+joint model that can deal with the relation overlap issue.
+The second one, MIML-RE
+         [15]
+         , is one of the state-of-the-art
+MIML relation extraction systems. We tune the models of MultiR and MIML-RE
+so that they fit our datasets.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.3
+        </span>
+        Overall Performance
+       </h3>
+       <div class="ltx_para" id="S4.SS3.p1">
+        <p class="ltx_p">
+         First we compare our framework and its variants with the baseline and the
+state-of-the-art RE models. Following previous works, we use the Precision-Recall curve as the evaluation criterion in our
+experiment. The results are summarized in Figure
+         2
+         .
+For the constraints, we first manually
+select an average of 20 relation pairs for each subcategory of the first kind of clues,
+and all the relations with unique argument values in
+         ℛ
+         .
+We also show how automatically learnt clues perform in Section
+         4.5
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS3.p2">
+        <p class="ltx_p">
+         Figure
+         2
+         shows that compared with the baseline, our framework
+performs consistently better in the DBpedia dataset and the Chinese dataset.
+Mintz++ proves to be a strong baseline on both datasets. It tends to result
+in a high recall, and its weakness of low precision is perfectly fixed by the ILP model.
+Our ILP model and its variants all outperform Mintz++ in precision in both
+datasets, indicating that our approach helps filter out incorrect predictions from the
+output of MaxEnt model.
+Compared with MultiR, our framework obtains better results in both datasets. Especially in the
+Chinese dataset, the improvement in precision reaches as high as 10-16% at the same recall points.
+Our framework performs better compared to MIML-RE in the English
+dataset. On the Chinese dataset, our framework outperforms MIML-RE except in the low-recall portion
+(
+         &lt;
+         10%) of the P-R curve. All these results show that embedding the relation background
+information into RE can help eliminate the wrong predictions and improve the results.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS3.p3">
+        <p class="ltx_p">
+         However, in the Riedel’s dataset, Mintz++, the MaxEnt relation extractor, does not perform well, and our framework cannot improve its performance. In order to find out
+the reasons, we manually investigate the dataset.
+The top three relations of this dataset are
+         /
+         location/location/contains
+         ,
+         /
+         people/person/nationality
+         and
+         /
+         people/person/place_lived
+         .
+About two-thirds of the entity tuples belongs to these three relations,
+and the outputs of the local extractor usually bias even more to the large relations.
+What is worse, we cannot find any clues from the top three relations because
+their arguments’ types are too general. Things are similar for many other relations in this dataset.
+Although we may find some clues any way, they are too few to make any improvement.
+Hence, our framework does not perform well due to the poor performance of MaxEnt extractor
+and the lack of clues. To solve this problem, we think of addressing the
+selection preferences between relations and entities proposed in
+         [10]
+         ,
+which should be our future work.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS3.p4">
+        <p class="ltx_p">
+         We notice that in all three datasets our variant ILP-1cand is
+shorter than Mintz++ in recall, indicating we may incorrectly discard some predictions.
+Compared to ILP-2cand and original ILP, ILP-1cand leads to slightly lower
+precision but much lower recall, showing that selecting more candidates may help us collect more
+potentially correct predictions. Comparing ILP-2cand and original ILP, the latter
+hardly makes any improvement in precision, but is slightly longer in recall, indicating using three
+candidates can still collect some more potentially correct predictions,
+although the number may be limited.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS3.p5">
+        <p class="ltx_p">
+         In order to study how our framework improves the performances
+on the DBpedia dataset and the Chinese dataset,
+we further investigate the number of incorrect predictions eliminated by
+ILP and the number of incorrect predictions corrected by ILP. We also
+examine the number of correct
+predictions newly introduce by ILP, which were NA in Mintz++. We summarize the results in Table
+         1
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS3.p6">
+        <p class="ltx_p">
+         The results show that our framework can reduce the incorrect
+predictions and introduce more correct predictions at the same time.
+We also find an interesting results: in the DBpedia dataset, ILP is more likely to introduce
+correct predictions to the results, while in the Chinese dataset
+it tends to reduce more incorrect predictions, which may be caused
+by the differences between performances of Mintz++ on the two datasets,
+where it gets a higher recall on the Chinese dataset.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS3.p7">
+        <p class="ltx_p">
+         Following
+         Surdeanu et al. (2012)
+         , we also list the peak F1 score (highest F1 score) for each model
+in Table
+         2
+         . Different from
+         [15]
+         , we use all the entity
+pairs instead of the ones with more than 10 mentions.
+We can observe that our model obtains the best performance
+in the DBpedia dataset and the Chinese dataset.
+In the DBpedia dataset, it is 3.6% higher than Mintz++, 7.9%
+higher than MIML-RE and 13.9% higher than MultiR. In the Chinese
+dataset, Mintz++, MultiR and MIML-RE performs similarly in terms of the highest F1 score, while
+our model gains about 8% improvement.
+In the Riedel’s dataset, our framework hardly
+obtains any improvement compared with Mintz++.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS3.p8">
+        <p class="ltx_p">
+         We also investigate the impacts of the constraints used in ILP, which are derived based on
+the two kinds of clues and can encode relation definition information
+into our framework.
+Experimental results in Table
+         2
+         shows that in the DBpedia dataset, the
+highest F1 score increases from 35.2% to 38.3% with the help of both kinds of clues,
+while in the Chinese dataset the improvement is from 44.4% to 52.8%.
+In the Riedel’s dataset we do not see any improvements since there are almost
+no clues.
+Furthermore, using constraints derived from only one kind of clues can also improve
+the performance, but not as well as using both of them.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS4">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.4
+        </span>
+        Adapting MultiR Sentence Level Extractor to Our Framework
+       </h3>
+       <div class="ltx_para" id="S4.SS4.p1">
+        <p class="ltx_p">
+         The preliminary relation extractor of our optimization framework
+is not limited to the MaxEnt extractor, and can take any sentence
+level relation extractor with confidence scores. We also fit
+MultiR’s mention level extractor into our framework.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS4.p2">
+        <p class="ltx_p">
+         As shown in Figure
+         3
+         , in the DBpedia dataset and the Chinese dataset, in most parts of the curve,
+ILP optimized MultiR outperforms original MultiR. We think the reason is that
+our framework make use of global clues to discard the incorrect
+predictions.
+The results are not as high as when we use MaxEnt as the preliminary extractor. We think one
+reason is that MultiR does not perform well in these two datasets. Furthermore,
+the confidence scores which MultiR outputs
+are not normalized to the same scale, which brings us difficulties
+in setting up a confidence threshold to select the candidates.
+As a result, we only use the top one result as the
+candidate since including top two predictions without thresholding the confidences performs
+bad, indicating that a probabilistic sentence-level extractor
+is more suitable for our framework.
+We also notice that in the Riedel’s dataset our framework does not improve the performance
+significantly, and we have discussed the reasons in Section
+         4.3
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS5">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.5
+        </span>
+        Examining the Automatically Learnt Clues
+       </h3>
+       <div class="ltx_para" id="S4.SS5.p1">
+        <p class="ltx_p">
+         Now we evaluate the performance of automatically collected clues used in our model.
+Since there are almost no clues in the Riedel’s dataset, we only investigate
+the other two datasets. We add clues according
+to their related relations’ proportions in the local predictions.
+For example,
+         Country
+         and
+         birthPlace
+         take up about 30% in the local predictions,
+we thus add clues that are related to these two relations, and then move on with new clues
+related to other relations according to those relations’ proportions in the local predictions.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS5.p2">
+        <p class="ltx_p">
+         As is shown in Figure
+         4
+         , in both datasets, the clues
+related to more local predictions will solve more inconsistencies, thus
+are more effective. Adding the first two relations improves
+the model significantly, and as more relations are added, the
+performances keep increasing until approaching the still state.
+It is worth mentioning that when sufficient learnt clues are added
+into the model, the results are comparable
+to those based on the clues refined manually, as shown in
+Figure
+         5
+         .
+This indicates that the clues can be collected automatically,
+and further used to examine whether predicted relations are
+consistent with the existing ones in the KB, which can be considered as
+a form of quality control.
+        </p>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

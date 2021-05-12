@@ -1,0 +1,690 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Comparing Automatic Evaluation Measures for Image Description.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_abstract">
+      <h6 class="ltx_title ltx_title_abstract">
+       Abstract
+      </h6>
+      <p class="ltx_p">
+       Image description is a new natural language generation task, where
+the aim is to generate a human-like description of an image. The evaluation of
+computer-generated text is a notoriously difficult problem, however, the
+quality of image descriptions has typically been measured using
+unigram
+       bleu
+       and human judgements. The focus of this paper is to
+determine the correlation of automatic measures with human judgements for this
+task. We estimate the correlation of unigram and Smoothed
+       bleu
+       ,
+       ter
+       ,
+       rouge-su4
+       , and Meteor against human judgements on two data
+sets. The main finding is that unigram
+       bleu
+       has a weak correlation, and
+Meteor has the strongest correlation with human judgements.
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Recent advances in computer vision and natural language processing have led to
+an upsurge of research on tasks involving both vision and language. State of
+the art visual detectors have made it possible to hypothesise
+        what
+        is in
+an image
+        [6, 5]
+        , paving the way for automatic
+image description systems. The aim of such systems is to extract and reason
+about visual aspects of images to generate a human-like description. An example
+of the type of image and gold-standard descriptions available can be seen in
+Figure
+        1
+        . Recent approaches to this task have been based on
+slot-filling
+        [17, 3]
+        , combining web-scale n-grams
+        [11]
+        , syntactic tree substitution
+        [12]
+        , and
+description-by-retrieval
+        [4, 14, 7]
+        . Image
+description has been compared to translating an image into text
+        [11, 9]
+        or summarising an image
+        [17]
+        , resulting
+in the adoption of the evaluation measures from those communities.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        In this paper we estimate the correlation of human judgements with five
+automatic evaluation measures on two image description data sets. Our work
+extends previous studies of evaluation measures for image description
+        [7]
+        , which focused on unigram-based measures and reported
+agreement scores such as Cohen’s
+        κ
+        rather than correlations. The main
+finding of our analysis is that
+        ter
+        and unigram
+        bleu
+        are weakly
+correlated against human judgements,
+        rouge-su4
+        and Smoothed
+        bleu
+        are moderately correlated, and the strongest correlation is found with Meteor.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Methodology
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        We estimate Spearman’s
+        ρ
+        for five different
+automatic evaluation measures against human judgements for the automatic image
+description task.
+Spearman’s
+        ρ
+        is a non-parametric correlation co-efficient that restricts
+the ability of outlier data points to skew the co-efficient value.
+The automatic measures are calculated on the sentence level and correlated
+against human judgements of semantic correctness.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S2.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.1
+        </span>
+        Data
+       </h3>
+       <div class="ltx_para" id="S2.SS1.p1">
+        <p class="ltx_p">
+         We perform the correlation analysis on the Flickr8K data set of
+         Hodosh et al. (2013)
+         , and the data set of
+         Elliott and Keller (2013)
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p2">
+        <p class="ltx_p">
+         The test data of the Flickr8K data set contains 1,000 images paired with five
+reference descriptions. The images were retrieved from Flickr, the reference
+descriptions were collected from Mechanical Turk, and the human judgements were
+collected from expert annotators as follows: each image in the test data was
+paired with the highest scoring sentence(s) retrieved from all possible test
+sentences by the
+         tri5sem
+         model in
+         Hodosh et al. (2013)
+         . Each
+image–description pairing in the test data was judged for semantic correctness
+by three expert human judges on a scale of 1–4. We calculate automatic
+measures for each image–retrieved sentence pair against the five reference
+descriptions for the original image.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p3">
+        <p class="ltx_p">
+         The test data of
+         Elliott and Keller (2013)
+         contains 101 images paired with three
+reference descriptions. The images were taken from the PASCAL VOC Action
+Recognition Task, the reference descriptions were collected from Mechanical
+Turk, and the judgements were also collected from Mechanical Turk.
+         Elliott and Keller (2013)
+         generated two-sentence descriptions for each of the test
+images using four variants of a slot-filling model, and collected five human
+judgements of the semantic correctness and grammatical correctness of the
+description on a scale of 1–5 for each image–description pair, resulting in a
+total of 2,042 human judgement–description pairings. In this analysis, we use
+only the first sentence of the description, which describes the event depicted
+in the image.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S2.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.2
+        </span>
+        Automatic Evaluation Measures
+       </h3>
+       <div class="ltx_para" id="S2.SS2.p1">
+        <p class="ltx_p">
+         bleu
+         measures the effective overlap between a reference sentence
+         X
+         and a
+candidate sentence
+         Y
+         . It is defined as the geometric mean of the effective
+n-gram precision scores, multiplied by the brevity penalty factor
+         B⁢P
+         to
+penalise short translations.
+         pn
+         measures the effective overlap by
+calculating the proportion of the maximum number of n-grams co-occurring
+between a candidate and a reference and the total number of n-grams in the
+candidate text. More formally,
+        </p>
+        <table class="ltx_equationgroup ltx_eqn_align" id="Sx1.EGx1">
+         <tr class="ltx_equation ltx_align_baseline" id="S2.Ex1">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           𝐵𝐿𝐸𝑈
+          </td>
+          <td class="ltx_td ltx_align_left">
+           =B⁢P⋅exp⁡(∑n=1Nwn⁢log⁡pn)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S2.Ex3">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           pn
+          </td>
+          <td class="ltx_td ltx_align_left">
+           =∑c∈c⁢a⁢n⁢d∑n⁢g⁢r⁢a⁢m∈cc⁢o⁢u⁢n⁢tc⁢l⁢i⁢p⁢(n⁢g⁢r⁢a⁢m)∑c∈c⁢a⁢n⁢d∑n⁢g⁢r⁢a⁢m∈cc⁢o⁢u⁢n⁢t⁢(n⁢g⁢r⁢a⁢m)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S2.Ex5">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           B⁢P
+          </td>
+          <td class="ltx_td ltx_align_left">
+           ={1if ⁢c&gt;re(1-r/c)if ⁢c≤r
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+        </table>
+        <p class="ltx_p">
+         Unigram
+         bleu
+         without a brevity penalty has been reported by
+         Kulkarni et al. (2011)
+         ,
+         Li et al. (2011)
+         ,
+         Ordonez et al. (2011)
+         , and
+         Kuznetsova et al. (2012)
+         ; to the best of our knowledge, the only image
+description work to
+use higher-order n-grams with
+         bleu
+         is
+         Elliott and Keller (2013)
+         . In this
+paper we use the smoothed
+         bleu
+         implementation of
+         Clark et al. (2011)
+         to
+perform a sentence-level analysis, setting
+         n=1
+         and no brevity penalty to get
+the unigram
+         bleu
+         measure, or
+         n=4
+         with the brevity penalty to get the
+Smoothed
+         bleu
+         measure. We note that a higher
+         bleu
+         score is better.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p2">
+        <p class="ltx_p">
+         rouge
+         measures the longest common subsequence of tokens between a
+candidate
+         Y
+         and reference
+         X
+         . There is also a variant that measures the
+co-occurrence of pairs of tokens in both the candidate and reference (a
+skip-bigram):
+         rouge-su*
+         . The skip-bigram calculation is parameterised
+with
+         d𝑠𝑘𝑖𝑝
+         , the maximum number of tokens between the words in the
+skip-bigram. Setting
+         d𝑠𝑘𝑖𝑝
+         to 0 is equivalent to bigram overlap and
+setting
+         d𝑠𝑘𝑖𝑝
+         to
+         ∞
+         means tokens can be any distance apart. If
+         α=|SKIP2⁢(X,Y)|
+         is the number of matching skip-bigrams between the
+reference and the candidate, then skip-bigram
+         rouge
+         is formally defined
+as:
+        </p>
+        <table class="ltx_equationgroup ltx_eqn_align" id="Sx1.EGx2">
+         <tr class="ltx_equation ltx_align_baseline" id="S2.Ex6">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           RSKIP2=α/(α2)
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+        </table>
+        <p class="ltx_p">
+         rouge
+         has been used by only
+         Yang et al. (2011)
+         to measure the quality of
+generated descriptions, using a variant they describe as
+         rouge-1
+         . We set
+         d𝑠𝑘𝑖𝑝=4
+         and award partial credit for unigram only matches, otherwise known
+as
+         rouge-su4
+         . We use
+         rouge
+         v.1.5.5 for the analysis, and configure
+the evaluation script to return the result for the average score for matching
+between the candidate and the references. A higher
+         rouge
+         score is better.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p3">
+        <p class="ltx_p">
+         ter
+         measures the number of modifications a human would need to make to
+transform a candidate
+         Y
+         into a reference
+         X
+         . The modifications available
+are insertion, deletion, substitute a single word, and shift a word an
+arbitrary distance.
+         ter
+         is expressed as the percentage of the sentence
+that needs to be changed, and can be greater than 100 if the candidate is
+longer than the reference. More formally,
+        </p>
+        <table class="ltx_equationgroup ltx_eqn_align" id="Sx1.EGx3">
+         <tr class="ltx_equation ltx_align_baseline" id="S2.Ex7">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           𝑇𝐸𝑅=|edits||reference tokens|
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+        </table>
+        <p class="ltx_p">
+         ter
+         has not yet been used to evaluate image description models. We use
+v.0.8.0 of the
+         ter
+         evaluation tool, and a lower
+         ter
+         is better.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p4">
+        <p class="ltx_p">
+         Meteor is the harmonic mean of unigram precision and recall that allows for
+exact, synonym, and paraphrase matchings between candidates and references. It
+is calculated by generating an alignment between the tokens in the candidate
+and reference sentences, with the aim of a 1:1 alignment between
+tokens and minimising the number of chunks
+         ch
+         of contiguous and
+identically ordered tokens in the sentence pair. The alignment is based on
+exact token matching, followed by Wordnet synonyms, and then stemmed tokens.
+We can calculate precision, recall, and F-measure, where
+         m
+         is the number
+of aligned unigrams between candidate and reference. Meteor is defined as:
+        </p>
+        <table class="ltx_equationgroup ltx_eqn_align" id="Sx1.EGx4">
+         <tr class="ltx_equation ltx_align_baseline" id="S2.Ex8">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           M
+          </td>
+          <td class="ltx_td ltx_align_left">
+           =(1-P⁢e⁢n)⋅Fm⁢e⁢a⁢n
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S2.Ex9">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           P⁢e⁢n
+          </td>
+          <td class="ltx_td ltx_align_left">
+           =γ⁢(c⁢hm)θ
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S2.Ex10">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           Fm⁢e⁢a⁢n
+          </td>
+          <td class="ltx_td ltx_align_left">
+           =P⁢Rα⁢P+(1-α)⁢R
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S2.Ex11">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           P
+          </td>
+          <td class="ltx_td ltx_align_left">
+           =|m||unigrams in candidate|
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S2.Ex12">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           R
+          </td>
+          <td class="ltx_td ltx_align_left">
+           =|m||unigrams in reference|
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+         </tr>
+        </table>
+        <p class="ltx_p">
+         We calculated the Meteor scores using release 1.4.0 with the package-provided free
+parameter settings of 0.85, 0.2, 0.6, and 0.75 for the matching components.
+Meteor has not yet been reported to evaluate the performance of different
+models on the image description task; a higher Meteor score is better.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S2.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.3
+        </span>
+        Protocol
+       </h3>
+       <div class="ltx_para" id="S2.SS3.p1">
+        <p class="ltx_p">
+         We performed the correlation analysis as follows. The sentence-level
+evaluation measures were calculated for each
+image–description–reference tuple. We collected the
+         bleu
+         ,
+         ter
+         , and Meteor scores using MultEval
+         [1]
+         , and the
+         rouge-su4
+         scores using the RELEASE-1.5.5.pl script. The
+evaluation measure scores were then compared with the human judgements
+using Spearman’s correlation estimated at the sentence-level.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Results
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        Table
+        1
+        shows the correlation co-efficients between
+automatic measures and human judgements and Figures
+        2
+        (a)
+and (b) show the distribution of scores for each measure against human
+judgements. To classify the strength of the correlations, we followed the
+guidance of
+        Dancey and Reidy (2011)
+        , who posit that a co-efficient of 0.0–0.1 is
+uncorrelated, 0.11–0.4 is
+        weak
+        , 0.41–0.7 is
+        moderate
+        , 0.71–0.90
+is
+        strong
+        , and 0.91–1.0 is
+        perfect
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p2">
+       <p class="ltx_p">
+        On the Flickr8k data set, all evaluation measures can be classified as either
+        weakly
+        correlated or
+        moderately
+        correlated with human judgements
+and all results are significant.
+        ter
+        is only weakly correlated with
+human judgements but could prove useful in comparing the types of differences
+between models. An analysis of the distribution of
+        ter
+        scores in
+Figure
+        2
+        (a) shows that differences in candidate and
+reference length are prevalent in the image description task. Unigram
+        bleu
+        is also only weakly correlated against human judgements, even though it
+has been reported extensively for this task. Figure
+        2
+        (a)
+shows an almost uniform distribution of unigram
+        bleu
+        scores, regardless
+of the human judgement. Smoothed
+        bleu
+        and
+        rouge-su4
+        are moderately
+correlated with human judgements, and the correlation is stronger than with
+unigram
+        bleu
+        . Finally, Meteor is most strongly correlated measure
+against human judgements.
+A similar pattern is observed in the
+        Elliott and Keller (2013)
+        data set,
+though the correlations are lower across all measures. This could be
+caused by the smaller sample size or because the descriptions were
+generated by a computer, and not retrieved from a collection of
+human-written descriptions containing the gold-standard text, as in the
+Flickr8K data set.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S3.SSx1">
+       <h3 class="ltx_title ltx_title_subsection">
+        Qualitative Analysis
+       </h3>
+       <div class="ltx_para" id="S3.SSx1.p1">
+        <p class="ltx_p">
+         Figure
+         3
+         shows two images from the test collection of the
+Flickr8K data set with a low Meteor score and a maximum human judgement of
+semantic correctness. The main difference between the candidates and references
+are in deciding
+         what
+         to describe (content selection), and
+         how
+         to
+describe it (realisation). We can hypothesise that in both translation and
+summarisation, the source text acts as a lexical and semantic framework within
+which the translation or summarisation process takes place. In
+Figure
+         3
+         (a), the authors of the descriptions made different
+decisions on
+         what
+         to describe. A decision has been made to describe the
+role of the officials in the candidate text, and not in the reference text.
+The underlying cause of this is an active area of research in the human vision
+literature and can be attributed to bottom-up effects, such as saliency
+         [8]
+         , top-down contextual effects
+         [16]
+         , or
+rapidly-obtained scene properties
+         [13]
+         . In (b), we can see the
+problem of deciding how to describe the selected content. The reference uses a
+more specific noun to describe the person on the bicycle than the candidate.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Discussion
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        There are several differences between our analysis and that of
+        Hodosh et al. (2013)
+        . First, we report Spearman’s
+        ρ
+        correlation
+coefficient of automatic measures against human judgements, whereas they report
+agreement between judgements and automatic measures in terms of Cohen’s
+        κ
+        . The use of
+        κ
+        requires the transformation of real-valued
+scores into categorical values, and thus loses information; we use the
+judgement and evaluation measure scores in their original forms. Second, our
+use of Spearman’s
+        ρ
+        means we can readily use all of the available data for
+the correlation analysis, whereas
+        Hodosh et al. (2013)
+        report agreement on
+thresholded subsets of the data. Third, we report the correlation coefficients
+against five evaluation measures, some of which go beyond unigram matchings
+between references and candidates, whereas they only report unigram
+        bleu
+        and unigram
+        rouge
+        . It is therefore difficult to directly compare the
+results of our correlation analysis against Hodosh et al.’s agreement analysis,
+but they also reach the conclusion that unigram
+        bleu
+        is not an
+appropriate measure of image description performance. However, we do find
+stronger correlations with Smoothed
+        bleu
+        , skip-bigram
+        rouge
+        , and
+Meteor.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p2">
+       <p class="ltx_p">
+        In contrast to the results presented here,
+        Reiter and Belz (2009)
+        found no
+significant correlations of automatic evaluation measures against human
+judgements of the
+        accuracy
+        of machine-generated weather forecasts. They
+did, however, find significant correlations of automatic measures against
+        fluency
+        judgements. There are no fluency judgements available for Flickr8K,
+but
+        Elliott and Keller (2013)
+        report grammaticality judgements for their data,
+which are comparable to fluency ratings. We failed to find significant
+correlations between grammatlicality judgements and any of the automatic
+measures on the
+        Elliott and Keller (2013)
+        data. This discrepancy could be explained
+in terms of the differences between the weather forecast generation and image
+description tasks, or because the image description data sets contain thousands
+of texts and a few human judgements per text, whereas the data sets of
+        Reiter and Belz (2009)
+        included hundreds of texts with 30 human judges.
+       </p>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

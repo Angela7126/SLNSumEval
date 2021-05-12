@@ -1,0 +1,383 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Computer-aided proof of Erdős discrepancy properties.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      The high mental activity of mathematical inquiry has been the battleground for artificial intelligence, and speaking more broadly for computer science, from their very dawn. The rigorous and structured nature of mathematical reasoning, the work on foundations of mathematics and on formalisation of mathematical proof, the invention of digital computers and the development of automated reasoning enabled mechanisation of proof search and proof checking. As a result, over the last 80 years we have witnessed the realisation of the dream of Leibniz and Babbage through the development of computer tools which can be used to make progress in mathematics itself by assisting humans in proving new statements and in formal verification of existing mathematical knowledge.
+     </paragraph>
+     <paragraph>
+      Yet, mathematically significant open questions whose status has been settled by a computer, that is, interesting mathematical problems for which no human solution or even solution sketch existed prior to the computer being applied, can be counted virtually on the fingers of one hand. Notably the success in these flagship cases was due to a combination of a significant computational effort with a non-trivial human effort either in the form of customising and fine-tuning proof assistants and their strategies [1] or in the form of developing specialised software programs [2], [3] that perform computations underpinning the proof.
+     </paragraph>
+     <paragraph>
+      Mathematicians generally have little or no issues when computers are used to discover a readable proof in a large space of possibilities. For example, even though it took the computer several weeks to find a solution to the Robbins problem [1], the proof itself consists of a dozen of steps, which can be inspected. On the other hand, when the answer is obtained by a complicated software system going through myriads of special cases—humans have doubts [4], and the degree of trust in computer mathematics often depends on the computer technology used.
+     </paragraph>
+     <paragraph>
+      Famously, it took four years to accept for publication the paper on the computer proof of Kepler's conjecture and still reviewers were not completely satisfied as they could not verify the entire computer program that was used to find the answer [5]. The paper on a computer proof of the non-existence of a finite projective plane of order 10 explicitly analyses the probability of a computational error [6]. The original Appel and Haken proof [2] of the Four Colour Theorem involved a deep theoretical argument followed by the vast computational case analysis carried out by a program written in the assembly language. The possibility of unaccounted errors in the software sparked a discussion whether such an answer can be accepted [7], which led to further progress and clarification by Robertson et al. [8], who considerably simplified the theoretical part and used computer programs written in a high-level programming language. The culmination of the effort on verification and clarification of the Four Colour Theorem has been achieved in the recent work on computer-checked proof by Gonthier using the Coq proof assistant [9].
+     </paragraph>
+     <paragraph>
+      The Four Colour Theorem story reflects the general trends in computer mathematics to formalise computer-generated proofs in a formal inference system and verify them by a trusted computer program. The availability of a well-defined independently verifiable proof makes computer mathematics more palatable for mathematicians, even if the proof itself is still too large for any human ever to inspect [5], [9], [10], [11].
+     </paragraph>
+     <paragraph>
+      In this article we attack a discrepancy theory question, which stood open for more than 80 years, by reduction to Boolean satisfiability. We then apply a general purpose solver in a fully automated unguided manner. To find a solution, the solver goes through a very large number of possibilities; however, unlike a simple computer-aided enumeration of cases for proof by exhaustion, it also produces a certificate assuring that the computer did not make a mistake going through these possibilities. The certificate can be reliably and independently verified. Coupled with the fact that the computer program generating the input to the solver is short and clear, the certificate constitutes a rigorous formal proof of the statement.
+     </paragraph>
+     <paragraph>
+      Discrepancy theory is a branch of mathematics dealing with irregularities of distributions of points in some space in combinatorial, measure-theoretic and geometric settings [12], [13], [14], [15]. The paradigmatic combinatorial discrepancy theory problem can be described in terms of a hypergraph {a mathematical formula}H=(U,S), that is, a set U and a family of its subsets {a mathematical formula}S⊆2U. Consider a colouring {a mathematical formula}c:U→{+1,−1} of the elements of U in blue{a mathematical formula}(+1) and red (−1) colours. Then one may ask whether there exists a colouring of the elements of U such that colours are distributed uniformly in every element of S or a discrepancy of colours is always inevitable. Formally, the discrepancy (deviation from a uniform distribution) of a hypergraph {a mathematical formula}H is defined as {a mathematical formula}minc⁡(maxs∈S⁡|∑e∈sc(e)|). Discrepancy theory has found applications in computational complexity [13], complexity of communication [16] and differential privacy [17]. Although other forms of combinatorial discrepancy, for example, hereditary and multicolour discrepancies have been defined, the classical two-coloured discrepancy defined above remains a focus of research both from the mathematical and algorithmic viewpoints [18].
+     </paragraph>
+     <paragraph>
+      One of the oldest problems of combinatorial discrepancy theory is the discrepancy of hypergraphs over sets of natural numbers with the subsets (hyperedges) forming arithmetical progressions over these sets [19]. Roth's theorem [20], one of the main results in the area, states that for the hypergraph formed by the arithmetic progressions in {a mathematical formula}{1,…,n}, that is {a mathematical formula}Hn=(Un,Sn), where {a mathematical formula}Un={1,2,…,n} and elements of {a mathematical formula}Sn being of the form {a mathematical formula}(d⋅i+c) for arbitrary {a mathematical formula}d,c, the discrepancy grows at least as {a mathematical formula}120n1/4. While proving this result, Roth introduced a pioneering proof technique that played a key role in the development of discrepancy theory and other areas [21].
+     </paragraph>
+     <paragraph>
+      Surprisingly, for the more restricted case of homogeneous arithmetic progressions of the form {a mathematical formula}(d⋅i), the question of the discrepancy bounds has been open for more than eighty years. In 1930s Erdős conjectured [22] that discrepancy is unbounded. Independently the same conjecture has been made by Čudakov [23]. Proving or disproving this conjecture has become one of the major open problems in combinatorial number theory and discrepancy theory. It is often referred to as the Erdős discrepancy problem (EDP) [12], [15], [24].
+     </paragraph>
+     <paragraph>
+      The expected value of the discrepancy of random ±1 sequences of length n grows as {a mathematical formula}n1/2+o(1) and the explicit constructions of a sequence with slowly growing discrepancy at the rate of {a mathematical formula}log3⁡n have been demonstrated [25], [26]. By considering cases, one can see that any ±1 sequence containing 12 or more elements has discrepancy at least 2; that is, Erdős's conjecture holds for the particular case {a mathematical formula}C=1 (also implied by a stronger result of Mathias [27]). Until February 2014 the status of the conjecture remained unknown for all other values of C. Although widely believed not to be the case, there was still a possibility that an infinite sequence of discrepancy 2 existed.
+     </paragraph>
+     <paragraph>
+      The EDP has attracted renewed interest in 2009–2010 as it became a topic of the fifth Polymath project [28] a widely publicised endeavour in collective mathematics initiated by Gowers [29]. As part of this activity an attempt has been made to attack the problem using computers (see the discussion in [28]). A purposely written computer program had successfully found ±1 sequences of length 1124 and discrepancy 2; however, no further progress has been made leading to a claim “given how long a finite sequence can be, it seems unlikely that we could answer this question just by a clever search of all possibilities on a computer” [28].
+     </paragraph>
+     <paragraph>
+      The status of the Erdős discrepancy conjecture for {a mathematical formula}C=2 has been settled by the authors of this article [30], [31] by encoding the problem as a propositional satisfiability problem and using state of the art SAT solvers to prove that the longest ±1 sequence of discrepancy 2 contains 1160 elements. A {a mathematical formula}13900 long ±1 sequence of discrepancy 3 was also constructed.
+     </paragraph>
+     <paragraph>
+      This article is a revised and extended version of [31]. We use a different smaller SAT encoding of the Erdős discrepancy problem, which is based on the sequential counter encoding of the at-most cardinality constraints.{sup:1} The impact of the new encoding is twofold. Firstly, it allows us to significantly reduce the size of the machine-generated proof of the fact that any sequence longer than 1160 has discrepancy at least 3. Secondly, by combining the new encoding with additional restrictions that the sequence is multiplicative, or completely multiplicative,{sup:2} we improve significantly the lower bound on the length of sequences of discrepancy 3. We prove the surprising result that {a mathematical formula}127645, the length of the longest completely multiplicative sequence of discrepancy 3, is also the maximal length of a multiplicative sequence of discrepancy 3, which is not the case for {a mathematical formula}C=1 and {a mathematical formula}C=2. The article also contains detailed argumentation, examples and complete proofs.
+     </paragraph>
+     <paragraph>
+      The article is organised as follows. In Section 2 we introduce the main terms and definition. In Section 3 we describe the new SAT encoding of the Erdős discrepancy problem. Results and conclusions are discussed in Sections 4 and 5 respectively.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Preliminaries
+     </section-title>
+     <paragraph>
+      We divide this section into two parts: main definitions for the Erdős discrepancy problem and some background and definitions for SAT solving. Since number 1 is used both as an element of ±1 sequences and as the logical value true, to avoid confusion, in what follows we write 1 to refer to the logical value true and +1 to refer to elements of ±1 sequences. We also use the following naming convention: we write {a mathematical formula}x1,…xn for ±1 sequences, {a mathematical formula}p1,…,pn for sequences of propositions, and {a mathematical formula}a1,…,an for 0/1 sequences.
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       Discrepancy of ±1 sequences
+      </section-title>
+      <paragraph>
+       A ±1 sequence of length n is a function {a mathematical formula}{1,…,n}→{−1,+1}. An infinite ±1 sequence is a function {a mathematical formula}N+→{1,−1}, where {a mathematical formula}N+ is the set of positive natural numbers. We write {a mathematical formula}x1,…,xn to denote a finite ±1 sequence of length n, and {a mathematical formula}(xn) to denote an infinite sequence. We refer to the i-th element of a sequence x, that is the value of {a mathematical formula}x(i), as {a mathematical formula}xi. A (finite or infinite) ±1 sequence x is completely multiplicative[33] if{a mathematical formula} The sequence is multiplicative if (1) is only required for coprime m and n.
+      </paragraph>
+      <paragraph>
+       It is easy to see that a sequence x is completely multiplicative if, and only if, {a mathematical formula}x1=+1 and for the canonical representation {a mathematical formula}m=∏i=1kpiαi, where {a mathematical formula}p1&lt;p2&lt;⋯&lt;pk are primes and {a mathematical formula}αi∈N+, we have {a mathematical formula}xm=∏i=1k(xpi)αi. This observation leads to a more computationally friendly definition of completely multiplicative sequences: x is completely multiplicative if, and only if,{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The EDP can be naturally described in terms of ±1 sequences (and this is how Erdős himself introduced it [22]). Then Erdős's conjecture can be formulated as follows.
+      </paragraph>
+      <paragraph label="Conjecture">
+       Erdős, 1930sFor any{a mathematical formula}C&gt;0and any infinite ±1 sequence{a mathematical formula}(xn)there exists its subsequence{a mathematical formula}xd,x2d,x3d,…,xkd, for some positive integers k and d, such that{a mathematical formula}|∑i=1kxi⋅d|&gt;C.
+      </paragraph>
+      <paragraph>
+       Notice that the general definition of discrepancy given in the introduction can be specialised in terms of partial sums of subsequences of a ±1 sequence. To simplify notation, we introduce an auxiliary notion of C-boundedness. We say that a ±1 sequence {a mathematical formula}x1,…,xl is C-bounded, for some {a mathematical formula}C&gt;0 if {a mathematical formula}|∑i=1jxi|≤C, for all {a mathematical formula}j:0&lt;j≤l. Notice that every ±1 sequence whose length does not exceed C is always C-bounded.
+      </paragraph>
+      <paragraph>
+       Then the discrepancy of a finite ±1 sequence {a mathematical formula}x1,…,xn of length n is a minimal C such that for every {a mathematical formula}d:1≤d≤⌊nC+1⌋ the subsequence {a mathematical formula}xd,x2d…,x⌊n/d⌋⋅d is C-bounded. For an infinite sequence {a mathematical formula}(xn) its discrepancy is the supremum of discrepancies of all its initial finite fragments.
+      </paragraph>
+      <paragraph>
+       The Erdős discrepancy conjecture is equivalent to its variant where “infinite ±1 sequence” is replaced by “infinite completely multiplicative ±1 sequence” [22]. This observation, in particular, explains an interest to multiplicativity properties in this context.
+      </paragraph>
+      <paragraph label="Example 1">
+       The finite sequence {a mathematical formula}x1,…x5=−1,−1,−1,+1,+1 has discrepancy 3 as for {a mathematical formula}d=1 and {a mathematical formula}j=3 we have {a mathematical formula}|∑i=1jxi⋅d|=|∑i=13xi|=|−3|=3, and it can be readily checked that all other sequences in the definition of discrepancy are 3-bounded.The finite sequence {a mathematical formula}y1,…y6=−1,+1,−1,+1,−1,+1 also has discrepancy 3, a value achieved by setting {a mathematical formula}d=2 and {a mathematical formula}j=3 in the definition above.The infinite sequence {a mathematical formula}(xn)=(−1n) has an unbounded discrepancy as its initial finite segment {a mathematical formula}x1,…,xm, for {a mathematical formula}m≥2, contains a subsequence whose all members are +1, namely {a mathematical formula}x2,x4,…xl, where {a mathematical formula}l=2⌊m2⌋. Thus, the discrepancy of the initial segment {a mathematical formula}x1,…,xm grows as {a mathematical formula}⌊m2⌋. In fact, any infinite periodic ±1 sequence {a mathematical formula}(xn) has an unbounded discrepancy. Indeed if {a mathematical formula}xn+p=xn, for all values of n, then {a mathematical formula}xp=x2p=x3p=… , so {a mathematical formula}|xp+x2p+⋯+xjp|=j, for any {a mathematical formula}j&gt;0 and thus there is no C such that every sequence {a mathematical formula}xp,x2p,…,xjp is C-bounded for all {a mathematical formula}j&gt;0. A similar argument applies to eventually periodic sequences, so no eventually periodic sequence has a bounded discrepancy.
+      </paragraph>
+      <paragraph>
+       It is easy to see why any ±1 sequence containing 12 elements has discrepancy at least 2.
+      </paragraph>
+      <paragraph label="Example 2">
+       For the proof by contradiction, suppose that the discrepancy of some ±1 sequence {a mathematical formula}x1,…,x12 is 1. Assume that {a mathematical formula}x1 is +1. We write{a mathematical formula} to track progress in this example, that is, we put specific values +1 or −1 into positions {a mathematical formula}i:1≤i≤12, to indicate decisions on {a mathematical formula}xi which have been taken so far, and mark positions of {a mathematical formula}xi, for which no decision has been made by an underscore.Notice that {a mathematical formula}x2 must be −1 for otherwise {a mathematical formula}x1+x2=2. So, we progress to{a mathematical formula} Then the 4th element of the sequence must be +1 for otherwise for {a mathematical formula}d=2 the sum {a mathematical formula}xd+x2d=x2+x4=−2. So we progress to{a mathematical formula} Then the 3rd element of the sequence must be −1 for otherwise {a mathematical formula}x1+⋯+x4=2 and so we come to{a mathematical formula} Repeating the reasoning above for {a mathematical formula}x3 and {a mathematical formula}x6 followed by {a mathematical formula}x5, for {a mathematical formula}x4 and {a mathematical formula}x8 followed by {a mathematical formula}x7, for {a mathematical formula}x5 and {a mathematical formula}x10 followed by {a mathematical formula}x9 and finally for {a mathematical formula}x6 and {a mathematical formula}x12 followed by {a mathematical formula}x11 we progress to{a mathematical formula} But then for {a mathematical formula}d=3 we have {a mathematical formula}xd+x2d+x3d+x4d=x3+x6+x9+x12=−2. So we derive a contradiction. It can be checked in a similar way that the other possibility of {a mathematical formula}x1 being −1 also leads to a contradiction.The first eleven elements of the sequence (3) form a discrepancy 1 sequence. It is multiplicative but not completely multiplicative as {a mathematical formula}x9 is −1. Reasoning similar to the one above shows that there exists a unique longest completely multiplicative ±1 sequence of discrepancy 1 which has nine elements:{a mathematical formula}
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Propositional satisfiability problem
+      </section-title>
+      <paragraph>
+       We assume standard definitions for propositional logic (see, for example, [34]). Propositional formulae are defined over Boolean constants true and false, denoted by 1 and 0, respectively, and the set of Boolean variables (or propositions) PV as follows: Boolean constants 0 and 1 as well as the elements of PV are formulae; if Φ and Ψ are formulae then so are {a mathematical formula}Φ∧Ψ (conjunction), {a mathematical formula}Φ∨Ψ (disjunction), {a mathematical formula}Φ→Ψ (implication), {a mathematical formula}Φ↔Ψ (equivalence) and ¬Φ (negation). We typically use letters p, q and s to denote propositions and capital Greek letters Φ and Ψ to denote propositional formulae. Whenever necessary, subscripts and superscripts are used. We use {a mathematical formula}vars(Φ) to denote the set of all propositions occurring in the formula Φ.
+      </paragraph>
+      <paragraph>
+       Every propositional formula can be reduced to conjunctive normal form. Propositions and negations of propositions are called literals. When the negation is applied to a literal, double negations are implicitly removed, that is, if l is ¬p then ¬l is p. A disjunction of literals is called a clause. A clause containing exactly one literal is called a unit clause. A conjunction of clauses is called a propositional formula in conjunctive normal form, a CNF formula for short. A clause can be represented by the set of its literals and the empty clause correspond to 0 (false); a CNF formula can be represented by the set its clauses. The two representations are used interchangeably. We typically use meaningful terms typeset in sans serif font, for example {a mathematical formula}edp or {a mathematical formula}cmult, to highlight the fact that a propositional formula is a CNF formula of interest.
+      </paragraph>
+      <paragraph>
+       For a propositional formula Φ, we write {a mathematical formula}Φ(p1,…,pn) to indicate that {a mathematical formula}{p1,…,pn}⊆vars(Φ). Propositions {a mathematical formula}p1,…,pn are designated as ‘input’ propositions in this case, and the intended meaning is that formula Φ encodes some property of {a mathematical formula}p1,…,pn. Then the expression {a mathematical formula}Φ(q1,…,qn) denotes the result of simultaneous replacement of every occurrence of {a mathematical formula}pi in Φ with {a mathematical formula}qi, for {a mathematical formula}1≤i≤n.
+      </paragraph>
+      <paragraph>
+       The semantics of propositional formulae is given by interpretations (also termed assignments). An interpretation I is a mapping {a mathematical formula}PV→{0,1} extended to literals, clauses, CNF formulae and propositional formulae in general in the usual way. For an assignment I and a formula Φ we say that I satisfies Φ (or I is a model of Φ) if {a mathematical formula}I(Φ)=1. A formula Φ is satisfiable if there exists an assignment that satisfies it, and unsatisfiable otherwise.
+      </paragraph>
+      <paragraph>
+       Despite the NP-completeness of the satisfiability problem, the tremendous progress in recent years in the development of SAT solvers—computer programs capable to find a satisfying assignment for a given propositional formula—made it possible to solve many interesting hard problems by first expressing them as a propositional formula and then using a SAT solver for obtaining a solution [35]. In addition to returning a satisfying assignment if the input formula is satisfiable, some SAT solvers are also capable to return a proof (or certificate) of unsatisfiability.
+      </paragraph>
+      <paragraph>
+       Reverse Unit Propagation (RUP) proofs constitute a compact representation of the resolution refutation of the given formula [36] in the following sense. Unit propagation is a CNF formula transformation technique, which simplifies the formula by fixing the values of propositions occurring to its unit clauses to satisfy these clauses. That is, if the unit clause (p) occurs in the CNF formula then all occurrences of p are replaced by 1 and if the unit clause {a mathematical formula}(¬p) occurs in the CNF formula, all occurrences of p are replaced by 0. Then the CNF formula is simplified in the obvious way. A clause {a mathematical formula}C=(l1,…lm) is an RUP inference from the input CNF formula Ψ if adding the unit clauses {a mathematical formula}(¬l1),…,(¬lm) to Ψ makes the whole formula refutable by unit propagation. An RUP unsatisfiability certificate is the sequence of clauses {a mathematical formula}C1,…Cm such that for every {a mathematical formula}1≤i≤m the clause {a mathematical formula}Ci is an RUP inference from {a mathematical formula}Ψ∪{C1,…,Ci−1} and {a mathematical formula}Cm is the empty clause. Every unsatisfiable CNF formula has an RUP unsatisfiability certificate [36].
+      </paragraph>
+      <paragraph>
+       Delete Reverse Unit Propagation (DRUP) proofs extend RUP proofs by including extra information about the proof search process, namely clauses that have been discarded by the solver. Eliminating this extra information from a DRUP proof converts it to a valid RUP proof. DRUP proofs are somewhat longer but they are significantly faster to verify than RUP proofs [37].
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      SAT encoding of the discrepancy problem
+     </section-title>
+     <paragraph>
+      In this section we present our SAT encoding of the EDP. We start with characterising C-boundedness of a sequence with the help of cardinality constraints. We then represent these constraints as a propositional formula in Section 3.2. In Section 3.3 we present an optimised clausal form for this encoding. In Section 3.4 we discuss a SAT encoding of multiplicativity. Finally, in Section 3.5 we put all the parts together.
+     </paragraph>
+     <section label="3.1">
+      C-boundedness expressed as cardinality constraints
+      <paragraph>
+       In the context of propositional satisfiability, cardinality constraints [38] are expressions that impose restrictions on propositional interpretations by specifying numerical bounds on the number of propositions, from a fixed set of propositions, that can be assigned value 1. The at-most r constraint over the set of propositions {a mathematical formula}{p1,…,pn}, written as {a mathematical formula}p1+⋯+pn≤r, holds for an interpretation I if, and only if, at most r propositions among {a mathematical formula}p1,…,pn are true under I. Its counterpart, the at-least r constraint, written as {a mathematical formula}p1+⋯+pn≥r, holds for an interpretation I if, and only if, at least r propositions among {a mathematical formula}p1,…,pn are true under I. A constraint is satisfiable if there exists an assignment in which the constraint holds. Cardinality constraints can be encoded by propositional formulae so that every interpretation satisfying the formula satisfies the cardinality constraint and vice versa; a number of such encodings can be found in the literature [38].
+      </paragraph>
+      <paragraph>
+       As every ±1 sequence whose length does not exceed C is always C-bounded, in what follows we only consider cases of {a mathematical formula}l&gt;C. As a first step towards a SAT encoding of C-boundedness, we switch our consideration from finite ±1 sequences of the form {a mathematical formula}x1,…,xl to their ‘characteristic’ representation by 0/1 sequences of the form {a mathematical formula}a1,…,al so that {a mathematical formula}xi=2ai−1 (in other words, +1 corresponds to 1 and −1 corresponds to 0). We extend the definition of C-boundedness to 0/1 sequences in the obvious way: a 0/1 sequence {a mathematical formula}a1,a2,…,al is C-bounded if, and only if, the ±1 sequence {a mathematical formula}2a1−1,2a2−1,…,2al−1 is C-bounded.
+      </paragraph>
+      <paragraph>
+       Notice that {a mathematical formula}|∑i=1jxi| from the definition of C-boundedness above can be characterised as the absolute value of the difference of the number of occurrences of +1 in {a mathematical formula}x1,…,xj and the number of occurrences of −1 in {a mathematical formula}x1,…,xj. Under our correspondence, the number of occurrences of +1 in {a mathematical formula}x1,…,xj is the number of occurrences of 1 in {a mathematical formula}a1,…,aj is {a mathematical formula}∑i=1jai. As the total number of elements in {a mathematical formula}x1,…xj is j, the number of occurrences of −1 in {a mathematical formula}x1,…,xj is the number of occurrences of 0 in {a mathematical formula}a1,…,aj is {a mathematical formula}(j−∑i=1jai). Then{a mathematical formula} Thus {a mathematical formula}a1,…,al is C-bounded if, and only if,{a mathematical formula} which is equivalent to the two following systems of inequalities,{a mathematical formula} and{a mathematical formula} If we interpret now the numerical values 0 and 1 as Boolean constants true and false, respectively, the 0/1 sequence {a mathematical formula}a1,…,al corresponds to the evaluation of a sequence of Boolean propositions {a mathematical formula}p1,…,pl under some interpretation I, and C-boundedness of a sequence can be expressed as cardinality constraints in a natural way.
+      </paragraph>
+      <paragraph label="Theorem 3">
+       A ±1 sequence{a mathematical formula}x1,…,xl, for some{a mathematical formula}C&gt;0and{a mathematical formula}l&gt;C, is C-bounded if, and only if, the union of the at-most cardinality constraints{a mathematical formula}and the at-least cardinality constraints{a mathematical formula}is satisfiable.
+      </paragraph>
+      <paragraph label="Proof">
+       The proof consists of a trivial observation that, by definition of cardinality constraints, the at-most constraints (6) capture condition (4) while the at-least constraints (7) capture condition (5).  □
+      </paragraph>
+      <paragraph>
+       Theorem 3 immediately yields a reduction of the question of the existence of a C-bounded sequence to a propositional satisfiability problem using any SAT representation of cardinality constraints [38]. However, if used in a “black-box” manner, constraints (6) and (7) are to be considered independently of each other for every {a mathematical formula}j:C&lt;j≤l leading to a proliferation of their SAT encodings. Instead we use the SAT encoding of cardinality constraints based on sequential counter circuits, which allows us to express C-boundedness of a sequence with a single propositional formula.
+      </paragraph>
+     </section>
+     <section label="3.2">
+      Sequential counter-based SAT encoding of C-boundedness
+      <paragraph>
+       A SAT encoding of cardinality constraints based on sequential counter circuits has been suggested by Sinz [39]. This encoding introduces auxiliary propositions {a mathematical formula}sjk to represent unary counters storing the partial sums of prefixes of {a mathematical formula}p1,…,pl so that whenever {a mathematical formula}∑i=1jpi≥k, for some {a mathematical formula}j≤l, we have {a mathematical formula}sjk=1.
+      </paragraph>
+      <paragraph>
+       We slightly modify the encoding in [39] as follows. Let {a mathematical formula}Φ(p1,…,pl) be the conjunction of{a mathematical formula}{a mathematical formula}{a mathematical formula} Recall that we write {a mathematical formula}Φ(p1,…,pl) to highlight the fact that {a mathematical formula}p1,…,pl are designated ‘input’ propositions; the set of all propositions of {a mathematical formula}Φ(p1,…,pl) is {a mathematical formula}vars(Φ(p1,…,pl))={p1,…,pl}∪⋃k=1l⋃j=1l{sjk}.
+      </paragraph>
+      <paragraph>
+       The proof of the fact that in every model I of {a mathematical formula}Φ(p1,…,pl) we have {a mathematical formula}I(sjk)=1 if, and only if, {a mathematical formula}∑i=1jI(pi)≥k can be extracted from [39]. It is based on the observation that the sum of the first j elements of the 0/1 sequence {a mathematical formula}I(p1),…,I(pl) exceeds k if, and only if, either already the sum of the first {a mathematical formula}j−1 elements exceeds k, or the sum of the first {a mathematical formula}j−1 elements is k and the j-th element of the sequence is 1. Formulae (9) and (10) specify the border cases that the sum of the first j elements of any sequence cannot exceed j and that the sum of every initial subsequence is at least 0.
+      </paragraph>
+      <paragraph>
+       Notice that rather than include formulae (9) and (10) explicitly in the encoding, one can directly modify (8) by replacing all occurrences of {a mathematical formula}sjk, for {a mathematical formula}0≤j&lt;k≤l, with 0 (the truth value false) and all occurrences of {a mathematical formula}sjk, for {a mathematical formula}k=0 and all {a mathematical formula}0≤j≤l, with 1 (the truth value true). Then, for example, for {a mathematical formula}k=j=1 formula (8) simplifies to {a mathematical formula}s11↔p1. We write (9) and (10) explicitly for the exposition purposes.
+      </paragraph>
+      <paragraph label="Proposition 4">
+       We give the formal proof of the following proposition in Appendix A for completeness of the presentation. Let{a mathematical formula}Φ(p1,…,pl)be as defined above. Then
+      </paragraph>
+      <list>
+       <list-item label="(i)">
+        For any assignment{a mathematical formula}I:vars(Φ(p1,…,pl))→{0,1}such that I satisfies{a mathematical formula}Φ(p1,…,pl), any{a mathematical formula}1≤j≤land{a mathematical formula}1≤k≤lwe have{a mathematical formula}
+       </list-item>
+       <list-item label="(ii)">
+        For any 0/1-sequence{a mathematical formula}(a1,…,al)∈{0,1}lthere exists an assignment{a mathematical formula}I:vars(Φ(p1,…,pl))→{0,1}such that I satisfies{a mathematical formula}Φ(p1,…,pl)and{a mathematical formula}I(pi)=ai, for all{a mathematical formula}1≤i≤l.
+       </list-item>
+      </list>
+      <paragraph>
+       It follows from Proposition 4 that the formula {a mathematical formula}(Φ(p1,…,pl)∧¬slr+1) encodes the at-most r cardinality constraint {a mathematical formula}p1+⋯+pl≤r, while the formula {a mathematical formula}(Φ(p1,…,pl)∧slr) encodes the at-least r cardinality constraint {a mathematical formula}p1+⋯+pl≥r. Notice that the original encoding in [39] only captures the at-most constraint and uses the polarity-based optimisation based on Tseitin's [40] renaming techniques yielding {a mathematical formula}O(nr) clauses, which require {a mathematical formula}O(nr) auxiliary propositions.
+      </paragraph>
+      <paragraph label="Theorem 5">
+       We now use Proposition 4 to encode C-boundedness of sequences. Let propositional formula {a mathematical formula}ΨC(p1,…,pl) be the conjunction of {a mathematical formula}Φ(p1,…,pl), with{a mathematical formula} and{a mathematical formula} Notice that, as in the case of {a mathematical formula}Φ(p1,…,pl), we write (11) and (12) explicitly for the ease of explanation. Then we have the following. For any{a mathematical formula}C&gt;0, any{a mathematical formula}l&gt;Cand any assignment{a mathematical formula}I:{p1,…,pl}→{0,1}the following holds: there exists an extension of I to{a mathematical formula}I′:vars(ΨC(p1,…,pl))→{0,1}that is a model of{a mathematical formula}ΨC(p1,…,pl)if, and only if, the sequence{a mathematical formula}I(p1),…,I(pl)is C-bounded.
+      </paragraph>
+      <paragraph label="Proof">
+       Assume that for some assignment {a mathematical formula}I:{p1,…,pl}→{0,1} the sequence {a mathematical formula}I(p1),…,I(pl) is C-bounded. By item (ii) of Proposition 4, I can be extended to an assignment {a mathematical formula}I′:vars(Φ(p1,…,pl)→{0,1} such that {a mathematical formula}I′ satisfies {a mathematical formula}Φ(p1,…,pl) and {a mathematical formula}I′(pi)=I(pi), for all {a mathematical formula}1≤i≤l. As {a mathematical formula}I′ is an extension of I the sequence {a mathematical formula}a1,…,al, where {a mathematical formula}ai=I′(p1) for {a mathematical formula}i=1,…,l, also is C-bounded, so conditions (4) and (5) hold true. By item (i) of Proposition 4, {a mathematical formula}I′(sjr+1)=0, for all {a mathematical formula}j:C&lt;j≤l and {a mathematical formula}r=⌊C+j2⌋, and {a mathematical formula}I′(sjr)=1, for all {a mathematical formula}j:C&lt;j≤l and {a mathematical formula}r=⌈−C+j2⌉. Thus, {a mathematical formula}I′ satisfies {a mathematical formula}ΨC(p1,…,pl).Conversely, consider an assignment {a mathematical formula}I:{p1,…,pl}→{0,1} and assume that its extension to {a mathematical formula}I′:vars(ΨC(p1,…,pl))→{0,1} is a model of {a mathematical formula}ΨC(p1,…,pl). Since {a mathematical formula}I′ satisfies {a mathematical formula}ΨC(p1,…,pl), we have {a mathematical formula}I′(sjr+1)=0, for all {a mathematical formula}j:C&lt;j≤l and {a mathematical formula}r=⌊C+j2⌋, and {a mathematical formula}I′(sjr)=1, for all {a mathematical formula}j:C&lt;j≤l and {a mathematical formula}r=⌈−C+j2⌉. As {a mathematical formula}Φ(p1,…,pl) is a conjunct of {a mathematical formula}ΨC(p1,…,pl), by Proposition 4 item (i), {a mathematical formula}∑i=1jI′(pi)≤⌊C+j2⌋, for all {a mathematical formula}j:C&lt;j≤l, and {a mathematical formula}∑i=1jI′(pi)≥⌊−C+j2⌋, for all {a mathematical formula}j:C&lt;j≤l, so {a mathematical formula}I′(p1),…,I′(pl) is C-bounded.  □
+      </paragraph>
+     </section>
+     <section label="3.3">
+      <section-title>
+       Clausal form
+      </section-title>
+      <paragraph label="Example 6">
+       Straightforward clausification of the formula {a mathematical formula}ΨC(p1,…,pl) yields {a mathematical formula}O(l2) clauses; however, unit propagation of (9), (10), (11) and (12) into (8) reduces significantly the size of the resulting CNF. We illustrate the effect of unit propagation on {a mathematical formula}ΨC(p1,…,pl) in Fig. 1 by presenting graphically values of {a mathematical formula}sjk for {a mathematical formula}{k,j}⊆{0,…,l} for the case of {a mathematical formula}C=2 and a relatively large {a mathematical formula}l=12. Notice that in every interpretation I satisfying {a mathematical formula}ΨC(p1,…,pl), the unit clauses (9), (10), (11) and (12) are true so the truth values of auxiliary propositions {a mathematical formula}sjk occurring in these clauses are fixed in any such interpretation. The dark gray areas in Fig. 1 correspond to {a mathematical formula}sjk whose values are being fixed by (9) and (10), while the boldface zeros and ones on the light gray background are due to (11) and (12). It is not hard to see that once these values are fixed, due to (8) all light gray cells above the unshaded region should contain 1 and all light gray cells below the unshaded region should contain 0. Thus, it is only the values of {a mathematical formula}sjk in the unshaded region that are not uniquely determined in any interpretation satisfying {a mathematical formula}Ψ3(p1,…,p12). In our example there are only 18 indeterminate values of {a mathematical formula}sjk out of {a mathematical formula}13×13=169 combinations of {a mathematical formula}j,k.
+      </paragraph>
+      <paragraph label="Proposition 7">
+       The same reasoning as in the example above applies to other values of C and l. Let{a mathematical formula}C&gt;0and{a mathematical formula}l&gt;C. Then{a mathematical formula}and{a mathematical formula}are logical consequences of{a mathematical formula}ΨC(p1,…,pl).
+      </paragraph>
+      <paragraph label="Proof">
+       Suppose, to the contrary, that for some {a mathematical formula}C&gt;0, some {a mathematical formula}l&gt;C, some I satisfying {a mathematical formula}ΨC(p1,…,pl), some {a mathematical formula}k:1≤k≤l and some {a mathematical formula}j:2k−1+C≤j≤l we have {a mathematical formula}I(sjk)=0. Then by Proposition 4, {a mathematical formula}∑i=1jI(pi)&lt;k. Since {a mathematical formula}j≥2k−1+C and {a mathematical formula}I(p1),…I(pl) is a 0/1 sequence,{a mathematical formula} Thus,{a mathematical formula} On the other hand, as I satisfies {a mathematical formula}ΨC(p1,…,pl), the sequence {a mathematical formula}I(p1),…,I(pl) is C-bounded and, as {a mathematical formula}2k−1+C&gt;C, by (5){a mathematical formula} So we derive a contradiction.The proof of (14) is similar with the use of (5).  □
+      </paragraph>
+      <paragraph>
+       As (8) is logically equivalent to the set of clauses{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} where {a mathematical formula}1≤k≤l, {a mathematical formula}1≤j≤l, it can be seen that the formula {a mathematical formula}ΨC(p1,…,pl) is logically equivalent to the set of clauses S consisting of (15), (16), (17), (18), (9), (10), (13) and (14). Let {a mathematical formula}CBoundC(p1,…,pl) be the result of applying unit propagation to S in an exhaustive manner. One can see that the set {a mathematical formula}CBoundC(p1,…,pl) contains less than {a mathematical formula}C⋅l auxiliary propositions and less than {a mathematical formula}4C⋅l clauses.
+      </paragraph>
+      <paragraph label="Example 8">
+       To save space, we limit our consideration to the top-left {a mathematical formula}5×5 region in Fig. 1 and present {a mathematical formula}CBound2(p1,…,p5), a clausal representation of the statement that the sequence {a mathematical formula}p1,…,p5 is 2-bounded. We also demonstrate how clauses (9), (10), (13) and (14) unit propagate into clauses (15), (16), (17), (18).Notice that for {a mathematical formula}k=1 every instance of clause (15) contains literal {a mathematical formula}sj−10, the only literal of the unit clause (10). Thus, every instance of clause (15) for {a mathematical formula}k=1 is redundant.For {a mathematical formula}k=2 and {a mathematical formula}j=1, clause (15) contains {a mathematical formula}¬s12, the only literal of the unit clause (9), so for {a mathematical formula}k=2 and {a mathematical formula}j=1, the instance of clause (15) is also redundant.For {a mathematical formula}k=2 and {a mathematical formula}j=2, an instance of the unit clause (9), namely {a mathematical formula}¬s12, unit propagates into (15) resulting in a 2-CNF clause {a mathematical formula}(¬s22∨s11).For {a mathematical formula}k=2 and {a mathematical formula}j=3, (15) instantiates to {a mathematical formula}(¬s32∨s22∨s21).Finally, for {a mathematical formula}k=2 and for {a mathematical formula}4≤j≤5, clause (15) contains {a mathematical formula}sj−11, the only literal of the unit clause (13). Thus, for {a mathematical formula}k=2 and {a mathematical formula}4≤j≤5 the instances of clause (15) are redundant.By a further consideration of cases, one can see that the set of all non-redundant simplified instance of clause (15), for {a mathematical formula}1≤k≤5 and {a mathematical formula}1≤j≤5, consists of{a mathematical formula}Similarly, instances of clause (16), for {a mathematical formula}1≤k≤5 and {a mathematical formula}1≤j≤5 are simplified with the help of unit clause (9), (10), (13) and (14) to{a mathematical formula} The set of all non-redundant simplified instances of clause (17) consists of{a mathematical formula} and set of all non-redundant simplified instances of clause (18) consists of{a mathematical formula} Thus, the set {a mathematical formula}CBound2(p1,…,p5) consists of 26 clauses grouped in (19), (20), (21), (22) above.
+      </paragraph>
+     </section>
+     <section label="3.4">
+      <section-title>
+       SAT encoding of multiplicativity
+      </section-title>
+      <paragraph>
+       Multiplicativity and complete multiplicativity of ±1 sequences can be encoded in SAT in a rather straightforward way. Assuming that a Boolean sequence {a mathematical formula}p1,…pn encodes a ±1 sequence {a mathematical formula}x1,…,xn so that the logical value 1 encodes the numerical value +1 and the logical value 0 encodes the numerical value −1, a SAT encoding of the fact that {a mathematical formula}xj⋅k=xj⋅xk is captured by the following clauses, which enumerate all four combinations of values of {a mathematical formula}xj and {a mathematical formula}xk:{a mathematical formula} Then multiplicativity of {a mathematical formula}x1,…xn is captured by instances of (23) for all coprime pairs {a mathematical formula}i&lt;j; and, by (2), complete multiplicativity of the sequence {a mathematical formula}x1,…,xn is captured by instances of (23) for j and k such that every product {a mathematical formula}j⋅k is generated only once.
+      </paragraph>
+      <paragraph>
+       For complete multiplicativity further optimisation is possible due to the fact that in any such sequence {a mathematical formula}xj2=+1 for any {a mathematical formula}j∈N+. It can be seen that the complete multiplicativity condition can be expressed by the union of the sets of clauses {a mathematical formula}cmulti defined below for every {a mathematical formula}i:1≤i≤n.{a mathematical formula}
+      </paragraph>
+     </section>
+     <section label="3.5">
+      <section-title>
+       Putting it all together
+      </section-title>
+      <paragraph label="Theorem 9">
+       We now have all the ingredients we need to define the CNF formulae used in our experiments. First we define the CNF encoding of finite sequences of length n having discrepancy bounded by C. It is defined as the conjunction of formulae expressing C-boundedness of its relevant subsequences (recall that every ±1 sequence whose length does not exceed C is always C-bounded).{a mathematical formula} We assume here that for the different values of d sets {a mathematical formula}CBoundC(pd,x2d,…,p⌊n/d⌋⋅d) share the same input propositions {a mathematical formula}p1,…,pn but use different auxiliary propositions {a mathematical formula}sjk. Then the following theorem is a direct consequence of Theorem 5. For any assignment{a mathematical formula}I:{p1,…,pn}→{0,1}the following holds: there exists an extension of I to{a mathematical formula}I′:vars(edp(C,n))→{0,1}that is a model of{a mathematical formula}edp(C,n)if, and only if,{a mathematical formula}I(p1),…,I(pn)encodes a ±1 sequence{a mathematical formula}x1,…,xnof length n and discrepancy at most C.
+      </paragraph>
+      <paragraph>
+       In our experiments we use two optimisations, which we present in the form of propositions. Both reduce significantly the size of the unsatisfiability certificate and have some noticeable effect on the running time. The first optimisation allows one to remove the ‘don't care’ propositions, which do not affect the satisfiability of the problem. The second optimisation breaks the symmetry in the problem.
+      </paragraph>
+      <paragraph label="Proposition 10">
+       Suppose that a ±1 sequence{a mathematical formula}a1,…,anis C-bounded and either n is odd and C is even or n is even and C is odd. Then for an arbitrary value{a mathematical formula}b∈{+1,−1}the sequence{a mathematical formula}a1,…,an,bis C-bounded.
+      </paragraph>
+      <paragraph label="Proof">
+       It suffices to notice that {a mathematical formula}|∑i=1jai| is odd if, and only if, j is odd. Thus, under the conditions of the proposition, {a mathematical formula}|∑i=1jai|≤C−1, and the sequence can be extended arbitrarily.  □
+      </paragraph>
+      <paragraph>
+       Symmetry breaking [41] is a well-known technique to reduce search in combinatorial problems. In the context of propositional satisfiability, a solution symmetry[42] can be defined as a bijection on the set of assignments of truth values to a set of solution variables[43], [44]. As the discrepancy of a ±1 sequence {a mathematical formula}x1,…,xn is bounded by C if, and only if, the discrepancy of {a mathematical formula}−x1,…,−xn is bounded by C, the permutation {a mathematical formula}l↦¬l, where l is a literal, is a solution symmetry for the SAT encoding of the EDP. This symmetry induces an equivalence relation on the set of all assignments. Notice that either all assignments in an equivalence class generated by this symmetry equivalence relation satisfies the formula, or the class contains no satisfying assignment. A symmetry breaking predicate[41] is a propositional formula, which is true on at least one assignment in every equivalence class generated by the symmetry equivalence relation. Conjoining the symmetry breaking predicate with the formula ensures that the SAT solver finds few representative assignment for every equivalence class. It should be clear that {a mathematical formula}pl is an equivalence breaking predicate for the encoding of the EDP for every {a mathematical formula}l:1≤1≤n. We summarise this argument as a proposition.
+      </paragraph>
+      <paragraph label="Proposition 11">
+       Symmetry breakingFor every{a mathematical formula}n&gt;0and{a mathematical formula}C&gt;0, the formula{a mathematical formula}edp(C,n)is satisfiable if, and only if, the formula{a mathematical formula}edp(C,n)∧(pl)is satisfiable, for some arbitrary but fixed value of l,{a mathematical formula}1≤l≤n.
+      </paragraph>
+      <paragraph>
+       Proposition 11 introduces a rather simple form of symmetry breaking. It is an interesting problem to identify some other forms of symmetry in the encoding of the EDP, for example, symmetry within solutions [45], [46] and investigate their effect on the performance of SAT solvers.
+      </paragraph>
+      <paragraph>
+       From the propositional satisfiability point of view, the study of multiplicative and completely multiplicative sequences of bounded discrepancy can be seen an example of streamlining [47] or tunnelling [48]. Notice however, that multiplicative and completely multiplicative sequences of bounded discrepancy are interesting in their own right and, as mentioned in Section 2.1, the question whether the discrepancy of unrestricted ±1 sequences is unbounded is equivalent to the question whether the discrepancy of completely multiplicative ±1 sequences is unbounded.
+      </paragraph>
+      <paragraph>
+       We define two sets of clauses{a mathematical formula} and{a mathematical formula}
+      </paragraph>
+      <paragraph label="Theorem 12">
+       The following statement is a direct consequence of Theorem 9. For any assignment{a mathematical formula}I:{p1,…,pn}→{0,1}the following holds: there exists an extension of I to{a mathematical formula}I′:vars(edpm(C,n))→{0,1}(or an extension of I to{a mathematical formula}I′:vars(edpcm(C,n))→{0,1}), which is a model of{a mathematical formula}edpm(C,n)(or{a mathematical formula}edpcm(C,n), respectively) if, and only if,{a mathematical formula}I(p1),…,I(pn)encodes a multiplicative (or completely multiplicative, respectively) ±1 sequence{a mathematical formula}x1,…,xnof length n and discrepancy at most C.
+      </paragraph>
+      <paragraph label="Proposition 13">
+       The completely multiplicative case can be further optimised based on the following observation. The discrepancy of a completely multiplicative ±1 sequence{a mathematical formula}x1,…,xnis bounded by C, for some{a mathematical formula}C&gt;0, if, and only if,{a mathematical formula}x1,…,xnis C-bounded.
+      </paragraph>
+      <paragraph label="Proof">
+       The necessary condition is trivial by definition of discrepancy. For the sufficient condition we show that for any C-bounded sequence {a mathematical formula}x1,…,xn and any {a mathematical formula}d&gt;1 the subsequence {a mathematical formula}xd,x2d,…,x⌊n/d⌋⋅d is C-bounded. Let {a mathematical formula}1≤j≤⌊n/d⌋. Then {a mathematical formula}|∑i=1jxi⋅d|=|∑i=1j(xi⋅xd)|=|xd⋅∑i=1jxi|=|∑i=1jxi|≤C.  □
+      </paragraph>
+      <paragraph>
+       Finally notice that the fact that {a mathematical formula}x1,…,xn is multiplicative does not imply that {a mathematical formula}−x1,…,−xn is, so symmetry breaking described in Proposition 11 is not applicable for multiplicative and completely multiplicative sequences.
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Results
+     </section-title>
+     <section>
+      <section>
+       <section>
+        <section-title>
+         Experimental setting
+        </section-title>
+        <paragraph>
+         In our experiments we use Treengeling, a parallel cube-and-conquer flavour of the Lingeling SAT solver [49] version aqw, the winner of the application SAT-UNSAT category of the SAT'13 competition [50], and the Glucose solver [51] version 3.0, the winner of the application certified UNSAT category of the SAT'13 competition [50]. All experiments were conducted on PCs equipped with an Intel Core i5-2500K CPU running at 3.30 GHz and 16 GB of RAM. Both solvers are used in a black-box manner with default parameters with the only exception of the activity heuristics [52], which contributes to the selection of variables for branching, being tuned to reduce the size of the unsatisfiability certificate for the case of {a mathematical formula}C=2 described below.
+        </paragraph>
+        <paragraph>
+         In our first series of experiments we investigate the discrepancy of unrestricted ±1 sequences. We encode{sup:3} the existence of a ±1 discrepancy C sequence of length n into SAT as described in Section 3. We deploy both optimisations described in Proposition 10 and Proposition 11. We choose as l, for which we fix {a mathematical formula}xl to be +1, a colossally abundant number [53], which has many divisors and thus contribute to many homogeneous sequences. Specifically for {a mathematical formula}C=2, the choice of {a mathematical formula}l=120 is more beneficial for satisfiable instances; however, {a mathematical formula}l=60 results in a better reduction of the size of the unsatisfiability proof described below. For consistency of presentation, we use {a mathematical formula}l=60 in all our experiments for {a mathematical formula}C=2.
+        </paragraph>
+        <paragraph>
+         We establish that the maximal length of a ±1 sequence of discrepancy 2 is 1160. The CNF formula {a mathematical formula}edp(2,1160) contains 11 824 propositions and 41 884 clauses. It takes the Treengeling system about 430 seconds to find a satisfying assignment on our hardware configuration. One of the sequences of length 1160 of discrepancy 2 can be found in Appendix B. When applied to the CNF formula {a mathematical formula}edp(2,1161), which contains 11 847 propositions and {a mathematical formula}41970 clauses, Treengeling reports unsatisfiability. In order to corroborate this statement, we also use Glucose. It takes the solver about 800 seconds to generate a DRUP certificate of unsatisfiability. The correctness of the generated unsatisfiability certificate has been independently verified with the drup-trim  tool [37].
+        </paragraph>
+        <paragraph>
+         The size of the certificate is about 1.88 GB. An experimental exploration of the effect of different solver options on the size of the certificate revealed that setting the var-decay option of Glucose, which controls the solver activity heuristic, to 0.995 reduces the unsatisfiability certificate roughly by {a mathematical formula}12.5% to 1.67 GB. Interestingly, deviating from the default options in other unsatisfiability cases reported below had a detrimental effect on the solver performance and, therefore, the default values were used in all other experiments.
+        </paragraph>
+        <paragraph label="Theorem 14">
+         The time needed to verify the certificate is comparable with the time needed to generate it. The RUP unsatisfiability certificate, that is the DRUP certificate with all information on the deleted clauses stripped, is 850.2 MB; it takes the drup-trim tool about five and a half hours to verify it. Combined with Theorem 9, these two experiments yield a computer proof of the following statement. The length of a maximal ±1 sequence of discrepancy 2 is 1160.
+        </paragraph>
+        <paragraph>
+         Thus we prove that the Erdős discrepancy conjecture holds true for {a mathematical formula}C=2.
+        </paragraph>
+        <paragraph>
+         When applied to {a mathematical formula}edp(3,n) for increasing values of n our method could only produce sequences of discrepancy 3 of length in the region of {a mathematical formula}14000, even though solvers were allowed to run for weeks. Since both multiplicativity and complete multiplicativity restrictions reduce severely the search space, in hope for better performance, we perform the second series of experiments to investigate the discrepancy bound for multiplicative and completely multiplicative sequences. Notice that the optimisation described in Proposition 11 is not applicable in this case as the fact that {a mathematical formula}x1,…,xn is multiplicative does not imply that {a mathematical formula}−x1,…,−xn is.
+        </paragraph>
+        <paragraph>
+         We saw in Example 2 that multiplicative sequences of discrepancy 1 are longer than completely multiplicative sequences. The longest completely multiplicative sequence of discrepancy 2 is known to contain 246 elements [54]; tests with {a mathematical formula}edpm show that the longest multiplicative sequence of discrepancy 2 has 344 elements. Thus it wouldn't be unreasonable to expect that the longest multiplicative discrepancy 3 sequence is longer than the longest completely multiplicative one, but is probably harder to find. It turns out that this expectation is wrong on both accounts.
+        </paragraph>
+        <paragraph>
+         We establish that the length of a maximal ±1 completely multiplicative discrepancy 3 sequence coincides with the length of a maximal ±1 multiplicative discrepancy 3 sequence and is equal to {a mathematical formula}127645. It takes Treengeling about one hour and fifty minutes to find a satisfying assignment to {a mathematical formula}edpcm(3,127645), which contains {a mathematical formula}3484084 propositions and {a mathematical formula}13759785 clauses, and about one hour and thirty five minutes to find a satisfying assignment to {a mathematical formula}edpm(3,127645), which also contains {a mathematical formula}3484084 propositions but {a mathematical formula}14813052 clauses.
+        </paragraph>
+        <paragraph>
+         It takes the Glucose solver just under eight hours to generate an approximately 1.28 GB DRUP proof of unsatisfiability for {a mathematical formula}edpcm(3,127646), which contains {a mathematical formula}3484084 propositions and {a mathematical formula}13759809 clauses, and about nine and a half hours to generate an approximately 1.56 GB DRUP proof of unsatisfiability for {a mathematical formula}edpm(3,127646), which again contains the same number of propositions but {a mathematical formula}14813076 clauses.
+        </paragraph>
+        <paragraph>
+         The optimisation of Proposition 13 leads to a reduction in the problem size for the completely multiplicative case (446 753 propositions and 1 738 125 clauses for length 127 645 and 446 759 propositions and 1 738 149 clauses for length 127 646) and a significant reduction both in the Treengeling running time (about 20 and 30 minutes, respectively) and in the size of the DRUP certificate, which is about 0.84 Gb.
+        </paragraph>
+        <paragraph label="Theorem 15">
+         So we get a computer-aided proof of another sharp bound on the sizes of maximal sequences of bounded discrepancy. The length of a maximal multiplicative ±1 sequence of discrepancy 3 equals the length of a maximal completely multiplicative ±1 sequence of discrepancy 3 and is{a mathematical formula}127645.
+        </paragraph>
+        <paragraph>
+         Unrestricted sequences of discrepancy 3 can still be longer than {a mathematical formula}127646: by requiring that only first {a mathematical formula}127600 elements of a sequence are completely multiplicative, we generate a 130 000 long EDP3 sequence in about one hour and fifty minutes thus establishing a slightly better lower bound on the length of ±1 sequences of discrepancy 3 than the one from Theorem 15. The solvers struggle to expand it much further. Notice that the optimisation of Proposition 13 is not applicable here.
+        </paragraph>
+        <paragraph>
+         We summarise known facts about discrepancy of unrestricted, multiplicative and completely multiplicative sequences in Table 1. We highlight in boldface cases where the lengths of maximal sequences of different kinds are equal.
+        </paragraph>
+       </section>
+      </section>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Conclusions
+     </section-title>
+     <paragraph>
+      We have demonstrated that SAT-based methods can be used to tackle the longstanding mathematical questions related to discrepancy of ±1 sequences. To the best of our knowledge, this is the first use of automatically generated unsatisfiability certificates as formal proofs of non-trivial mathematical statements. As a result, we able to identify the exact boundary between satisfiability and unsatisfiability for the encoding of the EDP for {a mathematical formula}C=2, thus identifying the longest sequences of discrepancy 2. We have established the surprising fact that the lengths of the longest multiplicative and completely multiplicative sequences of discrepancy 3 coincide. The latter result helps to establish a novel lower bound on the length of the longest discrepancy 3 sequence.
+     </paragraph>
+     <paragraph>
+      The general question of the existence of a finite bound on the length of ±1 sequences of discrepancy 3 (that is, the Erdős conjecture for {a mathematical formula}C=3) remains open. Considering the tenfold gap between the sizes of unrestricted discrepancy 3 sequences that solvers can find and maximal (completely) multiplicative discrepancy 3 sequences it would seem that without fresh ideas the conjecture is unlikely to be settled by a brute-force analysis, even helped by the modern SAT solver technology.
+     </paragraph>
+     <paragraph>
+      There is a noticeable asymmetry in our findings. The fact that a sequence of length 1160 has discrepancy 2 can be relatively easily checked manually. It is harder but not impossible to verify the correctness of the discrepancy bound for {a mathematical formula}127645-long sequences. On the other hand, even though improvements to our method shortened the Wikipedia-size 13 GB proof reported in [30] more than tenfold, passing the psychological barrier of 1 GB, it still probably is one of the longest proofs of a non-trivial mathematical result. It is equally improbable that a mathematician would verify by hand ten billion or half a billion of automatically generated proof lines. Having said that, the reduction of proof size will be useful for any future analysis in an attempt to identify patterns and lemmas and produce a compact proof more amenable for human comprehension.
+     </paragraph>
+     <paragraph>
+      Until such a human-comprehensible proof is found, the epistemic status of our results remains rather peculiar: we know that a proof exists, we even have it, we can handle it, check it by a third-party tool, analyse it, transform it, but we cannot understand it. To what extent this proof can be recognised as a proof is then a subject of foundational debate on the future of computer mathematics and goes beyond the scope of this article.
+     </paragraph>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     Proof of Proposition 4
+     <paragraph>
+      In this section we give a proof of the technical result used in the main text. We re-state the proposition for the reader's convenience.
+     </paragraph>
+     <paragraph label="Proposition 4">
+      Let{a mathematical formula}Φ(p1,…,pn)be as defined above. Then
+     </paragraph>
+     <list>
+      <list-item label="(i)">
+       For any assignment{a mathematical formula}I:vars(Φ(p1,…,pn))→{0,1}such that I satisfies{a mathematical formula}Φ(p1,…,pn), any{a mathematical formula}1≤j≤nand{a mathematical formula}1≤k≤nwe have{a mathematical formula}
+      </list-item>
+      <list-item label="(ii)">
+       For any 0/1-sequence{a mathematical formula}(a1,…,an)∈{0,1}nthere exists an assignment{a mathematical formula}I:vars(Φ(p1,…,pn))→{0,1}such that{a mathematical formula}I(pi)=ai, for{a mathematical formula}1≤i≤n; I satisfies{a mathematical formula}Φ(p1,…,pn); and for any{a mathematical formula}r≤nand{a mathematical formula}j≤nif{a mathematical formula}∑i=1jai≤rthen{a mathematical formula}I(sjk)=0, for{a mathematical formula}r&lt;k≤n.
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      <list>
+       <list-item label="(i)">
+        The proof proceeds by induction on the lexicographical partial order ≺ on pairs of non-negative integers: {a mathematical formula}(j,k)≺(j′,k′) iff {a mathematical formula}j&lt;j′∨((j=j′)∧(k&lt;k′)). Fix some {a mathematical formula}n≥1.Consider cases:
+       </list-item>
+       <list-item label="(ii)">
+        First notice that any assignment {a mathematical formula}Ip:{p1,…,pn)→{0,1} can be extended in a unique way to the assignment {a mathematical formula}I:vars(Φ(p1,…,pn))→{0,1}. Indeed, satisfaction of (9) and (10) defines uniquely the values of satisfying assignment I on {a mathematical formula}sjk for the cases {a mathematical formula}0≤j&lt;k≤n and {a mathematical formula}k=0;0≤j≤n, respectively. Further, using satisfaction condition for (8) the values of I on the remaining variables {a mathematical formula}sjk with {a mathematical formula}1≤k≤n,1≤j≤n are defined uniquely by induction on ≺. The remaining condition, that is for any {a mathematical formula}r≤n and {a mathematical formula}j≤n if {a mathematical formula}∑i=1jai≤r then {a mathematical formula}I(sjk)=0, for {a mathematical formula}r&lt;k≤n, now follows from item (i) above.
+       </list-item>
+      </list>
+      <paragraph>
+       □
+      </paragraph>
+     </paragraph>
+    </section>
+    <section label="Appendix B">
+     <section-title>
+      A sequence of length 1160 and discrepancy 2
+     </section-title>
+     <paragraph>
+      We give a graphical representation of one of the sequences of length 1160 obtained from the satisfying assignment computed with the Treengeling solver. Here + stands for +1 and − for −1, respectively.
+     </paragraph>
+     <paragraph>
+      - + + - + - - + + - + + - + - - + - - + + - + - - + - - +  + - + - - + + - + + - + - + + - - + + - + - - - + - + + -  + - - + - - + + + + - - + - - + + - + - - + + - + + - - -  - + + - + + - + - + + - - + + - + - + - - - + + - + - - +  + - + + - + - - + + - + - - + - - - + - + + - + - - + + -  + + - + - - + - - + + - + + - + - - + + - + - - + + + - +  - + - - - - + + + - + - - + - - + + + - - - + + - + + - +  - - + - - + + + - - + - + - + - - + - + + + - + + - + - -  + - - + + - + - - + + - + + - + - - + - - + + - - + + + -  - - + + + - + - - - + + - + - - + + - - + - + - - + - + +  + - + - - + + - + + - + - - + + - + - - + - - + + - + - -  + + - - + - + + - + - + - - + - + - + + - + - - + + - + -  - + - - + + - + - + - + + - + - + - + + - - - + - + - - +  + + + - - + - - - + + - + - + + - + - - + + - + - - + - -  + + - + - - + + + + - - + - - - + - + + + + - - + - - + +  - + + - + - - + + - + - - + - - + + - + - - + + - + + - +  - - + + - + - - + - - + + - + + - + - - - - + + + - + - -  + + - - + + + - - - + - + + - + - - + - + + - - - + - + +  - + + - + - - + - - + + - - + + + + - + - - + - - + - - +  + + + - - + - - + + + - - - + + - + + - + - - + + - - + -  + - - + - - + + - + + - + - - + - - + - + + + - + + - + -  - + - - + + - - + - + + - + + - + - - + - - + - - + + - +  + - + - - + + + - - - + + - + - - + + - + + - - - + + + -  - - + + - + + - - - - + + + - - + - + + - + - - + - - + +  - + - - + + - + + - + - + + - - + + - - + + - - - - + + +  - + + - - + + - - - - + + - + + + - - + + - - - + + + - -  - - + - + - + + - + + - + + - + - + - - - - + + + - - + +  - + - - + + - + + - + - - + - - + - - + + - + - - + + - +  + - + - - + + - - + - + - - + - + - + - + + + + - - - + -  + - + + - - + - - + - + - + - + + - + - + + + - - + - + -  - + - - + - + + + - - + - + + + - - - + + - + - - + - - +  + - + + - - + + - - - + + - + - + + - - + + - + - - - + -  + + - + - - + - + + - - + + - + - - + + - + - - + - + + +  - + - - + + - - + - + - + + + - - + - + - - + + - + + - +  - - + - - + - + + - - - + - + + - + - + + - - + + - + - -  + + + - + - - - - + + - - + - + + - + - + + - - + + - + -  - + + - + - + + - - + + - + - - - + - + + - + - - + + + -  - - - + - + - + + - - + + - + - - + + - + + - + + - + - -  + - - + - - + + + + - - - + + - - - + - + - + + - + - + +  + - - + - + + - - + - + - - + - + - + + - - - + + + - + +
+     </paragraph>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

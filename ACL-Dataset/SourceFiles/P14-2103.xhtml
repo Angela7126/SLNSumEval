@@ -1,0 +1,620 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Labelling Topics using Unsupervised Graph-based Methods</title>
+<!--Generated on Wed Jun 11 18:16:58 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Labelling Topics using Unsupervised Graph-based Methods</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Nikolaos Aletras 
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Mark Stevenson
+<br class="ltx_break"/>Department of Computer Science
+<br class="ltx_break"/>University of Sheffield
+<br class="ltx_break"/>Regent Court, 211 Portobello
+<br class="ltx_break"/>Sheffield, S1 4DP
+<br class="ltx_break"/>United Kingdom
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">n.aletras, m.stevenson</span>}<span class="ltx_text ltx_font_typewriter">@dcs.shef.ac.uk</span>
+
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">This paper introduces an unsupervised graph-based method that selects textual labels for automatically generated topics. Our approach uses the topic keywords to query a search engine and generate a graph from the words contained in the results. PageRank is then used to weigh the words in the graph and score the candidate labels. The state-of-the-art method for this task is supervised <cite class="ltx_cite">[<a href="#bib.bib76" title="Automatic labelling of topic models" class="ltx_ref">14</a>]</cite>. Evaluation on a standard data set shows that the performance of our approach is consistently superior to previously reported methods.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Topic models <cite class="ltx_cite">[<a href="#bib.bib57" title="Probabilistic latent semantic indexing" class="ltx_ref">11</a>, <a href="#bib.bib21" title="Latent Dirichlet Allocation" class="ltx_ref">2</a>]</cite> have proved to be a useful way to represent the content of document collections, e.g. <cite class="ltx_cite">[<a href="#bib.bib31" title="Visualizing topic models" class="ltx_ref">4</a>, <a href="#bib.bib2" title="TopicVis: a GUI for Topic-based feedback and navigation" class="ltx_ref">7</a>, <a href="#bib.bib50" title="TopicNets: visual analysis of large text corpora with topic modeling" class="ltx_ref">8</a>, <a href="#bib.bib56" title="TopicExplorer: exploring document collections with topic models" class="ltx_ref">10</a>, <a href="#bib.bib4" title="Topic models and metadata for visualizing text corpora" class="ltx_ref">20</a>]</cite>. In these interfaces, topics need to be presented to users in an easily interpretable way.
+A common way to represent topics is as set of keywords generated from the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p1.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> terms with the highest marginal probabilities. For example, a topic about the global financial crisis could be represented by its top 10 most probable terms: <span class="ltx_text ltx_font_smallcaps">financial, bank, market, government, mortgage, bailout, billion, street, wall, crisis</span>. But interpreting such lists is not always straightforward, particularly since background knowledge may be required <cite class="ltx_cite">[<a href="#bib.bib32" title="Reading Tea Leaves: How Humans Interpret Topic Models" class="ltx_ref">5</a>]</cite>.</p>
+</div>
+<div id="S1.F1" class="ltx_figure">
+<p class="ltx_p"><span class="ltx_text ltx_font_footnote">{<span class="ltx_text ltx_font_typewriter">`Description': `Microsoft will accelerate your journey to cloud computing with an agile and responsive datacenter built from your existing technology investments.',
+<br class="ltx_break"/>`DisplayUrl': `www.microsoft.com/en-us/server-cloud/datacenter/virtualization.aspx',
+<br class="ltx_break"/>`ID': `a42b0908-174e-4f25-b59c-70bdf394a9da',
+<br class="ltx_break"/>`Title': `Microsoft | Server &amp; Cloud | Datacenter | Virtualization ...',
+<br class="ltx_break"/>`Url': `http://www.microsoft.com/en-us/server-cloud/datacenter/virtualization.aspx', ... </span>}</span></p>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Sample of the metadata associated with a search result.</div>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Textual labels could assist with the interpretations of topics and researchers have developed methods to generate these automatically <cite class="ltx_cite">[<a href="#bib.bib95" title="Automatic Labeling of Multinomial Topic Models" class="ltx_ref">17</a>, <a href="#bib.bib77" title="Best topic word selection for topic labelling" class="ltx_ref">15</a>, <a href="#bib.bib76" title="Automatic labelling of topic models" class="ltx_ref">14</a>]</cite>. For example, a topic which has keywords <span class="ltx_text ltx_font_smallcaps">school, student, university, college, teacher, class, education, learn, high, program</span>, could be labelled as <span class="ltx_text ltx_font_smallcaps">Education</span> and a suitable label for the topic shown above would be <span class="ltx_text ltx_font_smallcaps">Global Financial Crisis</span>. Approaches that make use of alternative modalities, such as images <cite class="ltx_cite">[<a href="#bib.bib10" title="Representing topics using images" class="ltx_ref">1</a>]</cite>, have also been proposed.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Mei<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib95" title="Automatic Labeling of Multinomial Topic Models" class="ltx_ref">2007</a>)</cite> label topics using statistically significant bigrams identified in a reference collection. <cite class="ltx_cite">Magatti<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib90" title="Automatic Labeling of Topics" class="ltx_ref">2009</a>)</cite> introduced an approach for labelling topics that relied on two hierarchical knowledge resources labelled by humans, while <cite class="ltx_cite">Lau<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib77" title="Best topic word selection for topic labelling" class="ltx_ref">2010</a>)</cite> proposed selecting the most representative word from a topic as its label. <cite class="ltx_cite">Hulpus<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib62" title="Unsupervised graph-based topic labelling using DBpedia" class="ltx_ref">2013</a>)</cite> make use of structured data from DBpedia to label topics.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Lau<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib76" title="Automatic labelling of topic models" class="ltx_ref">2011</a>)</cite> proposed a method for automatically labelling topics using information from Wikipedia. A set of candidate labels is generated from Wikipedia article titles by querying using topic terms. Additional labels are then generated by chunk parsing the article titles to identify n-grams that represent Wikipedia articles as well. Outlier labels (less relevant to the topic) are identified and removed. Finally, the top-5 topic terms are added to the candidate set.
+The labels are ranked using Support Vector Regression (SVR) <cite class="ltx_cite">[<a href="#bib.bib140" title="Statistical learning theory" class="ltx_ref">21</a>]</cite> and features extracted using word association measures (i.e. PMI, t-test, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p4.m1" class="ltx_Math" alttext="\chi^{2}" display="inline"><msup><mi>χ</mi><mn>2</mn></msup></math> and Dice coefficient), lexical features and search engine ranking. <cite class="ltx_cite">Lau<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib76" title="Automatic labelling of topic models" class="ltx_ref">2011</a>)</cite> report two versions of their approach, one unsupervised (which is used as a baseline) and another which is supervised. They reported that the supervised version achieves better performance than a previously reported approach <cite class="ltx_cite">[<a href="#bib.bib95" title="Automatic Labeling of Multinomial Topic Models" class="ltx_ref">17</a>]</cite>.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">This paper introduces an alternative graph-based approach which is unsupervised and less computationally intensive than <cite class="ltx_cite">Lau<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib76" title="Automatic labelling of topic models" class="ltx_ref">2011</a>)</cite>. Our method uses topic keywords to form a query. A graph is generated from the words contained in the search results and these are then ranked using the PageRank algorithm <cite class="ltx_cite">[<a href="#bib.bib110" title="The PageRank citation ranking: bringing order to the web" class="ltx_ref">19</a>, <a href="#bib.bib97" title="TextRank: bringing order into texts" class="ltx_ref">18</a>]</cite>. Evaluation on a standard data set shows that our method consistently outperforms the best performing previously reported method, which is supervised <cite class="ltx_cite">[<a href="#bib.bib76" title="Automatic labelling of topic models" class="ltx_ref">14</a>]</cite>.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Methodology</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">We use the topic keywords to query a search engine. We assume that the search results returned are relevant to the topic and can be used to identify and weigh relevant keywords. The most important keywords can be used to generate keyphrases for labelling the topic or weight pre-existing candidate labels.</p>
+</div>
+<div id="S2.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.1 </span>Retrieving and Processing Text Information</h3>
+
+<div id="S2.SS1.p1" class="ltx_para">
+<p class="ltx_p">We use the approach described by <cite class="ltx_cite">Lau<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib76" title="Automatic labelling of topic models" class="ltx_ref">2011</a>)</cite> to generate candidate labels from Wikipedia articles. The 10 terms with the highest marginal probabilities in the topic are used to query Wikipedia and the titles of the articles retrieved used as candidate labels. Further candidate labels are generated by processing the titles of these articles to identify noun chunks and n-grams within the noun chunks that are themselves the titles of Wikipedia articles. Outlier labels, identified using a similarity measure <cite class="ltx_cite">[<a href="#bib.bib51" title="Using Ontological and Document Similarity to Estimate Museum Exhibit Relatedness" class="ltx_ref">9</a>]</cite>, are removed. This method has been proved to produce labels which effectively summarise a topic’s main subject.</p>
+</div>
+<div id="S2.SS1.p2" class="ltx_para">
+<p class="ltx_p">However, it should be noted that our method is flexible and could be applied to any set of candidate labels. We have experimented with various approaches to candidate label generation but chose to report results using the approach described by <cite class="ltx_cite">Lau<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib76" title="Automatic labelling of topic models" class="ltx_ref">2011</a>)</cite> to allow direct comparison of approaches.</p>
+</div>
+<div id="S2.SS1.p3" class="ltx_para">
+<p class="ltx_p">Information obtained from web searches is used to identify the best labels from the set of candidates. The top <em class="ltx_emph">n</em> keywords, i.e. those with highest marginal probability within the topic, are used to form a query which was submitted to the Bing<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup><a href="http://www.bing.com/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter ltx_font_footnote">http://www.bing.com/</span></a></span></span></span> search engine. Textual information included in the Title field<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>We also experimented with using the Description field but found that this reduced performance.</span></span></span> of the search results metadata was extracted. Each title was tokenised using openNLP<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup><a href="http://opennlp.apache.org/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter ltx_font_footnote">http://opennlp.apache.org/</span></a></span></span></span> and stop words removed.</p>
+</div>
+<div id="S2.SS1.p4" class="ltx_para">
+<p class="ltx_p">Figure <a href="#S1.F1" title="Figure 1 ‣ 1 Introduction ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> shows a sample of the metadata associated with a search result for the topic: <span class="ltx_text ltx_font_smallcaps">vmware, server, virtual, oracle, update, virtualization, application, infrastructure, management, microsoft</span>.</p>
+</div>
+</div>
+<div id="S2.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.2 </span>Creating a Text Graph</h3>
+
+<div id="S2.SS2.p1" class="ltx_para">
+<p class="ltx_p">We consider any remaining words in the search result metadata as nodes, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m1" class="ltx_Math" alttext="v\in V" display="inline"><mrow><mi>v</mi><mo>∈</mo><mi>V</mi></mrow></math>, in a graph <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m2" class="ltx_Math" alttext="G=(V,E)" display="inline"><mrow><mi>G</mi><mo>=</mo><mrow><mo>(</mo><mrow><mi>V</mi><mo>,</mo><mi>E</mi></mrow><mo>)</mo></mrow></mrow></math>. Each node is connected to its neighbouring words in a context window of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m3" class="ltx_Math" alttext="\pm n" display="inline"><mrow><mo>±</mo><mi>n</mi></mrow></math> words. In the previous example, the words added to the graph from the Title of the search result are <em class="ltx_emph">microsoft, server, cloud, datacenter</em> and <em class="ltx_emph">virtualization</em>.</p>
+</div>
+<div id="S2.SS2.p2" class="ltx_para">
+<p class="ltx_p">We consider both unweighted and weighted graphs. When the graph is unweighted we assume that all the edges have a weight <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m1" class="ltx_Math" alttext="e=1" display="inline"><mrow><mi>e</mi><mo>=</mo><mn>1</mn></mrow></math>. In addition, we weight the edges of the graph by computing the relatedness between two nodes, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m2" class="ltx_Math" alttext="v_{i}" display="inline"><msub><mi>v</mi><mi>i</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m3" class="ltx_Math" alttext="v_{j}" display="inline"><msub><mi>v</mi><mi>j</mi></msub></math>, as their normalised Pointwise Mutual Information (NPMI) <cite class="ltx_cite">[<a href="#bib.bib23" title="Normalized (pointwise) mutual information in collocation extraction" class="ltx_ref">3</a>]</cite>. Word co-occurrences are computed using Wikipedia as a a reference corpus. Pairs of words are connected with edges only if <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m4" class="ltx_Math" alttext="\text{NPMI}(w_{i},w_{j})&gt;0.2" display="inline"><mrow><mrow><mtext>NPMI</mtext><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>w</mi><mi>i</mi></msub><mo>,</mo><msub><mi>w</mi><mi>j</mi></msub></mrow><mo>)</mo></mrow></mrow><mo>&gt;</mo><mn>0.2</mn></mrow></math> avoiding connections between words co-occurring by chance and hence introducing noise.</p>
+</div>
+</div>
+<div id="S2.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.3 </span>Identifying Important Terms</h3>
+
+<div id="S2.SS3.p1" class="ltx_para">
+<p class="ltx_p">Important terms are identified by applying the PageRank algorithm <cite class="ltx_cite">[<a href="#bib.bib110" title="The PageRank citation ranking: bringing order to the web" class="ltx_ref">19</a>]</cite> in a similar way to the approach used by <cite class="ltx_cite">Mihalcea and Tarau (<a href="#bib.bib97" title="TextRank: bringing order into texts" class="ltx_ref">2004</a>)</cite> for document keyphrase extraction. The PageRank score (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p1.m1" class="ltx_Math" alttext="Pr" display="inline"><mrow><mi>P</mi><mo>⁢</mo><mi>r</mi></mrow></math>) over <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p1.m2" class="ltx_Math" alttext="G" display="inline"><mi>G</mi></math> for a word (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p1.m3" class="ltx_Math" alttext="v_{i}" display="inline"><msub><mi>v</mi><mi>i</mi></msub></math>) can be computed by the following equation:</p>
+</div>
+<div id="S2.SS3.p2" class="ltx_para">
+<table id="Sx1.EGx1" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S2.Ex1" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex1.m1" class="ltx_Math" alttext="\displaystyle Pr(v_{i})" display="inline"><mrow><mi>P</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>v</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex1.m2" class="ltx_Math" alttext="\displaystyle=d\cdot\sum_{v_{j}\in C(v_{i})}\frac{sim(v_{i},v_{j})}{\sum%&#10;\limits_{v_{k}\in C(v_{j})}sim(v_{j},v_{k})}Pr(v_{j})" display="inline"><mrow><mi/><mo>=</mo><mrow><mi>d</mi><mo>⋅</mo><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><msub><mi>v</mi><mi>j</mi></msub><mo>∈</mo><mrow><mi>C</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>v</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></mrow></munder></mstyle><mrow><mstyle displaystyle="true"><mfrac><mrow><mi>s</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>v</mi><mi>i</mi></msub><mo>,</mo><msub><mi>v</mi><mi>j</mi></msub></mrow><mo>)</mo></mrow></mrow><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><msub><mi>v</mi><mi>k</mi></msub><mo>∈</mo><mrow><mi>C</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>v</mi><mi>j</mi></msub><mo>)</mo></mrow></mrow></mrow></munder><mrow><mi>s</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>v</mi><mi>j</mi></msub><mo>,</mo><msub><mi>v</mi><mi>k</mi></msub></mrow><mo>)</mo></mrow></mrow></mrow></mfrac></mstyle><mo>⁢</mo><mi>P</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>v</mi><mi>j</mi></msub><mo>)</mo></mrow></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S2.E1" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E1.m2" class="ltx_Math" alttext="\displaystyle+(1-d)\mathbf{v}" display="inline"><mrow><mo>+</mo><mrow><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><mi>d</mi></mrow><mo>)</mo></mrow><mo>⁢</mo><mi>𝐯</mi></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p2.m1" class="ltx_Math" alttext="C(v_{i})" display="inline"><mrow><mi>C</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>v</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math> denotes the set of vertices which are connected to the vertex <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p2.m2" class="ltx_Math" alttext="v_{i}" display="inline"><msub><mi>v</mi><mi>i</mi></msub></math>. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p2.m3" class="ltx_Math" alttext="d" display="inline"><mi>d</mi></math> is the damping factor which is set to the default value of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p2.m4" class="ltx_Math" alttext="d=0.85" display="inline"><mrow><mi>d</mi><mo>=</mo><mn>0.85</mn></mrow></math> <cite class="ltx_cite">[<a href="#bib.bib110" title="The PageRank citation ranking: bringing order to the web" class="ltx_ref">19</a>]</cite>. In standard PageRank all elements of the vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p2.m5" class="ltx_Math" alttext="\mathbf{v}" display="inline"><mi>𝐯</mi></math> are the same, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p2.m6" class="ltx_Math" alttext="\frac{1}{N}" display="inline"><mfrac><mn>1</mn><mi>N</mi></mfrac></math> where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p2.m7" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math> is the number of nodes in the graph.</p>
+</div>
+</div>
+<div id="S2.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.4 </span>Ranking Labels</h3>
+
+<div id="S2.SS4.p1" class="ltx_para">
+<p class="ltx_p">Given a candidate label <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p1.m1" class="ltx_Math" alttext="L=\{w_{1},...,w_{m}\}" display="inline"><mrow><mi>L</mi><mo>=</mo><mrow><mo>{</mo><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>w</mi><mi>m</mi></msub></mrow><mo>}</mo></mrow></mrow></math> containing <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p1.m2" class="ltx_Math" alttext="m" display="inline"><mi>m</mi></math> keywords, we compute the score of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS4.p1.m3" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math> by simply adding the PageRank scores of its constituent keywords:</p>
+<table id="Sx1.EGx2" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S2.E2" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E2.m1" class="ltx_Math" alttext="\displaystyle Score(L)=\sum_{i=1}^{m}Pr(w_{i})" display="inline"><mrow><mrow><mi>S</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mrow><mo>(</mo><mi>L</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>m</mi></munderover></mstyle><mrow><mi>P</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>w</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+</div>
+<div id="S2.SS4.p2" class="ltx_para">
+<p class="ltx_p">The label with the highest score amongst the set of candidates is selected to represent the topic. We also experimented with normalised versions of the score, e.g. mean of the PageRank scores. However, this has a negative effect on performance since it favoured short labels of one or two words which were not sufficiently descriptive of the topics. In addition, we expect that candidate labels containing words that do not appear in the graph (with the exception of stop words) are unlikely to be good labels for the topic. In these cases the score of the candidate label is set to 0. We also experimented with removing this restriction but found that it lowered performance.</p>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Experimental Evaluation</h2>
+
+<div id="S3.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Domain</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Model</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Top-1 Av. Rating</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">nDCG-1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">nDCG-3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">nDCG-5</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t" rowspan="4"><span class="ltx_text ltx_font_bold">BLOGS</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><cite class="ltx_cite">Lau<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib76" title="Automatic labelling of topic models" class="ltx_ref">2011</a>)</cite>-U</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">1.84</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.75</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.77</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.79</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><cite class="ltx_cite">Lau<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib76" title="Automatic labelling of topic models" class="ltx_ref">2011</a>)</cite>-S</th>
+<td class="ltx_td ltx_align_center ltx_border_r">1.98</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.81</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.82</td>
+<td class="ltx_td ltx_align_center">0.83</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">PR</th>
+<td class="ltx_td ltx_align_center ltx_border_r">2.05†</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.83</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.84</td>
+<td class="ltx_td ltx_align_center">0.83</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_markedasmath">PR-NPMI</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r">2.08†</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.84</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.84</td>
+<td class="ltx_td ltx_align_center">0.83</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r"/>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">Upper bound</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">2.45</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">1.00</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">1.00</td>
+<td class="ltx_td ltx_align_center ltx_border_t">1.00</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t" rowspan="4"><span class="ltx_text ltx_font_bold">BOOKS</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><cite class="ltx_cite">Lau<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib76" title="Automatic labelling of topic models" class="ltx_ref">2011</a>)</cite>-U</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">1.75</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.77</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.77</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.79</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><cite class="ltx_cite">Lau<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib76" title="Automatic labelling of topic models" class="ltx_ref">2011</a>)</cite>-S</th>
+<td class="ltx_td ltx_align_center ltx_border_r">1.91</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.84</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.81</td>
+<td class="ltx_td ltx_align_center">0.83</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">PR</th>
+<td class="ltx_td ltx_align_center ltx_border_r">1.98†</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.86</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.88</td>
+<td class="ltx_td ltx_align_center">0.87</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_markedasmath">PR-NPMI</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r">2.01†</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.87</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.88</td>
+<td class="ltx_td ltx_align_center">0.87</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r"/>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">Upper bound</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">2.29</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">1.00</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">1.00</td>
+<td class="ltx_td ltx_align_center ltx_border_t">1.00</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t" rowspan="4"><span class="ltx_text ltx_font_bold">NEWS</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><cite class="ltx_cite">Lau<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib76" title="Automatic labelling of topic models" class="ltx_ref">2011</a>)</cite>-U</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">1.96</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.80</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.79</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.78</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><cite class="ltx_cite">Lau<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib76" title="Automatic labelling of topic models" class="ltx_ref">2011</a>)</cite>-S</th>
+<td class="ltx_td ltx_align_center ltx_border_r">2.02</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.82</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.82</td>
+<td class="ltx_td ltx_align_center">0.84</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">PR</th>
+<td class="ltx_td ltx_align_center ltx_border_r">2.04†</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.83</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.81</td>
+<td class="ltx_td ltx_align_center">0.81</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_markedasmath">PR-NPMI</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r">2.05†</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.83</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.81</td>
+<td class="ltx_td ltx_align_center">0.81</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r"/>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">Upper bound</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">2.45</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">1.00</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">1.00</td>
+<td class="ltx_td ltx_align_center ltx_border_t">1.00</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t" rowspan="4"><span class="ltx_text ltx_font_bold">PUBMED</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><cite class="ltx_cite">Lau<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib76" title="Automatic labelling of topic models" class="ltx_ref">2011</a>)</cite>-U</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">1.73</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.75</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.77</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.79</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><cite class="ltx_cite">Lau<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib76" title="Automatic labelling of topic models" class="ltx_ref">2011</a>)</cite>-S</th>
+<td class="ltx_td ltx_align_center ltx_border_r">1.79</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.77</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.82</td>
+<td class="ltx_td ltx_align_center">0.84</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">PR</th>
+<td class="ltx_td ltx_align_center ltx_border_r">1.88†‡</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.80</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.80</td>
+<td class="ltx_td ltx_align_center">0.80</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_markedasmath">PR-NPMI</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r">1.90†‡</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.81</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.80</td>
+<td class="ltx_td ltx_align_center">0.80</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r"/>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">Upper bound</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">2.31</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">1.00</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">1.00</td>
+<td class="ltx_td ltx_align_center ltx_border_t">1.00</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"/>
+<th class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span>Results for Various Approaches to Topic Labelling (†: significant difference (t-test, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m7" class="ltx_Math" alttext="p&lt;0.05" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.05</mn></mrow></math>) to <cite class="ltx_cite">Lau<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib76" title="Automatic labelling of topic models" class="ltx_ref">2011</a>)</cite>-U; ‡: significant difference (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m8" class="ltx_Math" alttext="p&lt;0.05" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.05</mn></mrow></math>) to <cite class="ltx_cite">Lau<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib76" title="Automatic labelling of topic models" class="ltx_ref">2011</a>)</cite>-S). </div>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Data</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">We evaluate our method on the publicly available data set published by <cite class="ltx_cite">Lau<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib76" title="Automatic labelling of topic models" class="ltx_ref">2011</a>)</cite>. The data set consists of 228 topics generated using text documents from four domains, i.e. blog posts (<span class="ltx_text ltx_font_bold">BLOGS</span>), books (<span class="ltx_text ltx_font_bold">BOOKS</span>), news articles (<span class="ltx_text ltx_font_bold">NEWS</span>) and scientific articles from the biomedical domain (<span class="ltx_text ltx_font_bold">PUBMED</span>). Each topic is represented by its ten most probable keywords. It is also associated with candidate labels and human ratings denoting the appropriateness of a label given the topic. The full data set consists of approximately 6,000 candidate labels (27 labels per topic).</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Evaluation Metrics</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">Our evaluation follows the framework proposed by <cite class="ltx_cite">Lau<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib76" title="Automatic labelling of topic models" class="ltx_ref">2011</a>)</cite> using two metrics, i.e. <span class="ltx_text ltx_font_bold">Top-1 average rating</span> and <span class="ltx_text ltx_font_bold">nDCG</span>, to compare various labelling methods.</p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Top-1 average rating</span> is the average human rating (between 0 and 3) assigned to the top-ranked label proposed by the system. This provides an indication of the overall quality of the label the system judges as the best one.</p>
+</div>
+<div id="S3.SS2.p3" class="ltx_para">
+<p class="ltx_p">Normalised discounted cumulative gain (<span class="ltx_text ltx_font_bold">nDCG</span>) <cite class="ltx_cite">[<a href="#bib.bib66" title="Cumulated gain-based evaluation of IR techniques" class="ltx_ref">13</a>, <a href="#bib.bib27" title="Search engines: information retrieval in practice" class="ltx_ref">6</a>]</cite> compares the label ranking proposed by the system to the ranking provided by human annotators. The discounted cumulative gain at position <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m1" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m2" class="ltx_Math" alttext="DCG_{p}" display="inline"><mrow><mi>D</mi><mo>⁢</mo><mi>C</mi><mo>⁢</mo><msub><mi>G</mi><mi>p</mi></msub></mrow></math>, is computed using the following equation:</p>
+<table id="Sx1.EGx3" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S3.E3" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E3.m1" class="ltx_Math" alttext="\displaystyle DCG_{p}=rel_{1}+\sum_{i=2}^{p}\frac{rel_{i}}{log_{2}(i)}" display="inline"><mrow><mrow><mi>D</mi><mo>⁢</mo><mi>C</mi><mo>⁢</mo><msub><mi>G</mi><mi>p</mi></msub></mrow><mo>=</mo><mrow><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><msub><mi>l</mi><mn>1</mn></msub></mrow><mo>+</mo><mrow><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>2</mn></mrow><mi>p</mi></munderover></mstyle><mstyle displaystyle="true"><mfrac><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><msub><mi>l</mi><mi>i</mi></msub></mrow><mrow><mi>l</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><msub><mi>g</mi><mn>2</mn></msub><mo>⁢</mo><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></mrow></mfrac></mstyle></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m3" class="ltx_Math" alttext="rel_{i}" display="inline"><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><msub><mi>l</mi><mi>i</mi></msub></mrow></math> is the relevance of the label to the topic in position <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m4" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math>. Then nDCG is computed as:</p>
+<table id="Sx1.EGx4" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S3.E4" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E4.m1" class="ltx_Math" alttext="\displaystyle nDCG_{p}=\frac{DCG_{p}}{IDCG_{p}}" display="inline"><mrow><mrow><mi>n</mi><mo>⁢</mo><mi>D</mi><mo>⁢</mo><mi>C</mi><mo>⁢</mo><msub><mi>G</mi><mi>p</mi></msub></mrow><mo>=</mo><mstyle displaystyle="true"><mfrac><mrow><mi>D</mi><mo>⁢</mo><mi>C</mi><mo>⁢</mo><msub><mi>G</mi><mi>p</mi></msub></mrow><mrow><mi>I</mi><mo>⁢</mo><mi>D</mi><mo>⁢</mo><mi>C</mi><mo>⁢</mo><msub><mi>G</mi><mi>p</mi></msub></mrow></mfrac></mstyle></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(4)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m5" class="ltx_Math" alttext="IDCG_{p}" display="inline"><mrow><mi>I</mi><mo>⁢</mo><mi>D</mi><mo>⁢</mo><mi>C</mi><mo>⁢</mo><msub><mi>G</mi><mi>p</mi></msub></mrow></math> is the superviseed ranking of the image labels, in our experiments this is the ranking provided by the scores in the human annotated data set.</p>
+</div>
+</div>
+<div id="S3.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.3 </span>Model Parameters</h3>
+
+<div id="S3.SS3.p1" class="ltx_para">
+<p class="ltx_p">Our proposed model requires two parameters to be set: the context window size when connecting neighbouring words in the graph and the number of the search results considered when constructing the graph.</p>
+</div>
+<div id="S3.SS3.p2" class="ltx_para">
+<p class="ltx_p">We experimented with different sizes of context window, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>, between <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m2" class="ltx_Math" alttext="\pm" display="inline"><mo>±</mo></math>1 words to the left and right and all words in the title. The best results were obtained when <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m3" class="ltx_Math" alttext="n=2" display="inline"><mrow><mi>n</mi><mo>=</mo><mn>2</mn></mrow></math> for all of the domains. In addition, we experimented with varying the number of search results between 10 and 300. We observed no noticeable difference in the performance when the number of search results is equal or greater than 30 (see below). We choose to report results obtained using 30 search results for each topic. Including more results did not improve performance but required additional processing.</p>
+</div>
+<div id="S3.F6" class="ltx_figure"><span class="ltx_ERROR undefined ltx_centering">{subfigure}</span>
+<p class="ltx_p ltx_align_center">[t]0.45
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" xml:id="S3.F6.pic1" fragid="S3.F6.pic1" imagesrc="P14-2103/image001.png" imagewidth="1924" imageheight="23" imagedepth="7" width="50" height="20" viewBox="-5 -10 45 10" overflow="visible"><g transform="translate(0,0)"><g transform="scale(1 -1)"><g transform="scale(1 -1) translate(-5,-10)"><foreignObject width="50" height="20"><svg height="1" version="1.1" viewBox="0 0 1 1" width="1"><g transform="matrix(1 0 0 -1 0 1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g/></g></g></g></g></g></svg></foreignObject></g><g transform="scale(1 -1) translate(-5,-10)"><foreignObject width="50" height="20"><span xmlns="http://www.w3.org/1999/xhtml" class="ltx_ERROR undefined">{axis}</span></foreignObject></g><g transform="scale(1 -1) translate(-5,-10)"><foreignObject width="50" height="20"><span xmlns="http://www.w3.org/1999/xhtml" class="ltx_ERROR undefined">\addplot</span></foreignObject></g><g transform="scale(1 -1) translate(-5,-10)"><foreignObject width="50" height="20"><span xmlns="http://www.w3.org/1999/xhtml" class="ltx_ERROR undefined">\addplot</span></foreignObject></g><g transform="scale(1 -1) translate(-5,-10)"><foreignObject width="50" height="20"><span xmlns="http://www.w3.org/1999/xhtml" class="ltx_ERROR undefined">\addplot</span></foreignObject></g><g transform="scale(1 -1) translate(-5,-10)"><foreignObject width="50" height="20"><span xmlns="http://www.w3.org/1999/xhtml" class="ltx_ERROR undefined">\addplot</span></foreignObject></g></g></g></svg></p>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>BLOGS</div><span class="ltx_ERROR undefined ltx_centering">{subfigure}</span>
+<p class="ltx_p ltx_align_center">[t]0.45
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" xml:id="S3.F6.pic2" fragid="S3.F6.pic2" imagesrc="P14-2103/image002.png" imagewidth="1928" imageheight="23" imagedepth="7" width="50" height="20" viewBox="-5 -10 45 10" overflow="visible"><g transform="translate(0,0)"><g transform="scale(1 -1)"><g transform="scale(1 -1) translate(-5,-10)"><foreignObject width="50" height="20"><svg height="1" version="1.1" viewBox="0 0 1 1" width="1"><g transform="matrix(1 0 0 -1 0 1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g/></g></g></g></g></g></svg></foreignObject></g><g transform="scale(1 -1) translate(-5,-10)"><foreignObject width="50" height="20"><span xmlns="http://www.w3.org/1999/xhtml" class="ltx_ERROR undefined">{axis}</span></foreignObject></g><g transform="scale(1 -1) translate(-5,-10)"><foreignObject width="50" height="20"><span xmlns="http://www.w3.org/1999/xhtml" class="ltx_ERROR undefined">\addplot</span></foreignObject></g><g transform="scale(1 -1) translate(-5,-10)"><foreignObject width="50" height="20"><span xmlns="http://www.w3.org/1999/xhtml" class="ltx_ERROR undefined">\addplot</span></foreignObject></g><g transform="scale(1 -1) translate(-5,-10)"><foreignObject width="50" height="20"><span xmlns="http://www.w3.org/1999/xhtml" class="ltx_ERROR undefined">\addplot</span></foreignObject></g><g transform="scale(1 -1) translate(-5,-10)"><foreignObject width="50" height="20"><span xmlns="http://www.w3.org/1999/xhtml" class="ltx_ERROR undefined">\addplot</span></foreignObject></g></g></g></svg></p>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 3: </span>BOOKS</div>
+<br class="ltx_break ltx_centering"/><span class="ltx_ERROR undefined ltx_centering">{subfigure}</span>
+<p class="ltx_p ltx_align_center">[t]0.45
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" xml:id="S3.F6.pic3" fragid="S3.F6.pic3" width="50" height="20" viewBox="-5 -10 45 10" overflow="visible"><g transform="translate(0,0)"><g transform="scale(1 -1)"><g transform="scale(1 -1) translate(-5,-10)"><foreignObject width="50" height="20"><svg height="1" version="1.1" viewBox="0 0 1 1" width="1"><g transform="matrix(1 0 0 -1 0 1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g/></g></g></g></g></g></svg></foreignObject></g><g transform="scale(1 -1) translate(-5,-10)"><foreignObject width="50" height="20"><span xmlns="http://www.w3.org/1999/xhtml" class="ltx_ERROR undefined">{axis}</span></foreignObject></g><g transform="scale(1 -1) translate(-5,-10)"><foreignObject width="50" height="20"><span xmlns="http://www.w3.org/1999/xhtml" class="ltx_ERROR undefined">\addplot</span></foreignObject></g><g transform="scale(1 -1) translate(-5,-10)"><foreignObject width="50" height="20"><span xmlns="http://www.w3.org/1999/xhtml" class="ltx_ERROR undefined">\addplot</span></foreignObject></g><g transform="scale(1 -1) translate(-5,-10)"><foreignObject width="50" height="20"><span xmlns="http://www.w3.org/1999/xhtml" class="ltx_ERROR undefined">\addplot</span></foreignObject></g><g transform="scale(1 -1) translate(-5,-10)"><foreignObject width="50" height="20"><span xmlns="http://www.w3.org/1999/xhtml" class="ltx_ERROR undefined">\addplot</span></foreignObject></g></g></g></svg></p>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 4: </span>NEWS</div><span class="ltx_ERROR undefined ltx_centering">{subfigure}</span>
+<p class="ltx_p ltx_align_center">[t]0.45
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" xml:id="S3.F6.pic4" fragid="S3.F6.pic4" imagesrc="P14-2103/image003.png" imagewidth="1946" imageheight="23" imagedepth="7" width="50" height="20" viewBox="-5 -10 45 10" overflow="visible"><g transform="translate(0,0)"><g transform="scale(1 -1)"><g transform="scale(1 -1) translate(-5,-10)"><foreignObject width="50" height="20"><svg height="1" version="1.1" viewBox="0 0 1 1" width="1"><g transform="matrix(1 0 0 -1 0 1)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><cite xmlns="http://www.w3.org/1999/xhtml" class="ltx_cite">Lau<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib76" title="Automatic labelling of topic models" class="ltx_ref">2011</a>)</cite><cite xmlns="http://www.w3.org/1999/xhtml" class="ltx_cite">Lau<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib76" title="Automatic labelling of topic models" class="ltx_ref">2011</a>)</cite></g></g></g></g></g></g></svg></foreignObject></g><g transform="scale(1 -1) translate(-5,-10)"><foreignObject width="50" height="20"><span xmlns="http://www.w3.org/1999/xhtml" class="ltx_ERROR undefined">{axis}</span></foreignObject></g><g transform="scale(1 -1) translate(-5,-10)"><foreignObject width="50" height="20"><span xmlns="http://www.w3.org/1999/xhtml" class="ltx_ERROR undefined">\addplot</span></foreignObject></g><g transform="scale(1 -1) translate(-5,-10)"><foreignObject width="50" height="20"><span xmlns="http://www.w3.org/1999/xhtml" class="ltx_ERROR undefined">\addplot</span></foreignObject></g><g transform="scale(1 -1) translate(-5,-10)"><foreignObject width="50" height="20"><span xmlns="http://www.w3.org/1999/xhtml" class="ltx_ERROR undefined">\addplot</span></foreignObject></g><g transform="scale(1 -1) translate(-5,-10)"><foreignObject width="50" height="20"><span xmlns="http://www.w3.org/1999/xhtml" class="ltx_ERROR undefined">\addplot</span></foreignObject></g><g transform="scale(1 -1) translate(-5,-10)"><foreignObject width="50" height="20"><span xmlns="http://www.w3.org/1999/xhtml" class="ltx_ERROR undefined">\legend</span></foreignObject></g></g></g></svg></p>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 5: </span>PUBMED</div>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 6: </span>Top-1 Average Rating obtained for different number of search results.</div>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Results and Discussion</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">Results are shown in Table <a href="#S3.T1" title="Table 1 ‣ 3 Experimental Evaluation ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>. Performance when PageRank is applied to the unweighted (<span class="ltx_text ltx_font_bold">PR</span>) and NPMI-weighted graphs (<span class="ltx_text ltx_font_bold">PR-NPMI</span>) (see Section <a href="#S2.SS2" title="2.2 Creating a Text Graph ‣ 2 Methodology ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>) is shown. Performance of the best unsupervised (<cite class="ltx_cite">Lau<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib76" title="Automatic labelling of topic models" class="ltx_ref">2011</a>)</cite><span class="ltx_text ltx_font_bold">-U</span>) and supervised (<cite class="ltx_cite">Lau<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib76" title="Automatic labelling of topic models" class="ltx_ref">2011</a>)</cite><span class="ltx_text ltx_font_bold">-S</span>) methods reported by <cite class="ltx_cite">Lau<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib76" title="Automatic labelling of topic models" class="ltx_ref">2011</a>)</cite> are shown. <cite class="ltx_cite">Lau<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib76" title="Automatic labelling of topic models" class="ltx_ref">2011</a>)</cite>-U uses the average <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m1" class="ltx_Math" alttext="\chi^{2}" display="inline"><msup><mi>χ</mi><mn>2</mn></msup></math> scores between the topic keywords and the label keywords while <cite class="ltx_cite">Lau<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib76" title="Automatic labelling of topic models" class="ltx_ref">2011</a>)</cite>-S uses SVR to combine evidence from all features. In addition, upper bound figures, the maximum possible value given the scores assigned by the annotators, are also shown.</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">The results obtained by applying PageRank over the unweighted graph (2.05, 1.98, 2.04 and 1.88) are consistently better than the supervised and unsupervised methods reported by <cite class="ltx_cite">Lau<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib76" title="Automatic labelling of topic models" class="ltx_ref">2011</a>)</cite> for the Top-1 Average scores and this improvement is observed in all domains. The difference is significant (t-test, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m1" class="ltx_Math" alttext="p&lt;0.05" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.05</mn></mrow></math>) for the unsupervised method. A slight improvement in performance is observed when the weighted graph is used (2.08, 2.01, 2.05 and 1.90). This is expected since the weighted graph contains additional information about word relatedness. For example, the word <em class="ltx_emph">hardware</em> is more related and, therefore, closer in the graph to the word <em class="ltx_emph">virtualization</em> than to the word <em class="ltx_emph">investments</em>.</p>
+</div>
+<div id="S4.p3" class="ltx_para">
+<p class="ltx_p">Results from the nDCG metric imply that our methods provide better rankings of the candidate labels in the majority of the cases. It is outperformed by the best supervised approach in two domains, NEWS and PUBMED, using the nDCG-3 and nDCG-5 metrics. However, the best label proposed by our methods is judged to be better (as shown by the nDCG-1 and Top-1 Av. Rating scores), demonstrating that it is only the lower ranked labels in our approach that are not as good as the supervised approach.</p>
+</div>
+<div id="S4.p4" class="ltx_para">
+<p class="ltx_p">An interesting finding is that, although limited in length, the textual information in the search result’s metadata contain enough salient terms relevant to the topic to provide reliable estimates of term importance. Consequently, it is not necessary to measure semantic similarity between topic keywords and candidate labels as previous approaches have done.
+In addition, performance improvement gained from using the weighted graph is modest, suggesting that the computation of association scores over a large reference corpus could be omitted if resources are limited.</p>
+</div>
+<div id="S4.p5" class="ltx_para">
+<p class="ltx_p">In Figure <a href="#S3.F6" title="Figure 6 ‣ 3.3 Model Parameters ‣ 3 Experimental Evaluation ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>, we show the scores of Top-1 average rating obtained in the different domains by experimenting with the number of search results used to generate the text graph. The most interesting finding is that performance is stable when 30 or more search results are considered. In addition, we observe that quality of the topic labels in the four domains remains stable, and higher than the supervised method, when the number of search results used is between 150 and 200. The only domain in which performance of the supervised method is sometimes better than the approach proposed here is NEWS. The main reason is that news topics are more fine grained and the candidate labels of better quality <cite class="ltx_cite">[<a href="#bib.bib76" title="Automatic labelling of topic models" class="ltx_ref">14</a>]</cite> which has direct impact in good performance of ranking methods.</p>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Conclusion</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">We described an unsupervised graph-based method to associate textual labels with automatically generated topics. Our approach uses results retrieved from a search engine using the topic keywords as a query. A graph is generated from the words contained in the search results metadata and candidate labels ranked using the PageRank algorithm. Evaluation on a standard data set shows that our method consistently outperforms the supervised state-of-the-art method for the task.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">We would like to thank Jey Han Lau for providing us with the labels selected by <cite class="ltx_cite">Lau<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib76" title="Automatic labelling of topic models" class="ltx_ref">2011</a>)</cite>-U and <cite class="ltx_cite">Lau<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib76" title="Automatic labelling of topic models" class="ltx_ref">2011</a>)</cite>-S. We also thank Daniel Preoţiuc-Pietro for his useful comments on early drafts of this paper.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Aletras and M. Stevenson</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Representing topics using images</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Atlanta, Georgia</span>, <span class="ltx_text ltx_bib_pages"> pp. 158–167</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib21" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. M. Blei, A. Y. Ng and M. I. Jordan</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Latent Dirichlet Allocation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">3</span>, <span class="ltx_text ltx_bib_pages"> pp. 993–1022</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text issn ltx_bib_external">ISSN 1532-4435</span></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib23" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. Bouma</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Normalized (pointwise) mutual information in collocation extraction</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p2" title="2.2 Creating a Text Graph ‣ 2 Methodology ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib31" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. J. Chaney and D. M. Blei</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Visualizing topic models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Dublin, Ireland</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib32" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Chang, J. Boyd-Graber and S. Gerrish</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Reading Tea Leaves: How Humans Interpret Topic Models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Neural Information</span>, <span class="ltx_text ltx_bib_pages"> pp. 1–9</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib27" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. W. Croft, D. Metzler and T. Strohman</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Search engines: information retrieval in practice</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Addison-Wesley</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p3" title="3.2 Evaluation Metrics ‣ 3 Experimental Evaluation ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Ganguly, M. Ganguly, J. Leveling and G. J.F. Jones</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">TopicVis: a GUI for Topic-based feedback and navigation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Dublin, Ireland</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib50" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Gretarsson, J. O’Donovan, S. Bostandjiev, T. Höllerer, A. Asuncion, D. Newman and P. Smyth</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">TopicNets: visual analysis of large text corpora with topic modeling</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">ACM Trans. Intell. Syst. Technol.</span> <span class="ltx_text ltx_bib_volume">3</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 23:1–23:26</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib51" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Grieser, T. Baldwin, F. Bohnert and L. Sonenberg</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Using Ontological and Document Similarity to Estimate Museum Exhibit Relatedness</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal on Computing and Cultural Heritage (JOCCH)</span> <span class="ltx_text ltx_bib_volume">3</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 10:1–10:20</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text issn ltx_bib_external">ISSN 1556-4673</span></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p1" title="2.1 Retrieving and Processing Text Information ‣ 2 Methodology ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib56" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Hinneburg, R. Preiss and R. Schröder</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">TopicExplorer: exploring document collections with topic models</span>.
+</span>
+<span class="ltx_bibblock">in <span class="ltx_text ltx_bib_editor">P. A. Flach, T. Bie and N. Cristianini (Eds.)</span>, <span class="ltx_text ltx_bib_inbook">Machine Learning and Knowledge Discovery in Databases</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">Lecture Notes in Computer Science</span>, Vol. <span class="ltx_text ltx_bib_volume">7524</span>, <span class="ltx_text ltx_bib_pages"> pp. 838–841</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib57" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Hofmann</span><span class="ltx_text ltx_bib_year">(1999)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Probabilistic latent semantic indexing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Berkeley, California, United States</span>, <span class="ltx_text ltx_bib_pages"> pp. 50–57</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib62" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">I. Hulpus, C. Hayes, M. Karnstedt and D. Greene</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Unsupervised graph-based topic labelling using DBpedia</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Rome, Italy</span>, <span class="ltx_text ltx_bib_pages"> pp. 465–474</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib66" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Järvelin and J. Kekäläinen</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Cumulated gain-based evaluation of IR techniques</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">ACM Trans. Inf. Syst.</span> <span class="ltx_text ltx_bib_volume">20</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 422–446</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p3" title="3.2 Evaluation Metrics ‣ 3 Experimental Evaluation ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib76" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. H. Lau, K. Grieser, D. Newman and T. Baldwin</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatic labelling of topic models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Portland, Oregon, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 1536–1545</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <span class="ltx_ref ltx_ref_self"><span class="ltx_text ltx_ref_title">Labelling Topics using Unsupervised Graph-based Methods</span></span>,
+<a href="#S1.p2" title="1 Introduction ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p4" title="1 Introduction ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p5" title="1 Introduction ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS1.p1" title="2.1 Retrieving and Processing Text Information ‣ 2 Methodology ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>,
+<a href="#S2.SS1.p2" title="2.1 Retrieving and Processing Text Information ‣ 2 Methodology ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>,
+<a href="#S3.F6.pic4" title="Figure 6 ‣ 3.3 Model Parameters ‣ 3 Experimental Evaluation ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>,
+<a href="#S3.SS1.p1" title="3.1 Data ‣ 3 Experimental Evaluation ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>,
+<a href="#S3.SS2.p1" title="3.2 Evaluation Metrics ‣ 3 Experimental Evaluation ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>,
+<a href="#S3.T1" title="Table 1 ‣ 3 Experimental Evaluation ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.p1" title="4 Results and Discussion ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>,
+<a href="#S4.p2" title="4 Results and Discussion ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>,
+<a href="#S4.p5" title="4 Results and Discussion ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>,
+<a href="#Sx1.p1" title="Acknowledgments ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_title">Acknowledgments</span></a>.
+</span></li>
+<li id="bib.bib77" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. H. Lau, D. Newman, S. Karimi and T. Baldwin</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Best topic word selection for topic labelling</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Beijing, China</span>, <span class="ltx_text ltx_bib_pages"> pp. 605–613</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p3" title="1 Introduction ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib90" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Magatti, S. Calegari, D. Ciucci and F. Stella</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatic Labeling of Topics</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Pisa, Italy</span>, <span class="ltx_text ltx_bib_pages"> pp. 1227–1232</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib95" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Q. Mei, X. Shen and C. X. Zhai</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatic Labeling of Multinomial Topic Models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">San Jose, California</span>, <span class="ltx_text ltx_bib_pages"> pp. 490–499</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p3" title="1 Introduction ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p4" title="1 Introduction ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib97" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Mihalcea and P. Tarau</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">TextRank: bringing order into texts</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Barcelona, Spain</span>, <span class="ltx_text ltx_bib_pages"> pp. 404–411</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p5" title="1 Introduction ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS3.p1" title="2.3 Identifying Important Terms ‣ 2 Methodology ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>.
+</span></li>
+<li id="bib.bib110" class="ltx_bibitem ltx_bib_report"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Page, S. Brin, R. Motwani and T. Winograd</span><span class="ltx_text ltx_bib_year">(1999)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The PageRank citation ranking: bringing order to the web</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_type">Technical Report</span>
+</span>
+<span class="ltx_bibblock">Technical Report <span class="ltx_text ltx_bib_number">1999-66</span>,  <span class="ltx_text ltx_bib_publisher">Stanford InfoLab</span>,  <span class="ltx_text ltx_bib_publisher">Stanford InfoLab</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p5" title="1 Introduction ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS3.p1" title="2.3 Identifying Important Terms ‣ 2 Methodology ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>,
+<a href="#S2.SS3.p2" title="2.3 Identifying Important Terms ‣ 2 Methodology ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Snyder, R. Knowles, M. Dredze, M. Gormley and T. Wolfe</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Topic models and metadata for visualizing text corpora</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Atlanta, Georgia</span>, <span class="ltx_text ltx_bib_pages"> pp. 5–9</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/N13-3002" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib140" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">V. N. Vapnik</span><span class="ltx_text ltx_bib_year">(1998)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Statistical learning theory</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Wiley</span>, <span class="ltx_text ltx_bib_place">New York</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Labelling Topics using Unsupervised Graph-based Methods" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 18:16:58 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,651 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Learning Polylingual Topic Models fromCode-Switched Social Media Documents</title>
+<!--Generated on Wed Jun 11 18:21:22 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Learning Polylingual Topic Models from
+<br class="ltx_break"/>Code-Switched Social Media Documents</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Nanyun Peng      Yiming Wang      Mark Dredze
+<br class="ltx_break"/>Human Language Technology Center of Excellence 
+<br class="ltx_break"/>Center for Language and Speech Processing
+<br class="ltx_break"/>Johns Hopkins University, Baltimore, MD USA
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">npeng1,freewym,mdredze</span>}<span class="ltx_text ltx_font_typewriter">@jhu.edu</span>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Code-switched documents are common in social media, providing evidence for
+polylingual topic models to infer aligned topics across languages.
+We present Code-Switched LDA (csLDA), which infers language specific topic distributions
+based on code-switched documents to facilitate multi-lingual corpus analysis.
+We experiment on two code-switching corpora (English-Spanish Twitter data and English-Chinese Weibo data) and show that csLDA improves perplexity over LDA, and learns semantically coherent aligned topics as judged by human annotators.</p>
+</div><span class="ltx_ERROR undefined">\floatsetup</span>
+<div id="p1" class="ltx_para">
+<p class="ltx_p">heightadjust=object,valign=t</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Topic models <cite class="ltx_cite">[]</cite> have become standard tools for analyzing document collections, and
+topic analyses are quite common for social media <cite class="ltx_cite">[]</cite>.
+Their popularity owes in part to their data driven nature, allowing them to adapt to new
+corpora and languages.
+In social media especially, there is a large diversity in terms of both the topic
+and language,
+necessitating the modeling of multiple languages simultaneously.
+A good candidate for multi-lingual topic analyses are polylingual topic models <cite class="ltx_cite">[]</cite>,
+which learn topics for multiple languages, creating tuples of language specific distributions over monolingual vocabularies for each topic.
+Polylingual topic models enable cross language analysis by grouping documents by topic
+regardless of language.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Training of polylingual topic models requires parallel or comparable corpora:
+document tuples from multiple languages that discuss the same topic. While
+additional non-aligned documents can be folded in during training, the “glue” documents
+are required to aid in the alignment across languages.
+However, the ever changing vocabulary and topics of social media <cite class="ltx_cite">[]</cite>
+make finding suitable comparable corpora difficult. Standard techniques – such
+as relying on machine translation parallel corpora or comparable documents extracted
+from Wikipedia in different languages – fail to capture the specific terminology of social media.
+Alternate methods that rely on bilingual
+lexicons <cite class="ltx_cite">[]</cite> similarly fail to adapt to shifting vocabularies. The result:
+an inability to train polylingual models on social media.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">In this paper, we offer a solution: utilize code-switched social media to discover correlations across languages.
+Social media is filled with examples of code-switching, where users switch between two or more languages, both
+in a conversation and even a single message <cite class="ltx_cite">[]</cite>.
+This mixture of languages in the same context suggests alignments between words across languages through
+the common topics discussed in the context.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">We learn from code-switched social media by extending the polylingual topic model framework
+to infer the language of each token and then automatically processing the learned topics to identify
+aligned topics.
+Our model improves both in terms of perplexity and a human evaluation, and we provide some example
+analyses of social media that rely on our learned topics.</p>
+</div>
+<div id="S1.F1" class="ltx_figure">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_script">User 1: !‘Don Samuel es un crack! #VamosMéxico #DaleTri</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_script">     RT @User4: Arriba! Viva Mexico! Advanced to GOLD.</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_script">     medal match in “Football”!</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_script">User 2: @user1 rodo que tal el nuevo Mountain ?</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_script">User 3: @User1 @User4 wow this is something !! Ja ja ja</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_script">     Football well said</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_script"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Three users discuss Mexico’s football team advancing to the Gold medal game
+in the 2012 Olympics in code-switched Spanish and English.</div>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Code-Switching</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">Code-switched documents has received considerable attention in the NLP community.
+Several tasks have focused on identification and analysis, including mining translations in code-switched documents
+<cite class="ltx_cite">[]</cite>, predicting code-switched points <cite class="ltx_cite">[]</cite>,
+identifying code-switched tokens <cite class="ltx_cite">[]</cite>,
+adding code-switched support to language models
+<cite class="ltx_cite">[]</cite>,
+linguistic processing of code switched data
+<cite class="ltx_cite">[]</cite>, corpus creation
+<cite class="ltx_cite">[]</cite>,
+and computational linguistic analyses and theories of code-switching <cite class="ltx_cite">[]</cite>.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">Code-switching specifically in social media has also received some recent attention.
+<cite class="ltx_cite"/> trained a supervised token level language identification system for
+Spanish and English code-switched social media to study code-switching behaviors.
+<cite class="ltx_cite"/> mined translation spans for Chinese and English
+in code-switched documents to improve a translation system,
+relying on an existing translation model to aid in the identification and extraction task.
+In contrast to this work, we take an unsupervised approach, relying only on readily available document level
+language ID systems to utilize code-switched data. Additionally, our focus is not on individual messages, rather
+we aim to train a model that can be used to analyze entire corpora.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">In this work we consider two types of code-switched documents: single messages and conversations, and two
+language pairs: Chinese-English and Spanish-English.
+Figure <a href="#S1.F1" title="Figure 1 ‣ 1 Introduction ‣ Learning Polylingual Topic Models from Code-Switched Social Media Documents" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> shows an example of a code-switched Spanish-English <span class="ltx_text ltx_font_italic">conversation</span>, in which three users discuss
+Mexico’s football team advancing to the Gold medal game in the 2012 Summer Olympics.
+In this conversation, some tweets are code-switched and some are in a single language. By collecting the entire
+conversation into a single document we provide the topic model with additional content.
+An example of a Chinese-English code-switched messages is given by <cite class="ltx_cite"/>:</p>
+<blockquote class="ltx_quote"><span class="ltx_ERROR undefined">{CJK}</span>
+<p class="ltx_p">UTF8gbsn
+<span class="ltx_text ltx_font_italic">watup Kenny Mayne!! - Kenny Mayne 最近这么样啊!!</span></p>
+</blockquote>
+<p class="ltx_p">Here a user switches between languages in a single <span class="ltx_text ltx_font_italic">message</span>. We empirically evaluate our
+model on both conversations and messages. In the model presentation we will refer
+to both as “documents.”</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>csLDA</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">To train a polylingual topic model on social media, we
+make two modifications to the model of <cite class="ltx_cite"/>: add a token specific language variable, and a process for identifying aligned
+topics.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">First, polylingual topic models require parallel or comparable corpora in which each document has an assigned
+language. In the case of code-switched social media data, we require a <span class="ltx_text ltx_font_italic">per-token</span> language variable.
+However, while document level language identification (LID) systems are common place, very few languages have
+per-token LID systems <cite class="ltx_cite">[]</cite>.</p>
+</div>
+<div id="S3.p3" class="ltx_para">
+<p class="ltx_p">To address the lack of available LID systems, we add a per-token latent language variable to the polylingual topic model.
+For documents that are not code-switched, we observe these variables
+to be the output of a document level LID system. In the case of code-switched documents,
+these variables are inferred during model inference.</p>
+</div>
+<div id="S3.p4" class="ltx_para">
+<p class="ltx_p">Second, polylingual topic models assume the aligned topics are from parallel or comparable corpora, which implicitly
+assumes that a topics popularity is balanced across languages. Topics that show up in one language necessarily
+show up in another.
+However, in the case of social media, we can make no such assumption. The topics discussed are influenced
+by users, time, and location, all factors intertwined with choice of language.
+For example, English speakers will more likely discuss Olympic basketball while Spanish speakers football.
+There may be little or no documents on a given topic in one language, while they are plentiful
+in another. In this case, a polylingual topic model, which necessarily infers a topic-specific word distribution for each topic
+in each language, would learn two unrelated word distributions in two languages for a single topic.
+Therefore, naively using the produced topics as “aligned” across languages is ill-advised.</p>
+</div>
+<div id="S3.p5" class="ltx_para">
+<p class="ltx_p">Our solution is to automatically identify aligned polylingual topics after learning by examining a topic’s distribution across
+code-switched documents. Our metric relies on distributional properties of an inferred topic across the entire collection.</p>
+</div>
+<div id="S3.p6" class="ltx_para">
+<p class="ltx_p">To summarize, based on the model of <cite class="ltx_cite"/> we will learn:</p>
+<ul class="ltx_itemize">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p">For each topic, a language specific word distribution.</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p">For each (code-switched) token, a language.</p>
+</div></li>
+<li id="I1.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i3.p1" class="ltx_para">
+<p class="ltx_p">For each topic, an identification as to whether the topic captures an alignment across languages.</p>
+</div></li>
+</ul>
+</div>
+<div id="S3.p7" class="ltx_para">
+<p class="ltx_p">The first two goals are achieved by incorporating new hidden variables in the traditional polylingual topic model. The third goal requires an automated post-processing step.
+We call the resulting model Code-Switched LDA (csLDA). The generative process is as follows:</p>
+</div>
+<div id="S3.p8" class="ltx_para">
+<ul class="ltx_itemize">
+<li id="I2.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i1.p1" class="ltx_para">
+<p class="ltx_p">For each topic <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m1" class="ltx_Math" alttext="z\in\mathcal{T}" display="inline"><mrow><mi>z</mi><mo>∈</mo><mi class="ltx_font_mathcaligraphic">𝒯</mi></mrow></math></p>
+<ul class="ltx_itemize">
+<li id="I2.I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize"><span class="ltx_text ltx_font_bold">–</span></span> 
+<div id="I2.I1.i1.p1" class="ltx_para">
+<p class="ltx_p">For each language <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.I1.i1.p1.m1" class="ltx_Math" alttext="l\in\mathcal{L}" display="inline"><mrow><mi>l</mi><mo>∈</mo><mi class="ltx_font_mathcaligraphic">ℒ</mi></mrow></math></p>
+<ul class="ltx_itemize">
+<li id="I2.I1.I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">*</span> 
+<div id="I2.I1.I1.i1.p1" class="ltx_para">
+<p class="ltx_p">Draw word distribution <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.I1.I1.i1.p1.m1" class="ltx_Math" alttext="\phi_{z}^{l}" display="inline"><msubsup><mi>ϕ</mi><mi>z</mi><mi>l</mi></msubsup></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.I1.I1.i1.p1.m2" class="ltx_Math" alttext="\sim" display="inline"><mo>∼</mo></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.I1.I1.i1.p1.m3" class="ltx_Math" alttext="Dir(\beta^{l})" display="inline"><mrow><mi>D</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mrow><mo>(</mo><msup><mi>β</mi><mi>l</mi></msup><mo>)</mo></mrow></mrow></math></p>
+</div></li>
+</ul>
+</div></li>
+</ul>
+</div></li>
+<li id="I2.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i2.p1" class="ltx_para">
+<p class="ltx_p">For each document <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i2.p1.m1" class="ltx_Math" alttext="d\in\mathcal{D}" display="inline"><mrow><mi>d</mi><mo>∈</mo><mi class="ltx_font_mathcaligraphic">𝒟</mi></mrow></math>:</p>
+<ul class="ltx_itemize">
+<li id="I2.I2.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize"><span class="ltx_text ltx_font_bold">–</span></span> 
+<div id="I2.I2.i1.p1" class="ltx_para">
+<p class="ltx_p">Draw a topic distribution <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.I2.i1.p1.m1" class="ltx_Math" alttext="\theta_{d}\sim Dir(\alpha)" display="inline"><mrow><msub><mi>θ</mi><mi>d</mi></msub><mo>∼</mo><mrow><mi>D</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mrow><mo>(</mo><mi>α</mi><mo>)</mo></mrow></mrow></mrow></math></p>
+</div></li>
+<li id="I2.I2.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize"><span class="ltx_text ltx_font_bold">–</span></span> 
+<div id="I2.I2.i2.p1" class="ltx_para">
+<p class="ltx_p">Draw a language distribution <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.I2.i2.p1.m1" class="ltx_Math" alttext="\psi_{d}" display="inline"><msub><mi>ψ</mi><mi>d</mi></msub></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.I2.i2.p1.m2" class="ltx_Math" alttext="\sim" display="inline"><mo>∼</mo></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.I2.i2.p1.m3" class="ltx_Math" alttext="Dir(\gamma)" display="inline"><mrow><mi>D</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mrow><mo>(</mo><mi>γ</mi><mo>)</mo></mrow></mrow></math></p>
+</div></li>
+<li id="I2.I2.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize"><span class="ltx_text ltx_font_bold">–</span></span> 
+<div id="I2.I2.i3.p1" class="ltx_para">
+<p class="ltx_p">For each token <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.I2.i3.p1.m1" class="ltx_Math" alttext="i\in d" display="inline"><mrow><mi>i</mi><mo>∈</mo><mi>d</mi></mrow></math>:</p>
+<ul class="ltx_itemize">
+<li id="I2.I2.I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">*</span> 
+<div id="I2.I2.I1.i1.p1" class="ltx_para">
+<p class="ltx_p">Draw a topic <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.I2.I1.i1.p1.m1" class="ltx_Math" alttext="z_{i}\sim\theta_{d}" display="inline"><mrow><msub><mi>z</mi><mi>i</mi></msub><mo>∼</mo><msub><mi>θ</mi><mi>d</mi></msub></mrow></math></p>
+</div></li>
+<li id="I2.I2.I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">*</span> 
+<div id="I2.I2.I1.i2.p1" class="ltx_para">
+<p class="ltx_p">Draw a language <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.I2.I1.i2.p1.m1" class="ltx_Math" alttext="l_{i}\sim\psi_{d}" display="inline"><mrow><msub><mi>l</mi><mi>i</mi></msub><mo>∼</mo><msub><mi>ψ</mi><mi>d</mi></msub></mrow></math></p>
+</div></li>
+<li id="I2.I2.I1.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">*</span> 
+<div id="I2.I2.I1.i3.p1" class="ltx_para">
+<p class="ltx_p">Draw a word <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.I2.I1.i3.p1.m1" class="ltx_Math" alttext="w_{i}\sim\phi_{z}^{l}" display="inline"><mrow><msub><mi>w</mi><mi>i</mi></msub><mo>∼</mo><msubsup><mi>ϕ</mi><mi>z</mi><mi>l</mi></msubsup></mrow></math></p>
+</div></li>
+</ul>
+</div></li>
+</ul>
+</div></li>
+</ul>
+<p class="ltx_p">For monolingual documents, we fix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p8.m1" class="ltx_Math" alttext="l_{i}" display="inline"><msub><mi>l</mi><mi>i</mi></msub></math> to the LID tag for all tokens. Additionally, we use a single background
+distribution for each language to capture stopwords; a control variable <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p8.m2" class="ltx_Math" alttext="\pi" display="inline"><mi>π</mi></math>, which follows a Dirichlet distribution with prior
+parameterized by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p8.m3" class="ltx_Math" alttext="\delta" display="inline"><mi>δ</mi></math>, is introduced to decide the choice between background words and topic words following <cite class="ltx_cite">[]</cite><span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>Omitted from the generative process but shown in Fig. <a href="#S3.F2" title="Figure 2 ‣ 3 csLDA ‣ Learning Polylingual Topic Models from Code-Switched Social Media Documents" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.</span></span></span>.
+We use asymmetric Dirichlet priors <cite class="ltx_cite">[]</cite>, and let the optimization process learn the
+hyperparameters. The graphical model is shown in Figure <a href="#S3.F2" title="Figure 2 ‣ 3 csLDA ‣ Learning Polylingual Topic Models from Code-Switched Social Media Documents" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.</p>
+</div>
+<div id="S3.F2" class="ltx_figure">
+<span class="ltx_inline-block ltx_align_center ltx_transformed_outer" style="width:298.7pt;height:192.777777777778px;vertical-align:-1.6pt;"><span class="ltx_transformed_inner" style="transform:translate(-37.3pt,-17.4pt) scale(0.8,0.8) ;-webkit-transform:translate(-37.3pt,-17.4pt) scale(0.8,0.8) ;-ms-transform:translate(-37.3pt,-17.4pt) scale(0.8,0.8) ;"><svg xmlns="http://www.w3.org/2000/svg" height="237" version="1.1" viewBox="-2 -73 465 237" width="465"><g transform="matrix(1 0 0 -1 0 91)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g stroke-width="0.8pt"><path d="M 303 41 M 303 41 L 303 156 L 441 156 L 441 41 Z M 441 156" style="fill:none"/><path d="M 252 33 M 252 33 L 252 163 L 461 163 L 461 33 Z M 461 163" style="fill:none"/><path d="M 378 -31 M 378 -31 L 378 26 L 461 26 L 461 -31 Z M 461 26" style="fill:none"/><path d="M 382 -20 M 382 -20 L 382 20 L 421 20 L 421 -20 Z M 421 20" style="fill:none"/><g><g stroke="#000000"><g stroke-width="0.8pt"><g><g stroke="#000000"><g stroke-width="0.8pt"><path d="M 222 138 C 222 145 216 152 209 152 C 201 152 195 145 195 138 C 195 130 201 124 209 124 C 216 124 222 130 222 138 Z M 209 138" style="fill:none"/></g></g></g><g><g transform="matrix(1 0 0 1 203 134)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="10">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.pic1.m1" class="ltx_Math" alttext="\gamma" display="inline"><mi>γ</mi></math></p></foreignObject></switch></g></g></g></g></g></g><g><g stroke="#000000"><g stroke-width="0.8pt"><g><g stroke="#000000"><g stroke-width="0.8pt"><path d="M 222 98 C 222 106 216 112 209 112 C 201 112 195 106 195 98 C 195 91 201 85 209 85 C 216 85 222 91 222 98 Z M 209 98" style="fill:none"/></g></g></g><g><g transform="matrix(1 0 0 1 203 95)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="10">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.pic1.m2" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math></p></foreignObject></switch></g></g></g></g></g></g><g><g stroke="#000000"><g stroke-width="0.8pt"><g><g stroke="#000000"><g stroke-width="0.8pt"><path d="M 352 138 C 352 145 346 152 339 152 C 331 152 325 145 325 138 C 325 130 331 124 339 124 C 346 124 352 130 352 138 Z M 339 138" style="fill:none"/></g></g></g><g><g transform="matrix(1 0 0 1 329 136)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="16" overflow="visible" width="19">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.pic1.m3" class="ltx_Math" alttext="l_{i}" display="inline"><msub><mi>l</mi><mi>i</mi></msub></math></p></foreignObject></switch></g></g></g></g></g></g><g><g stroke="#000000"><g stroke-width="0.8pt"><g><g stroke="#000000"><g stroke-width="0.8pt"><path d="M 289 138 C 289 145 283 152 276 152 C 268 152 262 145 262 138 C 262 130 268 124 276 124 C 283 124 289 130 289 138 Z M 276 138" style="fill:none"/></g></g></g><g><g transform="matrix(1 0 0 1 266 136)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="16" overflow="visible" width="19">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.pic1.m4" class="ltx_Math" alttext="\psi_{d}" display="inline"><msub><mi>ψ</mi><mi>d</mi></msub></math></p></foreignObject></switch></g></g></g></g></g></g><g><g stroke="#000000"><g stroke-width="0.8pt"><g><g stroke="#000000"><g stroke-width="0.8pt"><path d="M 289 98 C 289 106 283 112 276 112 C 268 112 262 106 262 98 C 262 91 268 85 276 85 C 283 85 289 91 289 98 Z M 276 98" style="fill:none"/></g></g></g><g><g transform="matrix(1 0 0 1 266 97)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="16" overflow="visible" width="19">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.pic1.m5" class="ltx_Math" alttext="\theta_{d}" display="inline"><msub><mi>θ</mi><mi>d</mi></msub></math></p></foreignObject></switch></g></g></g></g></g></g><g><g stroke="#000000"><g stroke-width="0.8pt"><g><g stroke="#000000"><g stroke-width="0.8pt"><path d="M 415 0 C 415 8 409 14 402 14 C 394 14 388 8 388 0 C 388 -8 394 -14 402 -14 C 409 -14 415 -8 415 0 Z M 402 0" style="fill:none"/></g></g></g><g><g transform="matrix(1 0 0 1 392 -4)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 14)"><switch><foreignObject color="#000000" height="20" overflow="visible" width="19">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.pic1.m6" class="ltx_Math" alttext="\phi_{z}^{l}" display="inline"><msubsup><mi>ϕ</mi><mi>z</mi><mi>l</mi></msubsup></math></p></foreignObject></switch></g></g></g></g></g></g><g><g stroke="#000000"><g stroke-width="0.8pt"><g><g stroke="#000000"><g stroke-width="0.8pt"><path d="M 455 0 C 455 8 449 14 441 14 C 433 14 427 8 427 0 C 427 -8 433 -14 441 -14 C 449 -14 455 -8 455 0 Z M 441 0" style="fill:none"/></g></g></g><g><g transform="matrix(1 0 0 1 432 -4)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 14)"><switch><foreignObject color="#000000" height="20" overflow="visible" width="19">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.pic1.m7" class="ltx_Math" alttext="\phi_{b}^{l}" display="inline"><msubsup><mi>ϕ</mi><mi>b</mi><mi>l</mi></msubsup></math></p></foreignObject></switch></g></g></g></g></g></g><g><g stroke="#000000"><g stroke-width="0.8pt"><g><g stroke="#000000"><g stroke-width="0.8pt"><path d="M 427 -59 C 427 -51 421 -45 413 -45 C 406 -45 400 -51 400 -59 C 400 -67 406 -73 413 -73 C 421 -73 427 -67 427 -59 Z M 413 -59" style="fill:none"/></g></g></g><g><g transform="matrix(1 0 0 1 408 -63)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="10">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.pic1.m8" class="ltx_Math" alttext="\beta" display="inline"><mi>β</mi></math></p></foreignObject></switch></g></g></g></g></g></g><g><g stroke="#000000"><g stroke-width="0.8pt"><g><g stroke="#000000"><g stroke-width="0.8pt"><path d="M 352 0 C 352 8 346 14 339 14 C 331 14 325 8 325 0 C 325 -8 331 -14 339 -14 C 346 -14 352 -8 352 0 Z M 339 0" style="fill:none"/></g></g></g><g><g transform="matrix(1 0 0 1 333 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="10">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.pic1.m9" class="ltx_Math" alttext="B" display="inline"><mi>B</mi></math></p></foreignObject></switch></g></g></g></g></g></g><g><g stroke="#000000"><g stroke-width="0.8pt"><g><g stroke="#000000"><g stroke-width="0.8pt"><path d="M 289 0 C 289 8 283 14 276 14 C 268 14 262 8 262 0 C 262 -8 268 -14 276 -14 C 283 -14 289 -8 289 0 Z M 276 0" style="fill:none"/></g></g></g><g><g transform="matrix(1 0 0 1 270 -3)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="10">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.pic1.m10" class="ltx_Math" alttext="\delta" display="inline"><mi>δ</mi></math></p></foreignObject></switch></g></g></g></g></g></g><g><g stroke="#000000"><g stroke-width="0.8pt"><g><g stroke="#000000"><g stroke-width="0.8pt"><path d="M 352 98 C 352 106 346 112 339 112 C 331 112 325 106 325 98 C 325 91 331 85 339 85 C 346 85 352 91 352 98 Z M 339 98" style="fill:none"/></g></g></g><g><g transform="matrix(1 0 0 1 329 97)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="16" overflow="visible" width="19">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.pic1.m11" class="ltx_Math" alttext="z_{i}" display="inline"><msub><mi>z</mi><mi>i</mi></msub></math></p></foreignObject></switch></g></g></g></g></g></g><g><g stroke="#000000"><g stroke-width="0.8pt"><g><g stroke="#000000"><g stroke-width="0.8pt"><path d="M 352 59 C 352 67 346 73 339 73 C 331 73 325 67 325 59 C 325 51 331 45 339 45 C 346 45 352 51 352 59 Z M 339 59" style="fill:none"/></g></g></g><g><g transform="matrix(1 0 0 1 329 57)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="16" overflow="visible" width="19">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.pic1.m12" class="ltx_Math" alttext="b_{i}" display="inline"><msub><mi>b</mi><mi>i</mi></msub></math></p></foreignObject></switch></g></g></g></g></g></g><g><g stroke="#000000"><g stroke-width="0.8pt"><g fill="#808080"><g><g stroke="#000000"><g stroke-width="0.8pt"><g fill="#808080"><path d="M 427 98 C 427 106 421 112 413 112 C 406 112 400 106 400 98 C 400 91 406 85 413 85 C 421 85 427 91 427 98 Z M 413 98"/></g></g></g></g><g><g transform="matrix(1 0 0 1 404 97)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="16" overflow="visible" width="19">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.pic1.m13" class="ltx_Math" alttext="w_{i}" display="inline"><msub><mi>w</mi><mi>i</mi></msub></math></p></foreignObject></switch></g></g></g></g></g></g></g><g><g><g transform="matrix(1 0 0 1 448 44)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="10">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.pic1.m14" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math></p></foreignObject></switch></g></g></g></g><g><g><g transform="matrix(1 0 0 1 428 56)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="10">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.pic1.m15" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math></p></foreignObject></switch></g></g></g></g><g><g><g transform="matrix(1 0 0 1 448 -27)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="10">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.pic1.m16" class="ltx_Math" alttext="\mathcal{L}" display="inline"><mi class="ltx_font_mathcaligraphic">ℒ</mi></math></p></foreignObject></switch></g></g></g></g><g><g><g transform="matrix(1 0 0 1 412 -19)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="12" overflow="visible" width="10">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F2.pic1.m17" class="ltx_Math" alttext="\mathcal{T}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒯</mi></math></p></foreignObject></switch></g></g></g></g><path d="M 223 98 L 260 98" style="fill:none"/><g><g transform="matrix(1 0 0 1 260 98)"><g><g stroke-width="0.64pt"><g stroke-dashoffset="0.0pt"><g stroke-linecap="round"><g stroke-linejoin="round"><path d="M -2 3 C -2 2 0 0 1 0 C 0 0 -2 -2 -2 -3" style="fill:none"/></g></g></g></g></g></g></g><path d="M 290 138 L 323 138" style="fill:none"/><g><g transform="matrix(1 0 0 1 323 138)"><g><g stroke-width="0.64pt"><g stroke-dashoffset="0.0pt"><g stroke-linecap="round"><g stroke-linejoin="round"><path d="M -2 3 C -2 2 0 0 1 0 C 0 0 -2 -2 -2 -3" style="fill:none"/></g></g></g></g></g></g></g><path d="M 351 131 L 400 106" style="fill:none"/><g><g transform="matrix(0.887217 -0.466953 0.466953 0.887217 400 106)"><g><g stroke-width="0.64pt"><g stroke-dashoffset="0.0pt"><g stroke-linecap="round"><g stroke-linejoin="round"><path d="M -2 3 C -2 2 0 0 1 0 C 0 0 -2 -2 -2 -3" style="fill:none"/></g></g></g></g></g></g></g><path d="M 223 138 L 260 138" style="fill:none"/><g><g transform="matrix(1 0 0 1 260 138)"><g><g stroke-width="0.64pt"><g stroke-dashoffset="0.0pt"><g stroke-linecap="round"><g stroke-linejoin="round"><path d="M -2 3 C -2 2 0 0 1 0 C 0 0 -2 -2 -2 -3" style="fill:none"/></g></g></g></g></g></g></g><path d="M 290 98 L 323 98" style="fill:none"/><g><g transform="matrix(1 0 0 1 323 98)"><g><g stroke-width="0.64pt"><g stroke-dashoffset="0.0pt"><g stroke-linecap="round"><g stroke-linejoin="round"><path d="M -2 3 C -2 2 0 0 1 0 C 0 0 -2 -2 -2 -3" style="fill:none"/></g></g></g></g></g></g></g><path d="M 353 98 L 398 98" style="fill:none"/><g><g transform="matrix(1 0 0 1 398 98)"><g><g stroke-width="0.64pt"><g stroke-dashoffset="0.0pt"><g stroke-linecap="round"><g stroke-linejoin="round"><path d="M -2 3 C -2 2 0 0 1 0 C 0 0 -2 -2 -2 -3" style="fill:none"/></g></g></g></g></g></g></g><path d="M 403 14 L 412 83" style="fill:none"/><g><g transform="matrix(0.119278 0.994 -0.994 0.119278 412 83)"><g><g stroke-width="0.64pt"><g stroke-dashoffset="0.0pt"><g stroke-linecap="round"><g stroke-linejoin="round"><path d="M -2 3 C -2 2 0 0 1 0 C 0 0 -2 -2 -2 -3" style="fill:none"/></g></g></g></g></g></g></g><path d="M 437 14 L 418 84" style="fill:none"/><g><g transform="matrix(-0.27031 0.96542 -0.96542 -0.27031 418 84)"><g><g stroke-width="0.64pt"><g stroke-dashoffset="0.0pt"><g stroke-linecap="round"><g stroke-linejoin="round"><path d="M -2 3 C -2 2 0 0 1 0 C 0 0 -2 -2 -2 -3" style="fill:none"/></g></g></g></g></g></g></g><path d="M 411 -45 L 405 -15" style="fill:none"/><g><g transform="matrix(-0.196474 0.98242 -0.98242 -0.196474 405 -15)"><g><g stroke-width="0.64pt"><g stroke-dashoffset="0.0pt"><g stroke-linecap="round"><g stroke-linejoin="round"><path d="M -2 3 C -2 2 0 0 1 0 C 0 0 -2 -2 -2 -3" style="fill:none"/></g></g></g></g></g></g></g><path d="M 419 -46 L 434 -14" style="fill:none"/><g><g transform="matrix(0.423956 0.90849 -0.90849 0.423956 434 -14)"><g><g stroke-width="0.64pt"><g stroke-dashoffset="0.0pt"><g stroke-linecap="round"><g stroke-linejoin="round"><path d="M -2 3 C -2 2 0 0 1 0 C 0 0 -2 -2 -2 -3" style="fill:none"/></g></g></g></g></g></g></g><path d="M 351 66 L 400 91" style="fill:none"/><g><g transform="matrix(0.887217 0.466953 -0.466953 0.887217 400 91)"><g><g stroke-width="0.64pt"><g stroke-dashoffset="0.0pt"><g stroke-linecap="round"><g stroke-linejoin="round"><path d="M -2 3 C -2 2 0 0 1 0 C 0 0 -2 -2 -2 -3" style="fill:none"/></g></g></g></g></g></g></g><path d="M 339 14 L 339 44" style="fill:none"/><g><g transform="matrix(0 1 -1 0 339 44)"><g><g stroke-width="0.64pt"><g stroke-dashoffset="0.0pt"><g stroke-linecap="round"><g stroke-linejoin="round"><path d="M -2 3 C -2 2 0 0 1 0 C 0 0 -2 -2 -2 -3" style="fill:none"/></g></g></g></g></g></g></g><path d="M 290 0 L 323 0" style="fill:none"/><g><g transform="matrix(1 0 0 1 323 0)"><g><g stroke-width="0.64pt"><g stroke-dashoffset="0.0pt"><g stroke-linecap="round"><g stroke-linejoin="round"><path d="M -2 3 C -2 2 0 0 1 0 C 0 0 -2 -2 -2 -3" style="fill:none"/></g></g></g></g></g></g></g></g></g></g></g></g></g></g></svg>
+</span></span>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>The graphical model for csLDA.</div>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Inference</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">Inference for csLDA follows directly from LDA. A Gibbs sampler learns the
+word distributions <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m1" class="ltx_Math" alttext="\phi_{z}^{l}" display="inline"><msubsup><mi>ϕ</mi><mi>z</mi><mi>l</mi></msubsup></math> for each language and topic. We use a block Gibbs sampler
+to jointly sample topic and language variables for each token.
+As is customary, we collapse out <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m2" class="ltx_Math" alttext="\phi" display="inline"><mi>ϕ</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m3" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m4" class="ltx_Math" alttext="\psi" display="inline"><mi>ψ</mi></math>.
+The sampling posterior is:
+<span class="ltx_text ltx_font_small"></span></p>
+<table id="S5.EGx1" class="ltx_equationgroup ltx_eqn_eqnarray">
+
+<tr id="S3.Ex1" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex1.m1" class="ltx_Math" alttext="\displaystyle P(z_{i},l_{i}|\mathbf{w},\mathbf{z}_{-i},\mathbf{l}_{-i},\alpha,%&#10;\beta,\gamma)\propto" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><msub><mi>z</mi><mi>i</mi></msub><mo>,</mo><msub><mi>l</mi><mi>i</mi></msub><mo>|</mo><mi>𝐰</mi><mo>,</mo><msub><mi>𝐳</mi><mrow><mo>-</mo><mi>i</mi></mrow></msub><mo>,</mo><msub><mi>𝐥</mi><mrow><mo>-</mo><mi>i</mi></mrow></msub><mo>,</mo><mi>α</mi><mo>,</mo><mi>β</mi><mo>,</mo><mi>γ</mi><mo>)</mo></mrow><mo>∝</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S3.E1" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E1.m1" class="ltx_Math" alttext="\displaystyle\frac{(n_{w_{i}}^{l,z})_{-i}+\beta}{n_{-i}^{l,z}+\mathcal{W}\beta%&#10;}\times\frac{m^{z,d}_{-i}+\alpha}{m^{d}_{-i}+\mathcal{T}\alpha}\times\frac{o^{%&#10;l,d}_{-i}+\gamma}{o^{d}_{-i}+\mathcal{L}\gamma}" display="inline"><mrow><mstyle displaystyle="true"><mfrac><mrow><msub><mrow><mo>(</mo><msubsup><mi>n</mi><msub><mi>w</mi><mi>i</mi></msub><mrow><mi>l</mi><mo>,</mo><mi>z</mi></mrow></msubsup><mo>)</mo></mrow><mrow><mo>-</mo><mi>i</mi></mrow></msub><mo>+</mo><mi>β</mi></mrow><mrow><msubsup><mi>n</mi><mrow><mo>-</mo><mi>i</mi></mrow><mrow><mi>l</mi><mo>,</mo><mi>z</mi></mrow></msubsup><mo>+</mo><mrow><mi class="ltx_font_mathcaligraphic">𝒲</mi><mo>⁢</mo><mi>β</mi></mrow></mrow></mfrac></mstyle><mo>×</mo><mstyle displaystyle="true"><mfrac><mrow><msubsup><mi>m</mi><mrow><mo>-</mo><mi>i</mi></mrow><mrow><mi>z</mi><mo>,</mo><mi>d</mi></mrow></msubsup><mo>+</mo><mi>α</mi></mrow><mrow><msubsup><mi>m</mi><mrow><mo>-</mo><mi>i</mi></mrow><mi>d</mi></msubsup><mo>+</mo><mrow><mi class="ltx_font_mathcaligraphic">𝒯</mi><mo>⁢</mo><mi>α</mi></mrow></mrow></mfrac></mstyle><mo>×</mo><mstyle displaystyle="true"><mfrac><mrow><msubsup><mi>o</mi><mrow><mo>-</mo><mi>i</mi></mrow><mrow><mi>l</mi><mo>,</mo><mi>d</mi></mrow></msubsup><mo>+</mo><mi>γ</mi></mrow><mrow><msubsup><mi>o</mi><mrow><mo>-</mo><mi>i</mi></mrow><mi>d</mi></msubsup><mo>+</mo><mrow><mi class="ltx_font_mathcaligraphic">ℒ</mi><mo>⁢</mo><mi>γ</mi></mrow></mrow></mfrac></mstyle></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m5" class="ltx_Math" alttext="(n_{w_{i}}^{l,z})_{-i}" display="inline"><msub><mrow><mo>(</mo><msubsup><mi>n</mi><msub><mi>w</mi><mi>i</mi></msub><mrow><mi>l</mi><mo>,</mo><mi>z</mi></mrow></msubsup><mo>)</mo></mrow><mrow><mo>-</mo><mi>i</mi></mrow></msub></math> is the number of times the type for word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m6" class="ltx_Math" alttext="w_{i}" display="inline"><msub><mi>w</mi><mi>i</mi></msub></math> assigned to topic <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m7" class="ltx_Math" alttext="z" display="inline"><mi>z</mi></math> and language <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m8" class="ltx_Math" alttext="l" display="inline"><mi>l</mi></math> (excluding current word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m9" class="ltx_Math" alttext="w_{i}" display="inline"><msub><mi>w</mi><mi>i</mi></msub></math>),
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m10" class="ltx_Math" alttext="m^{z,d}_{-i}" display="inline"><msubsup><mi>m</mi><mrow><mo>-</mo><mi>i</mi></mrow><mrow><mi>z</mi><mo>,</mo><mi>d</mi></mrow></msubsup></math> is the number of tokens assigned to topic <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m11" class="ltx_Math" alttext="z" display="inline"><mi>z</mi></math> in document <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m12" class="ltx_Math" alttext="d" display="inline"><mi>d</mi></math> (excluding current word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m13" class="ltx_Math" alttext="w_{i}" display="inline"><msub><mi>w</mi><mi>i</mi></msub></math>),
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m14" class="ltx_Math" alttext="o^{l,d}_{-i}" display="inline"><msubsup><mi>o</mi><mrow><mo>-</mo><mi>i</mi></mrow><mrow><mi>l</mi><mo>,</mo><mi>d</mi></mrow></msubsup></math> is the number of tokens assigned to language <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m15" class="ltx_Math" alttext="l" display="inline"><mi>l</mi></math> in document <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m16" class="ltx_Math" alttext="d" display="inline"><mi>d</mi></math> (excluding current word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m17" class="ltx_Math" alttext="w_{i}" display="inline"><msub><mi>w</mi><mi>i</mi></msub></math>),
+and these variables with superscripts or subscripts omitted are totals across all values for the variable. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m18" class="ltx_Math" alttext="\mathcal{W}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒲</mi></math> is the number of words in the corpus.
+All counts omit words assigned to the background.
+During sampling, words are first assigned to the background/topic distribution and then topic and language are sampled for non-background words.</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">We optimize the hyperparameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m1" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m2" class="ltx_Math" alttext="\beta" display="inline"><mi>β</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m3" class="ltx_Math" alttext="\gamma" display="inline"><mi>γ</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m4" class="ltx_Math" alttext="\delta" display="inline"><mi>δ</mi></math> by interleaving sampling iterations with a Newton-Raphson update to obtain
+the MLE estimate for the hyperparameters. Taking <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m5" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> as an example, one step of the Newton-Raphson update is:</p>
+<table id="S3.E2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E2.m1" class="ltx_Math" alttext="\alpha^{new}=\alpha^{old}-\mathbf{H}^{-1}\frac{\partial\mathcal{L}}{\partial\alpha}" display="block"><mrow><msup><mi>α</mi><mrow><mi>n</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>w</mi></mrow></msup><mo>=</mo><mrow><msup><mi>α</mi><mrow><mi>o</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>d</mi></mrow></msup><mo>-</mo><mrow><msup><mi>𝐇</mi><mrow><mo>-</mo><mn>1</mn></mrow></msup><mo>⁢</mo><mfrac><mrow><mo>∂</mo><mo>⁡</mo><mi class="ltx_font_mathcaligraphic">ℒ</mi></mrow><mrow><mo>∂</mo><mo>⁡</mo><mi>α</mi></mrow></mfrac></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m6" class="ltx_Math" alttext="\mathbf{H}" display="inline"><mi>𝐇</mi></math> is the Hessian matrix and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m7" class="ltx_Math" alttext="\frac{\partial\mathcal{L}}{\partial\alpha}" display="inline"><mfrac><mrow><mo>∂</mo><mo>⁡</mo><mi class="ltx_font_mathcaligraphic">ℒ</mi></mrow><mrow><mo>∂</mo><mo>⁡</mo><mi>α</mi></mrow></mfrac></math> is the gradient of the likelihood function with respect to the optimizing hyperparameter.
+We interleave 200 sampling iterations with one Newton-Raphson update.</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Selecting Aligned Topics</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">We next identify learned topics (a set of related word-distributions) that truly represent an aligned topic across
+languages, as opposed to an unrelated set of distributions for which there is no supporting alignment
+evidence in the corpus.
+We begin by measuring how often each topic occurs in code-switched documents. If a topic never
+occurs in a code-switched document, then there can be no evidence to support alignment across languages.
+For the topics that appear at least once in a code-switched document,
+we estimate their probability in the code-switched documents by a MAP estimate of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m1" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math>.
+Topics appearing in at least one code-switched document with probability greater than a threshold <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m2" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math> are selected as
+candidates for true cross-language topics.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Data</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">We used two datasets: a Sina Weibo Chinese-English corpus
+<cite class="ltx_cite">[]</cite> and a Spanish-English Twitter corpus.</p>
+</div>
+<div id="S4.SS2.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Weibo</h4>
+
+<div id="S4.SS2.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite"/> extracted over 1m Chinese-English parallel segments from Sina
+Weibo, which are code-switched messages. We randomly sampled 29,705 code-switched messages along with
+42,116 Chinese and 42,116 English messages from the the same time frame. We used these data for training. We
+then sampled
+an additional 2475 code-switched messages, 4221 English and 4211 Chinese messages as test data.</p>
+</div>
+</div>
+<div id="S4.SS2.SSS0.P2" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Olympics</h4>
+
+<div id="S4.SS2.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">We collected tweets from July 27, 2012 to August 12, 2012, and identified 302,775 tweets
+about the Olympics based on related hashtags and keywords (e.g. olympics, #london2012, etc.)
+We identified code-switched tweets using the Chromium Language Detector<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup><span class="ltx_text ltx_font_script">https://code.google.com/p/chromium-compact-language-detector/</span></span></span></span>. This system provides the top three possible
+languages for a given document with confidence scores; we identify a tweet as code-switched if two predicted languages
+each have confidence greater than 33%.
+We then used the tagger of <cite class="ltx_cite"/> to obtain token level LID tags, and only tweets with tokens in both Spanish
+and English are used as code-switched tweets. In total we identified 822 Spanish-English code-switched tweets.
+We further expanded the mined tweets to full conversations, yielding 1055 Spanish-English code-switched documents (including both tweets and conversations), along with 4007 English and 4421 Spanish tweets composes our data set. We reserve 10% of the data for testing.</p>
+</div>
+<div id="S4.F3" class="ltx_figure"><span class="ltx_ERROR undefined">\ffigbox</span><span class="ltx_ERROR undefined">{subfigure}</span>
+<p class="ltx_p">[bl]0.35
+<img src="" id="S4.F3.g1" class="ltx_graphics" alt=""/>
+
+
+<span class="ltx_ERROR undefined">{subfigure}</span>[bl]0.35
+<img src="" id="S4.F3.g2" class="ltx_graphics" alt=""/>
+
+
+<span class="ltx_ERROR undefined">{subfigure}</span>[bl]0.3
+
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.F3.m1" class="ltx_Math" alttext="\mathcal{T}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒯</mi></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.F3.m2" class="ltx_Math" alttext="=" display="inline"><mo>=</mo></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.F3.m3" class="ltx_Math" alttext="60/120" display="inline"><mrow><mn>60</mn><mo>/</mo><mn>120</mn></mrow></math></th>
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="3"><span class="ltx_text ltx_font_bold ltx_font_script">Olympics</span></th>
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="3"><span class="ltx_text ltx_font_bold ltx_font_script">Weibo</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_script">En</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_script">Es</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_script">CS</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_script">En</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_script">Cn</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_script">CS</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_script">LDA</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_script">11.32</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_script">9.44</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_script">6.97</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_script">29.19</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_script">23.06</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_script">11.69</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_script">LDA-bg</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_script">11.35</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_script">9.51</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">6.79</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_script">40.87</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_script">27.56</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">10.91</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_script">csLDA</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_script">8.72</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_script">7.94</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_script">6.17</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_script">18.20</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_script">17.31</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_script">12.72</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_script">csLDA-bg</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_script">8.72</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_script">7.73</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">6.04</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_script">18.25</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_script">17.74</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_script">12.46</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_script">csLDA-bg</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_script">8.73</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_script">7.93</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_script">4.91</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_script">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_script">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_script">-</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_script">with LID</span></th>
+<td class="ltx_td ltx_border_b"/>
+<td class="ltx_td ltx_border_b"/>
+<td class="ltx_td ltx_border_b ltx_border_r"/>
+<td class="ltx_td ltx_border_b"/>
+<td class="ltx_td ltx_border_b"/>
+<td class="ltx_td ltx_border_b ltx_border_r"/></tr>
+</tbody>
+</table><span class="ltx_text ltx_font_script">
+</span></p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 3: </span>Plots show perplexity for different <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.F3.m6" class="ltx_Math" alttext="\mathcal{T}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒯</mi></math> (Olympics left, Weibo right). Perplexity in the table are in magnitude of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.F3.m7" class="ltx_Math" alttext="1\times 10^{3}" display="inline"><mrow><mn>1</mn><mo>×</mo><msup><mn>10</mn><mn>3</mn></msup></mrow></math>.
+</div>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Experiments</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">We evaluated csLDA on the two datasets and evaluated each model using perplexity on held out data and human judgements.
+While our goal is to learn polylingual topics, we cannot compare to previous polylingual models since they require comparable data,
+which we lack. Instead, we constructed a baseline from
+LDA run on the entire dataset (no language information.)
+For each model, we measured the document completion perplexity <cite class="ltx_cite">[]</cite> on the held out data.
+We experimented with different numbers of topics (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m1" class="ltx_Math" alttext="\mathcal{T}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒯</mi></math>). Since csLDA duplicates topic
+distributions (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m2" class="ltx_Math" alttext="\mathcal{T}\times\mathcal{L}" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒯</mi><mo>×</mo><mi class="ltx_font_mathcaligraphic">ℒ</mi></mrow></math>)
+we used twice as many topics for LDA.</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">Figure <a href="#S4.F3" title="Figure 3 ‣ Olympics ‣ 4 Data ‣ Learning Polylingual Topic Models from Code-Switched Social Media Documents" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> shows test perplexity for varying <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m1" class="ltx_Math" alttext="\mathcal{T}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒯</mi></math> and perplexity for the best setting of csLDA (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m2" class="ltx_Math" alttext="\mathcal{T}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒯</mi></math>
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m3" class="ltx_Math" alttext="=" display="inline"><mo>=</mo></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m4" class="ltx_Math" alttext="60" display="inline"><mn>60</mn></math>) and LDA (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m5" class="ltx_Math" alttext="\mathcal{T}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒯</mi></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m6" class="ltx_Math" alttext="=" display="inline"><mo>=</mo></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m7" class="ltx_Math" alttext="120" display="inline"><mn>120</mn></math>). The table lists both monolingual and code-switched test data;
+csLDA improves over LDA in almost every case, and across all values of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p2.m8" class="ltx_Math" alttext="\mathcal{T}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒯</mi></math>.
+The background distribution (-bg) has mixed results for LDA, whereas for
+csLDA it shows consistent improvement.
+Table <a href="#S5.T1" title="Table 1 ‣ 5 Experiments ‣ Learning Polylingual Topic Models from Code-Switched Social Media Documents" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> shows some csLDA topics. While there are some mistakes, overall the topics are coherent and aligned.</p>
+</div>
+<div id="S5.p3" class="ltx_para">
+<p class="ltx_p">We use the available per-token LID system <cite class="ltx_cite">[]</cite> for Spanish/English
+to justify csLDA’s ability to infer the hidden language variables.
+We ran csLDA-bg with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p3.m1" class="ltx_Math" alttext="l_{i}" display="inline"><msub><mi>l</mi><mi>i</mi></msub></math> set
+to the value provided by the LID system for code-switched documents (csLDA-bg with LID),
+which gives csLDA high quality LID labels.
+While we see gains for the code-switched data,
+overall the results for csLDA-bg and csLDA-bg with LID are similar, suggesting that the model can
+operate effectively even without a supervised per-token LID system.</p>
+</div>
+<div id="S5.T1" class="ltx_table"><span class="ltx_ERROR undefined">\ffigbox</span><span class="ltx_ERROR undefined">{subtable}</span>
+<p class="ltx_p"><span class="ltx_text ltx_font_footnote">.5</span></p>
+<table class="ltx_tabular ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold ltx_font_footnote">Football</span></th>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold ltx_font_footnote">Basketball</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_footnote">English</span></th>
+<th class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_footnote">Spanish</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">English</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">Spanish</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">mexico</span></th>
+<th class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_footnote">mucho</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">game</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">españa</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_footnote">brazil</span></th>
+<th class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_footnote">argentina</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">basketball</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">baloncesto</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_footnote">soccer</span></th>
+<th class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_footnote">méxico</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">year</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">basketball</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_footnote">vs</span></th>
+<th class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_footnote">brasil</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">finals</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">bronce</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_footnote">womens</span></th>
+<th class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_footnote">ganará</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">gonna</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">china</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_footnote">football</span></th>
+<th class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_footnote">tri</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">nba</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">final</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_footnote">mens</span></th>
+<th class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_footnote">yahel_castillo</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">obama</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">rusia</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_footnote">final</span></th>
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_rr"><span class="ltx_text ltx_font_footnote">delpo</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_footnote">lebron</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_footnote">española</span></td></tr>
+</tbody>
+</table><span class="ltx_ERROR undefined">{subtable}</span>
+<p class="ltx_p"><span class="ltx_text ltx_font_footnote">.5</span></p>
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_rr ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold ltx_font_footnote">Social Media</span></th>
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold ltx_font_footnote">Transportation</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_footnote">English</span></th>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_footnote">Chinese</span></td>
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">English</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">Chinese</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">twitter</span></th>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_ERROR undefined">{CJK}</span><span class="ltx_text ltx_font_footnote">UTF8gbsn 啊啊啊</span></td>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">car</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_ERROR undefined">{CJK}</span><span class="ltx_text ltx_font_footnote">UTF8gbsn 汽车</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_footnote">bitly</span></th>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_ERROR undefined">{CJK}</span><span class="ltx_text ltx_font_footnote">UTF8gbsn 微博</span></td>
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">drive</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_ERROR undefined">{CJK}</span><span class="ltx_text ltx_font_footnote">UTF8gbsn 这个</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_footnote">facebook</span></th>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_ERROR undefined">{CJK}</span><span class="ltx_text ltx_font_footnote">UTF8gbsn 更新</span></td>
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">road</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_ERROR undefined">{CJK}</span><span class="ltx_text ltx_font_footnote">UTF8gbsn 真真</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_footnote">check</span></th>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_ERROR undefined">{CJK}</span><span class="ltx_text ltx_font_footnote">UTF8gbsn 下载</span></td>
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">line</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_ERROR undefined">{CJK}</span><span class="ltx_text ltx_font_footnote">UTF8gbsn 明年</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_footnote">use</span></th>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_ERROR undefined">{CJK}</span><span class="ltx_text ltx_font_footnote">UTF8gbsn 转发</span></td>
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">train</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_ERROR undefined">{CJK}</span><span class="ltx_text ltx_font_footnote">UTF8gbsn 自行车</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_footnote">blog</span></th>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_ERROR undefined">{CJK}</span><span class="ltx_text ltx_font_footnote">UTF8gbsn 视频</span></td>
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">harry</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_ERROR undefined">{CJK}</span><span class="ltx_text ltx_font_footnote">UTF8gbsn 车型</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_footnote">free</span></th>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_ERROR undefined">{CJK}</span><span class="ltx_text ltx_font_footnote">UTF8gbsn pm</span></td>
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_ERROR undefined">{CJK}</span><span class="ltx_text ltx_font_footnote">UTF8gbsn 汽车</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_ERROR undefined">{CJK}</span><span class="ltx_text ltx_font_footnote">UTF8gbsn 奔驰</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_footnote">post</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_rr"><span class="ltx_ERROR undefined">{CJK}</span><span class="ltx_text ltx_font_footnote">UTF8gbsn 推特</span></td>
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_footnote">bus</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_ERROR undefined">{CJK}</span><span class="ltx_text ltx_font_footnote">UTF8gbsn 大众</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span>Examples of aligned topics from Olympics (left) and Weibo (right).</div>
+</div>
+<div id="S5.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.1 </span>Human Evaluation</h3>
+
+<div id="S5.SS1.p1" class="ltx_para">
+<p class="ltx_p">We evaluate topic alignment quality through a human judgements <cite class="ltx_cite">[]</cite>.
+For each aligned topic, we show an annotator the 20 most frequent words from the foreign language topic (Chinese or Spanish)
+with the 20 most frequent words from the aligned English topic and two random English topics.
+The annotators are asked to select the most related English topic among the three; the one with the most votes is
+considered the aligned topic. We count how often the model’s alignments agree.</p>
+</div>
+<div id="S5.SS1.p2" class="ltx_para">
+<p class="ltx_p">LDA may learn comparable topics in different languages
+but gives no explicit alignments.
+We create alignments
+by classifying each LDA topic by language using the KL-divergence between the topic’s words distribution and a word distribution
+for the English/foreign language inferred from the monolingual documents.
+Language is assigned to a topic by taking the minimum KL. For Weibo data, this was not effective since the vocabularies
+of each language are highly unbalanced. Instead, we manually labeled the topics by language.
+We then pair topics across languages using the cosine similarity of their co-occurrence statistics in code-switched documents.
+Topic pairs with similarity above <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p2.m1" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math> are considered aligned topics. We also used a threshold <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p2.m2" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math> (§<a href="#S3.SS2" title="3.2 Selecting Aligned Topics ‣ 3 csLDA ‣ Learning Polylingual Topic Models from Code-Switched Social Media Documents" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>)
+to select aligned topics in csLDA.
+To ensure a fair comparison, we select the same number of aligned topics for LDA and csLDA.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>We used thresholds <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p2.m3" class="ltx_Math" alttext="p=0.2" display="inline"><mrow><mi>p</mi><mo>=</mo><mn>0.2</mn></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p2.m4" class="ltx_Math" alttext="t=0.0001" display="inline"><mrow><mi>t</mi><mo>=</mo><mn>0.0001</mn></mrow></math>. We limited the model with more alignments to match the one with less.</span></span></span>.
+We used the best performing setting: csLDA <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p2.m5" class="ltx_Math" alttext="\mathcal{T}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒯</mi></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p2.m6" class="ltx_Math" alttext="=" display="inline"><mo>=</mo></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p2.m7" class="ltx_Math" alttext="60" display="inline"><mn>60</mn></math>, LDA <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p2.m8" class="ltx_Math" alttext="\mathcal{T}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒯</mi></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p2.m9" class="ltx_Math" alttext="=" display="inline"><mo>=</mo></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p2.m10" class="ltx_Math" alttext="120" display="inline"><mn>120</mn></math>, which produced
+12 alignments from Olympics and 28 from Weibo.</p>
+</div>
+<div id="S5.SS1.p3" class="ltx_para">
+<p class="ltx_p">Using Mechanical Turk we collected multiple judgements per alignment.
+For Spanish, we removed workers who disagreed with the majority more than 50% of the time (83 deletions),
+leaving 6.5 annotations for each alignment (85.47% inter-annotator agreement.)
+For Chinese, since quality of general Chinese turkers is low <cite class="ltx_cite">[]</cite>
+we invited specific workers and obtained 9.3 annotations per alignment (78.72% inter-annotator agreement.)
+For Olympics, LDA alignments matched the judgements 25% of the time, while csLDA matched 50% of the time.
+While csLDA found 12 alignments and LDA 29, the 12 topics evaluated from both models show that csLDA’s alignments
+are higher quality.
+For the Weibo data, LDA matched judgements 71.4%, while csLDA matched 75%. Both obtained high quality alignments –
+likely due both to the fact that the code-switched data is curated to find translations and we hand labeled topic language –
+but csLDA found many more alignments: 60 as compared to 28. These results confirm our automated results: csLDA finds higher
+quality topics that span both languages.</p>
+</div>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 18:21:22 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

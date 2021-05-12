@@ -1,0 +1,1026 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Generalized possibilistic logic: Foundations and applications to qualitative reasoning about uncertainty.
+   </title>
+   <abstract>
+    This paper introduces generalized possibilistic logic (GPL), a logic for epistemic reasoning based on possibility theory. Formulas in GPL correspond to propositional combinations of assertions such as “it is certain to degree λ that the propositional formula α is true”. As its name suggests, the logic generalizes possibilistic logic (PL), which at the syntactic level only allows conjunctions of the aforementioned type of assertions. At the semantic level, PL can only encode sets of epistemic states encompassed by a single least informed one, whereas GPL can encode any set of epistemic states. This feature makes GPL particularly suitable for reasoning about what an agent knows about the beliefs of another agent, e.g., allowing the former to draw conclusions about what the other agent does not know. We introduce an axiomatization for GPL and show its soundness and completeness w.r.t. possibilistic semantics. Subsequently, we highlight the usefulness of GPL as a powerful unifying framework for various knowledge representation formalisms. Among others, we show how comparative uncertainty and ignorance can be modelled in GPL. We also exhibit a close connection between GPL and various existing formalisms, including possibilistic logic with partially ordered formulas, a logic of conditional assertions in the style of Kraus, Lehmann and Magidor, answer set programming and a fragment of the logic of minimal belief and negation as failure. Finally, we analyse the computational complexity of reasoning in GPL, identifying decision problems at the first, second, third and fourth level of the polynomial hierarchy.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Possibilistic logic [1] (PL) is a logic for reasoning with uncertain propositional formulas. Formulas in PL take the form {a mathematical formula}(α,λ) where α is a propositional formula and λ is a certainty degree taken from the unit interval, or from another linear scale. Contrary to probabilistic logics, possibilistic logic models accepted beliefs in the sense that if two propositions are believed to a certain level, so is their conjunction. In many applications, a PL knowledge base encodes the epistemic state of an agent. We then assume that all the agent knows are the formulas contained in the knowledge base and their logical consequences, with the weights referring to the degree of epistemic entrenchment [2] or the strength of belief. However, in its standard form, possibilistic logic has limitations as a tool for epistemic reasoning, i.e., reasoning about uncertainty, in at least two respects.
+     </paragraph>
+     <paragraph>
+      First, given that a knowledge base encodes a single epistemic state, PL does not allow us to encode incomplete information about the epistemic state of an agent. For example, assume that this agent privately flips a coin and looks at the result without revealing it. Then either the agent knows that the result was tails, which could be encoded as {a mathematical formula}{(tails,1)}, where 1 indicates complete certainty, or the agent knows that the result was heads, which could be encoded as {a mathematical formula}{(¬tails,1)}. However, all an outside agent knows is that one of these two situations holds, and in particular this other agent knows that the first agent is not ignorant about the outcome of the coin flip. To express this situation in PL, we would need to write a disjunction {a mathematical formula}(tails,1)∨(¬tails,1) which is not allowed in the language. In this paper, we propose a generalized possibilistic logic (GPL) in which such disjunctions can be expressed. This brings PL syntax closer to the one of modal logics for epistemic reasoning, and, to emphasize this, we will use a slightly different notation and write {a mathematical formula}N1(tails)∨N1(¬tails) instead.
+     </paragraph>
+     <paragraph>
+      Second, PL does not allow us to explicitly encode information about the absence of knowledge. Instead, in practice, we must rely on a kind of closed-world assumption, i.e., assume that the agent does not know whether α is true if neither α nor its negation can be derived from the given knowledge base representing what is known about this agent's beliefs. When reasoning about beliefs as revealed by an agent, this assumption is hard to keep and we need to distinguish between situations where we (the outside agent) know that the agent is ignorant about α and situations where we do not know whether the agent knows α or not. In GPL, this can be achieved by putting a negation in front of PL formulas: {a mathematical formula}¬N1(α) expresses that we know that the agent does not believe in the truth of α,{sup:1} whereas situations where we have no such knowledge are encoded by GPL theories which have models in which {a mathematical formula}N1(α) is true and models in which {a mathematical formula}N1(α) is false.
+     </paragraph>
+     <paragraph>
+      GPL is closely related to modal logics for epistemic reasoning such as KD45 and S5. However, it is essentially a two-tiered propositional logic, and, instead of using Kripke frames, the semantics we propose for GPL is based on possibility distributions, which explicitly represent epistemic states. Our ability to directly interpret the modality N as a constraint on a necessity measure results from the fact that we do not allow the modality N to be nested. Furthermore, by not allowing objective formulas, we can naturally interpret each GPL formula as a constraint on the possible epistemic states (i.e., possibility distributions) of an agent. Compared to existing epistemic modal logics [3], we thus trade some expressiveness for a more intuitive way of capturing revealed beliefs. Among others, the use of possibility distributions has the advantage that (strength of) belief can be naturally encoded as a graded notion and that existing concepts from possibility theory such as minimal specificity and guaranteed possibility can be exploited to model ignorance in a natural way. This will enable us to encode various forms of non-monotonic reasoning in GPL. For instance, we will show how GPL can be used to model the semantics of answer set programming [4] (ASP) without relying on a fixpoint construction, unlike most existing characterizations of ASP, and how default rules in the sense of System P [5] can be modelled by taking advantage of the fact that GPL can express comparative uncertainty.
+     </paragraph>
+     <paragraph>
+      The paper is structured as follows. First, we recall some basic notions from possibility theory and possibilistic logic. In Section 3 we define the language of GPL and a corresponding semantics in terms of possibility distributions. We then provide an axiomatization which is sound and complete w.r.t. this latter semantics. In Section 4 we analyze how GPL can be used to reason about the ignorance of another agent, focusing on the role of minimal specificity and an extension to the language of GPL related to the notion of “only knowing” [6]. In Section 5 we then focus on the ability of GPL to model comparative uncertainty (e.g., α is more certain than β), showing how GPL can be used to encode a variant of possibilistic logic with partially ordered formulas [7], and how, as a result, a conditional logic based on System P [5] can be embedded in GPL. Subsequently, in Section 6 we explain in more detail how GPL relates to a number of existing formalisms for non-monotonic reasoning that are based on the notion of negation as failure. Section 7 discusses a number of computational issues, including the complexity of the main reasoning tasks. We also propose a reduction to SAT, allowing for a straightforward implementation of the reasoning tasks at the first level of the polynomial hierarchy. Finally, we present our conclusions.
+     </paragraph>
+     <paragraph>
+      This paper aggregates and significantly extends parts of [8] and [9]. In particular, in [8] we introduced the syntax, semantics and axiomatization of GPL, whereas in [9] we studied methods for modelling ignorance in GPL, introduced a new proof of the completeness of the axiomatization, and discussed some of the complexity results from Section 7. The results in Sections 5 and 6 are entirely new (although the encodings in Section 6 are similar in spirit to the encoding of equilibrium logic in [8]).
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Preliminaries from possibility theory
+     </section-title>
+     <paragraph>
+      Consider a variable X which has an unknown value from some finite universe {a mathematical formula}U. In possibility theory [10], [11], [12], available knowledge about the value of X is encoded as a mapping {a mathematical formula}π:U→[0,1], which is called a possibility distribution. The intended interpretation of {a mathematical formula}π(u)=1 is that {a mathematical formula}X=u is fully compatible with all available information, while {a mathematical formula}π(u)=0 means that {a mathematical formula}X=u can be excluded based on available information. Note that the special case where we have no information about X is encoded using the vacuous possibility distribution, defined as {a mathematical formula}π(u)=1 for all {a mathematical formula}u∈U. Usually, we require that {a mathematical formula}π(u)=1 for some {a mathematical formula}u∈U, which corresponds to the assumption that the available information is consistent. If the possibility distribution π satisfies this condition, it is called normalized.
+     </paragraph>
+     <paragraph>
+      In general, the value of {a mathematical formula}π(u) can be interpreted in terms of degrees of potential surprise: the smaller the value of {a mathematical formula}π(u), the more we would be surprised to find out that {a mathematical formula}X=u. This interpretation goes back to Shackle [13] and supports a purely qualitative interpretation of the possibility degrees {a mathematical formula}π(u). In such a case, we could replace the unit interval {a mathematical formula}[0,1] by another linear scale (although an involutive order-reversing mapping is also needed). Other interpretations of possibility degrees relate a possibility distribution to a family of probability distributions [14], to a family of likelihood functions [15], to Shafer belief functions [16], or to Spohn ordinal conditional functions [2], [17] and thus to infinitesimal probabilities [18], among others.
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       Set functions in possibility theory
+      </section-title>
+      <paragraph>
+       A possibility distribution π induces a possibility measure Π, defined for {a mathematical formula}A⊆U as [10]:{a mathematical formula} A dual measure N, called the necessity measure, is defined for {a mathematical formula}A⊆U as [11]:{a mathematical formula} Intuitively, {a mathematical formula}Π(A) reflects to what extent it is possible, given the available knowledge, that the value of X is among those in A, while {a mathematical formula}N(A) reflects to what extent the available knowledge entails that the value of X must necessarily be among those in A. Two other measures that can be introduced are the guaranteed possibility measure Δ and the potential necessity measure ∇, defined for {a mathematical formula}A⊆U as [12]:{a mathematical formula} Intuitively, {a mathematical formula}Δ(A) reflects the extent to which all values in A are considered possible, while {a mathematical formula}∇(A) reflects the extent to which some value outside A is impossible. Note that for all {a mathematical formula}A≠∅{a mathematical formula} If π is normalized, we have {a mathematical formula}Π(A)=1 or {a mathematical formula}N(A)=0, and thus in particular:{a mathematical formula} If {a mathematical formula}π(u)=0 for some {a mathematical formula}u∈U, we have {a mathematical formula}Δ(A)=0 or {a mathematical formula}∇(A)=1, and thus:{a mathematical formula} Finally, note that Π and N are monotone w.r.t. set inclusion while Δ and ∇ are antitone, i.e., for {a mathematical formula}A⊆B we have{a mathematical formula}
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Possibilistic logic
+      </section-title>
+      <paragraph>
+       A formula in propositional possibilistic logic [1] (PL for short) is an expression of the form {a mathematical formula}(α,λ), where {a mathematical formula}λ∈]0,1] is a certainty degree and α is a propositional formula, built from a set of atomic formulas At using the connectives conjunction ∧, negation ¬, disjunction ∨, implication →, and equivalence ≡ in the usual way. Let Ω be the set of all interpretations of At and let {a mathematical formula}L be the set of all propositional formulas built from At. The semantics of possibilistic logic is defined in terms of possibility distributions over Ω. Specifically, a possibility distribution π over Ω satisfies the formula {a mathematical formula}(α,λ) iff {a mathematical formula}N(〚α〛)≥λ, where {a mathematical formula}〚α〛 denotes the set of all (classical) models of α. As π represents an epistemic state (it is a fuzzy set of classical models), we call it an epistemic model of {a mathematical formula}(α,λ), or an e-model for short. For the ease of presentation, we will write {a mathematical formula}N(α) instead of {a mathematical formula}N(〚α〛) throughout this paper.
+      </paragraph>
+      <paragraph>
+       A possibility distribution π is an e-model of a set of PL formulas K iff π is an e-model of every formula in K. K generally has multiple e-models, but they can be partially ordered by the specificity ordering, whereby {a mathematical formula}π1 is less specific than {a mathematical formula}π2, written {a mathematical formula}π1≼π2, if {a mathematical formula}π1(ω)≥π2(ω) for every {a mathematical formula}ω∈Ω. It can be shown that the set of e-models of a set of PL formulas K has a unique least element {a mathematical formula}πK w.r.t. ≼, which is called the least specific e-model of K. It can be expressed, for all {a mathematical formula}ω∈Ω as [1]:{a mathematical formula} where we assume {a mathematical formula}max⁡∅=0. Intuitively, the more certain the formulas that are violated by ω, the less plausible ω is considered to be.
+      </paragraph>
+      <paragraph>
+       The following inference rules are valid in PL:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} Let us write {a mathematical formula}K⊨PL(α,λ) if every e-model of K is an e-model of {a mathematical formula}(α,λ). If there is no cause for confusion we also write {a mathematical formula}⊨PL as ⊨ and {a mathematical formula}⊢PL as ⊢. It is possible to show that the following statements are all equivalent for a set of PL formulas K (see e.g., [19]):
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}K⊢PL(α,λ) can be derived from (1)–(4).
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}K⊨PL(α,λ).
+       </list-item>
+       <list-item label="3.">
+        The least specific e-model {a mathematical formula}πK of K is an e-model of {a mathematical formula}(α,λ).
+       </list-item>
+      </list>
+      <paragraph>
+       Inference in possibilistic logic thus remains close to inference in propositional logic. In particular, let the c-cut {a mathematical formula}Kc of K be the propositional theory {a mathematical formula}Kc={α|(α,λ)∈K and λ≥c}. Then we have that {a mathematical formula}K⊨PL(α,λ) iff {a mathematical formula}Kλ∪{¬α} is unsatisfiable. It follows that entailment checking in possibilistic logic is coNP-complete and that efficient reasoners can easily be implemented on top of off-the-shelf SAT solvers.
+      </paragraph>
+      <paragraph>
+       Possibilistic logic can be seen as a tool for specifying a ranking on propositional formulas. As such, it is closely related to the notion of epistemic entrenchment [20], as has been pointed out in [2]. This makes PL a natural vehicle for implementing strategies for belief revision [21] and managing inconsistency [22]. Along similar lines, there are close connections between PL and default reasoning in the sense of System P [5], which can be exploited to implement several forms of reasoning about rules with exceptions [23].
+      </paragraph>
+      <paragraph>
+       Syntactically, propositional possibilistic logic is similar to the propositional fragment of Markov logic [24]. Semantically, however, the certainty weights in Markov logic are interpreted probabilistically. In particular, a set {a mathematical formula}M={(α1,w1),...,(αn,wn)} of (propositional) Markov logic formulas defines the probability distribution {a mathematical formula}pM defined as follows ({a mathematical formula}ω∈Ω):{a mathematical formula} where Z is a normalization constant. This probabilistic semantics makes Markov logic particularly useful in machine learning settings. Note that we can equivalently define {a mathematical formula}pM as follows{a mathematical formula} where the new normalization constant {a mathematical formula}Z′ is given by {a mathematical formula}Z′=Zexp(∑iwi). This alternative formulation highlights the close relationship between the propositional fragment of Markov logic and the so-called penalty logic [25]. The two main differences are that negative weights are not considered in penalty logic{sup:2} and that the penalty associated with an interpretation is not normalized. This lack of normalization makes penalty logic somewhat closer in spirit to possibilistic logic. Attaching a positive weight w to a formula α in penalty logic is similar to attaching a degree of necessity {a mathematical formula}1−exp(−w) to this formula in possibilistic logic. Thus the main difference between penalty logic and possibilistic logic is that in the former case the product is used to combine certainty degrees while in the latter case the minimum is used.{sup:3}
+      </paragraph>
+      <paragraph>
+       However, we can also view Markov logic, penalty logic and possibilistic logic as equivalent frameworks for defining rankings of possible worlds. Indeed, as was shown in [27], given a Markov logic knowledge base M, we can always construct a possibilistic logic knowledge base K such that M and K define the same ranking of possible worlds, and vice versa. In fact, any ranking of interpretations can be represented by a possibilistic knowledge base.
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      Generalized possibilistic logic
+     </section-title>
+     <paragraph>
+      While PL is useful to encode a single epistemic state, our aim is to develop GPL as a logic for reasoning about the epistemic state of an agent from its revealed beliefs. A GPL knowledge base then encodes the set of epistemic states that are compatible with these revealed beliefs. The aim of this section is to define the syntax and semantics of GPL, and to introduce an axiomatization for this logic. We will use α, β, etc. to denote propositions in standard propositional logic, formed with the connectives, ∧ and ¬. As usual, we will also use the abbreviations {a mathematical formula}α∨β=¬(¬α∧¬β), {a mathematical formula}α→β=¬(α∧¬β) and {a mathematical formula}α≡β=(α→β)∧(β→α). Let {a mathematical formula}L be the language of all propositional formulas over a finite set of atomic propositions At. Unless stated otherwise, we restrict the set of certainty degrees to the finite subset {a mathematical formula}Λk={0,1k,2k,...,1} of the unit interval, with {a mathematical formula}k∈N∖{0} and let {a mathematical formula}Λk+=Λk∖{0}.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Syntax
+      </section-title>
+      <paragraph>
+       We define the language {a mathematical formula}LGPLk of generalized possibilistic logic with {a mathematical formula}k+1 certainty levels as follows:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        If {a mathematical formula}α∈L and {a mathematical formula}λ∈Λk+, then {a mathematical formula}Nλ(α)∈LGPLk.
+       </list-item>
+       <list-item label="•">
+        If {a mathematical formula}Φ∈LGPLk and {a mathematical formula}Ψ∈LkGPL, then ¬Φ and {a mathematical formula}Φ∧Ψ are also in {a mathematical formula}LGPLk.
+       </list-item>
+      </list>
+      <paragraph>
+       The corresponding logic will be referred to as GPLk. When k is clear from the context we will also refer to this logic as GPL, and to the corresponding language as {a mathematical formula}LGPL. Note that GPL is a graded version of the logic called MEL (Meta-Epistemic, or yet Minimal Epistemic, Logic), which was introduced in [28]. The MEL language is a special case of GPL where {a mathematical formula}k=1. Whereas MEL uses a standard modal logic syntax ({a mathematical formula}□=N1), we use a modality which refers to the necessity measure N to emphasize the link with possibility theory. Furthermore note that we view {a mathematical formula}LGPLk as a language with k different modalities {a mathematical formula}N1k,...,N1, rather than a language with a single modality and constants denoting certainty degrees.
+      </paragraph>
+      <paragraph>
+       In the following, we will also use the following abbreviation:{a mathematical formula} where we write {a mathematical formula}ν(λ) as an abbreviation for {a mathematical formula}1−λ+1k. Semantically the modality {a mathematical formula}Πλ will correspond to a lower bound on a possibility measure, namely (7) is the counterpart of the duality between a possibility and a necessity measure on a finite scale, where we have to shift from one level for moving from a strict inequality to an inequality in the broad sense.
+      </paragraph>
+      <paragraph>
+       Let us define a meta-atom as an expression of the form {a mathematical formula}Nλ(α), and a meta-literal as an expression of the form {a mathematical formula}Nλ(α) or {a mathematical formula}¬Nλ(α). A meta-clause is an expression of the form {a mathematical formula}Φ1∨...∨Φn with each {a mathematical formula}Φi a meta-literal. A meta-term is an expression of the form {a mathematical formula}Φ1∧...∧Φn with each {a mathematical formula}Φi a meta-literal.
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Semantics
+      </section-title>
+      <paragraph>
+       The semantics of GPL are defined in terms of normalized possibility distributions over propositional interpretations, encoding epistemic states, where possibility degrees are, by duality, of the form {a mathematical formula}1−λ, {a mathematical formula}∀λ∈Λk.{sup:4} Let {a mathematical formula}Pk be the set of all such possibility distributions. An e-model of a GPL formula is any possibility distribution π from {a mathematical formula}Pk, namely:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        π is an e-model of {a mathematical formula}Nλ(α) iff {a mathematical formula}N(α)≥λ;
+       </list-item>
+       <list-item label="•">
+        π is an e-model of {a mathematical formula}Φ1∧Φ2 iff π is an e-model of {a mathematical formula}Φ1 and of {a mathematical formula}Φ2;
+       </list-item>
+       <list-item label="•">
+        π is an e-model of {a mathematical formula}¬Φ1 iff π is not an e-model of {a mathematical formula}Φ1;
+       </list-item>
+      </list>
+      <paragraph>
+       where N is the necessity measure induced by π. As usual, π is called an e-model of a set of GPL formulas K, written {a mathematical formula}π⊨GPLkK, if it is an e-model of each formula in K. It is called a minimally specific e-model of K if there is no e-model {a mathematical formula}π′≠π of K such that {a mathematical formula}π′(ω)≥π(ω) for each possible world ω. We write {a mathematical formula}K⊨GPLkϕ, for K a set of GPL formulas and ϕ a GPL formula, if every e-model of K is also an e-model of ϕ. When k is clear from the context, we will sometimes write {a mathematical formula}⊨GPLk as {a mathematical formula}⊨GPL; furthermore, if there is no cause for confusion, we will also write {a mathematical formula}⊨GPLk as ⊨.
+      </paragraph>
+      <paragraph>
+       Intuitively, {a mathematical formula}N1(α) means that it is completely certain that α is true, whereas {a mathematical formula}Nλ(α) with {a mathematical formula}λ&lt;1 means that there is evidence which suggests that α is true, and none that suggests that it is false. Note that we can distinguish between complete and partial certainty only if {a mathematical formula}k≥2. Formally, an agent asserting {a mathematical formula}Nλ(α) has an epistemic state π such that {a mathematical formula}N(α)≥λ&gt;0. Hence {a mathematical formula}¬Nλ(α) stands for {a mathematical formula}N(α)&lt;λ, which means {a mathematical formula}Π(¬α)≥1−λ+1k. The abbreviation introduced in (7) thus corresponds to a syntactic counterpart of the duality between necessity and possibility measures. Note how the use of a finite scale makes it possible to express strict inequalities, even though we only use inequalities in the wide sense in the interpretation of graded modalities. Intuitively {a mathematical formula}Π1(α) means that α is fully compatible with our available beliefs (i.e., nothing prevents α from being true), while {a mathematical formula}Πλ(α) with {a mathematical formula}λ&lt;1 means that α cannot be fully excluded ({a mathematical formula}Π(α)≥λ).
+      </paragraph>
+      <paragraph>
+       This formalism is similar to an autoepistemic logic [29], [6]. However the latter aims to capture how an agent reasons about its own beliefs. One crucial difference, which has been pointed out in [30], is that when reasoning about one's own beliefs, it should not be possible to state {a mathematical formula}N1(α)∨N1(β) without either stating {a mathematical formula}N1(α) or {a mathematical formula}N1(β). Indeed, if we accept that an agent is aware of its epistemic state, the agent can tell, for each propositional formula, whether or not it is believed. Accordingly, in standard possibilistic logic, we cannot encode {a mathematical formula}N1(α)∨N1(β). We can just encode {a mathematical formula}N1(α) or {a mathematical formula}N1(β), or their conjunction. However, we will be able to overcome this limitation in GPL. More generally, in a graded setting, if the agent is aware of its epistemic state, it can tell which of two propositional formulas it considers to be most certain. This is again in accordance with possibilistic logic, whereas in GPL we will be able to encode the case where we are ignorant about which of two formulas is most certain for an external agent. This suggests that while standard possibilistic logic offers a natural setting for reasoning with one's own beliefs, GPL naturally lends itself to reasoning about another agent's beliefs. For this reason, we could say that GPL is an “alter-epistemic” logic.
+      </paragraph>
+      <paragraph>
+       As to the possible kinds of conclusions that can be inferred from a GPL base K regarding a propositional formula α, if {a mathematical formula}k=2, one can distinguish between the following five cases:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}K⊨N1(α) means that we know that the agent knows that α is true.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}K⊨N1(¬α) means that we know that the agent knows that α is false.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}K⊨N1(α)∨N1(¬α), {a mathematical formula}K⊭N1(α) and {a mathematical formula}K⊭N1(¬α) means that we know that the agent knows whether α is true or false, but we do not know which it is.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}K⊨Π1(α)∧Π1(¬α) means that we know that the agent is ignorant about whether α is true or false.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}K⊭N1(α)∨N1(¬α) and {a mathematical formula}K⊭Π1(α)∧Π1(¬α) means that we are ignorant about whether the agent is ignorant about α.
+       </list-item>
+      </list>
+      <paragraph>
+       This is in contrast with the only three situations that can be distinguished in classical logic (and in PL), i.e., we know that α is true, we know that α is false, or we do not know whether α is true or false. When {a mathematical formula}k&gt;2, we can consider graded counterparts of the five aforementioned cases. Moreover, a GPL base can then also express comparative uncertainty. For example:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}K⊨⋁i=1kNik(α)∧¬Nik(β): we know that the agent is more certain that α holds than that β holds, noticing that it is equivalent to {a mathematical formula}∃i,N(α)≥ik&gt;N(β).
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}K⊨⋁i=1kΠik(α)∧¬Πik(β): we know that the agent would be less surprised to learn that α is true than to learn that β is true, noticing that it is equivalent to {a mathematical formula}∃i.Π(α)≥ik&gt;Π(β).
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}K⊨⋁i=1k(Nik(α)∨Nik(¬α))∧¬Nik(β)∧¬Nik(¬β): we know that the agent is more certain about the truth or the falsity of α than about β, but we may not know with which certainty degree the agent knows the truth value of α, nor to what extent this certainty degree is greater than the certainty degree about the truth or the falsity of β.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}K⊨⋁i=1k(Nik(α)∧¬Nik(β))∨(Nik(β)∧¬Nik(α)): we know that the agent considers one of α, β more certain than the other, but we may not know which.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}K⊨⋀i=1k(Nik(α)→Nik(β)) expresses that the agent is at least as certain about β as about α.
+       </list-item>
+      </list>
+      <paragraph label="Example 1">
+       The six nations championship is a rugby competition consisting of 5 rounds. In each round, every team plays against one of the other 5 teams, so that over 5 rounds all teams have played once against each other. Let us write {a mathematical formula}playsi(x,y) to denote that x and y have played against each other in round i, and {a mathematical formula}woni(x) to denote that team x has won its game in round i. Let {a mathematical formula}T={eng,fra,ire,ita,sco,wal}. To express that an agent knows the rules of the championship, we can consider formulas such as, among others:{a mathematical formula} where {a mathematical formula}x∈T. A formula such as {a mathematical formula}N34(won1(wal)) means that the agent strongly believes, but is not fully certain, that Wales (wal) has won its first round game, while {a mathematical formula}Π34(won1(wal)) means that the agent does not exclude that Wales has won its first round game, without evidence as to the contrary. The following formula expresses that the agent considers it more plausible that Wales has won its first game than that England (eng) has won its first game{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Recall that the certainty degrees in GPL are typically only assumed to have an ordinal meaning. Saying that the necessity of a formula is {a mathematical formula}34 then does not have any intrinsic meaning, other than the fact that this formula is considered e.g., more certain than a formula with necessity {a mathematical formula}12 and less certain than a formula with necessity {a mathematical formula}78. The above example illustrates two alternative ways in which applications can deal with such ordinal certainty degrees. One idea is to use a small number of categories that are meaningful to a user, such as e.g., ‘completely certain’, ‘very certain’, ‘quite certain’, ‘somewhat certain’, and map these categories to the available elements from {a mathematical formula}Λk (e.g., ‘very certain’ could correspond to a necessity of {a mathematical formula}34). The second idea would be to avoid assigning certainty degrees, and only express certainty in a comparative way, as is illustrated in (9). This second approach will be discussed in more detail in Section 5.
+      </paragraph>
+     </section>
+     <section label="3.3">
+      <section-title>
+       Axiomatization
+      </section-title>
+      <paragraph>
+       We consider the following axiomatization, which closely parallels the one of MEL [28]:
+      </paragraph>
+      <list>
+       <list-item>
+        The axioms of classical logic for meta-formulas.
+       </list-item>
+       <list-item>
+        {a mathematical formula}Nλ(α→β)→(Nλ(α)→Nλ(β)).
+       </list-item>
+       <list-item>
+        {a mathematical formula}N1(α) whenever {a mathematical formula}α∈L is a classical tautology.
+       </list-item>
+       <list-item>
+        {a mathematical formula}Nλ(α)→Π1(α).
+       </list-item>
+       <list-item>
+        {a mathematical formula}Nλ1(α)→Nλ2(α), if {a mathematical formula}λ1≥λ2.
+       </list-item>
+      </list>
+      <paragraph>
+       If Φ can be derived from a set of GPL formulas K using the axioms (PL), (K), (N), (D), (W) and modus ponens, we write {a mathematical formula}K⊢GPLΦ; if there is no cause for confusion we also write {a mathematical formula}K⊢Φ. Note in particular that when λ is fixed we get a fragment of the modal logic KD. In particular, the axioms entail that {a mathematical formula}Nλ(α∧β) is equivalent to {a mathematical formula}Nλ(α)∧Nλ(β). It is easy to see that if α and β are logically equivalent formulas, then {a mathematical formula}Nλ(α) and {a mathematical formula}Nλ(β) are also equivalent. Indeed, in that case, {a mathematical formula}(α→β)∧(β→α) holds, and by applying (N), (W), (K), (D) we get both {a mathematical formula}Nλ(α)→Nλ(β) and {a mathematical formula}Nλ(β)→Nλ(α). Also note that from (N) and (W) we can derive a graded version of the necessitation rule, i.e., if ⊢α then {a mathematical formula}⊢GPLNλ(α) for any {a mathematical formula}λ∈Λk. Finally note that in the case where {a mathematical formula}k=1, GPL coincides with the logic MEL. In this latter case, we have {a mathematical formula}Π1(α)=¬N1(¬α) whereas in general we only have {a mathematical formula}Π1(α)=¬N1k(¬α). As we will see in Section 6, the ability to differentiate between full possibility for α and the lack of full certainty for ¬α is crucial when using GPL to provide a semantics for negation as failure.
+      </paragraph>
+      <paragraph label="Proposition 1">
+       Soundness and completenessLet K be a set of GPL formulas and Φ a GPL formula. It holds that{a mathematical formula}K⊨GPLΦiff{a mathematical formula}K⊢GPLΦ.
+      </paragraph>
+      <paragraph label="Proof">
+       The proof is presented in Appendix A.  □
+      </paragraph>
+      <paragraph>
+       The main idea behind the proof is that we can see formulas in GPL as propositional formulas which are built from the set of atomic formulas of {a mathematical formula}LGPLk. Given a knowledge base K in GPL, we construct a propositional base {a mathematical formula}K⁎ made of formulas of K plus axioms of GPL, viewed as propositional formulas as well. We then show that there exists a bijection between the set of propositional models of {a mathematical formula}K⁎ (seen as a propositional logic knowledge base) and the set of e-models of K (seen as a GPL knowledge base). A very similar strategy has been used, among others, in [31], [32] and [33], [34], in the context of multi-valued modal logics for reasoning about necessity (see Section 3.4).
+      </paragraph>
+      <paragraph>
+       Proposition 1 remains valid even if the set At of atomic propositions is countably infinite. On the other hand, the completeness result no longer holds if infinitely many certainty degrees are allowed in the language, as e.g. {a mathematical formula}{Nλ(a)|λ&lt;12}⊨GPLN12(a), for {a mathematical formula}a∈At but {a mathematical formula}{Nλ(a)|λ&lt;12}⊬GPLN12(a). This is not a real restriction, since knowledge bases only have finitely many formulas in practice, which means that only finitely many certainty levels actually need to be used, and since the semantics of GPL is based on the relative ordering of the certainty degrees, we can then always map these certainty degrees to {a mathematical formula}Λk for some k. In Section 5, however, we will discuss an extension of GPL in which we can express comparative uncertainty statements, where it will be desirable to allow an unbounded number of certainty degrees at the semantic level.
+      </paragraph>
+      <paragraph>
+       Using Proposition 1, and some well-known properties on necessity and possibility measures, it follows that the following formulas are theorems in GPL:{a mathematical formula} Next is a counterpart to the modus ponens rule in PL (4):{a mathematical formula} To show that this is a theorem in GPL, thanks to Proposition 1, it suffices to note that every necessity measure N satisfying {a mathematical formula}N(α)≥λ1 and {a mathematical formula}N(¬α∨β)≥λ2 also satisfies {a mathematical formula}N(β)≥min⁡(λ1,λ2), which is equivalent to the usual modus ponens in PL, a special case of (4). To see how (10) can be derived from the axioms of GPL, note that the deduction theorem is valid in GPL, and it thus suffices to show that {a mathematical formula}Nmin⁡(λ1,λ2)(β) can be derived from {a mathematical formula}{Nλ1(α),Nλ2(α→β)}. Starting from this latter set of premises, we apply (W) to obtain {a mathematical formula}Nmin⁡(λ1,λ2)(α) and {a mathematical formula}Nmin⁡(λ1,λ2)(α→β). Applying modus ponens on axiom (K) and {a mathematical formula}Nmin⁡(λ1,λ2)(α→β), we obtain {a mathematical formula}Nmin⁡(λ1,λ2)(α)→Nmin⁡(λ1,λ2)(β). Using modus ponens on the latter formula and {a mathematical formula}Nmin⁡(λ1,λ2)(α) we obtain {a mathematical formula}Nmin⁡(λ1,λ2)(β).
+      </paragraph>
+      <paragraph>
+       The following theorem is the counterpart of a hybrid modus ponens rule introduced in [35]:{a mathematical formula} Again a direct proof can be given, using the deduction theorem, by proving {a mathematical formula}Nν(λ1)(¬α) from {a mathematical formula}Nλ2(α→β) and {a mathematical formula}Nν(λ1)(¬β) in the same way (just rewriting {a mathematical formula}α→β as {a mathematical formula}¬β→¬α). However, we need to assume {a mathematical formula}ν(λ1)≤λ2 in order to weaken {a mathematical formula}Nλ2(α→β) into {a mathematical formula}Nν(λ1)(α→β). And {a mathematical formula}ν(λ1)≤λ2 is equivalent to {a mathematical formula}1−λ1+1k≤λ2, i.e., {a mathematical formula}λ2&gt;1−λ1.{sup:5}
+      </paragraph>
+      <paragraph>
+       Resolution rules in possibilistic logic [35], extending (10) and (11), can be proved likewise in GPL or, alternatively, by using the decomposability of {a mathematical formula}Nλ(⋅) w.r.t. conjunction.
+      </paragraph>
+     </section>
+     <section label="3.4">
+      <section-title>
+       Related work
+      </section-title>
+      <paragraph>
+       Although possibility theory has been the basis of an original theory of approximate reasoning [36], it was not introduced as a logical setting for epistemic reasoning, strictly speaking. Nonetheless, in the setting of his representation language PRUF [37], Zadeh discusses the representation of statements of the form “X is A” (meaning that the possible values of the single-valued variable X are fuzzily restricted by fuzzy set A), linguistically qualified in terms of truth, probability, or possibility. Interestingly, the representation of possibility-qualified statements led to possibility distributions over possibility distributions, but certainty-qualified statements, first considered in [38] (see also [11]), and used as the basic building blocks of possibilistic logic, were not considered at all, just because necessity measures as the dual of possibility measures were playing almost no role in Zadeh's view (with the exception of half a page in [39]). Possibility-qualified statements were exploited in [35] in relation with a weighted resolution principle extending the inference rule (11), whose formal analogy with an inference rule existing in modal logic was stressed.
+      </paragraph>
+      <paragraph>
+       The similarity between possibility theory (including necessity measures) and modal logic should not come as a surprise since the analogy between the duality property {a mathematical formula}N(A)=1−Π(Ω∖A) in possibility theory and the definition of ◇p as {a mathematical formula}¬□¬p is striking, and has been known for a long time [40]. Likewise, the axiom {a mathematical formula}□p→◇p (axiom D in modal logic systems) may encode the inequality {a mathematical formula}N(A)≤Π(A), and the characteristic axiom of necessity measures {a mathematical formula}N(A∩B)=min⁡(N(A),N(B)) corresponds to the theorem {a mathematical formula}(□p∧□q)↔□(p∧q) which is valid in modal system K. Nevertheless, no formally established connection between modal logic and possibility theory existed until the late 1980s.
+      </paragraph>
+      <paragraph>
+       This striking parallel between possibility theory and modal logic eventually led to proposals for a modal analysis and encoding of possibility theory. For instance, L. Fariñas and A. Herzig [41] proposed such an encoding by heavily relying on Lewis' conditional logics of comparative possibility [42], as indeed the only numerical counterparts of Lewis possibility relations are possibility measures [43]. Another attempt was later made by Boutilier [44], in the scope of non-monotonic inference based on a plausibility relation over possible worlds. The idea was to use this ordinal counterpart of a possibility distribution as an accessibility relation and to construct modalities from it. Another, more semantically-oriented trend was to build specific accessibility relations agreeing with possibility theory [45], [46].
+      </paragraph>
+      <paragraph>
+       A major difference with GPL is that the semantics of the above logics relies on accessibility relations. GPL can be embedded into a multimodal logic, but it is actually just a two-level propositional logic since its semantics is based on graded epistemic states, viewed as higher-order interpretations, not relying on accessibility relations. This point was discussed in [47]: relational semantics of epistemic logics may make sense in the scope of introspective reasoning, but appears more difficult to justify for modelling partial knowledge about the epistemic state of an external agent. In GPL, any agent is supposed to be aware of its own epistemic state, so it can model its own beliefs using a complete GPL base (see Section 4 on this point). Also, formally, GPL is a complexification of propositional logic, adding weighted modalities in front of propositional formulas only, and, at the semantic level, moving from usual interpretations to sets thereof, while simple epistemic logics like S5 or KD45 are constructed as a simplification of a complex logic allowing nested modalities naturally interpreted via accessibility relations, and need introspection axioms to simplify complex formulas into equivalent ones of depth at most 1. So beyond the formal analogies between modal logic and GPL, the motivations and the construction method are radically different.
+      </paragraph>
+      <paragraph>
+       A proposal closer to GPL is the one of Hájek [31], where possibility theory is cast into a many-valued logic setting, using many-valued modal formulas. The main difference with GPL, from a formal point of view, is that necessity is expressed as a single multi-valued modality, rather than a set of classical modalities in GPL. This implies that necessity statements need to be combined using a fuzzy logic, rather than classical propositional logic in GPL. A number of related logics are studied in [33], [34], which are using variants of Łukasiewicz logic both for the formulas inside the modalities and for combining the multi-valued modalities. In case these variants of Łukasiewicz are finite-valued (or e.g., include the Baaz Δ connective [48]), it is easy to see that GPL can be framed as a fragment of such a multi-valued modal logic. A general completeness result for such two-tiered (multi-valued) model logics has been introduced in [32]. Liau and Lin [49] have also studied a modal logic which is very similar to GPL, albeit using {a mathematical formula}[0,1] as a possibility scale (which forces them to introduce additional multimodal formulas to deal with strict inequalities). Their tableau-based proof methods could be of interest to develop inference techniques for GPL.
+      </paragraph>
+      <paragraph>
+       While from a formal point of view, GPL is close to some of these aforementioned logics, our focus in this paper is rather different. Specifically, our main aim is to study what is gained, in terms of the kinds of epistemic reasoning scenarios that can be modelled, from the increase in syntactic freedom compared to standard possibilistic logic. Among others, we will analyse several ways in which partial ignorance can be modelled, study the relation between GPL and logics of comparative uncertainty, and show how different forms of non-monotonic reasoning can naturally be modelled using GPL. To the best of our knowledge, these links with possibilistic logic (or the related multi-valued modal logics) have not been studied in previous work.
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Reasoning about ignorance in GPL
+     </section-title>
+     <paragraph>
+      Possibility theory offers a number of tools for modelling limitations on what is known. These tools can be used in GPL to explicitly model what we know that an external agent does not know. In particular, Section 4.1 proposes a method based on the guaranteed possibility measure, which is subsequently refined in Section 4.2. In Section 4.3, we then analyse how the principle of minimal specificity can be applied to reason about what an external agent does not know.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Ignorance as guaranteed possibility
+      </section-title>
+      <paragraph>
+       Using the modalities N and Π we can model constraints of the form {a mathematical formula}N(α)≥λ, {a mathematical formula}N(α)≤λ, {a mathematical formula}Π(α)≥λ and {a mathematical formula}Π(α)≤λ. So far, however, we have not considered the guaranteed possibility measure Δ and potential necessity measure ∇. Counterparts of these measures can be introduced as abbreviations in the language, by noting that {a mathematical formula}Δ(α)=minω∈〚α〛⁡Π({ω}). For a propositional interpretation ω let us write {a mathematical formula}conjω for the conjunction of all literals made true by ω, i.e., {a mathematical formula}conjω=⋀ω⊨aa∧⋀ω⊨¬a¬a. Then we define:{a mathematical formula} In fact, since {a mathematical formula}Π(α)=maxω∈〚α〛⁡Δ({ω}), another strategy we could have taken is to axiomatize a logic based on guaranteed possibility, and to define the modality N as an abbreviation. In particular, such a logic could be axiomatized by using the following graded version of the data logic of Dubois, Hájek and Prade [50]:
+      </paragraph>
+      <list>
+       <list-item>
+        The axioms of classical logic for meta-formulas.
+       </list-item>
+       <list-item>
+        {a mathematical formula}Δλ(α∧¬β)→(Δλ(¬α)→Δλ(¬β)).
+       </list-item>
+       <list-item>
+        {a mathematical formula}Δ1(α) whenever {a mathematical formula}¬α∈L is a tautology.
+       </list-item>
+       <list-item>
+        {a mathematical formula}Δλ(α)→∇1(α).
+       </list-item>
+       <list-item>
+        {a mathematical formula}Δλ1(α)→Δλ2(α), if {a mathematical formula}λ1≥λ2;
+       </list-item>
+      </list>
+      <paragraph>
+       and the modus ponens rule. We could then also introduce the following abbreviations:{a mathematical formula}{a mathematical formula} The resulting logic is very similar to GPL. However, for (D{sup:Δ}) to be sound, we need to restrict e-models to possibility distributions π for which {a mathematical formula}π(ω)=0 for at least one propositional interpretation ω. Similarly, for these axioms to be complete, we need to drop the requirement that {a mathematical formula}π(ω)=1 for at least one interpretation. In fact, the soundness and completeness result from Proposition 1 can straightforwardly be adapted to a logic centered on the Δ modality, by taking advantage of the following duality:{a mathematical formula} where the possibility distribution {a mathematical formula}π‾ is defined as {a mathematical formula}π‾(ω)=1−π(ω) for all {a mathematical formula}ω∈Ω. This duality can be readily verified using the definitions of the N and Δ measures in possibility theory (see Section 2.1).
+      </paragraph>
+      <paragraph>
+       However it is straightforward to show that (K{sup:Δ}), (Δ) and (W{sup:Δ}) are valid in GPL. We can furthermore show that the following formulas are valid in GPL:{a mathematical formula} and{a mathematical formula}{a mathematical formula} Note that (16) is the counterpart of a basic inference rule of the logic of accumulated data [50].
+      </paragraph>
+      <paragraph label="Proposition 2">
+       For any possibility distribution π over Ω, we can easily define a GPL knowledge base which has π as its only e-model, using the modality Δ. In particular, let {a mathematical formula}α1,...,αk be propositional formulas such that {a mathematical formula}〚αi〛={ω|π(ω)≥ik}. Then we define the knowledge base {a mathematical formula}Φπ as:{a mathematical formula} A formula of the form {a mathematical formula}Φπ defines a GPL base which is complete in the following sense. {a mathematical formula}∀α∈L,{a mathematical formula}λ∈Λ,{a mathematical formula}Φπ⊢Nλ(α)or{a mathematical formula}Φπ⊢¬Nλ(α).
+      </paragraph>
+      <paragraph label="Proof">
+       In Equation (18), the degree of possibility of each {a mathematical formula}ω∈〚αi〛 is defined by inequalities from above and from below. Indeed, {a mathematical formula}Δik(αi) means that {a mathematical formula}π(ω)≥ik for all {a mathematical formula}ω∈〚αi〛, whereas, {a mathematical formula}Nν(ik)(αi) means {a mathematical formula}π(ω)≤i−1k for all {a mathematical formula}ω∉〚αi〛. It follows that {a mathematical formula}π(ω)=0 if {a mathematical formula}ω∉〚α1〛, {a mathematical formula}π(ω)=ik if {a mathematical formula}ω∈〚αi〛∖〚αi+1〛 (for {a mathematical formula}i&lt;k) and {a mathematical formula}π(ω)=1 if {a mathematical formula}ω∈〚αk〛. In other words, π is indeed the only e-model of {a mathematical formula}Φπ. Since we clearly have {a mathematical formula}N(α)≥λ or {a mathematical formula}¬(N(α)≥λ) for any necessity measure, it follows that {a mathematical formula}Φπ⊢Nλ(α) or {a mathematical formula}Φπ⊢¬Nλ(α).  □
+      </paragraph>
+      <paragraph>
+       If we view the epistemic state of an agent as a possibility distribution, this means that every epistemic state can be modelled using a GPL knowledge base. Conceptually, the construction of {a mathematical formula}Φπ relates to the notion of “only knowing” from Levesque [6]. For example, assume that we want to model that all the agent knows is that β is true with certainty {a mathematical formula}jk. Then we have {a mathematical formula}π(ω)=1 for {a mathematical formula}ω∈〚β〛 and {a mathematical formula}π(ω)=k−jk for {a mathematical formula}ω∉〚β〛. This means that in the notation of (18), {a mathematical formula}αk−j+1=...αk=β and we obtain {a mathematical formula}Φπ=Δ1(β)∧Nν(k−j+1k)(β)∧Δk−jk(⊤). In the case when {a mathematical formula}k=1, Equation (18) reads {a mathematical formula}N1(α)∧Δ1(α) and isolates a single crisp e-model corresponding to the set of classical models of α as already pointed out in [28]. It expresses that we precisely know the epistemic state of the external agent, namely that (s)he only knows that α is true.
+      </paragraph>
+      <paragraph>
+       In practice, we will often have incomplete knowledge about the epistemic state of this agent. Suppose we only know that the epistemic state is among those in {a mathematical formula}S⊆Pk. This can be encoded as a GPL knowledge base {a mathematical formula}ΦS=⋁π∈SΦπ with {a mathematical formula}Φπ defined as above. As a consequence, any GPL knowledge base is semantically equivalent to a formula of the form {a mathematical formula}ΦS, and any subset of epistemic states can be captured by a GPL knowledge base.
+      </paragraph>
+      <paragraph>
+       Since the modality Δ was introduced as an abbreviation, allowing this modality has no impact on the expressiveness of the language or on the completeness of the axiomatization. However, the formula {a mathematical formula}Δλ(α) abbreviates a GPL formula which may be of exponential size, and allowing the modality Δ in the language is thus essential if we want to capture our knowledge about an agent's epistemic state in a compact way. As we will see in Section 7, this is reflected in an increase in computational complexity.
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Contextual ignorance as restricted guaranteed possibility
+      </section-title>
+      <paragraph label="Example 2">
+       The modality Δ allows us to express limitations on what an agent knows. However, it does not readily allow us to explicitly encode the ignorance of an agent on a particular topic. Consider again the scenario from Example 1 and suppose we want to encode that “all the agent knows about the games in round 3 is that Wales has won its game”. We cannot represent this as {a mathematical formula}N1(won3(wal))∧Δ1(won3(wal)), as that would entail e.g., {a mathematical formula}¬N1(won2(wal)), which is not warranted.
+      </paragraph>
+      <paragraph>
+       To encode limitations on the knowledge of the agent on a particular topic, understood as a set of propositional variables {a mathematical formula}X⊆At, we propose the following variant of the Δ modality:{a mathematical formula} where {a mathematical formula}conjωX is the restriction of {a mathematical formula}conjω to those literals about variables in {a mathematical formula}X, i.e., {a mathematical formula}conjωX=⋀{x|x∈X,ω⊨x}∧⋀{¬x|x∈X,ω⊨¬x}. Note that {a mathematical formula}⊨GPLΔλ(α)≡ΔλAt(α). For example, in the scenario from Example 2, instead of asserting {a mathematical formula}Δ1(won3(wal)), we can assert {a mathematical formula}Δ1X(won3(wal)), with {a mathematical formula}X={plays3(x,y)|x,y∈T}∪{won3(x)|x∈T} the set of all atomic formulas about round 3 of the championship. As we will see in Section 7, allowing this refinement of the Δ modality leads to a further increase in computational complexity.
+      </paragraph>
+     </section>
+     <section label="4.3">
+      <section-title>
+       Ignorance as minimal specificity
+      </section-title>
+      <paragraph>
+       The less specific than relation ≼ defines a partial order on the set of e-models of a GPL knowledge base K in a natural way, which allows us to introduce two non-monotonic entailment relations:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        We say that Φ is a brave consequence of K, written {a mathematical formula}K⊨bΦ iff Φ is satisfied by a minimally specific e-model of K.
+       </list-item>
+       <list-item label="•">
+        We say that Φ is a cautious consequence of K, written {a mathematical formula}K⊨cΦ iff Φ is satisfied by all minimally specific e-models of K.
+       </list-item>
+      </list>
+      <paragraph label="Example 3">
+       In standard possibilistic logic, every knowledge base K has a least specific e-model {a mathematical formula}πK. As a result, in standard possibilistic logic, the entailment relations ⊨, {a mathematical formula}⊨b and {a mathematical formula}⊨c coincide. In GPL, this is no longer the case. Let {a mathematical formula}u,v,w∈At. The formula {a mathematical formula}N1(u)∨N1(v) has two minimally specific e-models {a mathematical formula}πu and {a mathematical formula}πv defined as:{a mathematical formula} This already shows that ⊨ and {a mathematical formula}⊨b do not coincide, as e.g., {a mathematical formula}N1(u)∨N1(v)⊨bN1(u) while clearly {a mathematical formula}N1(u)∨N1(v)⊭N1(u). To see why ⊨ and {a mathematical formula}⊨c do not coincide, note that since u, v and w are logically independent, {a mathematical formula}N1(u)∨N1(v)⊨cΠ1(w)∧Π1(¬w) while {a mathematical formula}N1(u)∨N1(v)⊭Π1(w)∧Π1(¬w).
+      </paragraph>
+      <paragraph label="Example 4">
+       Reasoning about what is true in all minimally specific e-models, as opposed to all e-models, is similar to making a kind of meta-closed-world assumption. Intuitively, it amounts to assuming that the agent is ignorant about a formula α unless it has been asserted that the agent knows whether α is true or false. For example, in the scenario from Example 2, we can simply assert {a mathematical formula}N1(won3(wal)), as the knowledge that the agent is ignorant about anything else related to round 3 is implicit in the fact that no other knowledge has been asserted. However, even under this assumption, there may be situations in which we are ignorant about whether the agent knows whether α is true, as illustrated in the next example. Consider again the formula {a mathematical formula}N1(u)∨N1(v) and its minimally specific e-models {a mathematical formula}πu and {a mathematical formula}πv from Example 3. It holds that {a mathematical formula}N1(u)∨N1(v)⊭cN1(u)∨N1(¬u) (since {a mathematical formula}πv⊭N1(u) and {a mathematical formula}πv⊭N1(¬u)), i.e., we cannot conclude that the agent knows about u. However, we also have {a mathematical formula}N1(u)∨N1(v)⊭cΠ1(u)∧Π1(¬u) (since {a mathematical formula}πu⊨N1(u)), i.e., we cannot conclude that the agent is ignorant about u either.
+      </paragraph>
+      <paragraph>
+       In [30], it is argued that the epistemic state of an agent can be modelled as a propositional formula α, although through introspection the agent knows more than what is encoded by α directly. For example, if {a mathematical formula}α⊭β, the agent knows that it does not know β in this setting. In GPL, we can characterize what the agent knows (with full certainty) as the consequences of {a mathematical formula}N1(α) under the inference relation {a mathematical formula}⊨c, which coincides with {a mathematical formula}⊨b in this case, since {a mathematical formula}N1(α) has a unique least specific e-model. In particular, the argument of [30], translated to the terminology of this paper, is that theories which model the epistemic state of an agent should have such a unique least specific e-model. Formulas for which this is not the case (e.g., {a mathematical formula}N1(a)∨N1(b)) are called dishonest by [30]. In our setting, however, we should not exclude GPL formulas which have multiple minimally specific e-models, if our aim is to reason about the revealed beliefs of another agent. Indeed, such situations can easily arise if we have incomplete information about the epistemic state of an external agent. For example, we may know that this agent has received and read the notification email on a submitted conference paper, while not knowing whether the paper has been accepted or rejected. In that case we know {a mathematical formula}N1(accept)∨N1(¬accept), i.e., all we know is that the external agent knows the result with certainty.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Reasoning about comparative uncertainty
+     </section-title>
+     <paragraph>
+      In this section, we analyze in more detail how GPL can be used for reasoning about comparative uncertainty. First, in Section 5.1, we introduce the logic GPL≻, which extends GPL with formulas of the form {a mathematical formula}α≻β, expressing that α is strictly more certain than β. We will also consider a fragment GPL{a mathematical formula}≻core of this logic, in which only (propositional combinations of) such comparative certainty assertions are allowed. In Section 5.2 we then propose an axiomatization of GPL{a mathematical formula}≻core, by extending the axiomatization of a logic for reasoning about partially ordered formulas [7]. This axiomatization is subsequently extended to an axiomatization of GPL≻ in Section 5.3. Finally, in Section 5.4 we show how the ability of GPL to capture comparative uncertainty can be used to reason about propositional combinations of default rules in the sense of System P [5], and we introduce a variant of GPL{a mathematical formula}≻core, called GPLc, which is aimed specifically at reasoning about propositional combinations of default rules.
+     </paragraph>
+     <paragraph>
+      Table 1 presents an overview of the considered logics. Like GPL itself, each of the logics introduced in this section is two-tiered, in the sense that formulas correspond to propositional combinations of meta-atoms, and each meta-atom corresponds to a modal operator applied to one or two propositional formulas. From a syntactic point of view, the only difference between the different logics lies in the considered modal operators. From a semantic point of view, an important difference between GPL and the variants considered in this section is that here we will allow infinitely many possibility degrees.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       A logic for comparative uncertainty
+      </section-title>
+      <paragraph>
+       Rather than expressing absolute degrees of certainty in the logic, one may find it more natural to simply express the fact that a proposition α is at least as (resp. more) certain than another one β. In possibility theory, this can be expressed as {a mathematical formula}N(α)≥N(β) (resp. {a mathematical formula}N(α)&gt;N(β)). The statement {a mathematical formula}N(α)≥N(β) is equivalent to {a mathematical formula}∀λ∈Λk+, {a mathematical formula}N(β)≥λ implies {a mathematical formula}N(α)≥λ. In GPL, as already pointed out in Section 3.2, the latter expression can be syntactically described as{a mathematical formula} The statement {a mathematical formula}N(α)&gt;N(β) is the negation of {a mathematical formula}N(β)≥N(α), hence it can be encoded by{a mathematical formula} as was already illustrated in Example 1.
+      </paragraph>
+      <paragraph>
+       So far, we have assumed that the number of certainty levels k is fixed in advance. If k is not chosen sufficiently large, however, this can lead to some unwanted results. For example, if {a mathematical formula}k=2, the following statement, expressing {a mathematical formula}N(α1)&gt;N(α2)&gt;N(α3)&gt;N(α4) is not satisfiable:{a mathematical formula} In a purely ordinal setting, however, we would not expect a formula asserting {a mathematical formula}N(α1)&gt;N(α2)&gt;N(α3)&gt;N(α4) to be always unsatisfiable. To address this issue, we introduce GPL≻, a logic for reasoning about comparative uncertainty in which an unbounded number of certainty levels can be used at the semantic level. The language {a mathematical formula}L≻ of the logic GPL≻ is defined as follows:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        If {a mathematical formula}α∈L and {a mathematical formula}λ∈Λk+, then {a mathematical formula}Nλ(α) belongs to {a mathematical formula}L≻;
+       </list-item>
+       <list-item label="•">
+        if {a mathematical formula}α,β∈L then {a mathematical formula}α≻β belongs to {a mathematical formula}L≻;
+       </list-item>
+       <list-item label="•">
+        if Φ and Ψ belong to {a mathematical formula}L≻, then ¬Φ and {a mathematical formula}Φ∧Ψ are also in {a mathematical formula}L≻.
+       </list-item>
+      </list>
+      <paragraph>
+       At the semantic level, e-models will be allowed to take arbitrary values from {a mathematical formula}Λ⁎=[0,1]∩Q. As a result, {a mathematical formula}Πλ(α) cannot be defined as an abbreviation in GPL≻. We will use {a mathematical formula}α∼β as an abbreviation for {a mathematical formula}¬(α≻β)∧¬(β≻α) and {a mathematical formula}α⪰β as an abbreviation of {a mathematical formula}¬(β≻α). Note that this reflects the fact that at the semantic level, ⪰ will be a complete preordering with ∼ as its equivalence part. Intuitively, {a mathematical formula}α≻β means that α is strictly more certain than β, {a mathematical formula}α⪰β means that α is at least as certain as β, and {a mathematical formula}α∼β means that α is equally certain as β.
+      </paragraph>
+      <paragraph>
+       Let π be a normalized possibility distribution over Ω such that {a mathematical formula}π(ω)∈Λ⁎ for every {a mathematical formula}ω∈Ω, and let N be the necessity measure induced by π. The notion of e-model for formulas from {a mathematical formula}L≻ is defined as follows:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        π is an e-model of {a mathematical formula}Nλ(α) if {a mathematical formula}N(α)≥λ;
+       </list-item>
+       <list-item label="•">
+        π is an e-model of {a mathematical formula}α≻β iff {a mathematical formula}N(α)&gt;N(β);
+       </list-item>
+       <list-item label="•">
+        π is an e-model of {a mathematical formula}Φ1∧Φ2 iff π is an e-model of {a mathematical formula}Φ1 and of {a mathematical formula}Φ2;
+       </list-item>
+       <list-item label="•">
+        π is an e-model of {a mathematical formula}¬Φ1 iff π is not an e-model of {a mathematical formula}Φ1.
+       </list-item>
+      </list>
+      <paragraph>
+       If π is an e-model of Φ we write {a mathematical formula}π⊨≻Φ, and if every e-model of a set of GPL≻ formulas K is also an e-model of Φ, we write {a mathematical formula}K⊨≻Φ. If there is no cause for confusion, we also write {a mathematical formula}⊨≻ as ⊨.
+      </paragraph>
+      <paragraph>
+       In the following, we will also consider the fragment GPL{a mathematical formula}≻core of GPL≻, which is restricted to the language {a mathematical formula}L≻core, defined as follows:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        if {a mathematical formula}α,β∈L then {a mathematical formula}α≻β belongs to {a mathematical formula}L≻core;
+       </list-item>
+       <list-item label="•">
+        if Φ and Ψ belong to {a mathematical formula}L≻core, then ¬Φ and {a mathematical formula}Φ∧Ψ are also in {a mathematical formula}L≻core.
+       </list-item>
+      </list>
+      <paragraph>
+       In other words, GPL{a mathematical formula}≻core is concerned only with propositional combinations of comparative certainty statements, while in GPL≻ we also allow statements such as {a mathematical formula}N12(α)∨(α≻β).
+      </paragraph>
+     </section>
+     <section label="5.2">
+      Axiomatizing GPL{a mathematical formula}≻core
+      <paragraph>
+       In this section, we introduce an axiomatization for the logic GPL{a mathematical formula}≻core. To this end, we start from the axiomatization of the relative certainty logic that was studied by Touazi et al. [7]. A knowledge base in this latter logic is a conjunction of statements of the form {a mathematical formula}α≻β, i.e., the language they considered is the disjunction- and negation-free fragment of {a mathematical formula}L≻core. In [7] axiomatization for the resulting logic was introduced, inspired by an earlier axiomatization that was proposed in [51]. It contains one axiom:
+      </paragraph>
+      <list>
+       <list-item>
+        {a mathematical formula}α≻⊥ if α is a tautology
+       </list-item>
+      </list>
+      <paragraph>
+       and three inference rules:
+      </paragraph>
+      <list>
+       <list-item>
+        If {a mathematical formula}β≻α∧χ and {a mathematical formula}α≻β∧χ then {a mathematical formula}β∧α≻χ
+       </list-item>
+       <list-item>
+        If {a mathematical formula}α≻β, {a mathematical formula}α⊨α′ and {a mathematical formula}β′⊨β then {a mathematical formula}α′≻β′
+       </list-item>
+       <list-item>
+        If {a mathematical formula}α≻β and {a mathematical formula}β≻α then ⊥
+       </list-item>
+      </list>
+      <paragraph>
+       Note that the reason why (RI1)–(RI3) were formulated as inference rules in [7], rather than axioms, is because propositional combinations of comparative certainty statements were not considered in [7]. (RI1) is the so-called qualitativeness axiom [51] that ensures that if both α and β are more certain than χ then so is {a mathematical formula}α∧β, which is only compatible with necessity measures in the totally ordered case. (RI2) is a natural monotonicity assumption in agreement with logical entailment.
+      </paragraph>
+      <paragraph>
+       The axiom and inference rules are sufficient to ensure that ≻ is a strict partial order. Indeed, (RI3) encodes asymmetry, while the transitivity of ≻ was established in [7], i.e., the following inference rule can be derived from (Ax1) and (RI1)–(RI3):{a mathematical formula} A soundness and completeness result was also established in [7] with respect to a semantics in terms of partial orders between sets of models {a mathematical formula}〚α〛 and {a mathematical formula}〚β〛 verifying obvious semantic counterparts of the axioms. Note in particular that, unlike in GPL{a mathematical formula}≻core, the semantics considered in [7] is not based on necessity measures.
+      </paragraph>
+      <paragraph>
+       Clearly, the axiom (Ax1) and inference rules (RI1)–(RI3) are also sound for GPL{a mathematical formula}≻core. Note, however, that (RI1)–(RI3) can be formulated as axioms in GPL{a mathematical formula}≻core:
+      </paragraph>
+      <list>
+       <list-item>
+        {a mathematical formula}(β≻α∧χ)∧(α≻β∧χ)→(β∧α≻χ)
+       </list-item>
+       <list-item>
+        {a mathematical formula}(α≻β)→(α′≻β′) if {a mathematical formula}α→α′ and {a mathematical formula}β′→β are tautologies
+       </list-item>
+       <list-item>
+        {a mathematical formula}¬((α≻β)∧(β≻α))
+       </list-item>
+      </list>
+      <paragraph>
+       Further axioms are needed to capture the fact that arbitrary propositional combinations of comparative certainty statements are allowed in GPL{a mathematical formula}≻core. Furthermore, to capture the fact that our semantics is based on necessity measures, we will need to impose that ≻ is the complement of a weak order. Recall that {a mathematical formula}α∼β stands for {a mathematical formula}¬(α≻β)∨(β≻α). It is then obvious that the following formulas can be derived from (Ax1)–(Ax4) together with the axioms from propositional logic and modus ponens:
+      </paragraph>
+      <list>
+       <list-item>
+        {a mathematical formula}(α≻β)∨(β≻α)∨(α∼β)
+       </list-item>
+       <list-item>
+        {a mathematical formula}¬((α≻β)∧(α∼β))
+       </list-item>
+       <list-item>
+        {a mathematical formula}(α∼β)→(β∼α)
+       </list-item>
+      </list>
+      <paragraph>
+       To ensure that ∼ is transitive, we augment the relative certainty logic from [7] with the following additional axiom:
+      </paragraph>
+      <list>
+       <list-item>
+        {a mathematical formula}(α≻β)∧(α∼α′)→(α′≻β)
+       </list-item>
+      </list>
+      <paragraph label="Proposition 3">
+       For K a set of GPL{a mathematical formula}≻core formulas and Φ a GPL{a mathematical formula}≻core formula, we write {a mathematical formula}K⊢≻coreΦ to denote that Φ can be derived from K using (Ax1)–(Ax5), modus ponens and the axioms of classical logic. When there is no cause for confusion, we also write {a mathematical formula}⊢≻core as ⊢. We now show some properties of ≻ and ∼ that follow from the proposed axioms and inference rules, and which will be useful for showing the soundness and completeness result. The following theorems hold:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}
+      </paragraph>
+      <paragraph label="Proof">
+       <list>
+        <list-item>
+         From (S1) we know that {a mathematical formula}α∼γ holds unless {a mathematical formula}α≻γ or {a mathematical formula}γ≻α holds. However, from {a mathematical formula}α≻γ and {a mathematical formula}α∼β, we derive {a mathematical formula}β≻γ using (Ax5), which leads to a contradiction with {a mathematical formula}β∼γ when using (S2). Similarly, from {a mathematical formula}γ≻α and {a mathematical formula}β∼γ, we derive {a mathematical formula}β≻α using (S3) and (Ax5), leading to a contradiction with {a mathematical formula}α∼β using (S3) and (S2).
+        </list-item>
+        <list-item>
+         From (S1) and the irreflexivity of ≻ we immediately obtain (22).
+        </list-item>
+        <list-item>
+         Note that from (S1) we know that {a mathematical formula}α′∼β holds unless {a mathematical formula}α′≻β or {a mathematical formula}β≻α′ holds. From {a mathematical formula}α′≻β and {a mathematical formula}⊨α≡α′, we can derive {a mathematical formula}α≻β using (Ax3), which leads to a contradiction with {a mathematical formula}α∼β when using (S2). Similarly, from {a mathematical formula}β≻α′ and {a mathematical formula}⊨α≡α′, we can derive {a mathematical formula}β≻α using (Ax3), which leads to a contradiction with {a mathematical formula}α∼β when using (S3) and (S2).
+        </list-item>
+        <list-item>
+         From (S1) we know that {a mathematical formula}α≻β′ holds unless {a mathematical formula}α∼β′ or {a mathematical formula}β′≻α holds. From {a mathematical formula}α∼β′ and {a mathematical formula}β∼β′, we can derive {a mathematical formula}α∼β using (S3) and (21), which leads to a contradiction with {a mathematical formula}α≻β when using (S2). From {a mathematical formula}β′≻α and {a mathematical formula}β∼β′, we can derive {a mathematical formula}β≻α using (S3) and (Ax5), which leads to a contradiction with {a mathematical formula}α≻β using (Ax4).
+        </list-item>
+        <list-item>
+         Suppose {a mathematical formula}¬(α≻β)∧¬(α≻χ) holds. Then by (S1) we have{a mathematical formula} Now suppose that {a mathematical formula}α≻β∧χ were also the case. From either {a mathematical formula}β≻α or {a mathematical formula}β∼α we can then derive {a mathematical formula}β≻β∧χ, using respectively (20) and (Ax5). Similarly, from either {a mathematical formula}χ≻α or {a mathematical formula}χ∼α we can derive {a mathematical formula}χ≻β∧χ. Using (Ax3) we can derive {a mathematical formula}β≻χ∧β∧χ and {a mathematical formula}χ≻β∧β∧χ, which using (Ax2) gives us {a mathematical formula}β∧χ≻β∧χ. Using (Ax3) we derive a contradiction, and thus we can conclude {a mathematical formula}¬(α≻β∧χ). □
+        </list-item>
+       </list>
+      </paragraph>
+      <paragraph>
+       Note that it follows that ∼ is an equivalence relation. Indeed, the symmetry of ∼ is expressed in (S3), while its transitivity and reflexivity are expressed in (21) and (22) respectively. It follows that the relation ⪰ corresponds to a complete preorder (or weak order) on the language {a mathematical formula}L. In contrast, when using the partial order semantics of [7], the relation ∼ is not transitive, and property (25) does not hold, namely we do not have that {a mathematical formula}α&gt;β∧γ implies one of {a mathematical formula}α&gt;β or {a mathematical formula}α&gt;γ in the comparative certainty logic of [7]. This clearly illustrates the difference with the relative certainty logic from [7]. Axiom (Ax5) is not derivable from (Ax1)–(Ax4), since the latter only ensure that ≻ is a partial order, hence in that case ∼ also covers incomparability and is generally not transitive.
+      </paragraph>
+      <paragraph>
+       We can show the following soundness and completeness result for this extended set of axioms w.r.t. the GPL{a mathematical formula}≻core semantics.
+      </paragraph>
+      <paragraph label="Proposition 4">
+       Let Φ and Ψ be formulas in{a mathematical formula}L≻core. It holds that{a mathematical formula}Φ⊨≻Ψiff{a mathematical formula}Φ⊢≻coreΨ.
+      </paragraph>
+      <paragraph label="Proof">
+       The proof is given in Appendix B.  □
+      </paragraph>
+      <paragraph>
+       Finally, note that while we have focused on comparative necessity, in a similar way we could develop a logic for reasoning about comparative guaranteed possibility. Among other applications, it seems that such a logic could be useful for modelling and reasoning about desires [52].
+      </paragraph>
+     </section>
+     <section label="5.3">
+      Axiomatizing GPL≻
+      <paragraph>
+       In GPL≻ we can express formulas such as {a mathematical formula}Nλ(α)∧(β⪰α). Clearly, this formula entails {a mathematical formula}Nλ(β). To capture such inferences at the syntactic level, we extend the axiomatization of GPL{a mathematical formula}≻core with the following axioms:
+      </paragraph>
+      <list>
+       <list-item>
+        {a mathematical formula}Nλ(α)∧¬Nλ(β)→(α≻β)
+       </list-item>
+       <list-item>
+        {a mathematical formula}N1(α)≡(α∼⊤)
+       </list-item>
+       <list-item>
+        {a mathematical formula}Nλ(α)→(α≻⊥)
+       </list-item>
+      </list>
+      <paragraph>
+       Note that (Ax6) is equivalent to {a mathematical formula}Nλ(α)∧(β⪰α)→Nλ(β). In addition to these axioms, we will also use the GPL axioms (PL) (i.e. the axioms of classical logic) and (W). In particular, for K a set of GPL≻ formulas and Φ a GPL≻ formula (or set of GPL≻ formulas), we write {a mathematical formula}K⊢≻Φ to denote that Φ can be derived from K using (Ax1)–(Ax8), (PL), (W) and modus ponens.
+      </paragraph>
+      <paragraph>
+       Note (K), (N) and (D), which are axioms in GPL but not in GPL≻, can be derived as theorems in GPL≻. To show this for (K), we prove that {a mathematical formula}Nλ(α→β)∧Nλ(α)∧¬Nλ(β) is inconsistent. By applying (Ax6) twice, we can derive {a mathematical formula}(α→β≻β)∧(α≻β). This can be weakened to {a mathematical formula}(α→β≻α∧β)∧(α≻(α→β)∧β) using (Ax3), from which we can derive {a mathematical formula}α∧(α→β)≻β using (Ax2). The latter formula can be weakened to {a mathematical formula}β≻β by applying (Ax3) again, which is inconsistent with (Ax4). The GPL axiom (N) can straightforwardly be derived from (Ax7) and (22). Finally, (D) has to be expressed as {a mathematical formula}Nλ(α)→¬N1k(¬α), since the abbreviation {a mathematical formula}Π1(α) is not used in GPL≻. We show that {a mathematical formula}Nλ(α)∧N1k(¬α) is inconsistent. To this end, we can derive {a mathematical formula}N1k(⊥) using (K), (N), (W) and (PL). Using (Ax8), this leads to {a mathematical formula}⊥≻⊥, which is inconsistent with (Ax4).
+      </paragraph>
+      <paragraph label="Proposition 5">
+       We can show the following soundness and completeness result. Let Φ and Ψ be formulas in{a mathematical formula}L≻. It holds that{a mathematical formula}Φ⊨≻Ψiff{a mathematical formula}Φ⊢≻Ψ.
+      </paragraph>
+      <paragraph label="Proof">
+       The proof is given in Appendix C.  □
+      </paragraph>
+     </section>
+     <section label="5.4">
+      <section-title>
+       Reasoning about conditionals
+      </section-title>
+      <paragraph>
+       There are two rather distinct traditions in the field of non-monotonic reasoning. On the one hand, formalisms such as answer set programming, Reiter's default logic [53], and Moore's autoepistemic logic [29] allow us to explicitly make default assumptions of the form “unless there is evidence to the contrary, assume X”. We will discuss such forms of non-monotonic reasoning in more detail in Section 6. On the other hand, there is a large class of approaches to reason about rules with exceptions, based on the view that in the case of a conflict, priority should be given to more specific rules: from the information that birds generally fly, penguins generally cannot fly, and all penguins are birds, these approaches allow us to derive that Tweety, who is a penguin, cannot fly. In this section we show that we can encode such exception-tolerant rules in GPL{a mathematical formula}≻core.
+      </paragraph>
+      <paragraph>
+       Let us write {a mathematical formula}α|∼β to encode the conditional “if α then generally β”. Several approaches have been proposed to reason about such exception-tainted rules [54], [55], [56], [23]. One of the most important results in this field is that despite the different intuitions underlying these approaches, there is a consensus shared with virtually all of them about the minimal set of conditionals of the form {a mathematical formula}α|∼β that should be entailed by a given rule base {a mathematical formula}R={α1|∼β1,...,αn|∼βn}. This common core of conclusions is captured by the inference rules of System P [5]:{a mathematical formula} The last two inference rules correspond to the idea of cumulativity, whereby {a mathematical formula}α∧β|∼γ and {a mathematical formula}α|∼γ are equivalent if {a mathematical formula}α|∼β is taken for granted. If we only consider conditionals {a mathematical formula}α|∼β for which {a mathematical formula}α⊭⊥, the conclusions that System P allows us to derive from the rule base R can be characterized using possibility theory. Specifically, let {a mathematical formula}PR be the set of all possibility measures Π for which {a mathematical formula}Π(αi∧βi)&gt;Π(αi∧¬βi) for every {a mathematical formula}i∈{1,...,n}. It can then be shown [57] that {a mathematical formula}α|∼β can be derived from R using the axioms of System P iff {a mathematical formula}Π(α∧β)&gt;Π(α∧¬β) for every {a mathematical formula}Π∈PR. Moreover, it holds that {a mathematical formula}Π(α∧β)&gt;Π(α∧¬β) for the unique least specific possibility measure (i.e., the possibility measure induced by the least specific possibility distribution relative to a finite but sufficiently large set of certainty levels) in {a mathematical formula}PR iff {a mathematical formula}α|∼β is in the rational closure of R[55], the latter being a well-known refinement of System P.
+      </paragraph>
+      <paragraph label="Proposition 6">
+       This means that both System P and the rational closure can naturally be characterized using GPL{a mathematical formula}≻core. In particular, we associate with each conditional {a mathematical formula}α|∼β the GPL{a mathematical formula}≻core formula {a mathematical formula}c(α|∼β), stating that {a mathematical formula}Π(α∧β)&gt;Π(α∧¬β), or equivalently {a mathematical formula}N(α→β)&gt;N(α→¬β):{a mathematical formula} Similar as before, we find that we can interpret ≻ as an abbreviation in the language of GPLk, provided that k is sufficiently large. In particular, we have the following proposition. Let{a mathematical formula}c(R)={c(αi|∼βi)|(αi|∼βi)∈R}. Assume that{a mathematical formula}α,α1,...,αnare consistent. It holds that:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}c(R)⊨GPLkc(α|∼β)iff{a mathematical formula}α|∼βcan be derived from R using the axioms of System P, provided that{a mathematical formula}k≥|R|+1.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}α|∼βis in the rational closure of R iff{a mathematical formula}c(α|∼β)is satisfied by the (unique) least specific GPLke-model of{a mathematical formula}c(R), provided that{a mathematical formula}k≥|R|.
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       If {a mathematical formula}k≥|R|+1, it follows from Proposition 18 that {a mathematical formula}c(R)∧¬c(α|∼β) is inconsistent, or equivalently that {a mathematical formula}c(R)⊨≻c(α|∼β), iff every e-model of {a mathematical formula}c(R) also satisfies {a mathematical formula}c(α|∼β). In other words, given the result from [57], {a mathematical formula}c(R)⊨≻c(α|∼β) holds iff {a mathematical formula}α|∼β can be derived from R using the axioms of System P.The least specific e-model of {a mathematical formula}c(R) corresponds to the least specific e-model of the possibilistic counterpart to the Z-ranking [23]. As this possibilistic counterpart corresponds to a knowledge base with at most {a mathematical formula}|R| levels, it is clear that least specific e-model of {a mathematical formula}c(R) will correspond to the rational closure of R if {a mathematical formula}k≥|R|.  □
+      </paragraph>
+      <paragraph>
+       In contrast to System P, GPL{a mathematical formula}≻core can also be used to reason about propositional combinations of conditionals. For example, it holds that{a mathematical formula} Indeed, using (Ax3) it follows from either of {a mathematical formula}(a→b)≻(a→¬b) and {a mathematical formula}(a→c)≻(a→¬c) that {a mathematical formula}(a→b∨c)≻(a→¬(b∨c). Hence, we find {a mathematical formula}((a→b)≻(a→¬b))∨((a→c)≻(a→¬c))⊨(a→b∨c)≻(a→¬(b∨c), which is equivalent to (26). This means that we can use GPL{a mathematical formula}≻core to define a logic for reasoning about conditionals. Let us define the language {a mathematical formula}Lc as the following fragment of {a mathematical formula}L≻core:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        If {a mathematical formula}α,β∈L and {a mathematical formula}α⊭⊥, then {a mathematical formula}((α→β)≻(α→¬β)) belongs to {a mathematical formula}Lc;
+       </list-item>
+       <list-item label="•">
+        If Φ and Ψ belong to {a mathematical formula}Lc, then ¬Φ and {a mathematical formula}Φ∧Ψ are also in {a mathematical formula}Lc.
+       </list-item>
+      </list>
+      <paragraph>
+       We will refer to the corresponding logic as GPLc. Its satisfaction relation {a mathematical formula}⊨c is simply defined as the restriction of {a mathematical formula}⊨≻ to the language fragment {a mathematical formula}Lc. To reason about formulas in {a mathematical formula}Lc we can rely on the axiomatization of {a mathematical formula}L≻core proposed in Section 5.2. Alternatively, as we show next, we can also define a syntactic inference relation {a mathematical formula}⊢c that allows derivations to say within the language fragment {a mathematical formula}Lc. To this end, we will extend the inference rules of System P, all of which are theorems in GPL{a mathematical formula}≻core. In particular, it was shown in [7] that the following System P rules, here written as GPLc formulas, can be derived from (Ax1)–(Ax3):
+      </paragraph>
+      <list>
+       <list-item>
+        {a mathematical formula}c(α|∼γ)∧c(β|∼γ)→c(α∨β|∼γ)
+       </list-item>
+       <list-item>
+        {a mathematical formula}c(α|∼β)∧c(α|∼γ)→c(α∧β|∼γ)
+       </list-item>
+       <list-item>
+        {a mathematical formula}c(α∧β|∼γ)∧c(α|∼β)→c(α|∼γ)
+       </list-item>
+      </list>
+      <paragraph>
+       Furthermore, it is easy to see that the following System P rules also follow from (Ax1)–(Ax3):
+      </paragraph>
+      <list>
+       <list-item>
+        {a mathematical formula}c(α|∼α), if α is consistent
+       </list-item>
+       <list-item>
+        {a mathematical formula}c(α|∼β)→c(α′|∼β), if {a mathematical formula}⊨(α≡α′)
+       </list-item>
+       <list-item>
+        {a mathematical formula}c(α|∼β)→c(α|∼β′), if {a mathematical formula}β⊨β′
+       </list-item>
+      </list>
+      <paragraph>
+       In other words, all the inference rules of System P are theorems in GPL{a mathematical formula}≻core. To enable reasoning about propositional combinations of default rules in GPLc, we will also use the following axioms:
+      </paragraph>
+      <list>
+       <list-item>
+        {a mathematical formula}c(α|∼γ)∧¬c(α|∼¬β)→c(α∧β|∼γ)
+       </list-item>
+       <list-item>
+        {a mathematical formula}c(α|∼β)→¬c(α|∼¬β)
+       </list-item>
+      </list>
+      <paragraph>
+       Note that (INC) follows directly from (Ax4), i.e., the GPLc axiom (INC) is a theorem in GPL{a mathematical formula}≻core. The same holds for (WRM), which follows from Proposition 7 below. The notation for the axiom (WRM) was introduced in [58], where a logic called {a mathematical formula}NP+ is discussed, in which disjunctions and negations can also be expressed. Note that (WRM) is similar to, but different from the rational monotonicity rule considered in [59]. The latter allows to derive {a mathematical formula}α∧β|∼γ as soon as {a mathematical formula}α|∼γ holds and {a mathematical formula}α|∼¬β cannot be established. In contrast, (WRM) requires that the negation of {a mathematical formula}α|∼¬β can be derived. The axiom (INC) is needed to make inconsistencies explicit at the propositional meta-level.
+      </paragraph>
+      <paragraph>
+       For K a set of GPLc formulas and Ψ a GPLc formulas, we write {a mathematical formula}K⊢cΨ to denote that Ψ can be derived from K using (RE), (LLE), (RW), (OR), (CM), (CUT), (WRM), (INC), the axioms of propositional logic and modus ponens.
+      </paragraph>
+      <paragraph label="Proposition 7">
+       Let Φ and Ψ be formulas in{a mathematical formula}Lc. Then{a mathematical formula}Φ⊢cΨiff{a mathematical formula}Φ⊨cΨ.
+      </paragraph>
+      <paragraph label="Proof">
+       The proof is presented in Appendix D.  □
+      </paragraph>
+      <paragraph>
+       A similar result was obtained in [60], where possibility theory was also used to give a semantics to disjunctions of conditionals, albeit in a different context. Other logics in which propositional combinations of conditionals can be expressed include the logic {a mathematical formula}NP+ from [58], which has a semantics based on infinitesimal probabilities, the approach from [61], which is based on a three-valued semantics of conditional objects, and Lewis' logic VA [62], whose sphere semantics has been related to comparative possibility relations in [63] and can thus be simulated in GPL in a similar way.
+      </paragraph>
+      <paragraph>
+       Compared to logics such as {a mathematical formula}NP+ and VA, the main advantage of GPL is that we are able to provide a more intuitive semantics. Another advantage is that GPL can be implemented using SAT solvers in a relatively straightforward way, which should enable very efficient reasoning about default rules. Finally, embedding a logic of conditionals in GPL has the advantage that it allows us to combine conditionals with other types of epistemic knowledge. For example, we can use {a mathematical formula}¬Π1(β) to express that β is an abnormal situation, and, e.g., use {a mathematical formula}N1(α)→¬Π1(β) to encode that if α has been observed then β should be considered abnormal, which is more cautious than {a mathematical formula}α|∼¬β.
+      </paragraph>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Non-monotonic logic programming in GPL
+     </section-title>
+     <paragraph>
+      The ability of GPL to model limitations on the knowledge of an agent makes it a natural framework for implementing various forms of non-monotonic reasoning. Section 5.4 already explained how to capture reasoning with exception-tainted rules. In the following, we show how the semantics of answer set programs can also be naturally captured in GPL. Section 6.2 then shows a close correspondence between GPL and the logic of minimal belief and negation as failure [64]. In particular, we obtain that the notion of minimality that is required in the latter logic is less demanding than the principle of minimal specificity in GPL.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       Casting answer set programs in GPL
+      </section-title>
+      <paragraph>
+       Consider the GPL formula {a mathematical formula}Π1(a)→N1(b). Intuitively, this formula allows us to reason about the absence of information: as long as there is no reason to believe that a is false, we assume that b is necessarily true. Note, however, that {a mathematical formula}Π1(a)→N1(b), which is equivalent to {a mathematical formula}N1k(¬a)∨N1(b), has two minimally specific e-models: the e-models {a mathematical formula}πa⁎ and {a mathematical formula}πb defined as follows{a mathematical formula} Note that {a mathematical formula}πb is Boolean in the sense that {a mathematical formula}πb(ω)∈{0,1} for every {a mathematical formula}ω∈Ω, whereas {a mathematical formula}πa⁎ is not, if {a mathematical formula}k≥2. It turns out that in general, if we restrict our attention to minimally specific Boolean e-models of GPL formulas of this type with {a mathematical formula}k=2, we obtain a semantics for reasoning from the absence of information, which captures the stable model semantics of answer set programs. As we shall see the condition {a mathematical formula}k&gt;1 is crucial. If {a mathematical formula}k=1 then {a mathematical formula}Π1(a)→N1(b) is equivalent to {a mathematical formula}N1(¬a)∨N1(b), which does not allow for nonmonotonicity and only corresponds to a GPL (or more specifically MEL) translation of Kleene logic implication [65]. For the remainder of this section, we will focus on GPL2, although all the results readily translate to GPLk for any {a mathematical formula}k≥2.
+      </paragraph>
+      <paragraph>
+       Recall that an answer set program is a set of rules of the form:{a mathematical formula} Intuitively, this rule encodes the idea that if we have no knowledge that any of {a mathematical formula}c1,...,cℓ are true, then whenever we can derive {a mathematical formula}b1,...,bm we will assume that one of {a mathematical formula}a1,...,an must be true as well. As suggested in [66], we can view such a rule as a constraint on the possible epistemic states that a given agent may have. Let {a mathematical formula}Lit=At∪{¬a|a∈At} be the set of literals in the language. Let {a mathematical formula}M⊆Lit be such that {a mathematical formula}{a,¬a}⊈M for every {a mathematical formula}a∈At. Such a set {a mathematical formula}M⊆Lit can intuitively be viewed as a partial model: {a mathematical formula}a∈M means that a is known to be true, {a mathematical formula}¬a∈M means that a is known to be false, and {a mathematical formula}a,¬a∉M means that the truth value of a is unknown. The reduct {a mathematical formula}PM of an answer set program P w.r.t. a partial model M is defined as follows:{a mathematical formula} Note that the reduct {a mathematical formula}PM is free of the negation-as-failure operator “not”. The set M is called a model of a rule {a mathematical formula}a1∨...∨an←b1∧...∧bm iff {a mathematical formula}{b1,...,bm}⊈M or {a mathematical formula}M∩{a1,...,an}≠∅. Furthermore, M is called a model of a set of rules {a mathematical formula}PM (without negation-as-failure) if it is a model of every rule in {a mathematical formula}PM. Finally, M is called an answer set of an answer set program P iff it is the (unique) minimal model of {a mathematical formula}PM w.r.t. set inclusion.
+      </paragraph>
+      <paragraph>
+       Several equivalent methods have been identified to characterize the semantics of answer set programs [67]. Most of these characterizations are based on some kind of fixpoint construction. In the definition above, this is captured by the reduct, which fixes the interpretation of all literals under the scope of the “not” operator.
+      </paragraph>
+      <paragraph>
+       Using GPL, however, we can semantically characterize answer set programs purely in terms of minimally specific e-models. Specifically, given an answer set program P, we let {a mathematical formula}KP be the GPL knowledge base obtained by translating each rule of the form (27) into the following formula:{a mathematical formula} In other words, the body of a rule of the form (27) is satisfied if the agent knows each {a mathematical formula}bi with maximal certainty and moreover the agent considers {a mathematical formula}¬cj fully possible for each j. Note that {a mathematical formula}Π1(¬cj) is equivalent to {a mathematical formula}¬N12(cj) in GPL2.
+      </paragraph>
+      <paragraph>
+       The transformation in (28) is by itself not enough, as ASP is based on the idea of forward chaining and in particular does not allow contrapositive reasoning (e.g., from the rule {a mathematical formula}a←b and the fact ¬a we should not derive ¬b). To see how forward chaining could be enforced using GPL, first note that there are three ways in GPL2 in which the formula (28) can be satisfied by a minimally specific e-model π of {a mathematical formula}ΘP:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        one of the meta-literals {a mathematical formula}N1(bi) is not satisfied by π;
+       </list-item>
+       <list-item label="2.">
+        one of the meta-literals {a mathematical formula}Π1(¬ci) is not satisfied by π, i.e., {a mathematical formula}N12(ci) is satisfied by π;
+       </list-item>
+       <list-item label="3.">
+        one of the meta-literals {a mathematical formula}N1(ai) is satisfied by π.
+       </list-item>
+      </list>
+      <paragraph>
+       The first case intuitively corresponds to an answer set which does not include {a mathematical formula}bi, i.e., to a situation in which the rule (27) does not apply. The third case intuitively corresponds to an answer set in which {a mathematical formula}ai has been included to make the rule (27) satisfied, i.e., to a situation in which {a mathematical formula}ai has been derived using (non-deterministic) forward chaining. The second case, however, intuitively corresponds to a contrapositive inference, i.e., (27) has been satisfied by making {a mathematical formula}ci true. The latter inference is not allowed in ASP and the second case should thus be excluded. To this end, we take advantage of the fact that it is only in the second case that certainty degrees other than 0 or 1 are needed. Note that here we do not use degrees for modelling uncertainty, but intuitively for differentiating between literals that are assumed to be true and literals that can effectively be derived. In particular, it turns out that answer sets correspond to the minimally specific e-models of {a mathematical formula}ΘP in which only the certainty degrees 0 and 1 occur. Formally, the requirement that only these certainty degrees occur is encoded by the GPL formula Φ, defined as follows:{a mathematical formula} The formula Φ expresses that for every atom a, the agent is either fully certain about the truth value of a (in which case {a mathematical formula}N1(a)∨N1(¬a) holds) or the agent is completely ignorant about a (in which case {a mathematical formula}Π1(a)∧Π1(¬a) holds). It turns out that the answer sets of P correspond to the minimally specific e-models of {a mathematical formula}ΘP that satisfy Φ. In particular, we have the following correspondence.
+      </paragraph>
+      <paragraph label="Proposition 8">
+       Let P be an answer set program and let{a mathematical formula}KPbe the corresponding GPL2knowledge base. It holds that P has a consistent answer set iff{a mathematical formula}Furthermore, it holds that l is included in at least one answer set of P iff{a mathematical formula}Finally, it holds that l is included in all answer sets of P iff{a mathematical formula}
+      </paragraph>
+      <paragraph label="Proof">
+       The proof is presented in Appendix E.  □
+      </paragraph>
+      <paragraph>
+       Note that this result does not hold in GPL1. Indeed, for {a mathematical formula}k=1, like for instance in [28], we have that {a mathematical formula}⋀a∈AtN1(a)∨N1(¬a)∨(Π1(a)∧Π1(¬a)) is a tautology. This explains why a similar characterization is not possible in autoepistemic logic, or other modal logics which rely on Boolean certainty degrees only. In contrast, equilibrium logic [68] does allow a similar characterization, by using a Boolean valuation in two worlds (called here and there) instead of intermediary certainty degrees. The advantage of GPL over equilibrium logic is that the epistemic interpretation of formulas is explicit, which make them easier to interpret intuitively (although this comes at the cost of a less concise syntax); we refer to [8] for a more detailed discussion on the relation between GPL and equilibrium logic. Note that while Fariñas et al. [69] have proposed a characterization of equilibrium logic in modal logic, this characterization does not highlight the intuitive meaning of equilibrium logic formulas, from an epistemic reasoning point of view. Recently, the same authors [70] have proposed an epistemic equilibrium logic. Again, however, the aim of this logic is not to provide an intuitive method for epistemic reasoning, but to generalize epistemic specifications [71], [72], a generalization of ASP which allows a new type of literal {a mathematical formula}Kl in the body of rules, intuitively stating that l is true in all answer sets.
+      </paragraph>
+     </section>
+     <section label="6.2">
+      <section-title>
+       Logic of minimal belief and negation as failure
+      </section-title>
+      <paragraph>
+       The characterization of ASP using GPL easily allows us to generalize the stable model semantics to a larger class of logic programs. For example, we could readily provide a semantics for disjunctions of ASP rules, we could allow negation as failure to appear in the head of a rule, or use expressions of the form {a mathematical formula}N1(α) where α can be an arbitrary propositional expression instead of only a literal (see [66] for a more elaborate discussion on the latter point).
+      </paragraph>
+      <paragraph>
+       There are a number of existing logics which can similarly be used to provide a semantics for negation-as-failure in a more general setting. One of the simplest and earliest of these logics is Lifschitz' logic of minimal belief and negation as failure (MBNF) [64]. The language of this logic is the usual propositional language, extended with two modalities B and “not”. The semantics are defined w.r.t. triples of the form {a mathematical formula}(ω,Sb,Sn), where {a mathematical formula}ω∈Ω is a propositional interpretation and {a mathematical formula}Sb,Sn⊆Ω are sets of propositional interpretations:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        For an atom a, {a mathematical formula}(ω,Sb,Sn)⊨MBNFa iff {a mathematical formula}ω⊨a;
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}(ω,Sb,Sn)⊨MBNF¬ψ iff {a mathematical formula}(ω,Sb,Sn)⊭MBNFψ;
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}(ω,Sb,Sn)⊨MBNFψ∧ϕ iff {a mathematical formula}(ω,Sb,Sn)⊨MBNFψ and {a mathematical formula}(ω,Sb,Sn)⊨MBNFϕ;
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}(ω,Sb,Sn)⊨MBNFBψ iff {a mathematical formula}(ω′,Sb,Sn)⊨MBNFψ for every {a mathematical formula}ω′∈Sb (i.e., {a mathematical formula}Sb⊆〚ψ〛 if ψ is a propositional formula);
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}(ω,Sb,Sn)⊨MBNFnotψ iff there exists an {a mathematical formula}ω′∈Sn such that {a mathematical formula}(ω′,Sb,Sn)⊭MBNFψ (i.e., {a mathematical formula}Sn⊈〚ψ〛 if ψ is a propositional formula).
+       </list-item>
+      </list>
+      <paragraph>
+       Intuitively, Bψ is true if ψ is known to be true, i.e., we can think of {a mathematical formula}Sb as the set of worlds that the agent considers possible. Intuitively {a mathematical formula}notψ is true unless ψ is known to be true, where we instead consider {a mathematical formula}Sn as the set of worlds that the agent considers possible. The satisfaction relation ⊨ does not require any constraints on the relationship between {a mathematical formula}Sb and {a mathematical formula}Sn, although as we will see below, in models we will have that {a mathematical formula}Sb=Sn. So, {a mathematical formula}Sb is used to evaluate the “B” modalities and {a mathematical formula}Sn is used to evaluate the “not” modalities. The use of two separate epistemic states can thus be thought of as a technical trick to encode a notion of minimality. As usual, {a mathematical formula}ψ∨ϕ is seen as an abbreviation of {a mathematical formula}¬(¬ψ∧¬ϕ) and {a mathematical formula}ψ→ϕ as an abbreviation of {a mathematical formula}¬(ψ∧¬ϕ). Moreover, {a mathematical formula}(ω,Sb,Sn) satisfies a set of MNBF formulas K iff it satisfies every formula in that set. A structure {a mathematical formula}(ω,S) is called a model of a formula ψ iff
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}(ω,S,S)⊨MBNFψ; and
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}(ω′,S′,S)⊭MBNFψ for any {a mathematical formula}S′⊃S and any propositional interpretation {a mathematical formula}ω′.
+       </list-item>
+      </list>
+      <paragraph label="Proposition 9">
+       This second condition essentially plays a similar role to the notion of minimal specificity in GPL (and the notion of h-minimality in equilibrium logic). Note that the fact that modalities can be nested in MBNF does not really increase its expressive power, as e.g., {a mathematical formula}B(B(ψ)) and {a mathematical formula}B(ψ) are equivalent (i.e., are satisfied by the same triples). Let us now consider the restriction of the language of MBNF to formulas without nested modalities, in which all atomic formulas occur within the scope of a modality. Let us refer to this fragment as MBNF1. This fragment is particularly interesting, because it can be used to define the semantics of answer set programming, in a way which is similar to the characterization in GPL from Proposition 8. In particular, consider an ASP rule of the following form{a mathematical formula} The corresponding formula in MBNF1 is given by{a mathematical formula} Lifschitz showed the following result. [64]Let P be an answer set program and let K be the corresponding MNBF knowledge base. If holds that a set of literals M is a (consistent) answer set of P iff there exists a model{a mathematical formula}(ω,S)of K such that{a mathematical formula}S=〚M〛.
+      </paragraph>
+      <paragraph>
+       We will now show that MBNF1 is related to, but different from GPL2. In particular, with each MBNF1 knowledge base Θ, the corresponding GPL knowledge base {a mathematical formula}g(Θ) is obtained by replacing each occurrence of {a mathematical formula}B(α) by {a mathematical formula}N1(α) and each occurrence of {a mathematical formula}not(α) by {a mathematical formula}Π1(¬α). Note that for MBNF1 formulas, we can identify models with sets {a mathematical formula}S⊆Ω since whenever {a mathematical formula}(ω,S) is also a model of an MBNF1 formula, then {a mathematical formula}(ω′,S) is a model for any interpretation {a mathematical formula}ω′. For the same reason, we will write {a mathematical formula}(Sb,Sn) instead of {a mathematical formula}(ω,Sb,Sn) when the choice of ω is irrelevant.
+      </paragraph>
+      <paragraph>
+       In the following, for any {a mathematical formula}S⊆Ω, we define the possibility distribution {a mathematical formula}πS as {a mathematical formula}πS(ω)=1 if {a mathematical formula}ω∈S and {a mathematical formula}πS(ω)=0 otherwise.
+      </paragraph>
+      <paragraph label="Proposition 10">
+       Let Θ be an MBNF1knowledge base and let{a mathematical formula}g(Θ)be the corresponding GPL2knowledge base. Let{a mathematical formula}S⊆Ω. Then{a mathematical formula}(S,S)⊨MBNFΘiff{a mathematical formula}πS⊨GPLg(Θ).
+      </paragraph>
+      <paragraph label="Proof">
+       For any propositional formula α, we have that {a mathematical formula}(S,S)⊨MBNFB(α) iff α is true in every {a mathematical formula}ω∈S iff {a mathematical formula}πS⊨GPLN1(α). Similarly, we have {a mathematical formula}(S,S)⊨MBNFnot(α) iff α is false in some {a mathematical formula}ω∈S iff {a mathematical formula}πS⊨GPLΠ1(¬α). It follows that {a mathematical formula}(S,S)⊨MBNFΘ iff {a mathematical formula}πS⊨GPLg(Θ).  □
+      </paragraph>
+      <paragraph label="Example 5">
+       Moreover, if {a mathematical formula}πS is a minimally specific e-model of {a mathematical formula}g(Θ) then S is obviously a model of Θ. However, we do not have that every model S of an MBNF1 formula Θ corresponds to a minimally specific e-model of {a mathematical formula}g(Θ), as is illustrated by the following example. We consider an example with only one atom a and we denote {a mathematical formula}Ω={ωa,ω¬a}, where {a mathematical formula}ωa is the interpretation which makes a true and {a mathematical formula}ω¬a the interpretation which makes a false. Let {a mathematical formula}ψ=B(a)∨not(a). Then {a mathematical formula}g(ψ)=N1(a)∨Π1(¬a) has only one minimally specific e-model π, defined by {a mathematical formula}π(ωa)=π(ω¬a)=1. Accordingly, {a mathematical formula}S1={ωa,ω¬a} is a model of ψ; indeed we have {a mathematical formula}(S1,S1)⊨MBNFnot(a) and {a mathematical formula}S1 does not have any supersets since {a mathematical formula}ωa and {a mathematical formula}ω¬a are the only interpretations. However, we show that {a mathematical formula}S2={ωa} is also a model of ψ. First note that {a mathematical formula}(S2,S2)⊨MBNFB(a) hence we already have {a mathematical formula}(S2,S2)⊨MBNFψ. To show that {a mathematical formula}S2 is a model, it suffices to show that {a mathematical formula}(S1,S2)⊭MBNFψ for the only superset {a mathematical formula}S1, which is easy to verify. Indeed {a mathematical formula}S1 is not in {a mathematical formula}〚a〛, which violates {a mathematical formula}B(a), and {a mathematical formula}S2=〚a〛, which violates {a mathematical formula}not(a).
+      </paragraph>
+      <paragraph>
+       This means that the notion of minimal specificity in GPL is more demanding than the notion of minimality imposed on models in MBNF. In [8], we obtained a similar result when comparing GPL to equilibrium logic [68]. This discrepancy especially seems to arise for theories which correspond to logic programs with negation-as-failure in the head. It is well-known that in the presence of negation-as-failure in the head, most semantics that cover such cases lead to answer sets for which minimality no longer holds. While this has been advocated in e.g., [73] as a useful feature to encode particular constructs, such as inclusive disjunction, this behaviour remains somewhat counter-intuitive in a setting where minimal commitment is one of the main guiding principles.
+      </paragraph>
+      <paragraph>
+       The encoding of MBNF1 in GPL is similar in spirit to the encoding of equilibrium logic that we proposed in [8]. In particular, the GPL encoding of an equilibrium logic theory is also such that (some) stable models correspond to those minimally specific e-models π in which {a mathematical formula}π(ω)∈{0,1} for each {a mathematical formula}ω∈Ω. However, the encoding of MBNF1 is considerably more intuitive. This is a consequence of the fact that the modalities in MBNF have a clear epistemic flavor, which does not seem to be the case for the connectives in equilibrium logic.
+      </paragraph>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      Computational complexity
+     </section-title>
+     <paragraph>
+      In this section, we will consider the computational complexity of the main reasoning tasks for GPL. The modalities {a mathematical formula}Δλ, {a mathematical formula}∇λ, {a mathematical formula}ΔλX, {a mathematical formula}∇λX were introduced in Section 4 as abbreviations of formulas that only contain modalities of the form {a mathematical formula}Nλ. However, without these abbreviations, formulas may be exponentially longer, and as the computational complexity of reasoning tasks is expressed in function of the size of the formulas in the knowledge base, this has an impact on the complexity results. In other words, while these modalities have been introduced as abbreviations, they are not considered part of the language of GPL for the complexity results. We then also consider the variants GPL{sup:Δ} and GPL{a mathematical formula}RΔ, in which these modalities are assumed to be included in the language: GPL formulasare formulas in which all modalities are of the form {a mathematical formula}Nλ or {a mathematical formula}Πλ.GPL{a mathematical formula}Δformulasare formulas in which also modalities of the form {a mathematical formula}Δλ and {a mathematical formula}∇λ are allowed.GPL{a mathematical formula}RΔformulasare formulas in which moreover modalities of the form {a mathematical formula}ΔλX and {a mathematical formula}∇λX are allowed.Table 2 provides an overview of the complexity results that we will establish. In addition to the results from Table 2, we will also show that satisfiability checking in GPL{a mathematical formula}≻core and GPL≻ are NP-complete (and thus that entailment checking is coNP-complete), but the brave and cautious inference relations will not be considered in this case, as the notion of minimal specificity is not well-defined for these logics (e.g. {a mathematical formula}a≻⊥ does not have a minimally specific model).
+     </paragraph>
+     <paragraph>
+      Recall that a decision problem is in {a mathematical formula}ΣiP ({a mathematical formula}i&gt;1) if it can be solved in polynomial time on a non-deterministic Turing machine using a {a mathematical formula}Σi−1P-oracle, where {a mathematical formula}Σ1P=NP. A decision problem is in {a mathematical formula}ΠiP if its complement is in {a mathematical formula}ΣiP. A decision problem is in {a mathematical formula}Θ2P if it can be solved in polynomial time on a deterministic Turing machine, by making a logarithmic number of calls to an NP-oracle.
+     </paragraph>
+     <section label="7.1">
+      <section-title>
+       Complexity of reasoning about GPL formulas
+      </section-title>
+      <paragraph label="Proposition 11">
+       The problem of deciding whether a GPL formula is satisfiable is NP-complete (w.r.t. the size of the formula).
+      </paragraph>
+      <paragraph label="Proof">
+       Hardness follows straightforwardly from the NP-completeness of satisfiability in propositional logic. In particular, note that the propositional formula α is satisfiable iff the GPL formula {a mathematical formula}Π1(α) is satisfiable.We now propose an NP procedure for checking the satisfiability of an arbitrary GPL formula Φ. Each GPL formula Φ is equivalent to a disjunction of meta-terms, and it is sufficient that one of these terms is satisfiable. In polynomial time, we can guess such a term:{a mathematical formula} We know that {a mathematical formula}Nλ1(α1)∧...∧Nλn(αn) has a unique least specific e-model π if {a mathematical formula}α1∧...∧αn is satisfiable. All that we need to check is whether this is the case, and whether {a mathematical formula}Π(βi)≥μi for each i, with Π the possibility measure induced by π. In other words, there are two conditions which we need to check. First, the following formula needs to be consistent:{a mathematical formula} Second, to check whether {a mathematical formula}Π(βi)≥μi in the least specific model of {a mathematical formula}Nλ1(α1)∧...∧Nλn(αn), we need to verify that {a mathematical formula}βi has a model ω such that {a mathematical formula}ω⊨αj holds for all j where {a mathematical formula}λj≥ν(θ). In other words, we need to verify for each {a mathematical formula}βi that the following formula is consistent:{a mathematical formula}To check satisfiability in NP, when we guess the term (33), we can also guess an interpretation for each of these SAT instances and verify that they are indeed models of the corresponding propositional formulas.  □
+      </paragraph>
+      <paragraph label="Corollary 1">
+       The problem of deciding whether{a mathematical formula}Φ⊨Ψ, with Φ and Ψ GPL formulas, is coNP-complete.
+      </paragraph>
+      <paragraph label="Proof">
+       This follows immediately from the observation that {a mathematical formula}Φ⊨Ψ holds iff {a mathematical formula}Φ∧¬Ψ is not satisfiable.  □
+      </paragraph>
+      <paragraph>
+       From the proof it is immediately clear that the same complexity results hold in the case of MEL, i.e., when only the certainty levels 0 and 1 are used. In other words, there is no penalty, in terms of computational complexity, for allowing more certainty levels.
+      </paragraph>
+      <paragraph>
+       The proof of Proposition 11 suggests a way to reason with GPL formulas using standard SAT solvers. In particular, let Φ be a GPL formula in which no negations occur at the meta-level. Since {a mathematical formula}⊨GPLNλ(α∧β)≡Nλ(α)∧Nλ(β), we can also assume w.l.o.g. that every meta-literal of the form {a mathematical formula}Nλ(α) is such that α is a disjunction of literals and that every meta-literal of the form {a mathematical formula}Πλ(α) is such that α is a conjunction of literals. Let {a mathematical formula}f(Φ) be the propositional formula which is obtained from Φ by replacing every meta-literal of the form {a mathematical formula}Nλ(α) by a fresh atom {a mathematical formula}a(α,λ) and every meta-literal of the form {a mathematical formula}Πλ(α) by a fresh atom {a mathematical formula}b(α,λ). The SAT instance Θ corresponding with Φ contains the formula {a mathematical formula}f(Φ) as well as the following formulas, involving fresh atomic formulas of the form {a mathematical formula}x(β,μ), for each meta-literal {a mathematical formula}Πμ(β). Specifically, for each meta-literal of the form {a mathematical formula}Πμ(β) we add:{a mathematical formula} where we assume {a mathematical formula}β=a1∧...∧an∧¬b1∧...∧¬bm. Furthermore for each meta-literal of the form {a mathematical formula}Nλ(α) such that {a mathematical formula}λ≥ν(μ) we add:{a mathematical formula} where we assume {a mathematical formula}α=c1∨...∨cr∨¬d1∨...∨¬ds. Note that the formulas (36) and (37) are added to check the condition that the formula (35) has to be satisfiable for each meta-literal of the form {a mathematical formula}Πμ(β) in the chosen meta-term. The other condition that we need to check is (34), which we can do by adding the following formulas for each meta-literal of the form {a mathematical formula}Nλ(α):{a mathematical formula} where we again assume that {a mathematical formula}α=c1∨...∨cr∨¬d1∨...∨¬ds.
+      </paragraph>
+      <paragraph label="Example 6">
+       The following example illustrates the proposed reduction to SAT. Consider the following GPLk formula for {a mathematical formula}k=4:{a mathematical formula} The resulting SAT instance Θ contains the following propositional formulas:{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} Recall that expressions such as {a mathematical formula}a(x∨y,1) and {a mathematical formula}z(¬z,34) are viewed as atomic formulas. From (39) we know that the atomic formulas {a mathematical formula}a(x∨y,1), {a mathematical formula}a(¬y,34) and {a mathematical formula}a(¬x∨z,24) all need to be true, as well as {a mathematical formula}b(¬z,34) or {a mathematical formula}b(x,14). However, from (40), together with (42)–(44) it follows that {a mathematical formula}b(¬z,34) cannot be satisfied in any model of Θ. This corresponds to the observation that the meta-term {a mathematical formula}N1(x∨y)∧N34(¬y)∧N24(¬x∨z)∧Π34(¬z) is not satisfiable. On the other hand, the meta-term {a mathematical formula}N1(x∨y)∧N34(¬y)∧N24(¬x∨z)∧Π14(x) is satisfiable, and accordingly, it can readily be verified that Θ has a model in which the atom {a mathematical formula}b(x,14) is true.
+      </paragraph>
+      <paragraph label="Proposition 12">
+       Let Φ be a GPL formula and let Θ be the associated SAT instance, constructed using the method explained above. It holds that Φ is satisfiable iff Θ is satisfiable.
+      </paragraph>
+      <paragraph label="Proof">
+       Suppose Φ has an e-model π. Then π satisfies some meta-term ϕ of the form (33). We define a partial interpretation ω as follows: {a mathematical formula}ω⊨a(α,λ) iff the meta-term {a mathematical formula}Nλ(α) appears in ϕ and {a mathematical formula}ω⊨¬a(α,λ) otherwise; similarly {a mathematical formula}ω⊨b(α,λ) iff the meta-term {a mathematical formula}Πλ(α) appears in ϕ and {a mathematical formula}ω⊨¬b(α,λ) otherwise. Clearly, ω satisfies {a mathematical formula}f(Φ). It remains to be shown that ω can be extended to an interpretation of all atomic formulas appearing in Θ, such that (36)–(38) are satisfied. However, the existence of such an extension follows directly from the fact that the formulas (35) and (34) are satisfiable if π is an e-model of the meta-term ϕ.Conversely, if Θ has a model ω it is clear that there is some meta-term ϕ of the form (33) such that {a mathematical formula}ω⊨a(α,λ) for every meta-literal {a mathematical formula}Nλ(α) appearing in ϕ and {a mathematical formula}ω⊨b(α,λ) for every meta-literal {a mathematical formula}Πλ(α) appearing in ϕ. As in the proof of Proposition 11 we find that ϕ has an e-model iff the formulas (35)–(34) are satisfied, and this follows straightforwardly from the fact that ω satisfies (36)–(38).  □
+      </paragraph>
+      <paragraph>
+       As already follows from the results in Section 6, reasoning about minimally specific e-models is more expensive than reasoning about what is true for all e-models of a GPL knowledge base. This stands in contrast to standard possibilistic logic, where both notions of entailment coincide.
+      </paragraph>
+      <paragraph label="Proposition 13">
+       Let Φ and Ψ be two GPL formulas. The problem of checking whether{a mathematical formula}Φ⊨cΨis{a mathematical formula}Π2P-complete (in the joint size of Φ and Ψ).
+      </paragraph>
+      <paragraph label="Proof">
+       HardnessConsider the following QBF formula:{a mathematical formula} In the following, we will abbreviate such formulas as {a mathematical formula}∀X∃Y.ϕ(X,Y) where {a mathematical formula}X={x1,...,xn} and {a mathematical formula}Y={y1,...,ym}. We show that checking the validity of ψ can be reduced to the problem of checking whether {a mathematical formula}Φ⊨cΨ for Φ and Ψ GPL formulas. Specifically, we choose Φ and Ψ as follows:{a mathematical formula} Let {a mathematical formula}π:Ω→[0,1] be a minimally specific e-model of Ψ. Let us define {a mathematical formula}L⊆{x1,...,xn,¬x1,...,¬xn} as the set of literals that are known to be true in the epistemic state π:{a mathematical formula} It is clear, by definition of Ψ, that for every {a mathematical formula}xi either {a mathematical formula}π⊨N1(xi) or {a mathematical formula}π⊨N1(¬xi), and as a result either {a mathematical formula}xi∈L or {a mathematical formula}(¬xi)∈L. It is also clear, by construction of L, that {a mathematical formula}xi and {a mathematical formula}¬xi cannot both be in L. In other words L defines a propositional interpretation over {a mathematical formula}{x1,...,xn}. Conversely, each propositional interpretation over {a mathematical formula}{x1,...,xn} will correspond to some minimally specific e-model of Ψ.Because π was assumed to be minimally specific, every interpretation ω which is consistent with L will be such that {a mathematical formula}π(ω)=1. In particular, if there exists a model ω of {a mathematical formula}ϕ(x1,...,xn,y1,...,ym) which is compatible with L, it will satisfy {a mathematical formula}π(ω)=1 and thus {a mathematical formula}π⊨Π1(ϕ(x1,...,xn,y1,...,ym)).The QBF ψ is valid if and only if such a model ω exists for every choice of L. In other words, we have that ψ is valid iff {a mathematical formula}Φ⊨cΨ.MembershipFollows from the membership result in Proposition 15 below.  □
+      </paragraph>
+      <paragraph>
+       To characterize the complexity of brave reasoning, note that {a mathematical formula}Φ⊨cΨ iff it is not the case that {a mathematical formula}Φ⊨b¬Ψ. Hence we immediately get the following result.
+      </paragraph>
+      <paragraph label="Corollary 2">
+       Let Φ and Ψ be two GPL formulas. The problem of checking whether{a mathematical formula}Φ⊨bΨis{a mathematical formula}Σ2P-complete (in the joint size of Φ and Ψ).
+      </paragraph>
+      <paragraph>
+       Given this complexity result, it is clear that no polynomial transformation to SAT will allow us to check {a mathematical formula}Φ⊨cΨ or {a mathematical formula}Φ⊨bΨ, unless the polynomial hierarchy collapses. However, it is straightforward to reduce these entailment queries to QBFs, using a translation similar to the proposed SAT translation for checking the consistency of GPL formulas. In this way, we can use QBF solvers for reasoning about the minimally specific models of a GPL knowledge base.
+      </paragraph>
+     </section>
+     <section label="7.2">
+      Complexity of reasoning about GPL{sup:Δ} formulas
+      <paragraph>
+       We now consider GPL{sup:Δ} formulas, i.e., formulas in which also meta-literals of the form {a mathematical formula}Δλ(α) and {a mathematical formula}∇λ(α) can occur.
+      </paragraph>
+      <paragraph label="Proposition 14">
+       The problem of deciding whether{a mathematical formula}Φ⊨Ψ, for Φ and Ψ two GPL{sup:Δ}formulas, is{a mathematical formula}Θ2P-complete (in the joint size of Φ and Ψ).
+      </paragraph>
+      <paragraph label="Proof">
+       HardnessA standard {a mathematical formula}Θ2P-complete problem is the following. Let {a mathematical formula}ϕ1,...,ϕn be propositional formulas. Decide whether the smallest i for which {a mathematical formula}ϕi is unsatisfiable is an odd number.Without loss of generality, we can assume that n is odd (as otherwise we could simply omit {a mathematical formula}ϕn). Now consider the following GPL{sup:Δ} formula:{a mathematical formula} We show that {a mathematical formula}Δ1(⊤)⊨Ψ iff the smallest i for which {a mathematical formula}ϕi is unsatisfiable is odd. Clearly, {a mathematical formula}Δ1(⊤) has exactly one e-model, which is the possibility distribution {a mathematical formula}π⁎ for which every world is fully possible, i.e., {a mathematical formula}π⁎(ω)=1 for every {a mathematical formula}ω∈Ω. For a propositional formula ϕ, we then have {a mathematical formula}Π⁎(ϕ)=1 iff {a mathematical formula}〚ϕ〛≠∅. In other words, {a mathematical formula}π⁎ will be an e-model of Ψ iff {a mathematical formula}ϕ1 is not satisfiable, or {a mathematical formula}ϕ1 and {a mathematical formula}ϕ2 are satisfiable but not {a mathematical formula}ϕ3, etc.MembershipIt is well-known that the class {a mathematical formula}Θ2P coincides with the class of decision problems which can be solved in polynomial time on a deterministic Turing machine by using a polynomial number of parallel queries to an NP-oracle, i.e., such that the result of one query to the NP-oracle cannot be used to formulate another query to the NP-oracle [74]. Surprisingly, allowing two rounds of parallel queries does not lead to an increased complexity ([75], Theorem 9). We will show that {a mathematical formula}Φ⊨Ψ can be decided in this way, thus proving membership in {a mathematical formula}Θ2P.Since {a mathematical formula}Φ⊨Ψ holds iff {a mathematical formula}Φ∧¬Ψ is unsatisfiable, it is sufficient to show that satisfiability checking of GPL{sup:Δ} formulas is in {a mathematical formula}Θ2P. Let Ψ be a GPL{sup:Δ} formula. Without loss of generality, we can assume that no implications occur in Ψ and that all negations occur inside a modality, i.e., the meta-literals in Ψ are connected using conjunction and disjunction only.Assume that the meta-literals occurring in Ψ are:{a mathematical formula} Using a first round of parallel calls to an NP-oracle, we check {a mathematical formula}γiu⊨αjv for all {a mathematical formula}1≤i≤pu, {a mathematical formula}1≤j≤nv, and {a mathematical formula}u+v≥k+1. Note that the number of calls to the oracle is at most quadratic in the number of meta-literals appearing in Ψ.Using the result of these oracle calls, we can decide the satisfiability of Ψ in NP, i.e., by making one additional call to the NP-oracle, as follows. Note that Ψ is equivalent to a disjunction of meta-terms. In polynomial time we may guess such a meta-term, of the following form:{a mathematical formula} We will further refine the meta-literals of the form {a mathematical formula}Πwi(βi) and {a mathematical formula}∇zi(δi) in Θ. To refine a meta-literal of the form {a mathematical formula}Πwi(βi) we need to replace {a mathematical formula}βi by a more restrictive formula. To this end, for each {a mathematical formula}βi we guess a specific model {a mathematical formula}ωβi∈〚βi〛, and we define {a mathematical formula}βi⁎=⋀ωβi⊨ll, i.e., {a mathematical formula}βi⁎ is chosen such that {a mathematical formula}〚βi⁎〛={ωβi}. It follows that {a mathematical formula}⊨GPLΠwi(βi⁎)≡Δwi(βi⁎).To refine a meta-literal of the form {a mathematical formula}∇zi(δi), we need to replace {a mathematical formula}δi with a less restrictive formula. In particular, we guess a world {a mathematical formula}ωδi∉〚δi〛 and choose the formula {a mathematical formula}δi⁎ such that {a mathematical formula}〚δi⁎〛=Ω∖{ωδi}. It then holds that {a mathematical formula}⊨GPL∇zi(δi⁎)≡Nzi(δi⁎). Note that the size of the formulas {a mathematical formula}βi⁎ and {a mathematical formula}δi⁎ is linear in the number of literals, hence we can indeed guess these formulas in polynomial time.Clearly, the term Θ is satisfiable iff such refinements can be found that make the following term {a mathematical formula}Θ⁎ satisfiable{a mathematical formula} Let {a mathematical formula}π⁎ be the most specific possibility distribution satisfying{a mathematical formula} and let {a mathematical formula}π⁎ be the least specific possibility distribution satisfying{a mathematical formula} If is clear that every possibility distribution π from {a mathematical formula}Pk satisfying {a mathematical formula}π⁎(ω)≤π(ω)≤π⁎(ω) is an e-model of {a mathematical formula}Θ⁎. To complete the proof, we need to show that it can be checked in polynomial time whether such a possibility distribution π exists. This is the case exactly when {a mathematical formula}α1∧...∧αn∧δ1⁎∧....∧δr⁎ is satisfiable, and the following entailment relations are valid:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}βi⁎⊨αj for every i, j such that {a mathematical formula}wi≥ν(vj)
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}βi⁎⊨δj⁎ for every i, j such that {a mathematical formula}wi≥ν(zj)
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}γi⊨αj for every i, j such that {a mathematical formula}ui≥ν(vj)
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}γi⊨δj⁎ for every i, j such that {a mathematical formula}ui≥ν(zj)
+       </list-item>
+      </list>
+      <paragraph>
+       Thus we find that allowing the Δ modality causes a jump in complexity. It should be noted, however, that this increased complexity is the result of how N and Δ interact. In particular, the NP-completeness result from Proposition 11 could straightforwardly be adapted to a logic where only Δ modalities are allowed, by taking advantage of the duality expressed in (15).
+      </paragraph>
+      <paragraph label="Proposition 15">
+       Let Φ and Ψ be two GPL{sup:Δ}formulas. The problem of checking whether{a mathematical formula}Φ⊨cΨis{a mathematical formula}Π2P-complete (in the joint size of Φ and Ψ).
+      </paragraph>
+      <paragraph label="Proof">
+       HardnessFollows immediately from Proposition 13.MembershipWe now present a {a mathematical formula}Σ2P algorithm for checking that Ψ is false in at least one minimally specific e-model of Φ.The GPL formula Φ is equivalent to a disjunction of meta-terms. In polynomial time, we can guess such a meta-term. Moreover, as in the proof of Proposition 14, without loss of generality, we can assume that the only meta-literals which occur in this meta-term are of the form {a mathematical formula}Nλ1(α1) and {a mathematical formula}Δμ1(β1), by refining any meta-literals of the form {a mathematical formula}Πλ1(α1) and {a mathematical formula}∇μ1(β1). Assume that we guess a meta-term of the following form:{a mathematical formula} Using an NP-oracle we can check that this formula is consistent, verifying that {a mathematical formula}α1∧...∧αn is consistent, and that {a mathematical formula}βi⊨αj whenever {a mathematical formula}μi≥ν(λj). If the meta-term is consistent, it has a unique least specific e-model {a mathematical formula}π1, which is the least specific e-model of {a mathematical formula}Nλ1(α1)∧...∧Nλn(αn), noting that the latter corresponds to a standard possibilistic logic base.Using the NP-oracle we can check that β is false in {a mathematical formula}π1. In particular:
+       <list>
+        a meta-literal {a mathematical formula}Nδ1(γ1) is satisfied by {a mathematical formula}π1 iff {a mathematical formula}{αi|λi≥δ1}⊨γ1;a meta-literal {a mathematical formula}Πδ1(γ1) is falsified by {a mathematical formula}π1 iff {a mathematical formula}{αi|λi≥ν(δ1)}⊨¬γ1;a meta-literal {a mathematical formula}Δδ1(γ1) is satisfied by {a mathematical formula}π1 iff {a mathematical formula}γ1⊨{αi|λi≥ν(δ1)};a meta-literal {a mathematical formula}∇δ1(γ1) is falsified by {a mathematical formula}π1 iff {a mathematical formula}¬γ1⊨{αi|λi≥δ1}.What remains to be verified is that there does not exist another consistent meta-term which is an implicant of Φ and which has a least specific e-model
+       </list>
+       <paragraph>
+        {a mathematical formula}π2 that is strictly less specific than {a mathematical formula}π1.The check this, we define a GPL{sup:Δ} knowledge base {a mathematical formula}Φ′ as follows. Without loss of generality, we can assume that Φ is in negation normal form and in particular that there are no occurrences of negation or implication outside the modalities. Starting from Φ, for each meta-literal {a mathematical formula}Nδ(γ) that occurs, we test whether{a mathematical formula} If this is not the case, no e-model of {a mathematical formula}Nδ(γ) can be less specific than {a mathematical formula}π1; we then replace {a mathematical formula}Nδ(γ) by ⊥. Furthermore, for each meta-literal {a mathematical formula}∇δ(γ) which occurs, we test whether {a mathematical formula}¬γ∧¬⋀{αi|λi≥δ} is consistent. If not, we find that no e-model of {a mathematical formula}∇δ(γ) can be less specific than {a mathematical formula}π1, and we replace {a mathematical formula}∇δ(γ) by ⊥. If, on the other hand, {a mathematical formula}¬γ∧¬⋀{αi|λi≥δ} is consistent, then we replace the meta-literal {a mathematical formula}∇δ(γ) by {a mathematical formula}∇δ(γ∨⋀{αi|λi≥δ}), since the minimally specific e-models of the latter GPL formula are exactly those minimally specific e-models of {a mathematical formula}∇δ(γ) that are less specific than {a mathematical formula}π1. Note that the resulting knowledge base {a mathematical formula}Φ′ is consistent, and in particular that (49) is an implicant of {a mathematical formula}Φ′.By replacing a meta-literal {a mathematical formula}Nδ(γ) or {a mathematical formula}∇δ(γ), we potentially reduce the set of e-models of the knowledge base. However, by construction, none of these e-models can be less specific than {a mathematical formula}π1. Moreover, each minimally specific e-model of {a mathematical formula}Φ′ is either equal to {a mathematical formula}π1 or strictly less specific than {a mathematical formula}π1. Therefore, we finally test whether {a mathematical formula}Φ′⊨Nλ1(α1)∧...∧Nλn(αn). If this is the case, then none of the e-models of {a mathematical formula}Φ′, and by extension of Φ, can be less specific than {a mathematical formula}π1. On the other hand, if this is not the case, then {a mathematical formula}Φ′ has an e-model which is not a refinement of π (since any refinement of {a mathematical formula}π1 is also an e-model of {a mathematical formula}Nλ1(α1)∧...∧Nλn(αn)). By construction, {a mathematical formula}Φ′ then has an e-model which is strictly less specific than {a mathematical formula}π1, which means that the guess in (49) did not induce a minimally specific e-model of Φ. □
+       </paragraph>
+      </paragraph>
+      <paragraph label="Corollary 3">
+       Let Φ and Ψ be two GPL{sup:Δ}formulas. The problem of checking whether{a mathematical formula}Φ⊨bΨis{a mathematical formula}Σ2P-complete (in the joint size of Φ and Ψ).
+      </paragraph>
+     </section>
+     <section label="7.3">
+      Complexity of reasoning about GPL{a mathematical formula}RΔ formulas
+      <paragraph>
+       Next we consider the complexity of reasoning in the presence of the restricted guaranteed possibility modality.
+      </paragraph>
+      <paragraph label="Proposition 16">
+       The problem of deciding whether{a mathematical formula}Φ⊨Ψ, for Φ and Ψ two GPL{a mathematical formula}RΔformulas, is{a mathematical formula}Π3P-complete (in the joint size of Φ and Ψ).
+      </paragraph>
+      <paragraph label="Proof">
+       We will prove that checking the satisfiability of a GPL{a mathematical formula}RΔ formula is {a mathematical formula}Σ3P-complete, from which the stated result readily follows. HardnessLet {a mathematical formula}X∪Y∪Z be a partition of the set of atomic formulas. We can show that checking the validity of the QBF {a mathematical formula}Ψ=∃X∀Y∃Z.ϕ(X,Y,Z) is equivalent to checking whether the following formula is satisfiable:{a mathematical formula} Indeed, this formula is equivalent to a disjunction of meta-terms, each of which corresponds to an interpretation of the variables in X. Let {a mathematical formula}X1∪X2 be a partition of X and let us consider the corresponding implicant of (51):{a mathematical formula} This is equivalent to{a mathematical formula} The latter formula is satisfiable iff every truth assignment of the variables in Y can be extended to a model of {a mathematical formula}ϕ(X,Y,Z)∧(⋀x∈X1x)∧(⋀x∈X2¬x). Clearly this means that (51) is satisfiable iff the QBF Ψ is valid. This means that satisfiability checking in GPL{a mathematical formula}RΔ is {a mathematical formula}Σ3P-hard, from which it follows that entailment checking is {a mathematical formula}Π3P-hard.MembershipWe provide a {a mathematical formula}Σ3P procedure for verifying that a GPL{a mathematical formula}RΔ formula Ψ is satisfiable. Similarly as in the proof of Proposition 14, we can guess an implicant of Ψ of the following form:{a mathematical formula} where {a mathematical formula}X1,...,Xm are sets of atomic formulas. We give a {a mathematical formula}Σ2P procedure for checking that Θ is not satisfiable. First verify whether {a mathematical formula}α1∧...∧αn is satisfiable, using an NP oracle. If this is the case, select a {a mathematical formula}βi, guess a model ω of {a mathematical formula}βi, and verify using the NP-oracle that {a mathematical formula}conjωX∧{αj|vj≥ν(wi)} is inconsistent. It follows that checking the satisfiability of Θ is in {a mathematical formula}Π2P, and can thus be done in constant time using a {a mathematical formula}Σ2P-oracle. □
+      </paragraph>
+      <paragraph label="Proposition 17">
+       The problem of deciding whether{a mathematical formula}Φ⊨cΨ, for Φ and Ψ two GPL{a mathematical formula}RΔformulas, is{a mathematical formula}Π4P-complete (in the joint size of Φ and Ψ).
+      </paragraph>
+      <paragraph label="Proof">
+       HardnessLet {a mathematical formula}X∪Y∪Z∪U be a partition of the set of atomic formulas. We show that checking the validity of the QBF {a mathematical formula}ψ=∀X∃Y∀Z∃U.ϕ(X,Y,Z,U) is equivalent to checking whether {a mathematical formula}Φ⊨cΨ where:{a mathematical formula} Indeed, first note that for every subset {a mathematical formula}X0⊂X (i.e., for every interpretation of X), Φ has a minimally specific e-model in which {a mathematical formula}⋀x∈X0N1(x)∧⋀x∉X0N1(¬x) is true. To see why this is the case, note that the least specific e-model {a mathematical formula}π1 of {a mathematical formula}⋀x∈X0N1(x)∧⋀x∉X0N1(¬x)∧N1(a) is an e-model of Φ and for any e-model {a mathematical formula}π2 of Φ which is strictly less specific than {a mathematical formula}π1, it must be the case that {a mathematical formula}π2⊨⋀x∈X0N1(x)∧⋀x∉X0N1(¬x). We thus find that {a mathematical formula}Φ⊨cΨ iff for every {a mathematical formula}X0⊂X, it holds that {a mathematical formula}f(X0)⊨cΨ, where:{a mathematical formula} Note that {a mathematical formula}⊨GPLΦ≡⋁X0⊆Xf(X0). Now let us define {a mathematical formula}g(X0) and {a mathematical formula}f(X0,Y0) for {a mathematical formula}X0⊆X and {a mathematical formula}Y0⊆Y as follows:{a mathematical formula} Note that {a mathematical formula}f(X0)=g(X0)∨⋁Y0⊆Yf(X0,Y0). If there exists a {a mathematical formula}Y0⊆Y such that {a mathematical formula}f(X0,Y0) is consistent, then clearly the least specific e-model of {a mathematical formula}f(X0,Y0) will be strictly less specific than any e-model of {a mathematical formula}g(X0). Furthermore note that {a mathematical formula}f(X0,Y0)⊨c¬N1(a) while {a mathematical formula}g(X0)⊨cN1(a). In other words, we have {a mathematical formula}f(X0)⊨c¬N1(a) iff there exists a {a mathematical formula}Y0⊆Y such that {a mathematical formula}f(X0,Y0) is consistent. The latter condition will be satisfied iff for every {a mathematical formula}Z0⊆Z it holds that {a mathematical formula}⋀x∈X0x∧⋀x∉X0¬x∧⋀y∈Y0y∧⋀y∉Y0¬y∧⋀z∈Z0z∧⋀z∉Z0¬z∧ϕ(X,Y,Z,U) is consistent. In other words, iff for every {a mathematical formula}Z0⊆Z there exists a {a mathematical formula}U0⊆U such that {a mathematical formula}X0∪Y0∪Z0∪U0 defines a model of {a mathematical formula}ϕ(X,Y,Z,U).In summary we have that {a mathematical formula}Φ⊨cΨ iff for every {a mathematical formula}X0 it holds that {a mathematical formula}f(X0)⊨cΨ, iff for every {a mathematical formula}X0 there exists a {a mathematical formula}Y0 such that {a mathematical formula}f(X0,Y0) is consistent, iff for every {a mathematical formula}X0 there exists a {a mathematical formula}Y0 such that for every {a mathematical formula}Z0 there exists a {a mathematical formula}Y0 such that {a mathematical formula}X0∪Y0∪Z0∪U0 defines a model of {a mathematical formula}ϕ(X,Y,Z,U), iff the QBF ψ is valid.MembershipWe give a {a mathematical formula}Σ4P procedure for checking {a mathematical formula}Φ⊭cΨ, from which the membership result immediately follows. As in the proof of Proposition 16, we can guess an implicant of Φ of the following form:{a mathematical formula} where {a mathematical formula}X1,...,Xm are sets of atomic formulas. Using a {a mathematical formula}Σ2P oracle, we can verify that {a mathematical formula}Φ0 is consistent, as in the proof of Proposition 16. Since the unique least specific e-model of {a mathematical formula}Φ0 is also the least specific e-model of {a mathematical formula}Nv1(γ1)∧...∧Nvn(γn), using a {a mathematical formula}Σ2P oracle, we can check in polynomial time that {a mathematical formula}Φ0⊭cΨ. Indeed:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        The satisfaction of meta-literals of the form {a mathematical formula}Nλ(ϵ), {a mathematical formula}Πλ(ϵ), {a mathematical formula}Δλ(ϵ) and {a mathematical formula}∇λ(ϵ) occurring in Ψ can be verified as in the proof of Proposition 15.
+       </list-item>
+       <list-item label="•">
+        To check whether {a mathematical formula}Nv1(γ1)∧...∧Nvn(γn)⊨cΔλX(ϵ), it suffices to check the validity of the following QBF:{a mathematical formula} This can be accomplished in constant time using a {a mathematical formula}Σ2P oracle.
+       </list-item>
+       <list-item label="•">
+        To check whether {a mathematical formula}Nv1(γ1)∧...∧Nvn(γn)⊨c∇λX(ϵ), it suffices to check that {a mathematical formula}Nv1(γ1)∧...∧Nvn(γn)⊭cΔλX(¬ϵ), since {a mathematical formula}Nv1(γ1)∧...∧Nvn(γn) has a unique least specific e-model.
+       </list-item>
+      </list>
+      <paragraph label="Corollary 4">
+       The problem of deciding whether{a mathematical formula}Φ⊨bΨ, for Φ and Ψ two GPL{a mathematical formula}RΔformulas, is{a mathematical formula}Σ4P-complete (in the joint size of Φ and Ψ).
+      </paragraph>
+     </section>
+     <section label="7.4">
+      Complexity of reasoning in GPL≻ and GPL{a mathematical formula}≻core
+      <paragraph label="Proposition 18">
+       To characterize the complexity of satisfiability checking in GPL{a mathematical formula}≻core, we can take advantage of a straightforward reduction to GPLk. First note that when only finitely many certainty degrees are considered, ≻ can be introduced as an abbreviation in GPLk:{a mathematical formula} For finite knowledge bases, we never really need infinitely many certainty degrees, although the required number can depend on the size of the considered formulas. This is made precise in the following proposition. Let{a mathematical formula}Φ={α1≻β1,...,αn≻βn,γn+1∼δn+1,...,γm∼δm}. If{a mathematical formula}k≥n, it holds that Φ is satisfiable in GPLkiff Φ is satisfiable in GPL{a mathematical formula}≻core.
+      </paragraph>
+      <paragraph label="Proof">
+       Since any e-model of Φ in GPLk is also an e-model of Φ in GPL{a mathematical formula}≻core, it is clear that satisfiability in GPLk entails satisfiability in GPL{a mathematical formula}≻core.Conversely, let π be an e-model of Ψ in GPL{a mathematical formula}≻core. In particular, among all such e-models, let π be such that the number of certainty levels in {a mathematical formula}Λ={π(ω)|ω∈Ω} is minimal. Let {a mathematical formula}Λ′={1−N(αi)|1≤i≤n}∪{1−N(βi)|1≤i≤n}⊆Λ. It holds that {a mathematical formula}Λ=Λ′. Indeed, if this were not the case, we could define a possibility distribution {a mathematical formula}π′ as follows:{a mathematical formula} It is straightforward to verify that the necessity measure induced by {a mathematical formula}π′ still satisfies all constraints. This shows that it is possible to choose a possibility distribution {a mathematical formula}π′ which only takes values from {a mathematical formula}Λ′. Since we moreover clearly have that {a mathematical formula}Λ′⊆Λ, and π was assumed to minimize {a mathematical formula}|Λ|, we find {a mathematical formula}Λ′=Λ.We now show that {a mathematical formula}|Λ|≤n+1. In particular, we show that if {a mathematical formula}λ∈Λ∖{min⁡Λ,max⁡Λ} it holds that there are at least two different formulas {a mathematical formula}χ1, {a mathematical formula}χ2 among {a mathematical formula}{α1,...,αn,β1,...,βn} such that {a mathematical formula}N(χ1)=N(χ2)=1−λ. Suppose this were not the case, and that e.g., {a mathematical formula}αi is the only formula for which {a mathematical formula}N(αi)=1−λ. Define {a mathematical formula}π′ as follows:{a mathematical formula} Then it is clear that the necessity measure induced by {a mathematical formula}π′ still satisfies all constraints, while {a mathematical formula}π′ uses strictly fewer certainty levels than π, a contradiction. The case where {a mathematical formula}βi is the only formula with necessity {a mathematical formula}1−λ is entirely analogous. Finally, since only the relative ordering of the certainty levels matters, it is always possible to choose π such that {a mathematical formula}Λ={0,1k,...,1}, {a mathematical formula}k≥n. In other words, there exists an e-model {a mathematical formula}π∈Pk of Φ.  □
+      </paragraph>
+      <paragraph label="Proposition 19">
+       In general, to verify whether {a mathematical formula}Φ⊨≻Ψ holds, we can rewrite {a mathematical formula}Φ∧¬Ψ such that it is free of negations, by using the fact that {a mathematical formula}¬(α≻β) is equivalent to {a mathematical formula}(α∼β)∨(β≻α), and similarly {a mathematical formula}¬(α∼β) is equivalent to {a mathematical formula}(α≻β)∨(β≻α). Let Θ be the resulting formula. Then a suitable lower bound for k, ensuring that {a mathematical formula}Φ⊨≻Ψ iff {a mathematical formula}Φ⊨GPLkΨ, can be found as follows:{a mathematical formula} Since satisfiability checking in GPL{a mathematical formula}≻core can thus be reduced to checking the satisfiability of a GPL formula (whose size is polynomial in the size of the initial formula), it follows that this problem is in NP. The complexity of deciding whether a GPL{a mathematical formula}≻coreformula is satisfiable is NP-complete (w.r.t. the size of the formula).
+      </paragraph>
+      <paragraph label="Proof">
+       To see why satisfiability checking in GPL{a mathematical formula}≻core is NP-hard, note that the propositional formula α is satisfiable iff {a mathematical formula}α≻⊥ is satisfiable. NP-membership directly follows from Proposition 18.  □
+      </paragraph>
+      <paragraph label="Proposition 20">
+       The complexity of deciding whether a GPL≻formula is satisfiable is NP-complete (w.r.t. the size of the formula).
+      </paragraph>
+      <paragraph label="Proof">
+       NP-hardness trivially follows from Proposition 19. We now propose an NP procedure to check the satisfiability of a GPL≻ formula Φ. First, if Φ is satisfiable, in polynomial time we can guess a satisfiable term of the following form:{a mathematical formula} From Lemma 3 in Appendix C, we know that this term is satisfiable iff the following GPL{a mathematical formula}≻core formula is satisfiable.{a mathematical formula} As in the proof of Proposition 19, we find that the satisfiability of this latter formula can be checked using an NP procedure.  □
+      </paragraph>
+     </section>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     Proof of Proposition 1
+     <paragraph label="Proof">
+      The soundness of the axioms (PL), (K), (N), (D) and (W) w.r.t. the semantics of GPL can readily be verified. Here we show that these axioms are also complete.Let {a mathematical formula}F={Nλ(α)|α∈L,λ∈Λk+}. Let {a mathematical formula}Ω⁎ be the set of all propositional interpretations over the set of atomic formulas F. Given a GPL knowledge base K, let {a mathematical formula}K⁎ be the propositional knowledge base over F, defined as{a mathematical formula} where {a mathematical formula}α→β is an arbitrary (but fixed) formula from {a mathematical formula}L which is equivalent to {a mathematical formula}α→β, and similarly for ¬α. We then have that Φ can be derived from K using the axioms (PL), (K), (N), (D), (W) and modus ponens iff Φ can be derived from {a mathematical formula}K⁎ in propositional logic.To finish the proof, note that with every model I of {a mathematical formula}K⁎, we can associate a set-function {a mathematical formula}gI:2Ω→Λ defined for {a mathematical formula}α∈L as{a mathematical formula} where we define {a mathematical formula}gI(〚α〛)=0 if {a mathematical formula}{λ|I⊨Nλ(α)}=∅. From the fact that {a mathematical formula}K⁎ contains every instantiation of the axioms (K), (N), (D) and (W), we can derive the following properties for the function {a mathematical formula}gI:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       We have {a mathematical formula}gI(Ω)=1 thanks to the fact that {a mathematical formula}N1(⊤)∈K⁎.
+      </list-item>
+      <list-item label="•">
+       We have {a mathematical formula}gI(∅)=0. Indeed, since {a mathematical formula}K⁎ contains {a mathematical formula}N1(⊤) and {a mathematical formula}N1(⊤)→¬N1k(⊥) (as an instantiation of (D)) and {a mathematical formula}Nλ(⊥)→N1k(⊥) for every {a mathematical formula}λ∈Λk+ (as an instantiation of (W)) we know that {a mathematical formula}I⊨¬Nλ(⊥) for every {a mathematical formula}λ∈Λk+. It follows that {a mathematical formula}{λ|I⊨Nλ(⊥)}=∅ and thus {a mathematical formula}gI(∅)=gI(〚⊥〛)=0.
+      </list-item>
+      <list-item label="•">
+       We have that {a mathematical formula}gI is monotone w.r.t. set inclusion. Indeed, if {a mathematical formula}〚α〛⊆〚β〛 then {a mathematical formula}α⊨β holds, which means that {a mathematical formula}K⁎ will entail {a mathematical formula}Nλ(α)→Nλ(β) for every {a mathematical formula}λ∈Λk+ (as an instantiation of (K)). It follows that {a mathematical formula}{λ|I⊨Nλ(α)}⊆{λ|I⊨Nλ(β)} and {a mathematical formula}gI(〚α〛)≤gI(〚β〛).
+      </list-item>
+      <list-item label="•">
+       We have that {a mathematical formula}gI(〚α∧β〛)=min⁡(gI(〚α〛),gI(〚β〛)) for every {a mathematical formula}α,β∈L. Indeed from the monotonicity of {a mathematical formula}gI we already have {a mathematical formula}gI(〚α∧β〛)≤min⁡(gI(〚α〛),gI(〚β〛)). Conversely, assume {a mathematical formula}I⊨Nλ(α) and {a mathematical formula}I⊨Nλ(β). Using {a mathematical formula}Nλ(β) and the instantiation of (K) on the tautology {a mathematical formula}β→(α→(α∧β)) we find {a mathematical formula}I⊨Nλ(α→(α∧β)). Using another instantiation of (K) we find from {a mathematical formula}I⊨Nλ(α→(α∧β)) and {a mathematical formula}I⊨Nλ(α) that {a mathematical formula}I⊨Nλ(α∧β). It follows that {a mathematical formula}{λ|I⊨Nλ(α)}∩{λ|I⊨Nλ(β)}⊆{λ|I⊨Nλ(α∧β)} and {a mathematical formula}gI(〚α∧β〛)≥min⁡(gI(〚α〛),gI(〚β〛).
+      </list-item>
+     </list>
+    </section>
+    <section label="Appendix B">
+     Proof of Proposition 4
+     <paragraph label="Lemma 1">
+      Before we present the proof of the main result, which will apply to arbitrary propositional combinations of comparative certainty statements, we show that the proposed axioms are sufficient for detecting inconsistencies in sets of statements of the form {a mathematical formula}α≻β. Let{a mathematical formula}Θ={α1≻β1,...,αn≻βn}. It holds that Θ has an e-model iff{a mathematical formula}Θ⊬≻core⊥.
+     </paragraph>
+     <paragraph label="Proof">
+      The soundness of the axioms follows easily from well-known properties of necessity measures. We thus focus on showing that ⊥ can be derived if Θ is not satisfiable.For each {a mathematical formula}αi there exist formulas {a mathematical formula}αi1,...,αimi such that {a mathematical formula}αi=αi1∧...∧αimi and such that for each formula {a mathematical formula}αij it holds that {a mathematical formula}〚αij〛=Ω∖{ωij} for some propositional interpretation {a mathematical formula}ωij. Similarly, for each {a mathematical formula}βi there are formulas {a mathematical formula}βi1,...,βini such that {a mathematical formula}βi=βi1∧...∧βini and for each k it holds that {a mathematical formula}〚βik〛=Ω∖{ωik} for some propositional interpretation {a mathematical formula}ωik.From {a mathematical formula}αi≻βi we can derive using (Ax3) that {a mathematical formula}αij≻βi for every {a mathematical formula}j∈{1,...,mi}. Furthermore, using (25) we can derive {a mathematical formula}Aij=(αij≻βi1)∨...∨(αij≻βini). Conversely, from {a mathematical formula}Aij we can derive {a mathematical formula}αij≻βi using (Ax3), and from {a mathematical formula}{αi1≻βi,...,αimi≻βi} we can derive {a mathematical formula}αi≻βi using (Ax2) and (Ax3). It follows that {a mathematical formula}αi≻βi is equivalent to {a mathematical formula}{Ai1,...,Aimi}.Let ϕ be a mapping from {a mathematical formula}{1,...,n}×{1,...,mi} to {a mathematical formula}{1,...,ni}, allowing us to choose for each formula {a mathematical formula}Aij a disjunct {a mathematical formula}αij≻βiϕ(i,j). Clearly Θ is satisfiable iff there exists a mapping ϕ such that {a mathematical formula}Θϕ={αij≻βiϕ(i,j)|i∈{1,...,n},j∈{1,...,mi}} is satisfiable. Accordingly, for Θ to be unsatisfiable, it suffices to show that for each such mapping ϕ, ⊥ can be derived from the formulas in {a mathematical formula}Θϕ.Each formula {a mathematical formula}αij≻βiϕ(i,j) corresponds to a constraint of the form {a mathematical formula}N(αij)&gt;N(βiϕ(i,j)), which by construction corresponds to the constraint {a mathematical formula}π(ωij)&lt;π(ωiϕ(i,j)) on the associated possibility distribution. Clearly a set of such constraints can be satisfied unless there is a cycle of the form {a mathematical formula}π(ω1)&lt;π(ω2),π(ω2)&lt;π(ω3),...,π(ωr)&lt;π(ω1). In such a case, {a mathematical formula}Θϕ contains formulas of the form {a mathematical formula}χ1≻χ2,χ2≻χ3,...,χr≻χ1 (up to syntactic variations of the arguments {a mathematical formula}χl which we can ignore because of (Ax3)). By repeatedly applying (20) we can then derive {a mathematical formula}χ1≻χ1, which allows us to derive ⊥ using (Ax4). Thus we have shown that {a mathematical formula}Θϕ is unsatisfiable iff ⊥ can be derived.  □
+     </paragraph>
+     <paragraph label="Lemma 2">
+      In the next lemma, we additionally consider formulas of the form {a mathematical formula}γ∼δ. Let{a mathematical formula}Θ={α1≻β1,...,αn≻βn,γn+1∼δn+1,...,γm∼δm}. It holds that Θ has an e-model iff{a mathematical formula}Θ⊬≻core⊥.
+     </paragraph>
+     <paragraph label="Proof">
+      We show that Θ has an e-model if {a mathematical formula}Θ⊬≻core⊥; the other direction follows from the soundness of the axioms.From Lemma 1 we know that {a mathematical formula}{α1≻β1,...,αn≻βn} is satisfiable, given that we assumed that no inconsistency can be derived. Let π be a possibility distribution that satisfies {a mathematical formula}{α1≻β1,...,αn≻βn}. From the fact that ≻ is a strict partial order, the fact that ∼ is an equivalence relation and (Ax5), it follows that we can partition the set of formulas {a mathematical formula}X={α1,...,αn,β1,...,βn,γn+1,...,γm,δn+1,...,δm} as {a mathematical formula}X=X1∪...∪Xs where for {a mathematical formula}χ∈Xr and {a mathematical formula}χ′∈Xt, with {a mathematical formula}r&lt;t, it holds that Θ contains a conjunct {a mathematical formula}α≻β where {a mathematical formula}⊨α≡χ and {a mathematical formula}⊨β≡χ′. Let {a mathematical formula}Lr={1−N(χ)|χ∈Xr}. Because of how we choose π, it holds that {a mathematical formula}max⁡Lr&lt;min⁡Lt for {a mathematical formula}r&lt;t. We now define the possibility distribution {a mathematical formula}π′ as follows:{a mathematical formula} Let {a mathematical formula}N′ be the necessity measure induced by {a mathematical formula}π′. It is straightforward to verify that {a mathematical formula}N′(χ)=N′(χ′) for {a mathematical formula}χ,χ′∈Xr and that {a mathematical formula}N′(χ)&gt;N′(χ′) if {a mathematical formula}χ∈Xr and {a mathematical formula}χ′∈Xt with {a mathematical formula}r&lt;t. In other words, it holds that {a mathematical formula}π′⊨≻Θ.  □
+     </paragraph>
+     <paragraph label="Proof">
+      Proposition 4 now follows easily. The soundness of the axioms can be verified straightforwardly. To see why the completeness result holds, note that when {a mathematical formula}Φ⊨≻Ψ holds, we have that {a mathematical formula}Φ∧¬Ψ is unsatisfiable. Let {a mathematical formula}Φ1∨...∨Φn be a formula in DNF which is equivalent to {a mathematical formula}Φ∧¬Ψ, where each disjunct {a mathematical formula}Φi is a conjunction {a mathematical formula}ϕ1i∧...∧ϕni of meta-literals of the form {a mathematical formula}α≻β and {a mathematical formula}α∼β. From Lemma 2 it immediately follows that each such a disjunct {a mathematical formula}Φi is unsatisfiable iff {a mathematical formula}ϕ1∧...∧ϕn⊢≻core⊥. Since {a mathematical formula}Φ1∨...∨Φn is inconsistent, none of the disjuncts {a mathematical formula}Φi are satisfiable, from which we can thus conclude {a mathematical formula}Φ1∨...∨Φn⊢≻core⊥ and thus {a mathematical formula}Φ⊢≻coreΨ.  □
+     </paragraph>
+    </section>
+    <section label="Appendix C">
+     Proof of Proposition 5
+     <paragraph label="Lemma 3">
+      Let{a mathematical formula}K={Nλi(αi)|1≤i≤n}∪{¬Nλi(αi)|n+1≤i≤m}∪{αi≻βi|m+1≤i≤p}∪{αi∼βi|p+1≤i≤q}. Let the set of GPL{a mathematical formula}≻coreformulas L be given by:{a mathematical formula}It holds that K has an e-model iff L has an e-model.
+     </paragraph>
+     <paragraph label="Proof">
+      It is straightforward to verify that all the considered axioms are sound, hence when K has an e-model it must be the case that L has an e-model as well. Conversely, suppose that L has an e-model π. Note that by definition of e-model, π is then normalised. Clearly all formulas of the form {a mathematical formula}α≻β and {a mathematical formula}α∼β in K are satisfied by π, as these formulas are also included in L. Furthermore, for every formula of the form {a mathematical formula}N1(α) in K, L will contain the formula {a mathematical formula}α∼⊤, and thus {a mathematical formula}N(α)=N(⊤)=1 for N the necessity measure induced by π. Hence all formulas of the form {a mathematical formula}N1(α) from K are satisfied by π.
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Assume that some formula {a mathematical formula}Nλl(αl), with {a mathematical formula}λl&lt;1, is not satisfied by π and let {a mathematical formula}c=N(αl); note that we then have {a mathematical formula}c&lt;λl. Furthermore note that {a mathematical formula}c&gt;0 since L contains the formula {a mathematical formula}α≻⊥. Let d be the smallest element from the set {a mathematical formula}{λn+1,...,λm,1} which is strictly greater than {a mathematical formula}λl; since {a mathematical formula}λl&lt;1 such an element d must indeed exist. We define the normalized possibility distribution {a mathematical formula}π′ for {a mathematical formula}ω∈Ω as follows:{a mathematical formula} The transformation from π to {a mathematical formula}π′ is illustrated in Fig. C.1(a). First note that from {a mathematical formula}c&gt;0 and the fact that π is normalised, it follows that {a mathematical formula}π′ is normalised. Furthermore, since {a mathematical formula}c&lt;λl&lt;d we have that the transformation from π to {a mathematical formula}π′ is order-preserving, i.e. we have {a mathematical formula}π(ω1)&lt;π(ω2) iff {a mathematical formula}π′(ω1)&lt;π′(ω2). It follows that {a mathematical formula}π′ satisfies all formulas of the form {a mathematical formula}α≻β and {a mathematical formula}α∼β in K, given that π satisfies these formulas, as the satisfaction of such formulas only relies on the ordering of the possibility degrees. It clearly also holds that {a mathematical formula}π′⊨Nλl(αl). Indeed, since {a mathematical formula}N(αl)=c we know that {a mathematical formula}π(ω)≤1−c for every model of {a mathematical formula}¬αl. By definition of {a mathematical formula}π′ this means that {a mathematical formula}π(ω)≤1−λl for each such ω, and thus {a mathematical formula}π′⊨Nλl(αl). Furthermore, since {a mathematical formula}π′(ω)≤π(ω) for every {a mathematical formula}ω∈Ω, it holds that {a mathematical formula}π′ satisfies all the formulas of the form {a mathematical formula}Nλ(α) that were already satisfied by π.We now show that the same holds for formulas of the form {a mathematical formula}¬Nλ(α). Suppose {a mathematical formula}π⊨≻¬Nλp(αp), with {a mathematical formula}p∈{n+1,...,m}.
+      </list-item>
+      <list-item label="•">
+       Now consider the case where some formula {a mathematical formula}¬Nλl(αl) is not satisfied by π, and let us write {a mathematical formula}c=N(αl); note that we then have {a mathematical formula}c≥λl&gt;0. Furthermore note that we have {a mathematical formula}c&lt;1 since L contains the formula {a mathematical formula}⊤≻α. Let d be the largest element from the set {a mathematical formula}{λ1,...,λn,0} which is strictly smaller than {a mathematical formula}λl; since {a mathematical formula}λl&gt;0, such an element d must exist. Let us write {a mathematical formula}e=d+λl2. We define the normalized possibility distribution {a mathematical formula}π′ for {a mathematical formula}ω∈Ω as follows:{a mathematical formula} This transformation from π to {a mathematical formula}π′ is illustrated in Fig. C.1(b). Since {a mathematical formula}π′(ω)≥π(ω) and π is normalised, we have that {a mathematical formula}π′ is normalised as well. Furthermore, since {a mathematical formula}d&lt;e&lt;λl≤c, we have that the transformation from π to {a mathematical formula}π′ is order-preserving, and thus that {a mathematical formula}π′ satisfies all formulas of the form {a mathematical formula}α≻β and {a mathematical formula}α∼β. We also have that {a mathematical formula}π′⊨¬Nλl(αl). Indeed, since {a mathematical formula}c&lt;1 there must exist model {a mathematical formula}ω⁎ of {a mathematical formula}¬αl such that {a mathematical formula}π(ω⁎)=1−c. By construction, it holds that {a mathematical formula}π′(ω⁎)=1−e, from which it follows that {a mathematical formula}N′(αl)≤e&lt;λl, with {a mathematical formula}N′ the necessity measure induced by {a mathematical formula}π′. Furthermore, since {a mathematical formula}π′(ω)≥π(ω) for every {a mathematical formula}ω∈Ω, it holds that {a mathematical formula}π′ satisfies all the formulas {a mathematical formula}¬Nλp(αp) that were already satisfied by π.We now show that the same holds for formulas of the form {a mathematical formula}Nλp(αp). Suppose {a mathematical formula}π⊨≻Nλp(αp), with {a mathematical formula}p∈{1,...,n}.
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      Noting that all formulas in the set L can be derived from K using {a mathematical formula}⊢≻, the completeness of the GPL≻ axioms follows easily from the previous lemma, together with the completeness of the GPL{a mathematical formula}≻core axioms from Section 5.2. As it is clear that {a mathematical formula}Φ⊢≻Ψ implies {a mathematical formula}Φ⊨≻Ψ, we focus on the completeness result. If {a mathematical formula}Φ⊨≻Ψ then {a mathematical formula}Φ∧¬Ψ is unsatisfiable. Let {a mathematical formula}Φ1∨...∨Φn be a formula in DNF which is equivalent to {a mathematical formula}Φ∧¬Ψ, where each disjunct {a mathematical formula}Φi is a conjunction {a mathematical formula}ϕ1i∧...∧ϕni of meta-literals of the form {a mathematical formula}Nλ(α), {a mathematical formula}¬Nλ(α), {a mathematical formula}α≻β and {a mathematical formula}α∼β. From Lemma 3 it immediately follows that each such a disjunct {a mathematical formula}Φi is unsatisfiable iff {a mathematical formula}ϕ1∧...∧ϕn⊢≻⊥. Since {a mathematical formula}Φ1∨...∨Φn is inconsistent, none of the disjuncts {a mathematical formula}Φi are satisfiable, from which we can thus conclude {a mathematical formula}Φ1∨...∨Φn⊢≻⊥ and thus {a mathematical formula}Φ⊢≻Ψ.  □
+     </paragraph>
+    </section>
+    <section label="Appendix D">
+     Proof of Proposition 7
+     <paragraph label="Proof">
+      We first show the soundness of the axioms. As already discussed, the soundness of the axioms (RE), (LLE), (RW), (OR), (CM), (CUT) and (INC) follows from the soundness of (Ax1) and (RI1)–(RI3). To show that (WRM) is sound w.r.t. the possibilistic semantics it is sufficient to show that for any possibility measure Π it holds that {a mathematical formula}Π(α∧γ)&gt;Π(α∧¬γ) and {a mathematical formula}Π(α∧¬β)≤Π(α∧β) together imply {a mathematical formula}Π(α∧β∧γ)&gt;Π(α∧β∧¬γ). To see that this is the case,{sup:6} note that {a mathematical formula}Π(α∧γ)&gt;Π(α∧¬γ) means that either {a mathematical formula}Π(α∧β∧γ)&gt;Π(α∧¬γ) or {a mathematical formula}Π(α∧¬β∧γ)&gt;Π(α∧¬γ). In the former case, we readily obtain {a mathematical formula}Π(α∧β∧γ)&gt;Π(α∧β∧¬γ). In the latter case, we also need to have {a mathematical formula}Π(α∧β∧γ)&gt;Π(α∧β∧¬γ) since otherwise we find {a mathematical formula}Π(α∧¬β)≤Π(α∧β)=Π(α∧β∧¬γ), and in particular {a mathematical formula}Π(α∧¬β∧γ)≤Π(α∧¬β)≤Π(α∧β∧¬γ)≤Π(α∧¬γ), a contradiction.  □
+     </paragraph>
+     <paragraph label="Lemma 4">
+      To show the completeness result, we will use two lemmas. {a mathematical formula}c(α1|∼β1)∧...∧c(αn|∼βn)is satisfiable iff{a mathematical formula}c(α1|∼β1)∧...∧c(αn|∼βn)⊬c⊥.
+     </paragraph>
+     <paragraph label="Proof">
+      We show that {a mathematical formula}c(α1|∼β1)∧...∧c(αn|∼βn)⊢c⊥ if {a mathematical formula}c(α1|∼β1)∧...∧c(αn|∼βn) is unsatisfiable. The other direction trivially follows from the soundness of the axioms.Without loss of generality we can assume that {a mathematical formula}Ψ=c(α1|∼β1)∧...∧c(αn−1|∼βn−1) is satisfiable, but that every e-model π of Ψ is such that {a mathematical formula}Π(αn∧βn)≤Π(αn∧¬βn), with Π the possibility measure induced by π (i.e., from an inconsistent conjunction of conditionals with a consistent antecedent, we can always select a non-empty, maximal consistent subset of conditionals). This is only possible if every e-model π of Ψ is such that {a mathematical formula}Π(αn∧βn)&lt;Π(αn∧¬βn). Indeed, suppose there was an e-model π of Ψ such that {a mathematical formula}Π(αn∧βn)=Π(αn∧¬βn)&lt;1 and define {a mathematical formula}π′ as follows ({a mathematical formula}0&lt;ε&lt;1−Π(αn∧βn)):{a mathematical formula} It is easy to see that if {a mathematical formula}ε&lt;mini=1n−1⁡(Π(αi∧βi)−Π(αi∧¬βi)) it holds that {a mathematical formula}π′ is an e-model of {a mathematical formula}c(α1|∼β1)∧...∧c(αn|∼βn). If {a mathematical formula}Π(αn∧βn)=Π(αn∧¬βn)=1 we instead define {a mathematical formula}π′ as follows ({a mathematical formula}0&lt;ε&lt;Π(αn∧¬βn)):{a mathematical formula} Thus we can assume that for every e-model π of Ψ, we have {a mathematical formula}π⊨cc(αn|∼¬βn). Given the completeness result from [57] for consistent sets of conditionals, it follows that {a mathematical formula}c(αn|∼¬βn) can be derived from {a mathematical formula}c(α1|∼β1)∧...∧c(αn−1|∼βn−1). Finally, using (INC) and the axioms of classical logic, we can derive ⊥ from {a mathematical formula}c(αn|∼¬βn) and {a mathematical formula}c(αn|∼βn).  □
+     </paragraph>
+     <paragraph label="Lemma 5">
+      Let{a mathematical formula}{γ1|∼δ1,...,γm|∼δm}be a rationally closed set of defaults and let{a mathematical formula}Φ=c(γ1|∼δ1)∧...∧c(γm|∼δm)∧¬c(γm+1|∼δm+1)∧...∧¬c(γr|∼δr). It holds that Φ is satisfiable iff{a mathematical formula}Φ⊬⊥.
+     </paragraph>
+     <paragraph label="Proof">
+      Assume that {a mathematical formula}Φ⊬⊥; we show that Φ has an e-model. Note that the other direction follows trivially from the soundness of the axioms.Since {a mathematical formula}Φ⊬⊥, it follows from Lemma 4 that the set of conditionals {a mathematical formula}{γ1|∼δ1,...,γm|∼δm} is consistent. Given the correspondence between consistent sets of conditionals and possibility theory shown in [57], this means that {a mathematical formula}c(γ1|∼δ1)∧...∧c(γm|∼δm) is satisfiable, and in particular that it has an e-model π such that the conditionals satisfied by π are exactly those in {a mathematical formula}{γ1|∼δ1,...,γm|∼δm}, since we assumed that this set is rationally closed. Since {a mathematical formula}Φ⊬⊥ it holds that none of the defaults {a mathematical formula}γm+1|∼δm+1,...,γr|∼δr is included in this latter set, and thus that π is an e-model of Φ.  □
+     </paragraph>
+     <paragraph label="Proof">
+      We now show the completeness result. As it is clear that {a mathematical formula}Φ⊢cΨ implies {a mathematical formula}Φ⊨cΨ, we focus on the completeness result. If {a mathematical formula}Φ⊨cΨ then {a mathematical formula}Φ∧¬Ψ is unsatisfiable. Let {a mathematical formula}Φ1∨...∨Φn be a formula in DNF which is equivalent to {a mathematical formula}Φ∧¬Ψ, where each disjunct {a mathematical formula}Φi is a conjunction {a mathematical formula}ϕ1i∧...∧ϕni of meta-literals of the form {a mathematical formula}c(γ|∼δ) or {a mathematical formula}¬c(γ|∼δ). Moreover, thanks to axiom (WRM) we can assume that the set of meta-literals of the form {a mathematical formula}c(γ|∼δ) correspond to a rationally closed set of defaults. From Lemma 5 it then follows that each such a disjunct {a mathematical formula}Φi is satisfiable iff {a mathematical formula}ϕ1∧...∧ϕn⊢c⊥. Since {a mathematical formula}Φ1∨...∨Φn is inconsistent, none of the disjuncts {a mathematical formula}Φi are satisfiable, from which we can thus conclude {a mathematical formula}Φ1∨...∨Φn⊢c⊥ and thus {a mathematical formula}Φ⊢cΨ.  □
+     </paragraph>
+    </section>
+    <section label="Appendix E">
+     Proof of Proposition 8
+     <paragraph>
+      To prove the three results, we show that for every minimally specific e-model π of {a mathematical formula}KP which satisfies {a mathematical formula}⋀a∈AtN1(a)∨N1(¬a)∨(Π1(a)∧Π1(¬a)), it holds that the set M defined as follows is an answer set of P:{a mathematical formula} and that all answer sets are of this form, i.e., that for every answer set M of P it holds that the possibility distribution {a mathematical formula}πM defined as follows is a minimally specific e-model of {a mathematical formula}KP which satisfies {a mathematical formula}⋀a∈AtN1(a)∨N1(¬a)∨(Π1(a)∧Π1(¬a)):{a mathematical formula}
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Let M be a consistent answer set of P. We show that {a mathematical formula}πM is a minimally specific e-model of {a mathematical formula}KP which satisfies {a mathematical formula}⋀a∈HPN1(a)∨N1(¬a)∨(Π1(a)∧Π1(¬a)). The latter trivially follows from the fact that {a mathematical formula}πM(ω)∈{0,1} for each propositional interpretation ω. It remains to be shown that {a mathematical formula}πM is a minimally specific e-model of {a mathematical formula}KP. Note that because M is a consistent answer set, it holds that {a mathematical formula}πM is normalized.To see why {a mathematical formula}πM is an e-model, consider a rule from P of the form (27) and assume that {a mathematical formula}πM satisfies {a mathematical formula}N1(b1)∧...∧N1(bm)∧Π1(¬c1)∧...∧Π1(¬cℓ). Since {a mathematical formula}πM⊨N1(bi), we have {a mathematical formula}πM(ω)=0 for all worlds ω in which {a mathematical formula}bi is false. By construction this means that {a mathematical formula}bi∈M. Similarly, since {a mathematical formula}πM⊨Π1(¬ci) there is at least one world ω in which {a mathematical formula}ci is false, which by construction means that {a mathematical formula}ci∉M.It follows that the rule {a mathematical formula}a1∨...∨an←b1∧...∧bm is in the reduct {a mathematical formula}PM. Since M is a model of this rule (given the assumption that M is an answer set), one of {a mathematical formula}a1,...,an is in M. By construction this means that {a mathematical formula}πM⊨N1(ai) for some {a mathematical formula}1≤i≤n.It remains to be shown that {a mathematical formula}πM is minimally specific. Suppose {a mathematical formula}π⁎ is an e-model of {a mathematical formula}KP which is strictly less specific than {a mathematical formula}πM. Then there exists a world ω such that {a mathematical formula}πM(ω)=0 and {a mathematical formula}π⁎(ω)&gt;0. This means that there is a literal {a mathematical formula}l⁎∈M such that {a mathematical formula}π⊨N1(l⁎) and {a mathematical formula}π⁎⊭N1(l⁎). Let {a mathematical formula}M⁎={l|π⁎⊨N1(l)}. It is clear that {a mathematical formula}M⁎⊂M. It is not hard to see that {a mathematical formula}M⁎ is a model of {a mathematical formula}PM, which is a contradiction since M is an answer set and thus by definition the unique minimal model of {a mathematical formula}PM.
+      </list-item>
+      <list-item label="•">
+       Let π be a minimally specific e-model of {a mathematical formula}KP, which satisfies {a mathematical formula}⋀a∈AtN1(a)∨N1(¬a)∨(Π1(a)∧Π1(¬a)). Let M be defined as in (E.1). From the fact that π is normalized, it immediately follows that M is consistent.First we show that M is a model of {a mathematical formula}PM. Consider a rule of the form (27), for which {a mathematical formula}{c1,...,cℓ}∩M=∅, i.e., such that {a mathematical formula}a1∨...∨an←b1∧...∧bm is in the reduct {a mathematical formula}PM. Since {a mathematical formula}ci∉M we know that {a mathematical formula}π⊭N1(ci). Because π by assumption satisfies {a mathematical formula}N1(ci)∨N1(¬ci)∨(Π1(ci)∧Π1(¬ci)) it follows that {a mathematical formula}π⊨N1(¬ci) or {a mathematical formula}π⊨Π1(¬ci). Using axiom (D) we find that {a mathematical formula}π⊨Π1(¬ci) for each {a mathematical formula}ci. We then have that π is an e-model of {a mathematical formula}N1(a1)∨...∨N1(an)∨¬N1(b1)∨...∨¬N1(bm), from which we immediately find that M is a model of {a mathematical formula}a1∨...∨an←b1∧...∧bm.Now suppose that M is not an answer set. Then the minimal model {a mathematical formula}M⁎ of {a mathematical formula}PM is such that {a mathematical formula}M⁎⊂M. The corresponding possibility distribution {a mathematical formula}π⁎ is defined as{a mathematical formula} When {a mathematical formula}π⁎(ω)=0, we have that {a mathematical formula}ω⊨¬l for some {a mathematical formula}l∈M⁎. Then we also have {a mathematical formula}l∈M which means {a mathematical formula}π⊨N1(l) and in particular {a mathematical formula}π(ω)=0. It follows that {a mathematical formula}π⁎ is less specific than π, and since there is a literal {a mathematical formula}l0∈M∖M⁎ such that {a mathematical formula}π⊨N1(l0) and {a mathematical formula}π⁎⊭N1(l0), it follows that {a mathematical formula}π⁎ is strictly less specific than π.Now we define a third possibility distribution {a mathematical formula}π+ as follows:{a mathematical formula} Clearly, we have that {a mathematical formula}π+ is strictly less specific than π. We show that {a mathematical formula}π+ is an e-model of {a mathematical formula}KP, contradicting our assumption that π were a minimally specific e-model of {a mathematical formula}KP, from which it then follows that M must be an answer set.Consider a rule of the form (27). If {a mathematical formula}{c1,...,cℓ}∩M≠∅, by construction {a mathematical formula}π⊨N1(ci) must hold for some {a mathematical formula}ci. This means {a mathematical formula}π+⊨N12(ci) and in particular {a mathematical formula}π+⊨¬Π1(¬ci). This means that {a mathematical formula}π+ satisfies the corresponding GPL formula of the form (28). On the other hand, if {a mathematical formula}{c1,...,cℓ}∩M=∅, then {a mathematical formula}M⁎ satisfies the rule {a mathematical formula}a1∨...∨an←b1∧...∧bm, since this rule is in the reduct {a mathematical formula}PM. Moreover, by construction we have {a mathematical formula}l∈M⁎ iff {a mathematical formula}π⁎⊨N1(l) iff {a mathematical formula}π+⊨N1(l). It follows that {a mathematical formula}π+ satisfies {a mathematical formula}N1(a1)∨...∨N1(an)∨¬N1(b1)∨...∨¬N1(bm).
+      </list-item>
+     </list>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

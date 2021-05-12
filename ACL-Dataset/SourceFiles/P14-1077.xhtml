@@ -1,0 +1,1172 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Encoding Relation Requirements for Relation Extraction via Joint Inference</title>
+<!--Generated on Tue Jun 10 18:08:34 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Encoding Relation Requirements for Relation Extraction via Joint Inference</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">
+Liwei Chen<math xmlns="http://www.w3.org/1998/Math/MathML" id="m1" class="ltx_Math" alttext="{}^{1}" display="inline"><msup><mi/><mn>1</mn></msup></math>,
+Yansong Feng <math xmlns="http://www.w3.org/1998/Math/MathML" id="m2" class="ltx_Math" alttext="{}^{1}" display="inline"><msup><mi/><mn>1</mn></msup></math>,
+Songfang Huang<math xmlns="http://www.w3.org/1998/Math/MathML" id="m3" class="ltx_Math" alttext="{}^{2}" display="inline"><msup><mi/><mn>2</mn></msup></math>,
+Yong Qin<math xmlns="http://www.w3.org/1998/Math/MathML" id="m4" class="ltx_Math" alttext="{}^{2}" display="inline"><msup><mi/><mn>2</mn></msup></math>
+
+</span><span class="ltx_author_notes"><span>Yansong Feng is the corresponding author.</span></span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Dongyan Zhao<math xmlns="http://www.w3.org/1998/Math/MathML" id="m5" class="ltx_Math" alttext="{}^{1}" display="inline"><msup><mi/><mn>1</mn></msup></math>
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m6" class="ltx_Math" alttext="{}^{1}" display="inline"><msup><mi/><mn>1</mn></msup></math>ICST, Peking University, Beijing, China 
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m7" class="ltx_Math" alttext="{}^{2}" display="inline"><msup><mi/><mn>2</mn></msup></math>IBM China Research Lab, Beijing, China
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">chenliwei,fengyansong,zhaodongyan@pku.edu.cn</span> 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">huangsf,qinyong@cn.ibm.com</span>
+
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Most existing relation extraction models make predictions for each entity pair locally and individually, while ignoring implicit
+global clues available in the knowledge base, sometimes leading to conflicts among local predictions
+from different entity pairs. In this paper, we propose a joint inference
+framework that utilizes these global clues to resolve disagreements among
+local predictions.
+We exploit two kinds of clues
+to generate constraints which can capture the implicit type and cardinality requirements of a relation.
+Experimental results on three datasets, in both English and Chinese,
+show that our framework outperforms the
+state-of-the-art relation extraction models when such clues are applicable to the datasets.
+And, we find that the clues learnt automatically from existing knowledge bases perform comparably to those refined by human.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Identifying predefined kinds of relationship between pairs of entities
+is crucial for many knowledge base related applications<cite class="ltx_cite">[<a href="#bib.bib90" title="Advances in automated knowledge base construction" class="ltx_ref">13</a>]</cite>.
+In the literature, relation extraction (RE) is usually investigated
+in a classification style, where relations are simply treated as isolated class labels, while
+their definitions or background information are sometimes ignored. Take the relation <span class="ltx_text ltx_font_italic">Capital</span> as an example,
+we can imagine that this relation will expect a country as its subject and a city as object,
+and in most cases, a city can be the capital of only one country.
+All these clues are no doubt helpful, for instance, <cite class="ltx_cite">Yao<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib46" title="Collective cross-document relation extraction without labelled data" class="ltx_ref">2010</a>)</cite> explicitly modeled
+the expected types of a relation’s arguments with the help of Freebase’s type taxonomy
+and obtained promising results for RE.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">However, properly capturing and utilizing such typing clues are not trivial.
+One of the hurdles here is the lack of off-the-shelf resources
+and such clues often have to be coded by human experts.
+Many knowledge bases do not have a well-defined typing
+system, let alone fine-grained typing taxonomies with corresponding type recognizers,
+which are crucial to explicitly model the typing requirements for arguments of a relation,
+but rather expensive and time-consuming to collect.
+Similarly, the cardinality requirements of arguments, e.g., a person can have
+only one birthdate and a city can only be
+labeled as capital of one country, should be considered as a strong indicator
+to eliminate wrong predictions, but has
+to be coded manually as well.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">On the other hand, most previous relation extractors process each entity pair
+(we will use <span class="ltx_text ltx_font_italic">entity pair</span> and
+<span class="ltx_text ltx_font_italic">entity tuple</span> exchangeably in the rest of the
+paper) locally and individually, i.e., the extractor makes
+decisions solely based on the sentences
+containing the current entity pair and ignores other related pairs, therefore has difficulties to
+capture possible disagreements among different entity pairs.
+However, when looking at the output of a multi-class relation
+predictor globally, we can easily find possible incorrect predictions such as a university locates
+in two different cities, two different cities have been labeled as capital for one country, a country
+locates in a city and so on.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">In this paper, we will address how to derive and exploit two categories of these clues:
+the expected types and the cardinality requirements of a
+relation’s arguments, in the scenario of relation extraction.
+We propose to perform joint inference upon multiple local predictions by leveraging implicit
+clues that are encoded with relation specific requirements and can be learnt from existing knowledge bases. Specifically,
+the joint inference framework operates on the output of a sentence level relation extractor as input,
+derives 5 types of constraints from an existing KB to implicitly capture the expected
+type and cardinality requirements for a relation’s arguments, and
+jointly resolve the disagreements among candidate predictions.
+We formalize this procedure
+as a constrained optimization problem, which can be solved by many
+optimization frameworks.
+We use integer linear programming (ILP) as the solver and evaluate our framework on English and Chinese datasets.
+The experimental results show that our framework performs better than the state-of-the-art approaches
+when such clues are applicable to the datasets.
+We also show that the automatically learnt clues perform comparably to
+those refined manually.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">In the rest of the paper, we first review related work in Section <a href="#S2" title="2 Related Work ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>, and
+in Section <a href="#S3" title="3 The Framework ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>, we describe our framework in detail. Experimental setup and
+results are discussed in Section <a href="#S4" title="4 Experiments ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>. We conclude this paper in Section <a href="#S5" title="5 Conclusions ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related Work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">Since traditional supervised relation extraction methods
+<cite class="ltx_cite">[<a href="#bib.bib75" title="CRYSTAL inducing a conceptual dictionary" class="ltx_ref">12</a>, <a href="#bib.bib103" title="Extracting relations with integrated information using kernel methods" class="ltx_ref">20</a>]</cite> require manual annotations
+and are often domain-specific, nowadays many efforts focus on semi-supervised or unsupervised methods <cite class="ltx_cite">[<a href="#bib.bib51" title="Open information extraction from the web" class="ltx_ref">1</a>, <a href="#bib.bib78" title="Identifying relations for open information extraction" class="ltx_ref">5</a>]</cite>.
+Distant supervision (DS) is a semi-supervised RE framework
+and has attracted many attentions
+<cite class="ltx_cite">[<a href="#bib.bib89" title="Learning to extract relations from the web using minimal supervision" class="ltx_ref">3</a>, <a href="#bib.bib53" title="Distant supervision for relation extraction without labeled data" class="ltx_ref">9</a>, <a href="#bib.bib46" title="Collective cross-document relation extraction without labelled data" class="ltx_ref">17</a>, <a href="#bib.bib63" title="A simple distant supervision approach for the TAC-KBP slot filling task" class="ltx_ref">14</a>, <a href="#bib.bib56" title="Knowledge-based weak supervision for information extraction of overlapping relations" class="ltx_ref">6</a>, <a href="#bib.bib82" title="Multi-instance multi-label learning for relation extraction." class="ltx_ref">15</a>]</cite>.
+DS approaches can predict canonicalized (predefined in KBs) relations for large amount of data and
+do not need much human involvement. Since the automatically generated training datasets in
+DS often contain noises, there are also research efforts focusing on
+reducing the noisy labels in the training data <cite class="ltx_cite">[<a href="#bib.bib91" title="Reducing wrong labels in distant supervision for relation extraction" class="ltx_ref">16</a>]</cite>.
+To bridge the gaps between the relations extracted from open information extraction
+and the canonicalized relations in KBs, <cite class="ltx_cite">Yao<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib86" title="Probabilistic databases of universal schema" class="ltx_ref">2012</a>)</cite> and <cite class="ltx_cite">Riedel<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib85" title="Relation extraction with matrix factorization and universal schemas" class="ltx_ref">2013</a>)</cite>
+propose a universal schema which is a union of KB schemas and natural language patterns,
+making it possible to integrate
+the unlimited set of uncanonicalized relations in open settings with the relations in existing KBs.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">As far as we know, few works have managed to take the relation specific requirements for arguments into
+account, and most existing works make predictions locally and individually.
+The MultiR system
+allows entity tuples to have more than one relations, but still predicts
+each entity tuple locally <cite class="ltx_cite">[<a href="#bib.bib56" title="Knowledge-based weak supervision for information extraction of overlapping relations" class="ltx_ref">6</a>]</cite>.
+<cite class="ltx_cite">Surdeanu<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib82" title="Multi-instance multi-label learning for relation extraction." class="ltx_ref">2012</a>)</cite> propose a two-layer multi-instance multi-label (MIML)
+framework to capture the dependencies among relations. The first layer is
+a multi-class classifier making local predictions for single sentences, the output of which
+are aggregated by the second layer into the entity pair level. Their
+approach only captures relation dependencies,
+while we learn implicit relation backgrounds from knowledge bases,
+including argument type and cardinality requirements.
+<cite class="ltx_cite">Riedel<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib85" title="Relation extraction with matrix factorization and universal schemas" class="ltx_ref">2013</a>)</cite> propose to use latent vectors to estimate the
+preferences between relations and entities. These can be considered
+as the latent type information of the relations’ arguments, which is learnt from various data sources.
+In contrast, our approach learn implicit clues from existing KBs, and jointly
+optimize local predictions among different entity tuples to capture
+both relation argument type clues and cardinality clues.
+<cite class="ltx_cite">Li<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib100" title="Joint inference for cross-document information extraction" class="ltx_ref">2011</a>)</cite> and <cite class="ltx_cite">Li<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib104" title="Joint event extraction via structured prediction with global features." class="ltx_ref">2013</a>)</cite> use co-occurring statistics among relations or events to
+jointly improve information extraction performances in ACE tasks, while we mine existing KBs to collect
+global clues to solve local conflicts and find the optimal aggregation assignments, regarding
+existing knowledge facts. <cite class="ltx_cite">de Lacalle and Lapata (<a href="#bib.bib102" title="Unsupervised relation extraction with general domain knowledge." class="ltx_ref">2013</a>)</cite> encode general domain knowledge as FOL rules in a topic model while our instantiated constraints are directly operated in an ILP model.
+<cite class="ltx_cite">Zhang<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib101" title="Towards accurate distant supervision for relational facts extraction" class="ltx_ref">2013</a>)</cite> utilize relation cardinality to create negative
+samples for distant supervision while we use both implicit type clues and relation cardinality
+expectations to discover possible inconsistencies among local predictions.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>The Framework</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">Our framework takes a set of entity pairs and their supporting
+sentences as its input.
+We first train a preliminary sentence level extractor which can output confidence
+scores for its predictions, e.g., a maximum entropy or logistic regression model,
+and use this local extractor to produce local predictions.
+In order to implicitly capture the expected type and cardinality requirements for a relation’s arguments,
+we derive two kinds of clues from an existing KB, which are further
+utilized to discover the disagreements among local candidate predictions.
+Our objective is to maximize the overall confidence of
+all the selected predictions.</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Generating Candidate Relations</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">Since we will focus on the open domain relation extraction, we still
+follow the distant supervision paradigm to collect our training data
+guided by a KB, and train the local extractor accordingly. Specifically,
+we train a sentence level extractor using the maximum entropy model.
+Given a sentence containing an entity pair, the model will output the confidence
+of this sentence representing certain relationship (from a predefined relation set) between the entity pair.
+Formally <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m1" class="ltx_Math" alttext="\mathcal{R}" display="inline"><mi class="ltx_font_mathcaligraphic">ℛ</mi></math> represents the relation set we are working on,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m2" class="ltx_Math" alttext="\mathcal{T}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒯</mi></math> is the set of entity tuples that we will predict in
+the test set.</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">Keep in mind that our local extractor is trained
+on noisy training data, which, we admit, is not fully reliable.
+As we observed in a pilot experiment that there is a good chance that the
+predictions ranked in the second or third may still be correct,
+we select <span class="ltx_text ltx_font_bold">top three</span> predictions as the
+candidate relations for each mention in order to introduce more
+potentially correct output.</p>
+</div>
+<div id="S3.SS1.p3" class="ltx_para">
+<p class="ltx_p">On the other hand, we should discard the predictions whose
+confidences are too low to be true, where we set up a threshold of 0.1.
+For a tuple <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m1" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math>, we obtain its candidate relation set by combining
+the candidate relations of all its mentions, and represent it as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m2" class="ltx_Math" alttext="R^{t}" display="inline"><msup><mi>R</mi><mi>t</mi></msup></math>.
+For a candidate relation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m3" class="ltx_Math" alttext="r\in R^{t}" display="inline"><mrow><mi>r</mi><mo>∈</mo><msup><mi>R</mi><mi>t</mi></msup></mrow></math> and a tuple <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m4" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math>,
+we define <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m5" class="ltx_Math" alttext="M^{r}_{t}" display="inline"><msubsup><mi>M</mi><mi>t</mi><mi>r</mi></msubsup></math> as all <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m6" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math>’s
+mentions whose candidate relations contain <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m7" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math>.
+Now the confidence score of a relation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m8" class="ltx_Math" alttext="r\in R^{t}" display="inline"><mrow><mi>r</mi><mo>∈</mo><msup><mi>R</mi><mi>t</mi></msup></mrow></math> being
+assigned to tuple <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m9" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math> can be calculated as:</p>
+<table id="S3.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E1.m1" class="ltx_Math" alttext="conf(t,r)=\sum\limits_{m\in M^{r}_{t}}{\mbox{MEscore}(m,r)}" display="block"><mrow><mrow><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>t</mi><mo>,</mo><mi>r</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>m</mi><mo>∈</mo><msubsup><mi>M</mi><mi>t</mi><mi>r</mi></msubsup></mrow></munder><mrow><mtext>MEscore</mtext><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>m</mi><mo>,</mo><mi>r</mi></mrow><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+<p class="ltx_p">where MEscore(<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m10" class="ltx_Math" alttext="m,r" display="inline"><mrow><mi>m</mi><mo>,</mo><mi>r</mi></mrow></math>) is the confidence of mention <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m11" class="ltx_Math" alttext="m" display="inline"><mi>m</mi></math> representing relation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m12" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math>
+output by our preliminary extractor.</p>
+</div>
+<div id="S3.SS1.p4" class="ltx_para">
+<p class="ltx_p">Traditionally, both lexical features and syntactic features are
+used in relation extraction.
+Lexical features are the word chains between the subjects and
+objects in the sentences, while syntactic features are the
+dependency paths from the subjects to the objects on the dependency graphs of
+the supporting sentences. However, lexical features are usually too
+specific to frequently appear in the test data, while
+the reliability of syntactic features depends heavily on the quality of dependency parsing tools.
+Generally, we expect more potentially correct relations to be put into
+the candidate relation set for further consideration.
+So in addition to lexical
+and syntactic features, we also use n-gram features to train
+our preliminary relation extraction model.
+N-gram
+features are considered as more ambiguous compared to traditional lexical and syntactic
+features, and may introduce incorrect predictions, thus improving
+the recall at the cost of precision.</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Disagreements among the Candidates</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">The candidate relations we obtained in the previous subsection inevitably include many
+incorrect predictions. Ideally we should discard those wrong predictions to
+produce more accurate results.</p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p">As discussed earlier, we will exploit from the knowledge base two categories of clues that implicitly capture
+relations’ backgrounds: their expected argument types and argument cardinalities, based on which
+we can discover two categories of disagreements among the candidate predictions,
+summarized as argument type inconsistencies and violations of arguments’
+uniqueness, which have been rarely considered before.
+We will discuss them in detail, and describe how to
+learn the clues from a KB afterwards.</p>
+</div>
+<div id="S3.F1" class="ltx_figure"><img src="P14-1077/image001.png" id="S3.F1.g1" class="ltx_graphics ltx_centering" width="354" height="200" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>The different types of disagreements we will investigate in the
+candidate relations. The clues of detecting these inconsistencies can be learnt from a knowledge base.</div>
+</div>
+<div id="S3.SS2.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Implicit Argument Types Inconsistencies: </h4>
+
+<div id="S3.SS2.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">Generally, the argument types of the correct predictions should be consistent with each other. Given a
+relation, its arguments sometimes are required to be certain types
+of entities. For example, in Figure <a href="#S3.F1" title="Figure 1 ‣ 3.2 Disagreements among the Candidates ‣ 3 The Framework ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, the relation
+<span class="ltx_text ltx_font_italic">LargestCity</span> restricts its subject to be either countries or states, and
+its object to be cities. If the predictions among different
+entity tuples require the same entity to belong to different types, we
+call this an argument type inconsistency. Take <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m1" class="ltx_Math" alttext="&lt;" display="inline"><mo>&lt;</mo></math>USA, New York<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m2" class="ltx_Math" alttext="&gt;" display="inline"><mo>&gt;</mo></math>
+and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m3" class="ltx_Math" alttext="&lt;" display="inline"><mo>&lt;</mo></math>USA, Washington D.C.<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m4" class="ltx_Math" alttext="&gt;" display="inline"><mo>&gt;</mo></math> as an example. In Figure <a href="#S3.F1" title="Figure 1 ‣ 3.2 Disagreements among the Candidates ‣ 3 The Framework ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m5" class="ltx_Math" alttext="&lt;" display="inline"><mo>&lt;</mo></math>USA, New York<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m6" class="ltx_Math" alttext="&gt;" display="inline"><mo>&gt;</mo></math> has a candidate relation <span class="ltx_text ltx_font_italic">LargestCity</span> which restricts <span class="ltx_text ltx_font_italic">USA</span> to be
+either countries or states, while <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m7" class="ltx_Math" alttext="&lt;" display="inline"><mo>&lt;</mo></math>USA, Washington D.C.<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m8" class="ltx_Math" alttext="&gt;" display="inline"><mo>&gt;</mo></math> has a prediction
+<span class="ltx_text ltx_font_italic">LocationCity</span> which indicates a disagreement in terms of <span class="ltx_text ltx_font_italic">USA</span>’s
+type because the latter prediction expects <span class="ltx_text ltx_font_italic">USA</span> to be an organization located in a city.
+This warns that at least one of the two candidate relations is incorrect.</p>
+</div>
+<div id="S3.SS2.SSS0.P1.p2" class="ltx_para">
+<p class="ltx_p">The previous scenario shows that the
+subjects of two candidate relations may disagree with each other. From Figure <a href="#S3.F1" title="Figure 1 ‣ 3.2 Disagreements among the Candidates ‣ 3 The Framework ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+we can observe two more situations: the first one is that the objects
+of the two candidate relations are inconsistent with each other, for example
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p2.m1" class="ltx_Math" alttext="&lt;" display="inline"><mo>&lt;</mo></math>New York University, New York<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p2.m2" class="ltx_Math" alttext="&gt;" display="inline"><mo>&gt;</mo></math> with the prediction <span class="ltx_text ltx_font_italic">LocationCity</span>
+and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p2.m3" class="ltx_Math" alttext="&lt;" display="inline"><mo>&lt;</mo></math>Columbia University, New York<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p2.m4" class="ltx_Math" alttext="&gt;" display="inline"><mo>&gt;</mo></math> with the prediction <span class="ltx_text ltx_font_italic">LocationCountry</span>.
+The second one is that the subject of one candidate relation do not agree with another
+prediction’s object, for example <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p2.m5" class="ltx_Math" alttext="&lt;" display="inline"><mo>&lt;</mo></math>Richard Fuld, USA<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p2.m6" class="ltx_Math" alttext="&gt;" display="inline"><mo>&gt;</mo></math> with the prediction
+<span class="ltx_text ltx_font_italic">Nationality</span> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p2.m7" class="ltx_Math" alttext="&lt;" display="inline"><mo>&lt;</mo></math>USA, New York<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p2.m8" class="ltx_Math" alttext="&gt;" display="inline"><mo>&gt;</mo></math> with the prediction <span class="ltx_text ltx_font_italic">LocationCity</span>.
+Although we have not assigned explicit types to these entities, we can still exploit
+the inconsistencies implicitly with the help of shared entities.
+Note that the implicit argument typing clues here mean whether two relations
+can share arguments, but NOT enumate what types explicitly their arguments should have.</p>
+</div>
+<div id="S3.SS2.SSS0.P1.p3" class="ltx_para">
+<p class="ltx_p">We formalize all the relation pairs that disagree with each other as follows.
+These relation pairs can be divided into three subcategories.
+We represent the relation pairs <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p3.m1" class="ltx_Math" alttext="(r_{i},r_{j})" display="inline"><mrow><mo>(</mo><mrow><msub><mi>r</mi><mi>i</mi></msub><mo>,</mo><msub><mi>r</mi><mi>j</mi></msub></mrow><mo>)</mo></mrow></math> that are inconsistent in terms of subjects
+as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p3.m2" class="ltx_Math" alttext="\mathcal{C}^{sr}" display="inline"><msup><mi class="ltx_font_mathcaligraphic">𝒞</mi><mrow><mi>s</mi><mo>⁢</mo><mi>r</mi></mrow></msup></math>, the relations pairs that are inconsistent in terms of objects
+as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p3.m3" class="ltx_Math" alttext="\mathcal{C}^{ro}" display="inline"><msup><mi class="ltx_font_mathcaligraphic">𝒞</mi><mrow><mi>r</mi><mo>⁢</mo><mi>o</mi></mrow></msup></math>, the relation pairs that are inconsistent in terms of one’s subject
+and the other one’s object as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p3.m4" class="ltx_Math" alttext="\mathcal{C}^{rer}" display="inline"><msup><mi class="ltx_font_mathcaligraphic">𝒞</mi><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>r</mi></mrow></msup></math>.</p>
+</div>
+<div id="S3.SS2.SSS0.P1.p4" class="ltx_para">
+<p class="ltx_p">It is worth mentioning that
+disagreements inside a tuple are also included here. For instance,
+an entity tuple <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p4.m1" class="ltx_Math" alttext="&lt;" display="inline"><mo>&lt;</mo></math>USA, Washington D.C.<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p4.m2" class="ltx_Math" alttext="&gt;" display="inline"><mo>&gt;</mo></math> in Figure <a href="#S3.F1" title="Figure 1 ‣ 3.2 Disagreements among the Candidates ‣ 3 The Framework ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> has two candidate relations,
+<span class="ltx_text ltx_font_italic">Capital</span> and <span class="ltx_text ltx_font_italic">LocationCity</span>. These two predictions are inconsistent with each other
+with respect to the type of <span class="ltx_text ltx_font_italic">USA</span>. They implicitly consider <span class="ltx_text ltx_font_italic">USA</span> as “country” and
+“organization”, respectively.</p>
+</div>
+</div>
+<div id="S3.SS2.SSS0.P2" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Violations of Arguments’ Uniqueness: </h4>
+
+<div id="S3.SS2.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">The previous categories of disagreements are all based on the implicit type
+information of the relations’ arguments,
+Now we make use of the clues of argument cardinality requirements.
+Given a subject, some relations should have unique objects. For
+example, in Figure <a href="#S3.F1" title="Figure 1 ‣ 3.2 Disagreements among the Candidates ‣ 3 The Framework ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, given <span class="ltx_text ltx_font_italic">USA</span> as the
+subject of the relation <span class="ltx_text ltx_font_italic">Capital</span>, we can only accept one possible object,
+because there is great chance that a country only have one capital. On the other hand,
+given <span class="ltx_text ltx_font_italic">Washington D.C.</span> as the object of the relation <span class="ltx_text ltx_font_italic">Capital</span>, we can only accept
+one subject, since usually a city can only be the capital of one country or
+state.
+If these are violating in the candidates, we could know that there may be some
+incorrect predictions.
+We represent the relations expecting unique objects as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p1.m1" class="ltx_Math" alttext="\mathcal{C}^{ou}" display="inline"><msup><mi class="ltx_font_mathcaligraphic">𝒞</mi><mrow><mi>o</mi><mo>⁢</mo><mi>u</mi></mrow></msup></math>, and
+the relations expecting unique subjects as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p1.m2" class="ltx_Math" alttext="\mathcal{C}^{su}" display="inline"><msup><mi class="ltx_font_mathcaligraphic">𝒞</mi><mrow><mi>s</mi><mo>⁢</mo><mi>u</mi></mrow></msup></math>.</p>
+</div>
+</div>
+</div>
+<div id="S3.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.3 </span>Obtaining the Global Clues</h3>
+
+<div id="S3.SS3.p1" class="ltx_para">
+<p class="ltx_p">Now, the issue is how to obtain the clues used in the previous subsection.
+That is, how we determine which relations
+expect certain types of subjects, which relations expect certain types of objects, etc.
+These knowledge can be definitely coded by human, or learnt from a KB.</p>
+</div>
+<div id="S3.SS3.p2" class="ltx_para">
+<p class="ltx_p">Most existing knowledge bases represent their knowledge facts in the form of (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m1" class="ltx_Math" alttext="&lt;" display="inline"><mo>&lt;</mo></math><span class="ltx_text ltx_font_italic">subject, relation, object<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m2" class="ltx_Math" alttext="&gt;" display="inline"><mo mathvariant="normal">&gt;</mo></math></span>) triple, which
+can be seen as relational facts between entity tuples.
+Usually the triples in a KB are carefully defined by experts. It
+is rare to find inconsistencies among the triples in the knowledge base.
+The clues are therefore learnt from KBs, and further refined manually if needed.</p>
+</div>
+<div id="S3.SS3.p3" class="ltx_para">
+<p class="ltx_p">Given two relations
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m1" class="ltx_Math" alttext="r_{1}" display="inline"><msub><mi>r</mi><mn>1</mn></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m2" class="ltx_Math" alttext="r_{2}" display="inline"><msub><mi>r</mi><mn>2</mn></msub></math>, we query the KB for all tuples
+bearing the relation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m3" class="ltx_Math" alttext="r_{1}" display="inline"><msub><mi>r</mi><mn>1</mn></msub></math> or <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m4" class="ltx_Math" alttext="r_{2}" display="inline"><msub><mi>r</mi><mn>2</mn></msub></math>. We use <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m5" class="ltx_Math" alttext="S_{i}" display="inline"><msub><mi>S</mi><mi>i</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m6" class="ltx_Math" alttext="O_{i}" display="inline"><msub><mi>O</mi><mi>i</mi></msub></math> to represent
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m7" class="ltx_Math" alttext="r_{i}" display="inline"><msub><mi>r</mi><mi>i</mi></msub></math>’s (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m8" class="ltx_Math" alttext="i\in\{1,2\}" display="inline"><mrow><mi>i</mi><mo>∈</mo><mrow><mo>{</mo><mrow><mn>1</mn><mo>,</mo><mn>2</mn></mrow><mo>}</mo></mrow></mrow></math>) subject set and object set, respectively.
+We adopt the pointwise mutual information (PMI) to
+estimate the dependency between the argument sets of two relations:</p>
+<table id="S3.E2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E2.m1" class="ltx_Math" alttext="\mbox{PMI}(A,B)=\log\frac{{p(A,B)}}{{p(A)p(B)}}" display="block"><mrow><mrow><mtext>PMI</mtext><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>A</mi><mo>,</mo><mi>B</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mi>log</mi><mo>⁡</mo><mfrac><mrow><mi>p</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>A</mi><mo>,</mo><mi>B</mi></mrow><mo>)</mo></mrow></mrow><mrow><mi>p</mi><mo>⁢</mo><mrow><mo>(</mo><mi>A</mi><mo>)</mo></mrow><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mrow><mo>(</mo><mi>B</mi><mo>)</mo></mrow></mrow></mfrac></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m9" class="ltx_Math" alttext="p(A,B)" display="inline"><mrow><mi>p</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>A</mi><mo>,</mo><mi>B</mi></mrow><mo>)</mo></mrow></mrow></math> is number of the entities both in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m10" class="ltx_Math" alttext="A" display="inline"><mi>A</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m11" class="ltx_Math" alttext="B" display="inline"><mi>B</mi></math>,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m12" class="ltx_Math" alttext="p(A)" display="inline"><mrow><mi>p</mi><mo>⁢</mo><mrow><mo>(</mo><mi>A</mi><mo>)</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m13" class="ltx_Math" alttext="p(B)" display="inline"><mrow><mi>p</mi><mo>⁢</mo><mrow><mo>(</mo><mi>B</mi><mo>)</mo></mrow></mrow></math> are the numbers of the entities in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m14" class="ltx_Math" alttext="A" display="inline"><mi>A</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m15" class="ltx_Math" alttext="B" display="inline"><mi>B</mi></math>, respectively.
+For any pair of relations from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m16" class="ltx_Math" alttext="\mathcal{R}\times\mathcal{R}" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">ℛ</mi><mo>×</mo><mi class="ltx_font_mathcaligraphic">ℛ</mi></mrow></math>, we calculate four scores:
+PMI<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m17" class="ltx_Math" alttext="(S_{1},S_{2})" display="inline"><mrow><mo>(</mo><mrow><msub><mi>S</mi><mn>1</mn></msub><mo>,</mo><msub><mi>S</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></math>, PMI<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m18" class="ltx_Math" alttext="(O_{1},O_{2})" display="inline"><mrow><mo>(</mo><mrow><msub><mi>O</mi><mn>1</mn></msub><mo>,</mo><msub><mi>O</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></math>, PMI<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m19" class="ltx_Math" alttext="(S_{1},O_{2})" display="inline"><mrow><mo>(</mo><mrow><msub><mi>S</mi><mn>1</mn></msub><mo>,</mo><msub><mi>O</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></math> and PMI<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m20" class="ltx_Math" alttext="(S_{2},O_{1})" display="inline"><mrow><mo>(</mo><mrow><msub><mi>S</mi><mn>2</mn></msub><mo>,</mo><msub><mi>O</mi><mn>1</mn></msub></mrow><mo>)</mo></mrow></math>.
+To make more stable estimations,
+we set up a threshold for the PMI. If PMI<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m21" class="ltx_Math" alttext="(S_{1},S_{2})" display="inline"><mrow><mo>(</mo><mrow><msub><mi>S</mi><mn>1</mn></msub><mo>,</mo><msub><mi>S</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></math> is lower than the threshold, we will consider that
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m22" class="ltx_Math" alttext="r_{1}" display="inline"><msub><mi>r</mi><mn>1</mn></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m23" class="ltx_Math" alttext="r_{2}" display="inline"><msub><mi>r</mi><mn>2</mn></msub></math> cannot share a subject. Things are similar for the other
+three scores. The threshold is set to -3 in this paper.</p>
+</div>
+<div id="S3.SS3.p4" class="ltx_para">
+<p class="ltx_p">We can also learn the uniqueness of arguments for relations. For each pre-defined
+relation in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p4.m1" class="ltx_Math" alttext="\mathcal{R}" display="inline"><mi class="ltx_font_mathcaligraphic">ℛ</mi></math>, we collect all the triples containing this
+relation, and count the portion of the triples which only have one object for
+each subject, and the portion of the triples which only have one subject for
+each object. The relations whose
+portions are higher than the threshold will be considered to have unique
+argument values. This threshold is set to 0.8 in this paper.</p>
+</div>
+</div>
+<div id="S3.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.4 </span>Integer Linear Program Formulation</h3>
+
+<div id="S3.SS4.p1" class="ltx_para">
+<p class="ltx_p">As discussed above, given a set of entity pairs and their candidate
+relations output by a preliminary extractor, our goal is to find an optimal
+configuration for all those entities pairs jointly, solving the
+disagreements among those candidate predictions and maximizing the overall
+confidence of the selected predictions. This is an NP-hard optimization problem.
+Many optimization models can be used to obtain the approximate solutions.</p>
+</div>
+<div id="S3.SS4.p2" class="ltx_para">
+<p class="ltx_p">In this paper, we propose to solve the problem by using an ILP
+tool, IBM ILOG Cplex<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>www.cplex.com</span></span></span>. Firstly,
+for each tuple <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m1" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math> and one of its candidate relations <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m2" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math>,
+we define a binary decision variable <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m3" class="ltx_Math" alttext="d_{t}^{r}" display="inline"><msubsup><mi>d</mi><mi>t</mi><mi>r</mi></msubsup></math> indicating whether
+the candidate relation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m4" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math> is selected
+by the solver.
+Our objective is to maximize the total confidence of all the selected candidates,
+and the objective function can be written as:</p>
+<table id="Sx1.EGx1" class="ltx_equationgroup ltx_eqn_eqnarray">
+
+<tr id="S3.Ex1" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex1.m3" class="ltx_Math" alttext="\displaystyle\max\sum\limits_{t\in\mathcal{T},r\in{R^{t}}}conf(t,r){d_{t}^{r}}" display="inline"><mrow><mo movablelimits="false">max</mo><mo>⁡</mo><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mrow><mi>t</mi><mo>∈</mo><mi class="ltx_font_mathcaligraphic">𝒯</mi></mrow><mo>,</mo><mrow><mi>r</mi><mo>∈</mo><msup><mi>R</mi><mi>t</mi></msup></mrow></mrow></munder></mstyle><mrow><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>t</mi><mo>,</mo><mi>r</mi></mrow><mo>)</mo></mrow><mo>⁢</mo><msubsup><mi>d</mi><mi>t</mi><mi>r</mi></msubsup></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S3.Ex2" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex2.m3" class="ltx_Math" alttext="\displaystyle+\sum\limits_{\forall t,r\in{R^{t}},m\in M_{t}^{r}}{\max\mbox{%&#10;MEscore}(m,r)}{d_{t}^{r}}" display="inline"><mrow><mo>+</mo><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mrow><mrow><mrow><mo>∀</mo><mi>t</mi></mrow><mo>,</mo><mi>r</mi></mrow><mo>∈</mo><msup><mi>R</mi><mi>t</mi></msup></mrow><mo>,</mo><mrow><mi>m</mi><mo>∈</mo><msubsup><mi>M</mi><mi>t</mi><mi>r</mi></msubsup></mrow></mrow></munder></mstyle><mrow><mo movablelimits="false">max</mo><mo>⁡</mo><mrow><mtext>MEscore</mtext><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>m</mi><mo>,</mo><mi>r</mi></mrow><mo>)</mo></mrow><mo>⁢</mo><msubsup><mi>d</mi><mi>t</mi><mi>r</mi></msubsup></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m5" class="ltx_Math" alttext="conf(t,r)" display="inline"><mrow><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>t</mi><mo>,</mo><mi>r</mi></mrow><mo>)</mo></mrow></mrow></math> is the confidence of the tuple <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m6" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math> bearing the candidate relation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p2.m7" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math>.
+The first component is the sum of
+the original confidence scores of all the selected candidates, and the second one is
+the sum of the maximal mention-level confidence scores of all the selected candidates.
+The latter is designed to
+encourage the model to select the candidates with higher individual mention-level confidence scores.</p>
+</div>
+<div id="S3.SS4.p3" class="ltx_para">
+<p class="ltx_p">We add the constraints with respect to the disagreements described in Section <a href="#S3.SS2" title="3.2 Disagreements among the Candidates ‣ 3 The Framework ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+For the sake of clarity, we describe the constraints derived from
+each scenario of the two categories of disagreements separately.</p>
+</div>
+<div id="S3.SS4.p4" class="ltx_para">
+<p class="ltx_p">The subject-relation constraints avoid the disagreements
+between the predictions of two tuples sharing a subject.
+These constraints can be represented as:</p>
+<table id="Sx1.EGx2" class="ltx_equationgroup ltx_eqn_eqnarray">
+
+<tr id="S3.E3" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E3.m1" class="ltx_Math" alttext="\displaystyle d_{{t_{i}}}^{{r^{t_{i}}}}+d_{{t_{j}}}^{{r^{t_{j}}}}\leq 1" display="inline"><mrow><mrow><msubsup><mi>d</mi><msub><mi>t</mi><mi>i</mi></msub><msup><mi>r</mi><msub><mi>t</mi><mi>i</mi></msub></msup></msubsup><mo>+</mo><msubsup><mi>d</mi><msub><mi>t</mi><mi>j</mi></msub><msup><mi>r</mi><msub><mi>t</mi><mi>j</mi></msub></msup></msubsup></mrow><mo>≤</mo><mn>1</mn></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+<tr id="S3.Ex3" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex3.m1" class="ltx_Math" alttext="\displaystyle\forall t_{i},t_{j}:subj(t_{i})=subj(t_{j})\wedge(r^{t_{i}},r^{t_%&#10;{j}})\in\mathcal{C}^{sr}" display="inline"><mrow><mrow><mrow><mo>∀</mo><msub><mi>t</mi><mi>i</mi></msub></mrow><mo>,</mo><msub><mi>t</mi><mi>j</mi></msub></mrow><mo>:</mo><mrow><mrow><mi>s</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><mi>j</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>t</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mrow><mi>s</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><mi>j</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>t</mi><mi>j</mi></msub><mo>)</mo></mrow></mrow><mo>∧</mo><mrow><mo>(</mo><mrow><msup><mi>r</mi><msub><mi>t</mi><mi>i</mi></msub></msup><mo>,</mo><msup><mi>r</mi><msub><mi>t</mi><mi>j</mi></msub></msup></mrow><mo>)</mo></mrow></mrow><mo>∈</mo><msup><mi class="ltx_font_mathcaligraphic">𝒞</mi><mrow><mi>s</mi><mo>⁢</mo><mi>r</mi></mrow></msup></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p4.m1" class="ltx_Math" alttext="t_{i}" display="inline"><msub><mi>t</mi><mi>i</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p4.m2" class="ltx_Math" alttext="t_{j}" display="inline"><msub><mi>t</mi><mi>j</mi></msub></math> are two tuples in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p4.m3" class="ltx_Math" alttext="\mathcal{T}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒯</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p4.m4" class="ltx_Math" alttext="subj(t_{i})" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><mi>j</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>t</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math>
+is the subject of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p4.m5" class="ltx_Math" alttext="t_{i}" display="inline"><msub><mi>t</mi><mi>i</mi></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p4.m6" class="ltx_Math" alttext="r^{t_{i}}" display="inline"><msup><mi>r</mi><msub><mi>t</mi><mi>i</mi></msub></msup></math> is a candidate relation of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p4.m7" class="ltx_Math" alttext="t_{i}" display="inline"><msub><mi>t</mi><mi>i</mi></msub></math>,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p4.m8" class="ltx_Math" alttext="r^{t_{j}}" display="inline"><msup><mi>r</mi><msub><mi>t</mi><mi>j</mi></msub></msup></math> is a candidate relation of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p4.m9" class="ltx_Math" alttext="t_{j}" display="inline"><msub><mi>t</mi><mi>j</mi></msub></math>.</p>
+</div>
+<div id="S3.SS4.p5" class="ltx_para">
+<p class="ltx_p">The object-relation constraints avoid the inconsistencies
+between the predictions of two tuples sharing an object.
+Formally we add the following constraints:</p>
+<table id="Sx1.EGx3" class="ltx_equationgroup ltx_eqn_eqnarray">
+
+<tr id="S3.E4" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E4.m1" class="ltx_Math" alttext="\displaystyle d_{{t_{i}}}^{{r^{t_{i}}}}+d_{{t_{j}}}^{{r^{t_{j}}}}\leq 1" display="inline"><mrow><mrow><msubsup><mi>d</mi><msub><mi>t</mi><mi>i</mi></msub><msup><mi>r</mi><msub><mi>t</mi><mi>i</mi></msub></msup></msubsup><mo>+</mo><msubsup><mi>d</mi><msub><mi>t</mi><mi>j</mi></msub><msup><mi>r</mi><msub><mi>t</mi><mi>j</mi></msub></msup></msubsup></mrow><mo>≤</mo><mn>1</mn></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(4)</span></td></tr>
+<tr id="S3.Ex4" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex4.m1" class="ltx_Math" alttext="\displaystyle\forall t_{i},t_{j}:obj(t_{i})=obj(t_{j})\wedge(r^{t_{i}},r^{t_{j%&#10;}})\in\mathcal{C}^{ro}" display="inline"><mrow><mrow><mrow><mo>∀</mo><msub><mi>t</mi><mi>i</mi></msub></mrow><mo>,</mo><msub><mi>t</mi><mi>j</mi></msub></mrow><mo>:</mo><mrow><mrow><mi>o</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><mi>j</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>t</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mrow><mi>o</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><mi>j</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>t</mi><mi>j</mi></msub><mo>)</mo></mrow></mrow><mo>∧</mo><mrow><mo>(</mo><mrow><msup><mi>r</mi><msub><mi>t</mi><mi>i</mi></msub></msup><mo>,</mo><msup><mi>r</mi><msub><mi>t</mi><mi>j</mi></msub></msup></mrow><mo>)</mo></mrow></mrow><mo>∈</mo><msup><mi class="ltx_font_mathcaligraphic">𝒞</mi><mrow><mi>r</mi><mo>⁢</mo><mi>o</mi></mrow></msup></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p5.m1" class="ltx_Math" alttext="t_{i}\in\mathcal{T}" display="inline"><mrow><msub><mi>t</mi><mi>i</mi></msub><mo>∈</mo><mi class="ltx_font_mathcaligraphic">𝒯</mi></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p5.m2" class="ltx_Math" alttext="t_{j}\in\mathcal{T}" display="inline"><mrow><msub><mi>t</mi><mi>j</mi></msub><mo>∈</mo><mi class="ltx_font_mathcaligraphic">𝒯</mi></mrow></math> are two tuples, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p5.m3" class="ltx_Math" alttext="obj(t_{i})" display="inline"><mrow><mi>o</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><mi>j</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>t</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math>
+is the object of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p5.m4" class="ltx_Math" alttext="t_{i}" display="inline"><msub><mi>t</mi><mi>i</mi></msub></math>.</p>
+</div>
+<div id="S3.SS4.p6" class="ltx_para">
+<p class="ltx_p">The relation-entity-relation constraints ensure that if an entity
+works as subject and object in two tuples <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p6.m1" class="ltx_Math" alttext="t_{i}" display="inline"><msub><mi>t</mi><mi>i</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p6.m2" class="ltx_Math" alttext="t_{j}" display="inline"><msub><mi>t</mi><mi>j</mi></msub></math> respectively,
+their relations agree with each other. The constraints we add are:</p>
+<table id="Sx1.EGx4" class="ltx_equationgroup ltx_eqn_eqnarray">
+
+<tr id="S3.E5" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E5.m1" class="ltx_Math" alttext="\displaystyle d_{{t_{i}}}^{{r^{t_{i}}}}+d_{{t_{j}}}^{{r^{t_{j}}}}\leq 1" display="inline"><mrow><mrow><msubsup><mi>d</mi><msub><mi>t</mi><mi>i</mi></msub><msup><mi>r</mi><msub><mi>t</mi><mi>i</mi></msub></msup></msubsup><mo>+</mo><msubsup><mi>d</mi><msub><mi>t</mi><mi>j</mi></msub><msup><mi>r</mi><msub><mi>t</mi><mi>j</mi></msub></msup></msubsup></mrow><mo>≤</mo><mn>1</mn></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(5)</span></td></tr>
+<tr id="S3.Ex5" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex5.m1" class="ltx_Math" alttext="\displaystyle\forall t_{i},t_{j}:obj(t_{i})=subj(t_{j})\wedge(r^{t_{i}},r^{t_{%&#10;j}})\in\mathcal{C}^{rer}" display="inline"><mrow><mrow><mrow><mo>∀</mo><msub><mi>t</mi><mi>i</mi></msub></mrow><mo>,</mo><msub><mi>t</mi><mi>j</mi></msub></mrow><mo>:</mo><mrow><mrow><mi>o</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><mi>j</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>t</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mrow><mi>s</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><mi>j</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>t</mi><mi>j</mi></msub><mo>)</mo></mrow></mrow><mo>∧</mo><mrow><mo>(</mo><mrow><msup><mi>r</mi><msub><mi>t</mi><mi>i</mi></msub></msup><mo>,</mo><msup><mi>r</mi><msub><mi>t</mi><mi>j</mi></msub></msup></mrow><mo>)</mo></mrow></mrow><mo>∈</mo><msup><mi class="ltx_font_mathcaligraphic">𝒞</mi><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>r</mi></mrow></msup></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S3.SS4.p7" class="ltx_para">
+<p class="ltx_p">The object uniqueness constraints ensure that the relations requiring
+unique objects do not bear more than one object given a subject.</p>
+<table id="Sx1.EGx5" class="ltx_equationgroup ltx_eqn_eqnarray">
+
+<tr id="S3.E6" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E6.m1" class="ltx_Math" alttext="\displaystyle\sum\limits_{t\in Tuple(r),subj(t)=e}{d_{t}^{r}}\leq 1" display="inline"><mrow><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mrow><mi>t</mi><mo>∈</mo><mrow><mi>T</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mrow><mo>(</mo><mi>r</mi><mo>)</mo></mrow></mrow></mrow><mo>,</mo><mrow><mrow><mi>s</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><mi>j</mi><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></mrow><mo>=</mo><mi>e</mi></mrow></mrow></munder></mstyle><msubsup><mi>d</mi><mi>t</mi><mi>r</mi></msubsup></mrow><mo>≤</mo><mn>1</mn></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(6)</span></td></tr>
+<tr id="S3.Ex6" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex6.m1" class="ltx_Math" alttext="\displaystyle\forall e\wedge r\in\mathcal{C}^{ou}" display="inline"><mrow><mrow><mrow><mo>∀</mo><mi>e</mi></mrow><mo>∧</mo><mi>r</mi></mrow><mo>∈</mo><msup><mi class="ltx_font_mathcaligraphic">𝒞</mi><mrow><mi>o</mi><mo>⁢</mo><mi>u</mi></mrow></msup></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p7.m1" class="ltx_Math" alttext="e" display="inline"><mi>e</mi></math> is an entity, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p7.m2" class="ltx_Math" alttext="Tuple(r)" display="inline"><mrow><mi>T</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mrow><mo>(</mo><mi>r</mi><mo>)</mo></mrow></mrow></math> are the tuples whose candidate relations contain <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS4.p7.m3" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math>.</p>
+</div>
+<div id="S3.SS4.p8" class="ltx_para">
+<p class="ltx_p">The subject uniqueness constraints ensure that given an object,
+the relations expecting unique subjects do not bear more than one subject.</p>
+<table id="Sx1.EGx6" class="ltx_equationgroup ltx_eqn_eqnarray">
+
+<tr id="S3.E7" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E7.m1" class="ltx_Math" alttext="\displaystyle\sum\limits_{t\in Tuple(r),obj(t)=e}{d_{t}^{r}}\leq 1" display="inline"><mrow><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mrow><mi>t</mi><mo>∈</mo><mrow><mi>T</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mrow><mo>(</mo><mi>r</mi><mo>)</mo></mrow></mrow></mrow><mo>,</mo><mrow><mrow><mi>o</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><mi>j</mi><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></mrow><mo>=</mo><mi>e</mi></mrow></mrow></munder></mstyle><msubsup><mi>d</mi><mi>t</mi><mi>r</mi></msubsup></mrow><mo>≤</mo><mn>1</mn></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(7)</span></td></tr>
+<tr id="S3.Ex7" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex7.m1" class="ltx_Math" alttext="\displaystyle\forall e\wedge r\in\mathcal{C}^{su}" display="inline"><mrow><mrow><mrow><mo>∀</mo><mi>e</mi></mrow><mo>∧</mo><mi>r</mi></mrow><mo>∈</mo><msup><mi class="ltx_font_mathcaligraphic">𝒞</mi><mrow><mi>s</mi><mo>⁢</mo><mi>u</mi></mrow></msup></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S3.SS4.p9" class="ltx_para">
+<p class="ltx_p">By adopting ILP, we can combine the local information including
+MaxEnt confidence scores and the implicit relation backgrounds
+that are embedded into
+global consistencies of the entity tuples together. After
+the optimization problem is solved, we will obtain a list of
+selected candidate relations for each tuple, which will be our final output.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Experiments</h2>
+
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Datasets</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">We evaluate our approach on three datasets, including two
+English datasets and one Chinese dataset.</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">The first English dataset, Riedel’s dataset, is the one used in
+<cite class="ltx_cite">[<a href="#bib.bib45" title="Modeling relations and their mentions without labeled text" class="ltx_ref">11</a>, <a href="#bib.bib56" title="Knowledge-based weak supervision for information extraction of overlapping relations" class="ltx_ref">6</a>, <a href="#bib.bib82" title="Multi-instance multi-label learning for relation extraction." class="ltx_ref">15</a>]</cite>, with the same split. It uses
+Freebase as the knowledge base and New York Time corpus as the text corpus,
+including about 60,000 entity tuples in the training set, and about 90,000
+entity tuples in the testing set.</p>
+</div>
+<div id="S4.SS1.p3" class="ltx_para">
+<p class="ltx_p">We generate the second English dataset, DBpedia dataset, by mapping the triples in
+DBpedia <cite class="ltx_cite">[<a href="#bib.bib42" title="DBpedia - a crystallization point for the web of data" class="ltx_ref">2</a>]</cite> to the sentences in New York Time corpus.
+We map 51 different relations to the corpus and result in about 50,000
+entity tuples, 134,000 sentences for training and 30,000 entity
+tuples, 53,000 sentences for testing.</p>
+</div>
+<div id="S4.SS1.p4" class="ltx_para">
+<p class="ltx_p">For the Chinese dataset, we derive knowledge facts and construct a Chinese KB
+from the Infoboxes of HudongBaike, one of the largest Chinese online encyclopedias.
+We collect four national economic newspapers in 2009 as our corpus.
+28 different relations are mapped to the corpus and this results in 60,000
+entity tuples, 120,000 sentences for training and
+40,000 tuples, 83,000 sentences for testing.</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Baselines and Competitors</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">The baseline we use in this paper is Mintz++, which is described in <cite class="ltx_cite">[<a href="#bib.bib82" title="Multi-instance multi-label learning for relation extraction." class="ltx_ref">15</a>]</cite>.
+It is a modification of the model proposed by <cite class="ltx_cite">Mintz<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib53" title="Distant supervision for relation extraction without labeled data" class="ltx_ref">2009</a>)</cite>.
+The model predicts for each mention separately, and allows multi-label outputs
+for an entity tuple by OR-ing the outputs of its mentions.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">As we described in Section <a href="#S3.SS1" title="3.1 Generating Candidate Relations ‣ 3 The Framework ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>, originally we select the top three predicted relations as
+the candidates for each mention. In order to investigate whether it is necessary to use up to three
+candidates, we implement two variants of our approach, which select the top one and top two
+relations as candidates for each mention, and represented as ILP-1cand and ILP-2cand, respectively.</p>
+</div>
+<div id="S4.SS2.p3" class="ltx_para">
+<p class="ltx_p">We also use two distant supervision approaches for the comparison. The first one is
+MultiR <cite class="ltx_cite">[<a href="#bib.bib56" title="Knowledge-based weak supervision for information extraction of overlapping relations" class="ltx_ref">6</a>]</cite>, a novel
+joint model that can deal with the relation overlap issue.
+The second one, MIML-RE <cite class="ltx_cite">[<a href="#bib.bib82" title="Multi-instance multi-label learning for relation extraction." class="ltx_ref">15</a>]</cite>, is one of the state-of-the-art
+MIML relation extraction systems. We tune the models of MultiR and MIML-RE
+so that they fit our datasets.</p>
+</div>
+</div>
+<div id="S4.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.3 </span>Overall Performance</h3>
+
+<div id="S4.SS3.p1" class="ltx_para">
+<p class="ltx_p">First we compare our framework and its variants with the baseline and the
+state-of-the-art RE models. Following previous works, we use the Precision-Recall curve as the evaluation criterion in our
+experiment. The results are summarized in Figure <a href="#S4.F2" title="Figure 2 ‣ 4.3 Overall Performance ‣ 4 Experiments ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+For the constraints, we first manually
+select an average of 20 relation pairs for each subcategory of the first kind of clues,
+and all the relations with unique argument values in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p1.m1" class="ltx_Math" alttext="\mathcal{R}" display="inline"><mi class="ltx_font_mathcaligraphic">ℛ</mi></math>.
+We also show how automatically learnt clues perform in Section <a href="#S4.SS5" title="4.5 Examining the Automatically Learnt Clues ‣ 4 Experiments ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.5</span></a>.</p>
+</div>
+<div id="S4.F2" class="ltx_figure">
+<table style="width:100%;">
+<tr>
+<td class="ltx_subfigure">
+<div id="S4.F1.sf1" class="ltx_figure ltx_align_center"><img src="P14-1077/image006.png" id="S4.F1.sf1.g1" class="ltx_graphics" width="122" height="170" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">(a) </span>The DBpedia Dataset</div>
+</div></td>
+<td class="ltx_subfigure">
+<div id="S4.F1.sf2" class="ltx_figure ltx_align_center"><img src="P14-1077/image007.png" id="S4.F1.sf2.g1" class="ltx_graphics" width="122" height="170" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">(b) </span>The Riedel’s Dataset</div>
+</div></td>
+<td class="ltx_subfigure">
+<div id="S4.F1.sf3" class="ltx_figure ltx_align_center"><img src="P14-1077/image008.png" id="S4.F1.sf3.g1" class="ltx_graphics" width="122" height="170" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">(c) </span>The Chinese Dataset</div>
+</div></td>
+<td class="ltx_subfigure">
+<div id="S4.F1.sf4" class="ltx_figure ltx_align_center"><img src="P14-1077/image009.png" id="S4.F1.sf4.g1" class="ltx_graphics" width="122" height="170" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">(d) </span>The DBpedia Dataset</div>
+</div></td>
+<td class="ltx_subfigure">
+<div id="S4.F1.sf5" class="ltx_figure ltx_align_center"><img src="P14-1077/image010.png" id="S4.F1.sf5.g1" class="ltx_graphics" width="122" height="170" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">(e) </span>The Riedel’s Dataset</div>
+</div></td>
+<td class="ltx_subfigure">
+<div id="S4.F1.sf6" class="ltx_figure ltx_align_center"><img src="P14-1077/image011.png" id="S4.F1.sf6.g1" class="ltx_graphics" width="122" height="170" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">(f) </span>The Chinese Dataset</div>
+</div></td></tr>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>Overall performances of our framework and its variants, the baselines and the
+state-of-the-art approaches on the three datasets.</div>
+</div>
+<div id="S4.SS3.p2" class="ltx_para">
+<p class="ltx_p">Figure <a href="#S4.F2" title="Figure 2 ‣ 4.3 Overall Performance ‣ 4 Experiments ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> shows that compared with the baseline, our framework
+performs consistently better in the DBpedia dataset and the Chinese dataset.
+Mintz++ proves to be a strong baseline on both datasets. It tends to result
+in a high recall, and its weakness of low precision is perfectly fixed by the ILP model.
+Our ILP model and its variants all outperform Mintz++ in precision in both
+datasets, indicating that our approach helps filter out incorrect predictions from the
+output of MaxEnt model.
+Compared with MultiR, our framework obtains better results in both datasets. Especially in the
+Chinese dataset, the improvement in precision reaches as high as 10-16% at the same recall points.
+Our framework performs better compared to MIML-RE in the English
+dataset. On the Chinese dataset, our framework outperforms MIML-RE except in the low-recall portion
+(<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m1" class="ltx_Math" alttext="&lt;" display="inline"><mo>&lt;</mo></math>10%) of the P-R curve. All these results show that embedding the relation background
+information into RE can help eliminate the wrong predictions and improve the results.</p>
+</div>
+<div id="S4.SS3.p3" class="ltx_para">
+<p class="ltx_p">However, in the Riedel’s dataset, Mintz++, the MaxEnt relation extractor, does not perform well, and our framework cannot improve its performance. In order to find out
+the reasons, we manually investigate the dataset.
+The top three relations of this dataset are
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m1" class="ltx_Math" alttext="/" display="inline"><mo>/</mo></math><span class="ltx_text ltx_font_italic">location<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m2" class="ltx_Math" alttext="/" display="inline"><mo mathvariant="normal">/</mo></math>location<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m3" class="ltx_Math" alttext="/" display="inline"><mo mathvariant="normal">/</mo></math>contains</span>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m4" class="ltx_Math" alttext="/" display="inline"><mo>/</mo></math><span class="ltx_text ltx_font_italic">people<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m5" class="ltx_Math" alttext="/" display="inline"><mo mathvariant="normal">/</mo></math>person<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m6" class="ltx_Math" alttext="/" display="inline"><mo mathvariant="normal">/</mo></math>nationality</span> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m7" class="ltx_Math" alttext="/" display="inline"><mo>/</mo></math><span class="ltx_text ltx_font_italic">people<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m8" class="ltx_Math" alttext="/" display="inline"><mo mathvariant="normal">/</mo></math>person<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m9" class="ltx_Math" alttext="/" display="inline"><mo mathvariant="normal">/</mo></math>place_lived</span>.
+About two-thirds of the entity tuples belongs to these three relations,
+and the outputs of the local extractor usually bias even more to the large relations.
+What is worse, we cannot find any clues from the top three relations because
+their arguments’ types are too general. Things are similar for many other relations in this dataset.
+Although we may find some clues any way, they are too few to make any improvement.
+Hence, our framework does not perform well due to the poor performance of MaxEnt extractor
+and the lack of clues. To solve this problem, we think of addressing the
+selection preferences between relations and entities proposed in <cite class="ltx_cite">[<a href="#bib.bib85" title="Relation extraction with matrix factorization and universal schemas" class="ltx_ref">10</a>]</cite>,
+which should be our future work.</p>
+</div>
+<div id="S4.SS3.p4" class="ltx_para">
+<p class="ltx_p">We notice that in all three datasets our variant ILP-1cand is
+shorter than Mintz++ in recall, indicating we may incorrectly discard some predictions.
+Compared to ILP-2cand and original ILP, ILP-1cand leads to slightly lower
+precision but much lower recall, showing that selecting more candidates may help us collect more
+potentially correct predictions. Comparing ILP-2cand and original ILP, the latter
+hardly makes any improvement in precision, but is slightly longer in recall, indicating using three
+candidates can still collect some more potentially correct predictions,
+although the number may be limited.</p>
+</div>
+<div id="S4.SS3.p5" class="ltx_para">
+<p class="ltx_p">In order to study how our framework improves the performances
+on the DBpedia dataset and the Chinese dataset,
+we further investigate the number of incorrect predictions eliminated by
+ILP and the number of incorrect predictions corrected by ILP. We also
+examine the number of correct
+predictions newly introduce by ILP, which were NA in Mintz++. We summarize the results in Table <a href="#S4.T1" title="Table 1 ‣ 4.3 Overall Performance ‣ 4 Experiments ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.</p>
+</div>
+<div id="S4.T1" class="ltx_table">
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 1: </span>Details of the improvements made by ILP in the DBpedia and Chinese datasets.</div>
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Datasets</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_tiny">Incorrect Predictions</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_tiny">Wrong Predictioins</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_tiny">Correct Predictions</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_tiny">Eliminated</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_tiny">Corrected</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_tiny">Newly Introduced</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">DBpedia</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">268</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">61</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">1426</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">Chinese</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">1506</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">14</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">283</span></td></tr>
+</tbody>
+</table>
+</div>
+<div id="S4.SS3.p6" class="ltx_para">
+<p class="ltx_p">The results show that our framework can reduce the incorrect
+predictions and introduce more correct predictions at the same time.
+We also find an interesting results: in the DBpedia dataset, ILP is more likely to introduce
+correct predictions to the results, while in the Chinese dataset
+it tends to reduce more incorrect predictions, which may be caused
+by the differences between performances of Mintz++ on the two datasets,
+where it gets a higher recall on the Chinese dataset.</p>
+</div>
+<div id="S4.SS3.p7" class="ltx_para">
+<p class="ltx_p">Following <cite class="ltx_cite">Surdeanu<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib82" title="Multi-instance multi-label learning for relation extraction." class="ltx_ref">2012</a>)</cite>, we also list the peak F1 score (highest F1 score) for each model
+in Table <a href="#S4.T2" title="Table 2 ‣ 4.3 Overall Performance ‣ 4 Experiments ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>. Different from <cite class="ltx_cite">[<a href="#bib.bib82" title="Multi-instance multi-label learning for relation extraction." class="ltx_ref">15</a>]</cite>, we use all the entity
+pairs instead of the ones with more than 10 mentions.
+We can observe that our model obtains the best performance
+in the DBpedia dataset and the Chinese dataset.
+In the DBpedia dataset, it is 3.6% higher than Mintz++, 7.9%
+higher than MIML-RE and 13.9% higher than MultiR. In the Chinese
+dataset, Mintz++, MultiR and MIML-RE performs similarly in terms of the highest F1 score, while
+our model gains about 8% improvement.
+In the Riedel’s dataset, our framework hardly
+obtains any improvement compared with Mintz++.</p>
+</div>
+<div id="S4.T2" class="ltx_table">
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 2: </span>Results of the highest F1 score
+on all three datasets.</div>
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="3"><span class="ltx_text ltx_font_bold">DBpedia</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="3"><span class="ltx_text ltx_font_bold">Riedel</span></td>
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="3"><span class="ltx_text ltx_font_bold">Chinese</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Method</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">P(%)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">R(%)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">F1(%)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">P(%)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">R(%)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">F1(%)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">P(%)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">R(%)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">F1(%)</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">Mintz++</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">40.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">30.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">34.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">35.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">23.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">27.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">43.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">45.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">44.4</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">MultiR</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">60.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">15.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">24.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">32.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">25.1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">28.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">53.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">38.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">44.6</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">MIML-RE</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">51.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">21.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">30.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">41.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">19.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">26.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">49.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">41.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">44.9</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">ILP</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">37.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">39.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">38.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">35.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">23.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">28.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">52.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">52.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">52.8</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">ILP-No-Constraint</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">34.1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">36.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">35.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">35.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">23.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">28.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">43.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">45.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">44.4</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">ILP-Type-Inconsistent</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">36.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">39.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">37.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">35.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">23.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">28.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">49.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">49.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">49.2</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_small">ILP-Cardinality</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">35.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">37.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">36.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">35.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">23.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">28.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">50.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">48.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">49.6</span></td></tr>
+</tbody>
+</table>
+</div>
+<div id="S4.SS3.p8" class="ltx_para">
+<p class="ltx_p">We also investigate the impacts of the constraints used in ILP, which are derived based on
+the two kinds of clues and can encode relation definition information
+into our framework.
+Experimental results in Table <a href="#S4.T2" title="Table 2 ‣ 4.3 Overall Performance ‣ 4 Experiments ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> shows that in the DBpedia dataset, the
+highest F1 score increases from 35.2% to 38.3% with the help of both kinds of clues,
+while in the Chinese dataset the improvement is from 44.4% to 52.8%.
+In the Riedel’s dataset we do not see any improvements since there are almost
+no clues.
+Furthermore, using constraints derived from only one kind of clues can also improve
+the performance, but not as well as using both of them.</p>
+</div>
+</div>
+<div id="S4.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.4 </span>Adapting MultiR Sentence Level Extractor to Our Framework</h3>
+
+<div id="S4.SS4.p1" class="ltx_para">
+<p class="ltx_p">The preliminary relation extractor of our optimization framework
+is not limited to the MaxEnt extractor, and can take any sentence
+level relation extractor with confidence scores. We also fit
+MultiR’s mention level extractor into our framework.</p>
+</div>
+<div id="S4.F3" class="ltx_figure">
+<table style="width:100%;">
+<tr>
+<td class="ltx_subfigure">
+<div id="S4.F2.sf1" class="ltx_figure ltx_align_center"><img src="P14-1077/image012.png" id="S4.F2.sf1.g1" class="ltx_graphics" width="122" height="170" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">(a) </span>The DBpedia Dataset</div>
+</div></td>
+<td class="ltx_subfigure">
+<div id="S4.F2.sf2" class="ltx_figure ltx_align_center"><img src="P14-1077/image013.png" id="S4.F2.sf2.g1" class="ltx_graphics" width="122" height="170" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">(b) </span>The Riedel’s Dataset</div>
+</div></td>
+<td class="ltx_subfigure">
+<div id="S4.F2.sf3" class="ltx_figure ltx_align_center"><img src="P14-1077/image002.png" id="S4.F2.sf3.g1" class="ltx_graphics" width="122" height="170" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">(c) </span>The Chinese Dataset</div>
+</div></td></tr>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 3: </span>The results of original MultiR and ILP optimized MultiR on the three datasets.</div>
+</div>
+<div id="S4.SS4.p2" class="ltx_para">
+<p class="ltx_p">As shown in Figure <a href="#S4.F3" title="Figure 3 ‣ 4.4 Adapting MultiR Sentence Level Extractor to Our Framework ‣ 4 Experiments ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>, in the DBpedia dataset and the Chinese dataset, in most parts of the curve,
+ILP optimized MultiR outperforms original MultiR. We think the reason is that
+our framework make use of global clues to discard the incorrect
+predictions.
+The results are not as high as when we use MaxEnt as the preliminary extractor. We think one
+reason is that MultiR does not perform well in these two datasets. Furthermore,
+the confidence scores which MultiR outputs
+are not normalized to the same scale, which brings us difficulties
+in setting up a confidence threshold to select the candidates.
+As a result, we only use the top one result as the
+candidate since including top two predictions without thresholding the confidences performs
+bad, indicating that a probabilistic sentence-level extractor
+is more suitable for our framework.
+We also notice that in the Riedel’s dataset our framework does not improve the performance
+significantly, and we have discussed the reasons in Section <a href="#S4.SS3" title="4.3 Overall Performance ‣ 4 Experiments ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.</p>
+</div>
+</div>
+<div id="S4.SS5" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.5 </span>Examining the Automatically Learnt Clues</h3>
+
+<div id="S4.SS5.p1" class="ltx_para">
+<p class="ltx_p">Now we evaluate the performance of automatically collected clues used in our model.
+Since there are almost no clues in the Riedel’s dataset, we only investigate
+the other two datasets. We add clues according
+to their related relations’ proportions in the local predictions.
+For example, <span class="ltx_text ltx_font_italic">Country</span> and <span class="ltx_text ltx_font_italic">birthPlace</span> take up about 30% in the local predictions,
+we thus add clues that are related to these two relations, and then move on with new clues
+related to other relations according to those relations’ proportions in the local predictions.</p>
+</div>
+<div id="S4.F4" class="ltx_figure"><img src="P14-1077/image003.png" id="S4.F4.g1" class="ltx_graphics ltx_centering" width="338" height="354" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 4: </span>F1 score v.s. number of relations (used to introduce the related learnt clues into the ILP framework) on the DBpedia dataset (a) and the Chinese dataset (b).</div>
+</div>
+<div id="S4.F5" class="ltx_figure">
+<table style="width:100%;">
+<tr>
+<td class="ltx_subfigure">
+<div id="S4.F4.sf1" class="ltx_figure ltx_align_center"><img src="P14-1077/image004.png" id="S4.F4.sf1.g1" class="ltx_graphics" width="158" height="112" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">(a) </span>The DBpedia Dataset</div>
+</div></td>
+<td class="ltx_subfigure">
+<div id="S4.F4.sf2" class="ltx_figure ltx_align_center"><img src="P14-1077/image005.png" id="S4.F4.sf2.g1" class="ltx_graphics" width="158" height="112" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">(b) </span>The Chinese Dataset</div>
+</div></td></tr>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 5: </span>Performances of manually selected clues and
+automatically learnt clues on two datasets.</div>
+</div>
+<div id="S4.SS5.p2" class="ltx_para">
+<p class="ltx_p">As is shown in Figure <a href="#S4.F4" title="Figure 4 ‣ 4.5 Examining the Automatically Learnt Clues ‣ 4 Experiments ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>, in both datasets, the clues
+related to more local predictions will solve more inconsistencies, thus
+are more effective. Adding the first two relations improves
+the model significantly, and as more relations are added, the
+performances keep increasing until approaching the still state.
+It is worth mentioning that when sufficient learnt clues are added
+into the model, the results are comparable
+to those based on the clues refined manually, as shown in
+Figure <a href="#S4.F5" title="Figure 5 ‣ 4.5 Examining the Automatically Learnt Clues ‣ 4 Experiments ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+This indicates that the clues can be collected automatically,
+and further used to examine whether predicted relations are
+consistent with the existing ones in the KB, which can be considered as
+a form of quality control.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Conclusions</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">In this paper, we make use of the global clues derived from KB to help
+resolve the disagreements among local relation predictions, thus reduce the
+incorrect predictions and improve the performance of relation extraction.
+Two kinds of clues, including implicit argument type information and argument
+cardinality information of relations are investigated.
+Our framework outperforms the state-of-the-art models if we can find such
+clues in the KB. Furthermore, our framework is scalable for other
+local sentence level extractors in addition to the MaxEnt model. Finally,
+we show that the clues can be learnt automatically from the KB, and lead
+to comparable performance to manually refined ones.</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">For future work, we will investigate other kinds of clues
+and attempt a joint optimization framework that could host entity
+disambiguation, relation extraction and entity linking together. We
+will also adopt selection preference between entities and relations
+since sometimes we may not find useful clues.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">We would like to thank Heng Ji, Dong Wang and Kun Xu for their useful discussions and
+the anonymous reviewers for their helpful comments
+which greatly improved the work.
+This work was supported by the National
+High Technology R&amp;D Program
+of China (Grant No. 2012AA011101), National
+Natural Science Foundation of China (Grant No.
+61272344, 61202233, 61370055) and the joint project with IBM Research.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib51" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Banko, M. J. Cafarella, S. Soderland, M. Broadhead and O. Etzioni</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Open information extraction from the web</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">IJCAI’07</span>, <span class="ltx_text ltx_bib_pages"> pp. 2670–2676</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib42" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Bizer, J. Lehmann, G. Kobilarov, S. Auer, C. Becker, R. Cyganiak and S. Hellmann</span><span class="ltx_text ltx_bib_year">(2009-09)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">DBpedia - a crystallization point for the web of data</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Web Semant.</span> <span class="ltx_text ltx_bib_volume">7</span>, <span class="ltx_text ltx_bib_pages"> pp. 154–165</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.p3" title="4.1 Datasets ‣ 4 Experiments ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib89" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. C. Bunescu</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning to extract relations from the web using minimal supervision</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib102" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">O. L. de Lacalle and M. Lapata</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Unsupervised relation extraction with general domain knowledge.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 415–425</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib78" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Fader, S. Soderland and O. Etzioni</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Identifying relations for open information extraction</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">EMNLP ’11</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 1535–1545</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib56" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Hoffmann, C. Zhang, X. Ling, L. Zettlemoyer and D. S. Weld</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Knowledge-based weak supervision for information extraction of overlapping relations</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">HLT ’11</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 541–550</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.p2" title="2 Related Work ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.SS1.p2" title="4.1 Datasets ‣ 4 Experiments ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>,
+<a href="#S4.SS2.p3" title="4.2 Baselines and Competitors ‣ 4 Experiments ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib100" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Q. Li, S. Anzaroot, W. Lin, X. Li and H. Ji</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Joint inference for cross-document information extraction</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">CIKM ’11</span>, <span class="ltx_text ltx_bib_place">New York, NY, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 2225–2228</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib104" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Q. Li, H. Ji and L. Huang</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Joint event extraction via structured prediction with global features.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 73–82</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib53" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Mintz, S. Bills, R. Snow and D. Jurafsky</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Distant supervision for relation extraction without labeled data</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">ACL ’09</span>, <span class="ltx_text ltx_bib_pages"> pp. 1003–1011</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.SS2.p1" title="4.2 Baselines and Competitors ‣ 4 Experiments ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib85" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Riedel, L. Yao, B. M. Marlin and A. McCallum</span><span class="ltx_text ltx_bib_year">(2013-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Relation extraction with matrix factorization and universal schemas</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.p2" title="2 Related Work ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.SS3.p3" title="4.3 Overall Performance ‣ 4 Experiments ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+<li id="bib.bib45" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Riedel, L. Yao and A. McCallum</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Modeling relations and their mentions without labeled text</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_inbook">Machine Learning and Knowledge Discovery in Databases</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">Lecture Notes in Computer Science</span>, Vol. <span class="ltx_text ltx_bib_volume">6323</span>, <span class="ltx_text ltx_bib_pages"> pp. 148–163</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.p2" title="4.1 Datasets ‣ 4 Experiments ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib75" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Soderland, D. Fisher, J. Aseltine and W. Lehnert</span><span class="ltx_text ltx_bib_year">(1995)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">CRYSTAL inducing a conceptual dictionary</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">IJCAI’95</span>, <span class="ltx_text ltx_bib_place">San Francisco, CA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 1314–1319</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib90" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. Suchanek, J. Fan, R. Hoffmann, S. Riedel and P. P. Talukdar</span><span class="ltx_text ltx_bib_year">(2013-03)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Advances in automated knowledge base construction</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib63" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Surdeanu, D. McClosky, J. Tibshirani, J. Bauer, A. X. Chang, V. I. Spitkovsky and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2010-11)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A simple distant supervision approach for the TAC-KBP slot filling task</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Gaithersburg, Maryland, USA</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib82" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Surdeanu, J. Tibshirani, R. Nallapati and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Multi-instance multi-label learning for relation extraction.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 455–465</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-937284-43-5</span></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.p2" title="2 Related Work ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.SS1.p2" title="4.1 Datasets ‣ 4 Experiments ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>,
+<a href="#S4.SS2.p1" title="4.2 Baselines and Competitors ‣ 4 Experiments ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>,
+<a href="#S4.SS2.p3" title="4.2 Baselines and Competitors ‣ 4 Experiments ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>,
+<a href="#S4.SS3.p7" title="4.3 Overall Performance ‣ 4 Experiments ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+<li id="bib.bib91" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Takamatsu, I. Sato and H. Nakagawa</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Reducing wrong labels in distant supervision for relation extraction</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">ACL ’12</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 721–729</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib46" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Yao, S. Riedel and A. McCallum</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Collective cross-document relation extraction without labelled data</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">EMNLP ’10</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 1013–1023</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p1" title="2 Related Work ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib86" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Yao, S. Riedel and A. McCallum</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Probabilistic databases of universal schema</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">AKBC-WEKEX ’12</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 116–121</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib101" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">X. Zhang, J. Zhang, J. Zeng, J. Yan, Z. Chen and Z. Sui</span><span class="ltx_text ltx_bib_year">(2013-08)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Towards accurate distant supervision for relational facts extraction</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sofia, Bulgaria</span>, <span class="ltx_text ltx_bib_pages"> pp. 810–815</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P13-2141" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib103" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Zhao and R. Grishman</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Extracting relations with integrated information using kernel methods</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">ACL ’05</span>, <span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 419–426</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ Encoding Relation Requirements for Relation Extraction via Joint Inference" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 18:08:34 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

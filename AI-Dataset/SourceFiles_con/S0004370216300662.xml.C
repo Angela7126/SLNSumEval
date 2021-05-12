@@ -1,0 +1,1423 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Data repair of inconsistent nonmonotonic description logic programs.
+   </title>
+   <abstract>
+    Combining Description Logic (DL) ontologies and nonmonotonic rules has gained increasing attention in the past decade, due to the growing range of applications of DLs. A well-known proposal for such a combination are non-monotonic DL-programs, which support rule-based reasoning on top of DL ontologies in a loose coupling, using a well-defined query interface. However, inconsistency may easily arise as a result of the interaction of the rules and the ontology, such that no answer set (i.e., model) of a DL-program exists; this makes the program useless. To overcome this problem, we present a framework for repairing inconsistencies in DL-programs by exchanging formulas of an ontology formulated in DL- LiteA, which is a prominent DL that allows for tractable reasoning. Viewing the data part of the ontology as a source of inconsistency, we define program repairs and repair answer sets based on them. We analyze the complexity of the notion, and we extend an algorithm for evaluating DL-programs to compute repair answer sets, under optional selection of preferred repairs that satisfy additional constraints. The algorithm induces a generalized ontology repair problem, in which the entailment respectively non-entailment of queries to the ontology, subject to possible updates, must be achieved by a data change. While this problem is intractable in general, we identify several tractable classes of preferred repairs that are useful in practice. For the class of deletion repairs among them, we optimize the algorithm by reducing query evaluation to constraint matching, based on the novel concept of support set, which roughly speaking is a portion of the data from which entailment of an ontology query follows. Our repair approach is implemented within an answer set program system, using a declarative method for repair computation. An experimental evaluation on a suite of benchmark problems shows the effectiveness of our approach and promising results, both regarding performance and quality of the obtained repairs. While we concentrate on DL- LiteA ontologies, our notions extend to other DLs, for which more general computation approaches may be used.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Description Logics (DLs) [4], which emerged from semantic networks with the goal to equip respective formalisms with a clear formal semantics based on logic, nowadays play a dominant role among formalisms for Knowledge Representation and Reasoning (KRR). As such, DLs are geared towards describing domains in terms of concepts that map to sets of domain objects and their relations, as well as roles that capture relationships among domain objects. This makes DLs well-suited for representing ontologies formally and to reason about them, which has a central role in the Semantic Web vision [9]; indeed, DLs provide the formal underpinning of the Web Ontology Language (OWL), a recommended standard for expressing ontological knowledge on the web. Fueled by the success in this area, DLs have been successfully deployed to many other contexts and applications, among them reasoning about actions [6], data integration and ontology based data access [20], [19], spatial reasoning [69], runtime verification and program analysis [2], [53], and many others.
+     </paragraph>
+     <paragraph>
+      Most DL ontologies are fragments of classical first-order logic, and as such lack sufficient expressiveness for the requirements of certain problems; for instance, they cannot model closed-world reasoning, nor can they express nonmonotonicity; these features are often essential in practical application scenarios. Furthermore, DLs do not offer rules, which are popular in practical knowledge representation and serve a complementary aspect: while DLs are focused on specifying and reasoning about conceptual knowledge, logic rules serve well for reasoning about individuals; furthermore they target issues associated with nonmonotonic inference as well as non-determinism. To overcome these shortcomings, several extensions of DLs have been developed, e.g. [80], [5], [26], [27], [65], [15], [23], [52], [47], [14] and various notions of hybrid knowledge bases (KBs) have been proposed to get the best out of the DL and rules worlds by combining them (see [66] and references therein). Among them, Nonmonotonic Description Logic (DL-)programs[37] are the most prominent approach for a loose coupling between the rules and the ontology via so-called DL-atoms, which serve as query interfaces to the ontology that support information hiding and the use of legacy software (i.e., ontology reasoners). The possibility to add information from the rules part prior to query evaluation allows for adaptive combinations.
+     </paragraph>
+     <paragraph label="Example 1">
+      Consider the DL-program Π in Fig. 1, which captures information about children of a primary school and their parents in simplistic form. It is given as a pair {a mathematical formula}Π=〈O,P〉 of an ontology {a mathematical formula}O and a set of rules {a mathematical formula}P. The ontology {a mathematical formula}O contains a taxonomy {a mathematical formula}T of concepts (i.e., classes) in (1)–(3) and factual data (i.e., assertions) {a mathematical formula}A about some individuals in (4)–(6). Intuitively, {a mathematical formula}T states that every child has a parent, adopted child is a child, and male and female are disjoint. The rules {a mathematical formula}P contain some further facts (7), (8) and proper rules: (9) determines fathers from the ontology, upon feeding information to it; (10) checks, informally, against them for local parent information (ischildof) the constraint that a child has for sure at most one father, unless it is adopted (where ⊥ stands for falsity); finally (11)–(12) single out contact persons for children, which by default are the parents; for adopted children, fathers from the ontology are omitted if some other contact exists. The rules and the ontology interact via DL-atoms, which are the expressions starting with “DL”; e.g., {a mathematical formula}DL[Male⊎boy;Male](X) informally selects all individuals c, such that {a mathematical formula}Male(c) is provable from {a mathematical formula}O after temporarily adding for boys the assertions that they are male in the ontology.
+     </paragraph>
+     <paragraph>
+      The semantics of DL-programs was given in the seminal paper [37] in terms of answer sets, as a generalization of the answer set semantics of nonmonotonic logic programs [46]. In this way, DL-programs are an extension of answer set programming (ASP) [18] in which the user can evaluate in the rules queries over an ontology via DL-atoms. Notably, DL-atoms enable a bidirectional information flow between the rules and the ontology, which may even be cyclic; this makes DL-programs quite expressive, and allows one to formulate advanced reasoning applications on ontologies, such as extended closed-world or terminological default reasoning [37].
+     </paragraph>
+     <paragraph>
+      On the other hand, the information flow can lead to inconsistency, i.e., that no answer set of the DL-program exists, even if the ontology and rules are perfectly consistent when considered separately; this happens in the example above, where the DL-program has no answer set. An inconsistent DL-program yields no information and is of no use for constructive problem solving; it may be viewed as broken and in need of an appropriate management of this situation. Systems for evaluating DL-programs, among them {an inline-figure}{sup:1} and DReW,{sup:2} however can not resolve inconsistencies easily; this is clearly a drawback for their deployment to applications.
+     </paragraph>
+     <paragraph>
+      Adequate treatment of inconsistent information is a ubiquitous challenge faced by many KR formalisms in various settings. The issue has been extensively studied in various fields, e.g. diagnosis [73], nonmonotonic reasoning [17], [76], belief revision [1], [42], knowledge base updates [28], databases (see [10] for an overview) and many others (e.g., [11], [67], [62], [25]). Although a large number of “inconsistency-tolerant” approaches exist (see Section 7 for a discussion), most of them are applicable only to formalisms that are based on a single underlying logic. DL-programs in turn constitute a hybrid formalism, and existing approaches can not be readily applied for such a setting; thus, suitable methods for inconsistency handling in DL-programs are needed.
+     </paragraph>
+     <paragraph>
+      In this work, we address this need and develop techniques for repairing inconsistent DL-programs. Our main contributions can be summarized as follows.
+     </paragraph>
+     <list>
+      <list-item label="(1)">
+       We formalize repairing DL-programs and introduce the notions of repair and repair answer set. They are based on changes of the assertions in the ontology that enable answer sets. As it turns out, repair answer sets do not have higher complexity than ordinary answer sets (more precisely, weak and flp answer sets) if queries in DL-atoms are evaluable in polynomial time; to ensure this, we concentrate on the prominent Description Logic DL-{a mathematical formula}LiteA from the DL-Lite family [21]. Furthermore, we model repair preference by functions σ that select preferred repairs from a set of candidate repairs. As selecting most preferred repairs in a repair ordering may be a source of complexity, [54], we focus on selections σ that allow to filter preferred repairs independent of other repairs (which is relevant in practice).
+      </list-item>
+      <list-item label="(2)">
+       The task of repair computation involves a generalized ontology repair problem (ORP), which arises from a candidate answer set and the DL-atoms of the program. It consists of two sets {a mathematical formula}D1 and {a mathematical formula}D2 containing entailment and non-entailment queries to the ontology, respectively, under temporary assertions induced by the answer set candidate, and asks for an ABox satisfying these sets. Importantly, if a selection function σ is independent, the σ-selected ABoxes also yield, modulo a conditional check on the rules part, the σ-selected repairs of the program. Unsurprisingly, the ORP problem is intractable ({a mathematical formula}NP-complete) for DL-{a mathematical formula}LiteA in general, and {a mathematical formula}NP-hard even in elementary ontology settings, due to the temporary assertions. However, we identify several tractable cases of σ-selections that are useful in practice. The ORP problem is of independent interest, as it can arise in a general context where multiple ontologies are integrated which share the taxonomy and some defeasible data, where queries serve as constraints.
+      </list-item>
+      <list-item label="(3)">
+       To optimize repair answer set computation, we introduce support sets as means to shortcut the ontology access for query evaluation. Informally, a support set of a DL-atom is a portion of the data in the ontology and the answer set from which the entailment of the query in the DL-atom follows; by a simple ontology enhancement, this data can be described entirely in terms of data in the ontology. Furthermore, support sets lift faithfully to the nonground level, i.e., can be schematically described, and the latter can for DL-{a mathematical formula}LiteA ontologies not only be efficiently computed, but are also small; this provides the basis for scalability in exploitation. Using support sets likewise proved to be effective for evaluating DL-programs, as was shown in [32]; they can be seen as non-ground justifications why a query to the ontology evaluates to true and informally generalize explanations of positive query answers [16] to a setting with further ad-hoc input data.
+      </list-item>
+      <list-item label="(4)">
+       Utilizing support sets, we devise an algorithm for the effective computation of deletion repairs of DL-programs under weak and flp-answer set semantics, and we discuss potential generalizations. The algorithm is implemented within the {an inline-figure} answer set solving framework, using a declarative approach for support set evaluation. Furthermore, we report results of an extensive experimental evaluation of the implementation on a suite of benchmarks that gather scenarios of different characteristics. The results provide evidence for the effectiveness of the method and scalability with respect to intuitively increasing inconsistency in the data.
+      </list-item>
+     </list>
+     <paragraph>
+      Organization. The remainder of this article is organized as follows. Section 2 provides necessary preliminaries on DL-programs. In Section 3, the notions of repair and repair answer sets are introduced and a detailed analysis of their computational complexity is presented. Section 4 elaborates on support sets as optimization means and algorithms for deletion repair computation of DL-programs over DL-{a mathematical formula}LiteA ontologies based on them. In Section 5 the structure of the prototype and the implementation details are given, and in Section 6 the evaluation results are presented and analyzed. A comprehensive discussion of further and related work is given in Section 7, followed by concluding remarks and an outlook in Section 8. In order not to distract from the flow of reading, longer proofs have been moved to the Appendix.
+     </paragraph>
+     <paragraph>
+      This article significantly extends the preliminary work in [33], [35].
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Preliminaries
+     </section-title>
+     <paragraph>
+      In this section, we recall basic notions of Description Logics, where we focus on {a mathematical formula}DL-LiteA[21], [70], and DL-programs [37]; for more background on Description Logics, see [4].
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       Description logic knowledge bases
+      </section-title>
+      <paragraph>
+       We consider Description Logic (DL) knowledge bases (KBs) over a signature {a mathematical formula}ΣO=〈I,C,R〉 with a set I of individuals (constants), a set C of concept names (unary predicates), and a set R of role names (binary predicates) as usual.
+      </paragraph>
+      <paragraph>
+       A DL knowledge base (or ontology) is a pair {a mathematical formula}O=〈T,A〉 of a TBox{a mathematical formula}T and an ABox{a mathematical formula}A, which are finite sets of formulas capturing taxonomic resp. factual knowledge, whose form depends on the underlying DL. In abuse of notation, we also write {a mathematical formula}O=T∪A viewing {a mathematical formula}O as a set of formulas.
+      </paragraph>
+      <paragraph>
+       Syntax. In {a mathematical formula}DL-LiteA, concepts C, denoting sets of objects, and roles R, denoting binary relations between objects, obey the following syntax, where {a mathematical formula}A∈C is an atomic concept and {a mathematical formula}P∈R an atomic role:{a mathematical formula}{a mathematical formula}DL-LiteA TBox axioms are then of the form:{a mathematical formula} Axioms where {a mathematical formula}D=C resp. {a mathematical formula}S=R are positive inclusion axioms and where {a mathematical formula}D=¬C resp. {a mathematical formula}S=¬R are disjointness axioms; {a mathematical formula}(functR) is a functionality axiom. As a further constraint, roughly speaking in {a mathematical formula}DL-LiteA (inverse) functional roles can not be specialized, i.e., they can not appear on the right-hand side of positive inclusion axioms; for formal details, see [70] An assertion is a formula {a mathematical formula}A(c) or {a mathematical formula}P(c,d), where {a mathematical formula}A∈C, {a mathematical formula}P∈R, and {a mathematical formula}c,d∈I (called positive) or its negation, i.e., {a mathematical formula}¬A(c) resp. {a mathematical formula}¬P(c,d) (negative).{sup:3} An example of a {a mathematical formula}DL-LiteA ontology is given in Fig. 1.
+      </paragraph>
+      <paragraph>
+       Semantics. The semantics of DL ontologies {a mathematical formula}O is based on first-order interpretations [21].
+      </paragraph>
+      <paragraph label="Definition 2">
+       InterpretationAn interpretation is a pair {a mathematical formula}I=〈ΔI,⋅I〉 of a non-empty domain {a mathematical formula}ΔI and an interpretation function {a mathematical formula}⋅I that assigns to each individual {a mathematical formula}c∈I an object {a mathematical formula}cI∈ΔI, to each concept name C a subset {a mathematical formula}CI of {a mathematical formula}ΔI, and to each role name R a binary relation {a mathematical formula}RI over {a mathematical formula}ΔI.
+      </paragraph>
+      <paragraph>
+       An interpretation I extends inductively to non-atomic concepts C and roles R according to the concept resp. role constructors; as for {a mathematical formula}DL-LiteA, {a mathematical formula}(∃R)I={o1|〈o1,o2〉∈RI} and {a mathematical formula}(¬C)I=ΔI\CI, and {a mathematical formula}R−I={〈o1,o2〉|〈o2,o1〉∈RI} and {a mathematical formula}(¬R)I=ΔI×ΔI\RI. Based on this satisfaction of formulas in {a mathematical formula}I⊨ω is defined as follows.
+      </paragraph>
+      <paragraph label="Definition 3">
+       SatisfactionSatisfaction of an axiom respectively assertion w.r.t. an interpretation {a mathematical formula}I is as follows:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}I⊨C⊑D, if {a mathematical formula}CI⊆DI;
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}I⊨R⊑S, if {a mathematical formula}RI⊆SI;
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}I⊨funct(R), if {a mathematical formula}(o1,o2)∈RI and {a mathematical formula}(o1,o3)∈RI implies {a mathematical formula}o2=o3 for all {a mathematical formula}o1,o2,o3∈ΔI;
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}I⊨C(a), if {a mathematical formula}aI∈CI and {a mathematical formula}I⊨¬C(a), if {a mathematical formula}aI∈ΔI\CI;
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}I⊨P(a,b), if {a mathematical formula}(aI,bI)∈PI and {a mathematical formula}I⊨¬P(a,b), if {a mathematical formula}(aI,bI)∈ΔI×ΔI\PI.
+       </list-item>
+      </list>
+      <paragraph>
+       A TBox {a mathematical formula}T, ABox {a mathematical formula}A respectively ontology {a mathematical formula}O is satisfiable (or consistent), if some interpretation {a mathematical formula}I satisfies it. We call {a mathematical formula}Aconsistent with{a mathematical formula}T, if {a mathematical formula}T∪A is consistent.
+      </paragraph>
+      <paragraph label="Example 4">
+       cont'dThe ontology {a mathematical formula}O in Fig. 1 is consistent, since there exists a satisfying interpretation {a mathematical formula}I=〈ΔI,⋅I〉, defined by setting {a mathematical formula}ΔI={john,pat}, {a mathematical formula}MaleI={john,pat}, {a mathematical formula}hasParentI={(john,pat)} and {a mathematical formula}ChildI=FemaleI=∅. The ontology {a mathematical formula}O′=O∪{Female(pat)} does not have any model, and thus is inconsistent.
+      </paragraph>
+      <paragraph>
+       It has been shown that in {a mathematical formula}DL-LiteA inconsistency arises by few assertions [21].
+      </paragraph>
+      <paragraph label="Proposition 5">
+       cf. [21]In{a mathematical formula}DL-LiteA, for a given TBox{a mathematical formula}Tevery ⊆-minimal ABox{a mathematical formula}Asuch that{a mathematical formula}T∪Ais inconsistent fulfills{a mathematical formula}|A|≤2.
+      </paragraph>
+      <paragraph>
+       Throughout the paper, we consider ontologies in {a mathematical formula}DL-LiteA under the unique names assumption, i.e., {a mathematical formula}o1I≠o2I whenever {a mathematical formula}o1≠o2 holds in any interpretation.
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       DL-programs
+      </section-title>
+      <paragraph>
+       A DL-program {a mathematical formula}Π=〈O,P〉 is given as a pair of a DL ontology {a mathematical formula}O and a set {a mathematical formula}P of DL-rules, which extend rules in non-monotonic logic programs with special DL-atoms. They are formed over a signature {a mathematical formula}ΣΠ=〈C,P,I,C,R〉, where {a mathematical formula}ΣP=〈C,P〉 is a signature of the rule part {a mathematical formula}P with {a mathematical formula}C being a finite set of constant symbols, and P a finite set of predicate symbols (called lp predicates) of arities ≥0, and {a mathematical formula}ΣO=〈I,C,R〉 is a DL signature. The set P is disjoint with {a mathematical formula}C,R. For simplicity, we assume here {a mathematical formula}C=I.
+      </paragraph>
+      <paragraph>
+       Syntax. A (disjunctive) DL-program{a mathematical formula}Π=〈O,P〉 consists of a DL ontology {a mathematical formula}O and a finite set {a mathematical formula}P of DL-rules r of the form{a mathematical formula} where {a mathematical formula}not is negation as failure (NAF){sup:4} and each {a mathematical formula}ai, {a mathematical formula}0≤i≤n, is a first-order atom {a mathematical formula}p(t→) with predicate {a mathematical formula}p∈P (called ordinary or lp-atom) and each {a mathematical formula}bi, {a mathematical formula}1≤i≤m, is either an lp-atom or a DL-atom. If {a mathematical formula}n=0, the rule is a constraint, and if {a mathematical formula}n≤1, it is normal. The notions of a head and a body of a rule are naturally inherited from normal logic programs, i.e. for a DL-rule r of the form (1), {a mathematical formula}H(r)={a1,…,an} is called the head of r, and {a mathematical formula}B(r)={b1,…,bk,notbk+1,…,notbm} is called the body of r.
+      </paragraph>
+      <paragraph>
+       A DL-atom{a mathematical formula}a(t→) is of the form{a mathematical formula} where
+      </paragraph>
+      <list>
+       <list-item label="(a)">
+        {a mathematical formula}λ=S1op1p1,…,Smopmpm,m≥0 is the input list and for each i, {a mathematical formula}1≤i≤m, {a mathematical formula}Si∈C∪R, {a mathematical formula}opi∈{⊎,⩁,⋂̵} is an update operator, and {a mathematical formula}pi∈P is an input predicate of the same arity as {a mathematical formula}Si; intuitively, {a mathematical formula}opi=⊎ (resp., {a mathematical formula}opi=⩁) increases {a mathematical formula}Si (resp., {a mathematical formula}¬Si) by the extension of {a mathematical formula}pi, while {a mathematical formula}opi=⋂̵ constrains {a mathematical formula}Si to {a mathematical formula}pi;
+       </list-item>
+       <list-item label="(b)">
+        {a mathematical formula}Q(t→) is a DL-query, which has one of the forms (i) {a mathematical formula}C(t), where C is a concept and t is a term; (ii) {a mathematical formula}R(t1,t2), where R is a role and {a mathematical formula}t1,t2 are terms; (iii) Q is an inclusion axiom and {a mathematical formula}t→=ϵ; (iv) Q is a disjointness axiom and {a mathematical formula}t→=ϵ; or (v) {a mathematical formula}¬Q′(t→) where {a mathematical formula}Q′(t→) is from (i)–(iv). We omit {a mathematical formula}(t→) for {a mathematical formula}t→=ϵ.
+       </list-item>
+      </list>
+      <paragraph label="Example 6">
+       cont'dConsider a ground version {a mathematical formula}DL[Male⊎boy;Male](pat) of the DL-atom in the rule (9) of Π in Fig. 1. It has a DL-query {a mathematical formula}Male(pat); its list {a mathematical formula}λ=Male⊎boy contains an input predicate boy which extends the ontology predicate Male via an update operator ⊎.
+      </paragraph>
+      <paragraph>
+       Semantics. The semantics of a DL-program {a mathematical formula}Π=〈O,P〉 is in terms of its grounding {a mathematical formula}gr(Π)=〈O,gr(P)〉 over {a mathematical formula}C, i.e., {a mathematical formula}gr(P) contains all ground instances of rules r in {a mathematical formula}P over {a mathematical formula}C. In the remainder, by default we assume that Π is ground.
+      </paragraph>
+      <paragraph>
+       A (Herbrand) interpretation of Π is a set {a mathematical formula}I⊆HBΠ of ground atoms, where {a mathematical formula}HBΠ is the Herbrand base w.r.t. {a mathematical formula}C and P (i.e. all ground atoms over {a mathematical formula}C and P); I satisfies an lp- or DL-atom a, if
+      </paragraph>
+      <list>
+       <list-item label="(i)">
+        {a mathematical formula}a∈I, if a is an lp-atom, and
+       </list-item>
+       <list-item label="(ii)">
+        {a mathematical formula}〈O∪λI(a)〉⊨Q(t→) where {a mathematical formula}O=〈T,A〉, if a is a DL-atom of form (2), where{a mathematical formula} and
+       </list-item>
+      </list>
+      <paragraph>
+       Satisfaction of a DL-rule r resp. set {a mathematical formula}P of rules by I is then as usual, where I satisfies {a mathematical formula}notbj, if I does not satisfy {a mathematical formula}bj; I satisfies Π, if it satisfies each {a mathematical formula}r∈P. We denote that I satisfies (is a model of) an object ω (atom, rule, etc.) with {a mathematical formula}I⊨Oω. A model I of ω is minimal, if no model {a mathematical formula}I′ of ω exists such that {a mathematical formula}I′⊂I.
+      </paragraph>
+      <paragraph label="Example 7">
+       cont'dThe interpretation {a mathematical formula}I={ischildof(john,alex),boy(john)} satisfies the DL-atom {a mathematical formula}o=DL[Child⊎boy;Male](john), as {a mathematical formula}O∪λI(o)⊨Male(john). Furthermore, {a mathematical formula}I⊭ODL[;Adopted](john), since the input list of {a mathematical formula}DL[;Adopted](john) is empty and {a mathematical formula}O⊭Adopted(john).
+      </paragraph>
+      <paragraph>
+       Answer sets. Various semantics for DL-programs extend the answer sets semantics of (disjunctive) logic programs [46] to DL-programs, e.g. [37], [59], [82], [77]. We concentrate here on weak answer sets[37], in which DL-atoms are treated like atoms under NAF, and flp answer sets[38], which obey a stronger foundedness condition. Both are like answers sets of ordinary logic programs defined as interpretations that are minimal models of a program reduct, which intuitively captures that assumption-based application of the rules on an interpretation can reconstruct the latter.
+      </paragraph>
+      <paragraph label="Definition 8">
+       Weak answer setsLet {a mathematical formula}Π=〈O,P〉 be a DL-program. The weak reduct of {a mathematical formula}P relative to {a mathematical formula}O and to an interpretation {a mathematical formula}I⊆HBΠ, denoted by {a mathematical formula}PweakI,O is the ordinary positive program obtained from {a mathematical formula}gr(P) by deleting
+       <list>
+        all DL-rules r such that either {a mathematical formula}I⊭Oa for some DL-atom {a mathematical formula}a∈B+(r), or {a mathematical formula}I⊨Ol for some {a mathematical formula}l∈B−(r); andfrom every remaining DL-rule r all the DL-atoms in {a mathematical formula}B+(r) and all the literals in {a mathematical formula}B−(r).A
+       </list>
+       <paragraph>
+        weak answer set of Π is any interpretation {a mathematical formula}I⊆HBΠ that is a minimal model of {a mathematical formula}PweakI,O. By {a mathematical formula}ASweak(Π) we denote the set of all weak answer sets of Π.
+       </paragraph>
+      </paragraph>
+      <paragraph>
+       Note that {a mathematical formula}PweakI,O is an ordinary ground positive program without DL-atoms and default-negated literals, which has the least (unique minimal) model if each rule in {a mathematical formula}P is definite (i.e., {a mathematical formula}n=1 in (1)).
+      </paragraph>
+      <paragraph label="Example 9">
+       Let {a mathematical formula}O be as in Fig. 1 and let the rule set {a mathematical formula}P be as follows:{a mathematical formula} Consider {a mathematical formula}I={ischild(john,alex),boy(john),contact(john,pat),hasfather(john,pat)}. The weak-reduct {a mathematical formula}PweakI,O contains the following rules:{a mathematical formula} The interpretation I is a weak-answer set of Π, since I is a minimal model of {a mathematical formula}PweakI,O. In fact, {a mathematical formula}ASweak(Π)={I} holds.
+      </paragraph>
+      <paragraph>
+       The flp-answer set semantics is defined as follows.
+      </paragraph>
+      <paragraph label="Definition 10">
+       flp answer setsLet {a mathematical formula}Π=〈O,P〉 be a DL-program. The flp-reduct of {a mathematical formula}P relative to {a mathematical formula}O and an interpretation {a mathematical formula}I⊆HBΠ is the set of rules {a mathematical formula}PflpI,O={rflpI,O|r∈P} where {a mathematical formula}rflpI,O=r, if the body of r is satisfied, i.e., {a mathematical formula}I⊨Obi, for all {a mathematical formula}bi, {a mathematical formula}1≤i≤k and {a mathematical formula}I⊭Obj, for all {a mathematical formula}k&lt;j≤m; otherwise, {a mathematical formula}rflpI,O is empty.An flp-answer set of Π is any interpretation {a mathematical formula}I⊆HBΠ that is a minimal model of {a mathematical formula}PflpI,O. By {a mathematical formula}ASflp(Π) we denote the set of all flp answer sets of Π.
+      </paragraph>
+      <paragraph label="Example 11">
+       Reconsider {a mathematical formula}Π=〈O,P〉 and I from Example 9. The reduct {a mathematical formula}PflpI,O contains all rules of {a mathematical formula}P apart from (11). It is not difficult to verify that I is a minimal model of {a mathematical formula}PflpI,O, and hence an flp-answer set of Π; in fact {a mathematical formula}ASflp(Π)={I}. □
+      </paragraph>
+      <paragraph>
+       In general, the set of all flp answer sets of a DL-program is contained in the set of its strong answer sets [37], which in turn is contained in the set of weak answer sets. Strong answer sets coincide with flp ones in some cases, in particular, if the constraint operator ⋂̵ does not occur in Π. For more information, see [37], [82].
+      </paragraph>
+      <paragraph>
+       When dealing with evaluation of DL-atoms w.r.t. a given interpretation I, it is often convenient to consider input assertions defined as follows.
+      </paragraph>
+      <paragraph label="Definition 12">
+       Input assertionGiven a DL-atom {a mathematical formula}d=DL[λ;Q](t→) and {a mathematical formula}P∘p∈λ, {a mathematical formula}∘∈{⊎,⩁}, we call {a mathematical formula}Pp(c→) an input assertion for d, where {a mathematical formula}Pp is a fresh ontology predicate and {a mathematical formula}c→⊆C. By {a mathematical formula}Ad we denote the set of all such assertions.
+      </paragraph>
+      <paragraph label="Lemma 13">
+       For a TBox {a mathematical formula}T and a DL-atom d, we let{a mathematical formula} and for an interpretation I, we let{a mathematical formula} We then have: For every{a mathematical formula}O=〈T,A〉, DL-atom{a mathematical formula}d=DL[λ;Q](t→)and interpretation I, it holds that{a mathematical formula}I⊨Odiff{a mathematical formula}I⊨OdIDL[ϵ;Q](t→)iff{a mathematical formula}OdI⊨Q(t→).
+      </paragraph>
+      <paragraph>
+       Unlike (3), in {a mathematical formula}OdI there is a clear distinction between native assertions and input assertions of d w.r.t. I (via facts {a mathematical formula}Pp and axioms {a mathematical formula}Pp⊑(¬)P), mirroring the lp-input of d.
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      Repair semantics
+     </section-title>
+     <paragraph>
+      The powerful formalism of DL-programs permits a bidirectional information flow between the rule part and the ontology, which makes it attractive for various application scenarios. This information flow, however, can have unforeseen effects and cause that a DL-program has no answer set; we call such DL-programs inconsistent.
+     </paragraph>
+     <paragraph label="Example 14">
+      cont'dThe DL-program Π from Fig. 1 does not have any weak nor flp answer set, and thus is inconsistent. The inconsistency arises in this program as john, who is not provably adopted, has pat as father by the ontology, and by the local information possibly also alex; this causes the constraint (10) to be violated. □
+     </paragraph>
+     <paragraph>
+      Absence of answer sets makes a DL-program unusable, which calls for a remedy to this problem. As mentioned earlier, there are two principled approaches: to tolerate inconsistency, in the sense that reasoning does not trivialize, or to repair the program, i.e., change formulas in it to obtain consistency. As regards DL-programs (and likewise similar hybrid formalisms), previous works [72], [40] focused on inconsistency tolerance, by suppressing or weakening information that leads to inconsistency in model building.
+     </paragraph>
+     <paragraph>
+      In this section, we consider DL-program repair from a theoretical perspective by introducing a repair semantics and analyzing its computational complexity. In our setting, we assume that the rule part {a mathematical formula}P, which is on top of the ontology {a mathematical formula}O=〈T,A〉, is reliable and that the cause for inconsistency is in the latter. Thus when searching for a repair, modifications should only be applied to {a mathematical formula}O. In principle, the TBox {a mathematical formula}T and the ABox {a mathematical formula}A of the ontology could be subject to change; however, as usually the TBox is well-developed and a suitable TBox change is less clear in general (the more by an external user), we confine to change only the ABox. For example, in the DL-program Π in Example 14 it would be sufficient to delete the assertion {a mathematical formula}hasParent(john,pat) from the ABox to obtain a (weak respectively flp) answer set.
+     </paragraph>
+     <paragraph>
+      From a general perspective, our goal is, given a possibly inconsistent DL-program, to find an ABox {a mathematical formula}A′ such that replacing the ABox {a mathematical formula}A by {a mathematical formula}A′ makes the DL-program consistent. The answer sets of such a “repaired” DL-program are then referred to as repair answer sets of the program.
+     </paragraph>
+     <paragraph>
+      Formally, they are defined as follows.
+     </paragraph>
+     <paragraph label="Definition 15">
+      {a mathematical formula}x-repairs and x-repair answer setsGiven a DL-program {a mathematical formula}Π=〈O,P〉, {a mathematical formula}O=〈T,A〉, an ABox {a mathematical formula}A′ is an x-repair of Π, where {a mathematical formula}x∈{flp,weak}, if
+      <list>
+       {a mathematical formula}O′=〈T,A′〉 is consistent, and{a mathematical formula}Π′=〈O′,P〉 has some x-answer set.Furthermore, by
+      </list>
+      <paragraph>
+       {a mathematical formula}repxI(Π)={A′∈repx(Π)|I∈ASx(Π′),Π′=〈O′,P〉,O′=〈T,A′〉} we denote the set of all ABoxes {a mathematical formula}A′ under which I becomes an x-answer set of Π.
+      </paragraph>
+     </paragraph>
+     <paragraph label="Example 16">
+      cont'dReconsider Π in Example 1. The interpretation {a mathematical formula}I1={boy(john),ischildof(john,alex)} is an flp-repair answer set with flp-repair {a mathematical formula}A1′={Male(john),Male(pat)}. Another flp-repair for {a mathematical formula}I1 is {a mathematical formula}A2′={hasParent(john,pat),Female(pat),Male(john)}. The interpretation {a mathematical formula}I1 is also a weak-repair answer set with the weak-repairs {a mathematical formula}A1′ and {a mathematical formula}A2′.
+     </paragraph>
+     <section label="3.1">
+      Complexity of RAS existence for DL-programs over {a mathematical formula}DL-LiteA DL
+      <paragraph>
+       We now look at the problem of deciding whether a given DL-program {a mathematical formula}Π=〈O,P〉 has an x-(repair) answer set for {a mathematical formula}x∈{flp,weak}. Table 1 compactly summarizes our complexity results for this problem for {a mathematical formula}O in {a mathematical formula}DL-LiteA.
+      </paragraph>
+      <paragraph>
+       Before formally addressing the complexity of repair answer sets, we first state the following proposition:
+      </paragraph>
+      <paragraph label="Proposition 17">
+       Given any{a mathematical formula}I⊆HBΠ,{a mathematical formula}Oin{a mathematical formula}DL-LiteA, and a DL-atom{a mathematical formula}a=DL[λ;Q](t→), deciding{a mathematical formula}I⊨Oais feasible in polynomial time.
+      </paragraph>
+      <paragraph label="Proof">
+       Deciding whether {a mathematical formula}I⊨Oa is equivalent to checking {a mathematical formula}O∪λI(a)⊨Q(t→). As instance checking is known to be polynomial [21] in {a mathematical formula}DL-LiteA, the result immediately follows.  □
+      </paragraph>
+      <paragraph>
+       We are now ready to formally prove basic complexity results for checking the existence of repair answer sets for a DL-program.
+      </paragraph>
+      <paragraph label="Theorem 18">
+       Given a ground DL-program{a mathematical formula}Π=〈O,P〉with{a mathematical formula}Oin{a mathematical formula}DL-LiteAdeciding whether{a mathematical formula}RASx(Π)≠∅is
+      </paragraph>
+      <list>
+       <list-item>
+        {a mathematical formula}NP-complete for normal Π and{a mathematical formula}x=weak;
+       </list-item>
+       <list-item>
+        {a mathematical formula}Σ2P-complete for arbitrary Π and{a mathematical formula}x∈{weak,flp};
+       </list-item>
+       <list-item>
+        {a mathematical formula}Σ2P-complete for normal Π and{a mathematical formula}x=flp.
+       </list-item>
+      </list>
+      <paragraph>
+       We remark that the problem in (i) remains {a mathematical formula}NP-hard even if Π consists of a stratified DL-program in the sense of [37] that has additional constraints, cf. [79]. In (ii), the {a mathematical formula}Σ2P-hardness is inherited from the complexity of answer sets of ordinary disjunctive logic programs. In (iii), the complexity drops to {a mathematical formula}NP-completeness if the update operator ⋂̵ is excluded, as then the flp- and the strong answer sets of such DL-programs are guaranteed to coincide and deciding strong answer set existence is {a mathematical formula}co-{a mathematical formula}NP-complete [36]. Furthermore, all results extend to the setting where independent selection functions for determining preferred solutions, which are introduced in the next section, of polynomial time complexity are available.
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Selection functions
+      </section-title>
+      <paragraph>
+       Clearly, not all repairs are equally useful or interesting for a certain scenario. For instance, repairs that have no common assertions with the original ABox might be unwanted; repairs that introduce assertions that are not in the initial ABox; repairs that would cause non-minimal change etc. Formally, we model preferred repairs using a selection function:
+      </paragraph>
+      <paragraph label="Definition 19">
+       Selection functionA selection function is a mapping {a mathematical formula}σ:2AB×AB→2AB, where {a mathematical formula}AB is the set of all ABoxes, that assigns every pair {a mathematical formula}(S,A) of a set S of ABoxes and an ABox {a mathematical formula}A a set {a mathematical formula}σ(S,A)⊆S of preferred (or selected) ABoxes.
+      </paragraph>
+      <paragraph>
+       This notion captures a variety of selection principles, including minimal repairs according to some preference relation, or some global selection property. We then define:
+      </paragraph>
+      <paragraph label="Definition 20">
+       {a mathematical formula}(σ,x)-repairs and (σ,x)-repair answer setsGiven {a mathematical formula}Π=〈O,P〉, {a mathematical formula}O=〈T,A〉, and a selection σ, we call {a mathematical formula}rep(σ,x)(Π)=σ(repx(Π),A) the {a mathematical formula}(σ,x)-repairs of Π. An interpretation {a mathematical formula}I⊆HBΠ is a {a mathematical formula}(σ,x)-repair answer set of Π, if {a mathematical formula}rep(σ,x)I(Π)≠∅, where {a mathematical formula}rep(σ,x)I(Π)=rep(σ,x)(Π)∩repxI(Π); by {a mathematical formula}RAS(σ,x)(Π) we denote the set of all such repair answer sets.
+      </paragraph>
+      <paragraph label="Example 21">
+       Consider a DL-program {a mathematical formula}Π=〈O,P〉, where {a mathematical formula}O=〈∅,A〉={Child(john)} and {a mathematical formula}P is as follows:{a mathematical formula} The interpretation {a mathematical formula}I={male(john),pupil(john),boy(john)} is a (σ, weak)-repair answer set of Π with a possible (σ, weak)-repair {a mathematical formula}A′={studiesAt(john,sch80)}, i.e. {a mathematical formula}I∈RAS(σ,weak)(Π) and {a mathematical formula}A′∈rep(σ,weak)I(Π), where σ chooses repairs {a mathematical formula}A′, such that the set difference between {a mathematical formula}A and {a mathematical formula}A′ contains at most 2 assertions. Indeed, we have that {a mathematical formula}PweakI,O′={male(john);pupil(john);boy(john)}, and clearly I is its minimal model.Moreover, {a mathematical formula}I∈RAS(σ,flp)(Π), and {a mathematical formula}A″={studiesAt(john,sch80), {a mathematical formula}Child(john)}∈repσ,flpI(Π) is an (σ, flp)-repair of Π. To verify this, observe that the reduct {a mathematical formula}PflpI,O″ contains the rules (1)–(3), and I is a minimal model of {a mathematical formula}〈A″,PflpI,O″〉, where {a mathematical formula}O″=〈∅,A″〉. Note that while {a mathematical formula}A″∈rep(σ,weak)I(Π), we have that {a mathematical formula}A′∉rep(σ,flp)I(Π). More specifically, I is not a minimal model of {a mathematical formula}〈O′,PflpI,O′〉, where {a mathematical formula}PflpI,O′=PflpI,O″ and {a mathematical formula}O′=〈∅,A′〉, since there is a smaller model {a mathematical formula}I′=I∖{boy(john)}, which satisfies all rules of {a mathematical formula}PflpI,O′.The repair {a mathematical formula}A1′={Male(john),Male(pat)} from Example 16 is in {a mathematical formula}repσ1,xI1(Π) for {a mathematical formula}I1={ischildof(john,alex), {a mathematical formula}boy(john)}, where {a mathematical formula}x∈{weak,flp} and {a mathematical formula}σ1 selects deletion repairs, i.e. subsets of {a mathematical formula}A. Furthermore, the ABox {a mathematical formula}A2′={hasParent(john,pat), {a mathematical formula}Male(john), {a mathematical formula}Female(pat)} is in {a mathematical formula}repσ2,xI1(Π), where {a mathematical formula}x∈{weak,flp}, and {a mathematical formula}σ2 selects repairs {a mathematical formula}A′, which differ from {a mathematical formula}A only on assertions over gender predicates {a mathematical formula}Male,Female, and {a mathematical formula}|A|=|A′|. Consequently, {a mathematical formula}I1∈RAS(σ1,x)(Π) and {a mathematical formula}I2∈RAS(σ2,x)(Π) for {a mathematical formula}x∈{weak,flp}.  □
+      </paragraph>
+      <paragraph>
+       In general, even polynomially computable selections σ may incur intractability, e.g., selecting ABoxes {a mathematical formula}A′ with set-minimal change to {a mathematical formula}A, or with smallest Dalal (Hamming) distance (see e.g. [54]). Naturally, we aim at selections that are useful in practice and have benign computational properties, which are pragmatic specifically for our problem.
+      </paragraph>
+      <paragraph label="Definition 22">
+       Independent selectionA selection {a mathematical formula}σ:2AB×AB→2AB is independent, if {a mathematical formula}σ(S,A)=σ(S′,A)∪σ(S∖S′,A) whenever {a mathematical formula}S′⊆S.
+      </paragraph>
+      <paragraph label="Example 23">
+       All selection functions considered in Example 21 are independent. The selection function σ, which seeks repairs {a mathematical formula}A′ that contain a minimal number of changes in assertions over predicate Adopted w.r.t. {a mathematical formula}A in Example 1 is not independent, since to find the preferred σ-repair one needs to compute all repair candidates first, and then choose the best one among them.  □
+      </paragraph>
+      <paragraph>
+       Independence allows us to decide whether a given repair {a mathematical formula}A′∈S is selected by σ without looking at other repairs, and composition works here easily. This makes the introduced property valuable, since independent selection functions of different kind can be conveniently combined without a major increase in the complexity. Formally,
+      </paragraph>
+      <paragraph label="Proof">
+       If selection functions{a mathematical formula}σ1and{a mathematical formula}σ2are independent, then their composition{a mathematical formula}σ1∘σ2is also independent.We show that whenever {a mathematical formula}S′⊆S it holds that {a mathematical formula}σ1(σ2(S,A),A)=σ1(σ2(S′,A),A)∪σ1(σ2(S∖S′,A),A). By independence of {a mathematical formula}σ2 we have {a mathematical formula}σ2(S,A)=σ2(S′,A)∪σ2(S∖S′,A). Hence, {a mathematical formula}σ2(S′,A)⊆σ2(S,A), and thus by independence of {a mathematical formula}σ1 we get {a mathematical formula}σ1(σ2(S,A),A)=σ1(σ2(S′,A),A)∪σ1(σ2(S,A)∖σ2(S′,A),A). As {a mathematical formula}σ2(S,A)∖σ2(S′,A)=σ2(S∖S′,A), the result follows.  □
+      </paragraph>
+      <paragraph>
+       Clearly, set-minimal change and smallest Dalal distance are not independent, as to decide whether {a mathematical formula}A′∈σ(S,A) one has to compare {a mathematical formula}A′ with all other ABoxes from S. On the other hand, selecting all ABoxes such that {a mathematical formula}A′⊆A, is obviously independent. The latter, and several other independent selections that are useful in practice, will be considered in the next section.
+      </paragraph>
+      <paragraph>
+       Independence leads to the following beneficial property.
+      </paragraph>
+      <paragraph label="Proof">
+       For every Π and selection σ, if σ is independent, then{a mathematical formula}rep(σ,x)I(Π)⊆rep(σ,x)(Π), for every{a mathematical formula}I⊆HBΠ.By definition {a mathematical formula}rep(σ,x)(Π)=σ(repx(Π),A) and {a mathematical formula}rep(σ,x)I(Π)=σ(repxI(Π),A). Now as {a mathematical formula}repxI(Π)⊆repx(Π) and σ is independent, we obtain {a mathematical formula}σ(repx(Π),A)=σ(repxI(Π),A)∪σ(repx(Π)\repxI(Π),A), from which the result is obtained.  □
+      </paragraph>
+      <paragraph>
+       Proposition 25 implies that if we can turn an interpretation I into an answer set of Π by a σ-selected repair from the repairs which achieve this for I, then I is a σ-repair answer set of Π; that is, local selection is enough for a global σ-repair answer set. This will be exploited later in this section.
+      </paragraph>
+     </section>
+     <section label="3.3">
+      <section-title>
+       Ontology repair problem
+      </section-title>
+      <paragraph>
+       In this section we introduce the Ontology Repair Problem (ORP), which is an important subtask of repair answer set computation. Intuitively, an ORP is the problem of identifying an ABox under which a simultaneous entailment and non-entailment of sets of queries, where further individual additions for each query are possible, is guaranteed. In our setting updates and queries are obtained from a candidate interpretation and values of DL-atoms, under which this interpretation is an answer set of a DL-program at hand (see Section 4 for details).
+      </paragraph>
+      <paragraph>
+       Let us now provide a formal definition for this repair problem.
+      </paragraph>
+      <paragraph label="Definition 26">
+       Ontology repair problem (ORP)An ontology repair problem (ORP) is a triple {a mathematical formula}R=〈O,D1,D2〉 where {a mathematical formula}O=〈T,A〉 is an ontology and {a mathematical formula}Di={〈Uji,Qji〉|1≤j≤mi}, {a mathematical formula}i=1,2, are sets of pairs where each {a mathematical formula}Uji is an ABox and each {a mathematical formula}Qji is a DL-query. A repair (solution) for {a mathematical formula}R is any ABox {a mathematical formula}A′ such that
+      </paragraph>
+      <list>
+       <list-item label="(i)">
+        the ontology {a mathematical formula}O′=〈T,A′〉 is consistent;
+       </list-item>
+       <list-item label="(ii)">
+        {a mathematical formula}〈T,A′∪Uj1〉⊨Qj1 holds for {a mathematical formula}1≤j≤m1;
+       </list-item>
+       <list-item label="(iii)">
+        {a mathematical formula}〈T,A′∪Uj2〉⊭Qj2 holds for {a mathematical formula}1≤j≤m2.
+       </list-item>
+      </list>
+      <paragraph label="Example 27">
+       For an illustration of ORPs, we resort to the ontology from Fig. 1. Consider {a mathematical formula}R=〈O,D1,D2〉 with {a mathematical formula}O as in Fig. 1, and the following sets {a mathematical formula}D1 and {a mathematical formula}D2:
+       <list>
+        {a mathematical formula}D1={〈U11,Q11〉,〈U21,Q21〉,〈U31,Q31〉}, where{a mathematical formula}D2={〈U12,Q12〉}, whereOne of the possible solutions to the described ORP is the ABox
+       </list>
+       <paragraph>
+        {a mathematical formula}A′={Male(alex), {a mathematical formula}hasParent(john,pat), {a mathematical formula}Male(pat)}. Indeed, it is easy to verify that
+       </paragraph>
+       <list>
+        <list-item label="•">
+         {a mathematical formula}〈T,A′∪Male(john)〉⊨Male(pat), {a mathematical formula}〈T,A′〉⊨hasParent(john,pat), {a mathematical formula}〈T,A′∪Child(john)〉⊨Male(alex);
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}〈T,A′〉⊭Adopted(john).  □
+        </list-item>
+       </list>
+      </paragraph>
+      <paragraph>
+       We now analyze the complexity of the ORP problem in the general setting.
+      </paragraph>
+     </section>
+     <section label="3.4">
+      <section-title>
+       Complexity results for ORP
+      </section-title>
+      <paragraph>
+       Unsurprisingly, the Ontology Repair Problem is intractable in general. However, this holds already for very simple ontologies, which we show in the next proposition.
+      </paragraph>
+      <paragraph label="Proposition 28">
+       Deciding whether an ORP{a mathematical formula}R=〈〈T,A〉,D1,D2〉has some repair{a mathematical formula}A′is{a mathematical formula}NP-complete, and{a mathematical formula}NP-hard even if{a mathematical formula}Tcontains only positive concept inclusions and{a mathematical formula}A=∅.
+      </paragraph>
+      <paragraph>
+       In fact, even if both TBox and ABox are empty, the problem stays intractable, which is formally stated in the following proposition.
+      </paragraph>
+      <paragraph label="Theorem 29">
+       Deciding whether an ORP{a mathematical formula}R=〈〈T,A〉,D1,D2〉has some repair is{a mathematical formula}NP-hard even if{a mathematical formula}O=∅.
+      </paragraph>
+      <paragraph>
+       We note that ORP has two sources of {a mathematical formula}NP-hardness, viz. the data part (as in the proof above) and the taxonomy, which under σ-repairs may derive further assertions. Furthermore, each ORP can be encountered in some DL-program setting; we show this on an example.
+      </paragraph>
+      <paragraph label="Example 30">
+       Consider the ORP {a mathematical formula}R=〈O,D1,D2〉, where {a mathematical formula}D1={δ1}, {a mathematical formula}D2={a mathematical formula}{δ2}, such that {a mathematical formula}δ1=〈{C(c),¬D(c)}, {a mathematical formula}¬E(c)〉, and {a mathematical formula}δ2=〈{D(d), {a mathematical formula}¬S(d)},C(d)〉. We introduce predicates {a mathematical formula}pCδ1,pDδ1 for {a mathematical formula}δ1 and {a mathematical formula}pDδ2,pSδ2 for {a mathematical formula}δ2 and construct {a mathematical formula}Π=〈O,PI∪PDL〉, where{a mathematical formula} Then Π has a single repair answer set candidate, in which {a mathematical formula}a1 must evaluate to true and {a mathematical formula}a2 to false. This gives rise to {a mathematical formula}R; the rule (1) effects the pair {a mathematical formula}δ1 in {a mathematical formula}D1 and the rule (2) the pair {a mathematical formula}δ2 in {a mathematical formula}D2.  □
+      </paragraph>
+      <paragraph>
+       Generalizing the above example, for each {a mathematical formula}R=〈O,D1,D2〉 one can construct a DL-program {a mathematical formula}Π=〈O,P〉, such that the solutions of {a mathematical formula}R correspond to the repairs of Π as follows. A DL-atom {a mathematical formula}aij is created for every pair {a mathematical formula}〈Uij,Qij〉∈Dj, such that the DL-query of {a mathematical formula}aij is {a mathematical formula}Qij, and the input signature {a mathematical formula}λij encodes the update {a mathematical formula}Uij: for every {a mathematical formula}C(e→)∈Uij (resp. {a mathematical formula}¬C(e→)) the signature {a mathematical formula}λij contains {a mathematical formula}C⊎pCi,j (resp. {a mathematical formula}C⩁pCi,j). Furthermore, for each such update the fact {a mathematical formula}pCi,j(e→) is added to {a mathematical formula}P. The rules of {a mathematical formula}P ensure that all DL-atoms {a mathematical formula}aij are true for {a mathematical formula}j=1 and false for {a mathematical formula}j=2. That is, the logic program part {a mathematical formula}P of Π contains
+      </paragraph>
+      <list>
+       <list-item label="•">
+        a constraint {a mathematical formula}⊥←notai11, for every {a mathematical formula}ai11, and
+       </list-item>
+       <list-item label="•">
+        a constraint {a mathematical formula}⊥←ai22, for every {a mathematical formula}ai22.
+       </list-item>
+      </list>
+      <paragraph>
+       As there are no predicates in {a mathematical formula}P apart from those occurring in facts, the only possible repair answer set I of Π contains all facts of {a mathematical formula}P. Therefore, the update {a mathematical formula}λI(aij) of every {a mathematical formula}aij corresponds exactly to {a mathematical formula}Uij, and the constraints of {a mathematical formula}P guarantee the simultaneous entailment and non-entailment of sets of queries under possible temporary updates encoded by the given {a mathematical formula}R.
+      </paragraph>
+     </section>
+     <section label="3.5">
+      <section-title>
+       Tractable ORP cases
+      </section-title>
+      <paragraph>
+       As Theorem 29 demonstrates, we obtain intractability results for ORP even if the ontology is empty. In what follows we aim at finding tractable cases for the ORP problem given that {a mathematical formula}O is in DL {a mathematical formula}DL-LiteA.
+      </paragraph>
+      <paragraph>
+       If there are few DL-atoms in the ground DL-program Π, then the ORP becomes tractable. However, in application settings Π is obtained by grounding a DL-program that has variables, which will lead to many DL-atoms in Π. Therefore, the pairs {a mathematical formula}D1 and {a mathematical formula}D2 are hard to control in practice, and to gain tractability for ORP, we consider restrictions on repairs and the ontology. We present four tractable cases of σ-repairs with independent selection function σ, which are arguably useful in practice. In what follows, let {a mathematical formula}R=〈O,D1,D2〉, where {a mathematical formula}O=〈T,A〉.
+      </paragraph>
+      <section label="3.5.1">
+       Bounded {a mathematical formula}δ±-change
+       <paragraph label="Proof">
+        A natural restriction that one could exploit is to bound the distance from the original ABox, i.e.{a mathematical formula} where {a mathematical formula}A′△A=(A′\A)∪(A\A′) is the symmetric difference of sets. Our tractability result for this setting is as follows. Deciding whether an ORP{a mathematical formula}R=〈O,D1,D2〉has a{a mathematical formula}δ±,k-change repair, is feasible in polynomial time for fixed k.As the number m of possible ABox assertions is polynomial in the size of {a mathematical formula}T and {a mathematical formula}A, traversing all {a mathematical formula}O((mk)) possible {a mathematical formula}A′ and checking the repair condition can be done in polynomial time.  □
+       </paragraph>
+       <paragraph label="Example 32">
+        We illustrate this repair type by the following example. For the DL-program from Fig. 1 the ABox {a mathematical formula}A′=(A\{Male(pat)})∪{Female(pat)} is a possible {a mathematical formula}δ±,k-change repair for {a mathematical formula}k=2. Another repair candidate is {a mathematical formula}A′=(A\{Male(pat)})∪{Male(mat)} provided that mat is a constant from the ontology signature. □
+       </paragraph>
+       <paragraph>
+        The {a mathematical formula}δ±-change repairs are arguably useful in practice. The repairs that restore consistency by getting rid of such deficiencies as typos and syntactical inaccuracies fall into this repair category. For instance, in Example 32 the fact {a mathematical formula}Male(pat) was in the ontology instead of {a mathematical formula}Male(mat), as the letters p and m were confused during the data engineering process. In such scenarios one can search for repairs by applying selective changes to certain ontology assertions. These selective changes include modifications of the predicate or constants occurring in the assertion, i.e. {a mathematical formula}P(t→) could be changed to {a mathematical formula}P(t′→) or {a mathematical formula}P′(t→).
+       </paragraph>
+       <paragraph>
+        To ensure tractability, the number of constants or predicates with which the initial facts can be modified is bounded by n. Under this restriction, an ABox {a mathematical formula}A with at most k assertions allowed for modification has {a mathematical formula}O(k2n) repair candidates; thus if both n and k are bounded by a constant, deciding whether a {a mathematical formula}δ±-solution for ORP exists is polynomial. The alternatives (i.e. constants and predicates) used for fixing initial facts can be created by partitioning the elements of the ontology signature into subsets based on their syntactical similarity (measured by some string distance, cf. [24], such as Hamming or Levenshtein distance [57]). For example, the constants mat and pat differ just by a single letter and thus will be put to the same partition. This way one naturally limits the number of possibilities for changing a certain fact.
+       </paragraph>
+       <paragraph label="Example 33">
+        Swapping constants in role assertions is another special setting with obvious practical applications. {a mathematical formula}A′=A\{hasParent(john,pat)}∪{hasParent(pat,john)} would be a plausible repair for the DL-program Π from Fig. 1. □
+       </paragraph>
+      </section>
+      <section label="3.5.2">
+       <section-title>
+        Deletion repair
+       </section-title>
+       <paragraph>
+        Another important restriction is to allow only to delete assertions from the original ABox i.e., use{a mathematical formula}
+       </paragraph>
+       <paragraph label="Example 34">
+        For Π in Fig. 1, each {a mathematical formula}A′⊂A except for {a mathematical formula}{Male(pat), {a mathematical formula}hasParent(john,pat)} is a deletion repair. □
+       </paragraph>
+       <paragraph label="Lemma 35">
+        Before formally stating the complexity results for this repair we establish the following lemma. If{a mathematical formula}〈T,A〉is consistent, then{a mathematical formula}〈T,A∪Uji〉⊨Qjiiff{a mathematical formula}〈T,A0∪Uji〉⊨Qjifor some{a mathematical formula}A0⊆Awith{a mathematical formula}|A0|≤1.
+       </paragraph>
+       <paragraph>
+        To achieve tractability, we exclude non-containment (⋢) DL-queries, i.e., of the form ¬Q where Q is an inclusion or a disjointness axiom, from {a mathematical formula}P; let us call any ORP ⋢-free, if no DL-query of this form occurs in it. Under the reasonable (and necessary) assumption that the original ontology is consistent, we then obtain.
+       </paragraph>
+       <paragraph label="Theorem 36">
+        Deciding whether a ⋢-free ORP{a mathematical formula}R=〈O,D1,D2〉with consistent{a mathematical formula}Ohas a{a mathematical formula}σdel-repair is feasible in polynomial time.
+       </paragraph>
+       <paragraph>
+        If non-containment queries are allowed in DL-atoms, computing deletion repairs remains {a mathematical formula}NP-hard.
+       </paragraph>
+       <paragraph label="Theorem 37">
+        Deciding whether an ORP{a mathematical formula}R=〈D1,D2,O〉with a consistent{a mathematical formula}Ohas some{a mathematical formula}σdelrepair is{a mathematical formula}NP-complete, and{a mathematical formula}NP-hardness holds even if each{a mathematical formula}〈Uj2,Qj2〉∈D2has{a mathematical formula}Uj2=∅and either (i) each{a mathematical formula}〈Ui1,Qi1〉∈D1has{a mathematical formula}Ui1=∅(thus,{a mathematical formula}Rhas only empty updates), or (ii){a mathematical formula}T=∅.
+       </paragraph>
+      </section>
+      <section label="3.5.3">
+       Deletion {a mathematical formula}δ+2 repair
+       <paragraph>
+        This selection combines deletion and small change in a prioritized way. First one deletes assertions from {a mathematical formula}A (assumed to be consistent) according to some polynomial method μ (using domain knowledge etc.) until some {a mathematical formula}A0=μ(O)⊆A results that satisfies Definition 26 (iii). If {a mathematical formula}A0 is a repair, it is the result; otherwise, one looks for a close repair with bounded {a mathematical formula}δ+ change. That is{a mathematical formula}
+       </paragraph>
+       <paragraph label="Example 38">
+        If {a mathematical formula}μ(O) drops unreliable information about the gender of certain persons in Example 1 (e.g. pat), {a mathematical formula}A0={Male(john), {a mathematical formula}hasParent(john,pat)} is a deletion repair. If the constraint{a mathematical formula} (the gender of parents must be known) would be in {a mathematical formula}P, then one would have to add {a mathematical formula}Female(pat) to {a mathematical formula}A0 to obtain a deletion-{a mathematical formula}δ+ repair. □
+       </paragraph>
+       <paragraph>
+        Then one can try all possible combinations of k assertions that can be added to the ABox {a mathematical formula}A′ such that along with condition (iii), also (ii) and (i) of the repair definition hold. Observe that {a mathematical formula}μ(O) is selected by an independent selection function {a mathematical formula}σdel, which chooses subsets of {a mathematical formula}A. Furthermore, {a mathematical formula}σδ+ is applied to {a mathematical formula}μ(O), the selection {a mathematical formula}σδ+ chooses an ABox {a mathematical formula}A′⊇μ(O), such that {a mathematical formula}A′∖μ(O) contains not more then k assertions. The selection {a mathematical formula}σδ+ is independent by Proposition 24, as it is a composition of {a mathematical formula}σdel and {a mathematical formula}σδ+ both of which are independent. As both {a mathematical formula}σdel and {a mathematical formula}σδ+ are realizable in polynomial time, the overall problem is tractable.
+       </paragraph>
+      </section>
+      <section label="3.5.4">
+       <section-title>
+        Addition under bounded opposite polarity
+       </section-title>
+       <paragraph>
+        Repairs by unbounded additions become tractable, if few of them are positive resp. negative, i.e., the number of assertions with opposite polarity is bounded (which by Theorem 29 is necessary). That is, if {a mathematical formula}A+ (resp., {a mathematical formula}A−) is the positive (negative) part of an ABox {a mathematical formula}A, then{a mathematical formula} The following result is instrumental.
+       </paragraph>
+       <paragraph label="Theorem 39">
+        For a ⋢-free ORP{a mathematical formula}R=〈O,D1,D2〉, where{a mathematical formula}O=〈T,A〉and{a mathematical formula}Thas no disjointness axioms{sup:5}deciding whether some{a mathematical formula}σbop-repair exists is polynomial.
+       </paragraph>
+      </section>
+      <section label="3.5.5">
+       <section-title>
+        Applicability of independent selections
+       </section-title>
+       <paragraph>
+        Like for relational databases, our tractable cases fit real applications, e.g. in case of deletion repairs (observing that non-subsumption queries are insignificant for practical DL-programs) and scenarios akin to key-constraint violations in databases. Restoring consistency by removing conflicting pieces of data is a common approach in data management.
+       </paragraph>
+       <paragraph>
+        Composability of independent selections adds to their applicability. Moreover, they may be combined with DB-style factorization and localization techniques (see [10] and references therein) and with local search to compute closest repairs.
+       </paragraph>
+       <paragraph>
+        Bounding the number of changes, especially additions, is also compliant with practice, where too many potential repairs suggest human intervention (cf. [10]). Finally, one may increase the bound in iterative deepening (assuming that not many changes are needed).
+       </paragraph>
+      </section>
+     </section>
+     <section label="3.6">
+      <section-title>
+       Domain-based restrictions on repairs
+      </section-title>
+      <paragraph>
+       In previous sections we have proposed several technical means for treating inconsistencies in DL-programs. We have presented some repair forms that are practically usable and computationally effective, but until now no domain knowledge has been incorporated into the DL-program repair process. It is natural, however, to believe that the end users of DL-programs will wish to contribute to the repair by sharing their subject expertise.
+      </paragraph>
+      <paragraph>
+       Qualitative and domain-dependent aspects of repairs are of crucial importance for their practicability. These qualitative aspects formulated in terms of additional local restrictions put on repairs help to effectively filter out the irrelevant repair candidates. For example, availability of meta information about the trustfulness of certain ontology pieces may allow to adjust the repair process.
+      </paragraph>
+      <paragraph label="Example 40">
+       Being aware of the unreliability of ontology facts about the individual john in Example 1 motivates one to consider the repair {a mathematical formula}A′=A\{hasParent(john,pat)} for the DL-program Π in the first instance.Knowing additionally that the set of {a mathematical formula}Adopted children is very likely to be incomplete naturally adds {a mathematical formula}A″=A∪{Adopted(john)} to the set of repair possibilities.  □
+      </paragraph>
+      <paragraph label="Example 41">
+       Similarly the user might be willing to keep some information bits in the ontology unchanged. If in Example 40 one wants to avoid dropping the data about individuals belonging to the concept {a mathematical formula}Child but not known to be {a mathematical formula}Adopted; then the repair {a mathematical formula}A′ is no longer among the preferred options. □
+      </paragraph>
+      <paragraph>
+       The guidelines on the operations that are allowed to be applied to the ontology could clearly influence the repair process further.
+      </paragraph>
+      <paragraph label="Example 42">
+       If in Example 40 additions to the ontology are strongly prohibited, then the repair {a mathematical formula}A″ is automatically dropped from the set of leading candidates. □
+      </paragraph>
+      <paragraph>
+       In some scenarios various dependencies among the data parts stored in the ontology might influence the repair process. Deletion (resp. addition) of a certain fact might force further ontology changes to be incorporated.
+      </paragraph>
+      <paragraph label="Example 43">
+       Consider a variant of Example 1, in which each {a mathematical formula}Adopted child stored in the ontology is desired to have a certain identification number (ID) assigned to it through the predicate hasID. This additional constraint could be expressed by the TBox axiom {a mathematical formula}Adopted⊑∃hasID. However, this restriction might not be a formal requirement, but rather a wish of the user, for whom it is more convenient to track adopted children by their IDs. Thus the TBox axiom might not be in the ontology explicitly. In such a setting the repair {a mathematical formula}A″ from Example 40 in which information about john's adoption is added, is not among the best repair candidates any longer, as together with this new information, the additional knowledge about the ID of john should be available.Similarly, if not only adopted children, but all persons are required to have an ID, and the latter is indeed given in the original ontology, the repair {a mathematical formula}A′=A\{Male(pat)}∪{Male(mat)} from Example 32 forces one to delete the ID of pat and add the ID of mat; in case the latter is not known, the repair {a mathematical formula}A′ becomes undesired.  □
+      </paragraph>
+      <paragraph>
+       Integration of domain restrictions into the repair computation process. The wide spectrum of potential restrictions that could be applied to the repair candidates motivates one to consider various possible ways of integrating additional domain knowledge into the repair computation process. Three global modes of repairing inconsistent DL-programs seem reasonable in this context:
+      </paragraph>
+      <list>
+       <list-item label="1)">
+        The first mode suggests the computation of repair candidates with some σ-selection function, followed by a post-filtering of the candidates taking into account the domain knowledge. If some of the protected ontology elements are no longer present in the repair candidate, and their reintroduction violates the repair conditions, then one proceeds with the analysis of a next repair candidate. Otherwise, the desired repair is computed, and the computation process terminates.
+       </list-item>
+       <list-item label="Example 44">
+        The second mode assumes that the domain knowledge is encoded in the selection function and consequently all identified repairs a priori satisfy the introduced domain-based requirements. Suppose we want to compute the {a mathematical formula}δ± repairs with the desired property expressed in Example 43, i.e. in the repairs for all Adopted children their ID should be known. Then our problem amounts to the problem of computing {a mathematical formula}δ± repairs of the original DL-program extended by the following rules that conveniently encode the additional requirement:{a mathematical formula} The repairs of the extended program correspond to the repairs of the original program post-filtered by the respective domain-specific condition. □
+       </list-item>
+       <list-item label="3)">
+        The third mode is the combination of the first two, where some domain conditions are incorporated into the repair search process, but further post-filtering conditions can be checked.
+       </list-item>
+       <list-item label="Example 45">
+        The mode (2) can be extended to support prioritized repair computation. That is, first one aims at finding the best repairs that fully satisfy the domain specific requirements, and then if such search does not bring any results, the requirements are weakened accordingly or even dropped altogether. Recall the setting from Example 44. We first aim at repairs such that IDs of all adopted children are known. Once some repair answer set of Π with rules (1) and (2) is found, the computation terminates and the result is output. If no such I was identified, then one might be willing to relax the repair condition by allowing at most k adopted children to lack IDs. For that the constraint (2) can be changed to a rule (2′) having {a mathematical formula}not_assigned(X) in the head. Repair answer sets I of the resulting program with at most k ground predicates over {a mathematical formula}not_assigned will satisfy the above requirement, and consequently any repair {a mathematical formula}A′∈repσ,xI(Π) is guaranteed to be preferred, where σ is a {a mathematical formula}δ±-change selection function.  □
+       </list-item>
+      </list>
+      <paragraph>
+       All of the discussed domain-specific repair preferences can be combined and ordered in various ways. The techniques for their computation heavily depend on the application scenario, and in different concrete settings could be adapted and extended.
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Computation
+     </section-title>
+     <paragraph>
+      In this section, we first recall the essentials of the evaluation algorithm for DL-programs as a special class of so-called HEX-programs as in [30], and we then provide a naive and an optimized extension of that algorithm for computing repairs.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       DL-program evaluation
+      </section-title>
+      <paragraph label="Example 46">
+       The evaluation of a DL-program Π builds on a program rewriting {a mathematical formula}Πˆ, where DL-atoms a are replaced by ordinary atoms (called replacement atoms) {a mathematical formula}ea, and a guess on the truth value of the latter by ‘choice’ rules {a mathematical formula}ea∨nea is added. Consider the following grounding of some rules from Fig. 1:{a mathematical formula} The replacement program {a mathematical formula}Πˆ′ for {a mathematical formula}Π′=〈O,P′〉 comprises the following rules:{a mathematical formula} where{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Given an interpretation {a mathematical formula}Iˆ of the replacement program {a mathematical formula}Πˆ, we use {a mathematical formula}I|Π to denote its restriction to the original language of Π. A crucial notion is that of compatible set.
+      </paragraph>
+      <paragraph label="Definition 47">
+       Compatible setA compatible set of a (ground) DL-program {a mathematical formula}Π=〈O,P〉 is an interpretation {a mathematical formula}Iˆ, such that (i) {a mathematical formula}Iˆ is an answer set of {a mathematical formula}Πˆ, and (ii) {a mathematical formula}ea∈Iˆ iff {a mathematical formula}I|Π⊨Oa, for every {a mathematical formula}a=DL[λ;Q](c) occurring in Π.
+      </paragraph>
+      <paragraph label="Example 48">
+       Consider an interpretation {a mathematical formula}Iˆ={ischildof(john,alex),boy(john),hasfather(john,pat),ea1,ea2, {a mathematical formula}ea3,nea4} of {a mathematical formula}Πˆ′ from Example 46. This interpretation is not compatible for {a mathematical formula}Π′=〈O,P′〉, since {a mathematical formula}ea3(john)∈Iˆ, but it holds that {a mathematical formula}I⊭ODL[;Adopted](john), and thus (ii) of Definition 47 is not satisfied. However, the interpretation {a mathematical formula}Iˆ is a compatible set for {a mathematical formula}Π″=〈O′,P′〉 where {a mathematical formula}O′=O∪{Adopted(john)}. Furthermore, the restriction of {a mathematical formula}Iˆ to the language of {a mathematical formula}Π″ is {a mathematical formula}Iˆ|Π″={ischildof(john,alex),hasfather(john,pat),{a mathematical formula}boy(john)}.
+      </paragraph>
+      <paragraph>
+       Conversely, given an interpretation I of Π, we denote by {a mathematical formula}Ic the interpretation of {a mathematical formula}Πˆ such that {a mathematical formula}Ic coincides with I on normal atoms, and each replacement atom {a mathematical formula}ea is in {a mathematical formula}Ic (i.e. true) iff {a mathematical formula}I⊨Oa for the respective DL-atom a.
+      </paragraph>
+      <paragraph>
+       With these concepts in place, we are ready to describe the basic algorithm (cf. Algorithm 1) for evaluating a DL-program {a mathematical formula}Π=〈O,P〉 adopted from [30]. First, {a mathematical formula}Πˆ is evaluated by an ordinary ASP solver; for every answer set {a mathematical formula}Iˆ of {a mathematical formula}Πˆ in (b), the function CMP checks for compatibility, while xFND tests foundedness, i.e., whether {a mathematical formula}Iˆ|Π is a ⊆-minimal model of the reduct {a mathematical formula}PxI|Π,O. In case of {a mathematical formula}x=weak, xFND just returns true, otherwise ({a mathematical formula}x=flp) it checks for disjointness with unfounded sets as defined in [30]. If both tests succeed, then {a mathematical formula}Iˆ|Π is output as an answer set.
+      </paragraph>
+      <paragraph label="Example 49">
+       Suppose we are interested in computing flp-answer sets of {a mathematical formula}Π″ from Example 48. In (a) among {a mathematical formula}AS(Πˆ″) the interpretation {a mathematical formula}Iˆ={ischild(john,alex),boy(john),hasfather(john,pat),ea1(pat),ea3(john),nea4(alex),{a mathematical formula}ea2(john,pat)} is identified. Both the compatibility and the foundedness check in (b) for {a mathematical formula}Iˆ succeed, and thus {a mathematical formula}Iˆ|Π″ is output as an flp-answer set of {a mathematical formula}Π″.
+      </paragraph>
+      <paragraph label="Proposition 50">
+       An important link between the answer sets of Π and {a mathematical formula}Πˆ is the following property. If{a mathematical formula}I∈ASx(Π)then{a mathematical formula}Ic∈ASx(Πˆ).
+      </paragraph>
+      <paragraph>
+       While AnsSet is clearly sound, from this result its completeness follows, i.e. restricting the search to {a mathematical formula}ASx(Πˆ) does not yield any loss of answer sets.
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Naive algorithm for repair computation
+      </section-title>
+      <paragraph>
+       We next present a naive algorithm for computing deletion repair answer sets which extends the above DL-program evaluation algorithm. First we aim at a procedure for computing {a mathematical formula}(σ,x)-repairs given an independent selection function σ. Then, we describe how its main subroutine can be used for an extension of AnsSet that computes answer sets if they exist, and {a mathematical formula}(σ,x)-repair answer sets otherwise.
+      </paragraph>
+      <paragraph label="Proposition 51">
+       A first key observation is that Proposition 50 generalizes to repair answer sets. More precisely: If{a mathematical formula}I∈RASx(Π)then{a mathematical formula}Ic∈AS(Πˆ).
+      </paragraph>
+      <paragraph label="Proof">
+       By definition of {a mathematical formula}RASx(Π), we get that {a mathematical formula}I∈AS(Π′), where {a mathematical formula}Π′=〈O′,P〉, {a mathematical formula}O′=〈T,A′〉 and {a mathematical formula}A′∈repx(Π). Since by Proposition 50{a mathematical formula}Ic∈AS(Πˆ′) and {a mathematical formula}Πˆ=Πˆ′, the result immediately follows.  □
+      </paragraph>
+      <paragraph>
+       Thus, our approach is to traverse {a mathematical formula}AS(Πˆ) and check for each {a mathematical formula}Iˆ∈AS(Πˆ) whether {a mathematical formula}Iˆ|Π is a {a mathematical formula}(σ,x)-repair answer set of Π. The latter proceeds in two steps, where the first step is to search for potential σ-repairs of the ontology such that Definition 47 (ii) holds for {a mathematical formula}Iˆ, that is to find solutions of the corresponding ontology repair problem.
+      </paragraph>
+      <paragraph>
+       The procedure RepAns (cf. Algorithm 2) calls the subroutine {a mathematical formula}ORP(Iˆ,Π,σ) in (a) to compute σ-repairs {a mathematical formula}A′ of the corresponding ORP, constructed from the DL-atoms with their guessed values and the ontology. Further on, RepAns re-uses the functions CMP and xFND in (b) to check whether {a mathematical formula}Iˆ is a compatible set of {a mathematical formula}Π′ and that it is founded w.r.t. {a mathematical formula}Π′=〈O′,P〉, {a mathematical formula}O′=〈T,A′〉. It thus computes the set of all ABoxes under which {a mathematical formula}Iˆ becomes a {a mathematical formula}(σ,x)-repair answer set. We demonstrate RepAns on an example.
+      </paragraph>
+      <paragraph label="Example 53">
+       Suppose that RepAns gets as input {a mathematical formula}Π′, {a mathematical formula}Iˆ from Example 46, Example 48, and {a mathematical formula}σδ±,1 selection function computing δ± repairs. The corresponding ORP {a mathematical formula}R is given by {a mathematical formula}R=〈O,D1,D2〉, where {a mathematical formula}D1={〈{Male(john)},Male(pat)〉,〈∅,hasParent(john,pat)〉,〈∅,Adopted〉} and {a mathematical formula}D2={〈∅,¬Male(alex)〉}. The ABox {a mathematical formula}A′={Male(john),Male(pat),hasParent(john,pat),Adopted(john)} is computed in (a) as the {a mathematical formula}σδ±-repair for {a mathematical formula}R. The checks in (b) succeed for the ABox {a mathematical formula}A′, and it is output to the user.Let {a mathematical formula}Π=〈O,P〉 be a DL-program, where{a mathematical formula} We denote by {a mathematical formula}a1 and {a mathematical formula}a2 the DL-atoms {a mathematical formula}DL[C⩁r;D](c) and {a mathematical formula}DL[D⊎p,E⩁r;¬C](c) respectively. Consider the interpretation {a mathematical formula}Iˆ={p(c),r(c),q(c), {a mathematical formula}ea1,nea2}, in which {a mathematical formula}a1 is guessed true and {a mathematical formula}a2 guessed false. The corresponding ORP is given by {a mathematical formula}R=〈O,D1,D2〉, where {a mathematical formula}D1={〈{¬C(c)};D(c)〉} and {a mathematical formula}D2={〈{D(c),¬E(c)};¬C(c)〉}. Let σ select the deletion repairs, than we get {a mathematical formula}A′={D(c),C(c)} as a possible output of the procedure {a mathematical formula}ORP(Iˆ,Π,σ), for which the compatibility check verified by the call {a mathematical formula}CMP(Iˆ,〈T,A′,P〉) is passed. If we are interested in {a mathematical formula}(σ,weak) repairs then {a mathematical formula}A′ is output by the algorithm RepAns. Yet another foundedness test is needed to check whether {a mathematical formula}A′ is a ({a mathematical formula}σ,flp) repair. This test is done in {a mathematical formula}flp-FND(Iˆ,〈T,A′,P〉), which checks whether I is a minimal model of the flp-reduct {a mathematical formula}PflpI,O′={p(c);q(c);q(c)←DL[C⩁r;D](c)}. As the latter test succeeds, the ABox {a mathematical formula}A′ is an flprepair and thus it is in the output of {a mathematical formula}RepAns(Π,Iˆ,σdel).  □
+      </paragraph>
+      <paragraph label="Theorem 54">
+       Let now RepAnsSet (Algorithm 3) be the algorithm that iteratively calls RepAns for every {a mathematical formula}Iˆ∈AS(Πˆ), and outputs any {a mathematical formula}Iˆ, where the result of RepAns is nonempty, i.e. some repair {a mathematical formula}A′ was computed. We then have: RepAns and RepAnsSet are both sound and complete for{a mathematical formula}rep(σ,x)(Π)and{a mathematical formula}RAS(σ,x)(Π), respectively, for every independent selection function σ.
+      </paragraph>
+      <paragraph>
+       A natural question is whether computing repair answer sets via compatible sets {a mathematical formula}Iˆ of Π makes repair answer set checking for {a mathematical formula}Iˆ|Π easier than for arbitrary interpretations I. Unfortunately, this is not the case; we thus obtain a strengthening of the results of Theorem 18.
+      </paragraph>
+      <paragraph label="Theorem 55">
+       For ground{a mathematical formula}Π=〈O,P〉and{a mathematical formula}I⊆HBΠ, deciding whether{a mathematical formula}I∈RASx(Π)is (i){a mathematical formula}NP-complete for{a mathematical formula}x=weakand (ii){a mathematical formula}Σ2p-complete for{a mathematical formula}x=flp; hardness holds even if{a mathematical formula}I=Iˆ|Πfor an answer set{a mathematical formula}Iˆ∈AS(Πˆ)(and, moreover, I is unique).
+      </paragraph>
+      <paragraph>
+       Intuitively, even if we know {a mathematical formula}Iˆ, we still need to guess a repair {a mathematical formula}A′ that witnesses {a mathematical formula}Iˆ|Π. The verification of the guess involves a foundedness test, which is {a mathematical formula}co-{a mathematical formula}NP-hard in case of {a mathematical formula}x=flp; this results in {a mathematical formula}Σ2p-completeness.
+      </paragraph>
+      <paragraph>
+       Note that, for illustration, we kept the algorithms simple; several optimizations apply, some of which we discuss below. For instance, to compute just some {a mathematical formula}(σ,x)-repair answer set, we can modify RepAns to a version that merely computes a first witnessing ABox {a mathematical formula}A′. Moreover, caching ABoxes {a mathematical formula}A′ and/or all answer sets of the respective {a mathematical formula}Π′ (which can be straight output as {a mathematical formula}(σ,x)-repair answer sets of Π) further reduces the search space.
+      </paragraph>
+     </section>
+     <section label="4.3">
+      <section-title>
+       Support sets
+      </section-title>
+      <paragraph>
+       The algorithms RepAns and RepAnsSet represent natural realizations of repair computation. However, they turn out as too naive and do not scale for practical applications; each ORP derived from an answer set {a mathematical formula}Iˆ of the replacement program {a mathematical formula}Πˆ is solved from scratch, as no information about past ORPs is exploited.
+      </paragraph>
+      <paragraph>
+       We thus develop an alternative approach for computing repair answer sets based on the notion of support set. Intuitively, a support set for a DL-atom {a mathematical formula}d=DL[λ;Q](t→) is a portion of its input that, together with ABox assertions, is sufficient to conclude that the query {a mathematical formula}Q(t→) evaluates to true; i.e., given a subset {a mathematical formula}I′⊆I of an interpretation I and a set {a mathematical formula}A′⊆A of ABox assertions from the ontology, we can conclude that {a mathematical formula}I⊨OQ(t→). Basically, our method precomputes support sets for each DL-atom at a nonground level. During DL-program evaluation, for each candidate interpretation the ground instantiations of the support sets are effectively obtained. The latter help to prune the answer set search space and also allow one to solve ORPs by constraint matching.
+      </paragraph>
+      <paragraph>
+       Exploiting Lemma 13 we define support sets using only ontology predicates as follows:
+      </paragraph>
+      <paragraph label="Definition 56">
+       Ground support setsGiven a ground DL-atom {a mathematical formula}d=DL[λ;Q](t→), a set S of assertions from {a mathematical formula}A∪Ad is a support set for d w.r.t. an ontology {a mathematical formula}O=〈T,A〉, if {a mathematical formula}Td∪S⊨Q(t→). By {a mathematical formula}SuppO(d) we denote the set of all support sets S for d w.r.t. {a mathematical formula}O.
+      </paragraph>
+      <paragraph>
+       Support sets can be grouped into families of support sets or simply support families. More formally,
+      </paragraph>
+      <paragraph label="Definition 57">
+       Support familyAny collection {a mathematical formula}S⊆SuppO(d) of support sets for a DL-atom d w.r.t. an ontology {a mathematical formula}O is a support family of d w.r.t. {a mathematical formula}O.
+      </paragraph>
+      <paragraph>
+       Clearly, support sets as defined above may be subsumed by other support sets (e.g., {a mathematical formula}{A(c),R(c,d)} by {a mathematical formula}{A(c)}) and removed. We concentrate on ⊆-minimal support sets S for a DL-atom d, i.e. for every {a mathematical formula}S′⊂S it holds that {a mathematical formula}S′∉SuppO(d). In general even ⊆-minimal support sets can be arbitrarily large and there can be infinitely many (exponentially many for acyclic {a mathematical formula}T) support sets. However, fortunately it turns out that for {a mathematical formula}DL-LiteA support sets are of a particular structure. In view of the property that in {a mathematical formula}DL-LiteA a single assertion is sufficient to derive a query [21] from a consistent ontology, we obtain that for {a mathematical formula}DL-LiteA support sets are at most of size 2. More formally,
+      </paragraph>
+      <paragraph label="Proposition 58">
+       Every ⊆-minimal support set S for a DL-atom{a mathematical formula}d=DL[λ;Q](t→)w.r.t. an ontology{a mathematical formula}O=〈T,A〉in{a mathematical formula}DL-LiteAhas either the form (i){a mathematical formula}S={P(c→)}, such that{a mathematical formula}Td∪S⊨Q(t→), or (ii){a mathematical formula}S={P(c→),P′(d→)}such that{a mathematical formula}Td∪Sis inconsistent.
+      </paragraph>
+      <paragraph>
+       Support sets are linked to interpretations by the following notion.
+      </paragraph>
+      <paragraph label="Definition 59">
+       CoherenceA support set S of a DL-atom d is coherent with an interpretation I, if for each {a mathematical formula}Pp(c→)∈S it holds that {a mathematical formula}p(c)∈I.
+      </paragraph>
+      <paragraph label="Example 60">
+       We illustrate the notion of coherence by the following example. The set {a mathematical formula}{hasParent(john,pat)} is a support set for the DL-atom {a mathematical formula}DL[;hasParent](john,pat) w.r.t. {a mathematical formula}O, and so is {a mathematical formula}{Male(pat)} for the DL-atom {a mathematical formula}a=DL[Male⊎boy;Male](pat). Moreover, {a mathematical formula}{Maleboy(pat)} is in {a mathematical formula}SuppO(a) but incoherent with minimal models of Π.
+      </paragraph>
+      <paragraph>
+       The evaluation of d w.r.t. I then reduces to the search for coherent support sets.
+      </paragraph>
+      <paragraph label="Proposition 61">
+       Let d be a ground DL-atom, let{a mathematical formula}O=〈T,A〉be an ontology, and let I be an interpretation. Then,{a mathematical formula}I⊨Odiff some{a mathematical formula}S∈SuppO(d)exists s.t. S is coherent with I.
+      </paragraph>
+      <paragraph label="Corollary 62">
+       As a simple consequence, we get: Given a ground DL-atom d and an ontology{a mathematical formula}O, some interpretation I exists such that{a mathematical formula}I⊨Odiff{a mathematical formula}SuppO(d)≠∅.
+      </paragraph>
+      <paragraph label="Proposition 63">
+       Apart from the maximal number of assertions that participate in support sets for DL-atoms accessing {a mathematical formula}DL-LiteA ontologies, there is also a limit on the number of constants that can occur in such support sets. In fact, in Definition 58{a mathematical formula}c→∪d→ can involve at most 3 constants, which is formally stated in the following proposition. Let S be a ⊆-minimal support set of a ground DL-atom d w.r.t. a{a mathematical formula}DL-LiteAontology{a mathematical formula}O=〈T,A〉. Then S involves at most 3 constants.
+      </paragraph>
+      <paragraph>
+       When working with support sets for DL-atoms that access an {a mathematical formula}DL-LiteA ontology, we can exploit the above proposition and limit ourselves only to support sets of size 2 involving at most 3 constants.
+      </paragraph>
+     </section>
+     <section label="4.4">
+      <section-title>
+       Nonground support sets
+      </section-title>
+      <paragraph>
+       Using support sets, we can completely eliminate the ontology access for the evaluation of DL-atoms. In a naive approach, one precomputes all support sets for all ground DL-atoms with respect to relevant ABoxes, and then uses them during the repair answer set computation. This does not scale in practice, since support sets may be computed that are incoherent with all candidate repair answer sets.
+      </paragraph>
+      <paragraph>
+       An alternative is to fully interleave the support set computation with the search for repair answer sets. Here we construct coherent ground support sets for each DL-atom and interpretation on the fly. As the input to a DL-atom may change in different interpretations, its support sets must be recomputed, however, since reuse may not be possible; effective optimizations are not immediate.
+      </paragraph>
+      <paragraph>
+       A better solution is to precompute support sets at a nonground level, that is, schematic support sets, prior to repair computation. Furthermore, in that we may leave the concrete ABox open; the support sets for a DL-atom instance are then easily obtained by syntactic matching. This leads to the following definition.
+      </paragraph>
+      <paragraph label="Definition 64">
+       Nonground support setsLet {a mathematical formula}T be a TBox, and let {a mathematical formula}d(X→)=DL[λ;Q](X→) be a nonground DL-atom. Suppose that V is a set of distinct variables such that {a mathematical formula}X→⊆V, and that {a mathematical formula}C is a set of constants. A nonground support set for d w.r.t. {a mathematical formula}T is a set {a mathematical formula}S={P1(Y1→),…,Pk(Yk→)} such that
+      </paragraph>
+      <list>
+       <list-item label="(i)">
+        {a mathematical formula}Y1→,…,Yk→⊆V and
+       </list-item>
+       <list-item label="(ii)">
+        for each substitution {a mathematical formula}θ:V→C, the instance {a mathematical formula}Sθ={P1(Y1→θ),…,Pk(Y→kθ)} is a support set for {a mathematical formula}d(X→θ) w.r.t. {a mathematical formula}OC=〈T,AC〉, where {a mathematical formula}AC is the set of all possible ABox assertions over {a mathematical formula}C.
+       </list-item>
+      </list>
+      <paragraph>
+       Here {a mathematical formula}AC takes care of any possible ABox, by considering the maximal ABox (since {a mathematical formula}O⊆O′ implies that {a mathematical formula}SuppO(d)⊆SuppO′(d)). Now generalizing Proposition 58, Proposition 63 we obtain the following characterization for nonground support sets accessing {a mathematical formula}DL-LiteA ontologies:
+      </paragraph>
+      <paragraph label="Proposition 65">
+       Every ⊆-minimal nonground support set S for a DL-atom d w.r.t. an ontology{a mathematical formula}Oin{a mathematical formula}DL-LiteAhas either the form (i){a mathematical formula}S={P(Y→)}or (ii){a mathematical formula}S={P(Y→),P′(Y′→)}, where{a mathematical formula}Y→∪Y′→contains at most 3 distinct variables.
+      </paragraph>
+      <paragraph label="Example 66">
+       cont'dCertainly {a mathematical formula}{hasParent(X,Y)} is a nonground support set for {a mathematical formula}DL[;hasParent](X,Y), and so are {a mathematical formula}{Male(X)} and {a mathematical formula}{Maleboy(X)} for the DL-atom {a mathematical formula}d(X)=DL[Male⊎boy;Male](X), but {a mathematical formula}d(X) has also {a mathematical formula}{Maleboy(Y),Female(Y)} as a nonground support set.
+      </paragraph>
+      <paragraph>
+       Nonground support sets S for {a mathematical formula}DL-LiteA are sound in the sense that each instance Sθ matching with {a mathematical formula}A∪Ad is a support set of the ground DL-atom dθ w.r.t. {a mathematical formula}O=〈T,A〉. They are also complete, i.e., every support set S of a ground DL-atom d w.r.t. {a mathematical formula}O=〈T,A〉 results as such an instance, and thus can be determined by syntactic matching.
+      </paragraph>
+      <paragraph>
+       If a sufficient portion of support sets is precomputed, then the ontology access can be fully avoided. We call such a portion a complete support family.
+      </paragraph>
+      <paragraph label="Definition 67">
+       CompletenessA family {a mathematical formula}S⊆SuppO(d) of nonground support sets for a (non-ground) DL-atom {a mathematical formula}d(X→) w.r.t. a {a mathematical formula}DL-LiteA ontology {a mathematical formula}O is complete, if for every θ: {a mathematical formula}X→→C and {a mathematical formula}S∈SuppO(d(X→θ)), some {a mathematical formula}S′∈S exists such that {a mathematical formula}S=S′θ′, for some extension {a mathematical formula}θ′:V→C of θ to V, where V is a set of distinct variables, such that {a mathematical formula}X→⊆V.
+      </paragraph>
+      <paragraph label="Example 68">
+       Consider the DL-atom {a mathematical formula}d=DL[Male⊎boy;Male](X) from Fig. 1. For computing a complete family S of nonground support sets for d w.r.t.{a mathematical formula}O, we may refer to {a mathematical formula}Td=T∪{Maleboy⊑Male}. The support family {a mathematical formula}S={S1,S2,S3,S4} is complete for d, where {a mathematical formula}S1={Male(X)}, {a mathematical formula}S2={Maleboy(X)}, {a mathematical formula}S3={Maleboy(Y),¬Male(Y)}, {a mathematical formula}S4={Maleboy(Y),Female(Y)}.  □
+      </paragraph>
+     </section>
+     <section label="4.5">
+      <section-title>
+       Determining nonground support sets
+      </section-title>
+      <paragraph>
+       Our technique for computing the nonground support sets for DL-atoms over {a mathematical formula}DL-LiteA ontologies is based on TBox classification, which is an important problem in Description Logics [4]: given a TBox {a mathematical formula}T over a signature {a mathematical formula}Σo, the TBox classification {a mathematical formula}Clf(T) determines all subsumption relations {a mathematical formula}P⊑(¬)P′ between concepts and roles {a mathematical formula}P,P′ in {a mathematical formula}Σo that are entailed by {a mathematical formula}T. This can be exploited for our goal to compute nonground support sets, more precisely a complete family S of such sets. For example, [56] studies it for the OWL 2 QL profile and [51] discusses it for {a mathematical formula}EL. Respective algorithms are thus suitable and also easily adapted for the computation of (a complete family of) nonground support sets for a DL-atom {a mathematical formula}d(X→) w.r.t. an ontology {a mathematical formula}O in {a mathematical formula}DL-LiteA.
+      </paragraph>
+      <paragraph>
+       In principle, one can exploit Proposition 13 and resort to {a mathematical formula}Td, i.e., compute the classification {a mathematical formula}Clf(Td), and determine nonground support sets of {a mathematical formula}d(X→) minimal conflict sets [74]. To determine inconsistent support sets, perfect rewriting [21] can be done over {a mathematical formula}Pos(T), i.e., the TBox obtained from {a mathematical formula}T by substituting all negated concepts (roles) ¬C (¬R, {a mathematical formula}¬∃R, {a mathematical formula}¬∃R−) with positive replacements {a mathematical formula}C‾ ({a mathematical formula}R‾, {a mathematical formula}∃R‾, {a mathematical formula}∃R−‾).
+      </paragraph>
+      <paragraph>
+       In practice (and as in our implementation), it can nonetheless be worthwhile to compute {a mathematical formula}Clf(T) first, as it is reusable for all DL-atoms. The additional axioms in {a mathematical formula}Td, i.e., those of form {a mathematical formula}Pp⊑(¬)P (induced by update operators), are handled when determining the nonground support sets for a particular DL-atom from {a mathematical formula}Clf(T).
+      </paragraph>
+      <paragraph label="Example 69">
+       Consider the DL-atom {a mathematical formula}d=DL[Male⊎boy;Male](X) from Example 1. For computing a complete family S of nonground support sets for d w.r.t. {a mathematical formula}O, we may refer to {a mathematical formula}Td=T∪{Maleboy⊑Male} and its classification {a mathematical formula}Clf(Td). Here, {a mathematical formula}S1={Male(X)} and {a mathematical formula}S2={Maleboy(X)} are the only unary nonground support sets of d. Further nonground support sets are obtained by computing minimal conflict sets, yielding {a mathematical formula}{P(Y→),¬P(Y→)} for each {a mathematical formula}P∈C∪R, as well as {a mathematical formula}S3={Maleboy(Y),¬Male(Y)}, {a mathematical formula}S4={Maleboy(Y),Female(Y)}, and {a mathematical formula}S5={Male(Y), {a mathematical formula}Female(Y)}. However, since we are interested in completeness w.r.t. {a mathematical formula}O and {a mathematical formula}O is consistent, pairs not involving input assertions can be dropped (as they will not have a match in {a mathematical formula}A). Hence, {a mathematical formula}S={S1,S2,S3,S4} is a complete support family for d w.r.t. {a mathematical formula}O. □
+      </paragraph>
+     </section>
+     <section label="4.6">
+      <section-title>
+       Optimized algorithm for repair computation
+      </section-title>
+      <paragraph>
+       We are now ready to describe our optimized algorithm SupRAnsSet (see Algorithm 4), which avoids multiple interface calls and merely needs to access the ontology once. Given a (ground) DL-program Π for input, SupRAnsSet proceeds as follows.
+      </paragraph>
+      <paragraph>
+       We start (a) by computing a complete family S of nonground support sets for each DL-atom. Afterwards the replacement program {a mathematical formula}Πˆ is created and its answer sets are computed one by one. Once an answer set {a mathematical formula}Iˆ of {a mathematical formula}Πˆ is found (b), we first determine the sets of DL-atoms {a mathematical formula}Dp (resp. {a mathematical formula}Dn) that are guessed true (resp. false) in {a mathematical formula}Iˆ. Next, for all ground DL-atoms in {a mathematical formula}Dp∪Dn, the function {a mathematical formula}Gr(S,Iˆ,A) instantiates S to relevant ground support sets, i.e., that are coherent with {a mathematical formula}Iˆ and match with {a mathematical formula}A∪Ad. We then check in (c) for atoms in {a mathematical formula}Dp (resp. {a mathematical formula}Dn) without support (resp. input only support). If either is the case, we skip to (b), the next model candidate, since no repair exists for the current one. Otherwise, in a loop (d) over atoms in {a mathematical formula}Dp–except for those supported input only (e)–we remove support sets S that are conflicting w.r.t. {a mathematical formula}Dn. Intuitively, this is the case if S hinges on an assertion {a mathematical formula}α∈A that also supports some atom {a mathematical formula}d′∈Dn (hence α needs to be deleted; note that due to consistency of {a mathematical formula}A, even inconsistent support of {a mathematical formula}d′ leaves no choice). If this operation leaves the atom from {a mathematical formula}Dp under consideration without support (check at (f)), then no repair exists and the next model candidate is considered. Otherwise (exiting the loop at (g)), a potential deletion repair {a mathematical formula}A′ is obtained from {a mathematical formula}A by removing assertions that occur in any support set for some atom {a mathematical formula}d′∈Dn. An eventual check (h) for foundedness (minimality) w.r.t. {a mathematical formula}A′ determines whether a deletion repair answer set has been found.
+      </paragraph>
+      <paragraph label="Example 70">
+       Consider the DL-atoms {a mathematical formula}a=DL[;hasParent](john,pat) and {a mathematical formula}b=DL[Male⊎boy;Male](pat) from Example 1, and assume that {a mathematical formula}{ea,neb}⊆Iˆ. Then, we get {a mathematical formula}SgrIˆ(a)={{hasParent(john,pat)}}, and we reach the else part of Step (e) where nothing is removed from {a mathematical formula}SgrIˆ(a), since {a mathematical formula}SgrIˆ(b)={a mathematical formula}{{Male(pat)}} and {a mathematical formula}SgrIˆ(a)∩SgrIˆ(b)=∅. Hence, at Step (g) we must drop {a mathematical formula}Male(pat) from {a mathematical formula}A to make {a mathematical formula}Iˆ a deletion repair answer set. □
+      </paragraph>
+      <paragraph label="Proposition 71">
+       As we show, Algorithm SupRAnsSet correctly computes the deletion repair answer sets of the input DL-program. For the completeness part, i.e., that all deletion repair answer sets are indeed produced, the following proposition is crucial. Given a DL-program Π, let{a mathematical formula}Iˆbe an answer set of{a mathematical formula}Πˆsuch that{a mathematical formula}I=Iˆ|Πis an answer set of{a mathematical formula}Π=〈T,A,P〉. If{a mathematical formula}Iˆis a compatible set for{a mathematical formula}Π′=〈T,A′,P〉where{a mathematical formula}A′⊇A, then I is an answer set for{a mathematical formula}Π′=〈T,A′,P〉.
+      </paragraph>
+      <paragraph>
+       Armed with this result, we establish the correctness result.
+      </paragraph>
+      <paragraph label="Theorem 72">
+       SupRAnsSet is sound and complete w.r.t. computing deletion repair answer sets, i.e., given a DL-program{a mathematical formula}Π=〈O,P〉with{a mathematical formula}DL-LiteAontology{a mathematical formula}O,{a mathematical formula}SupRAnsSet(Π)correctly outputs all deletion repair answer sets of Π.
+      </paragraph>
+      <paragraph>
+       In the next section, we turn to an implementation of Algorithm SupRAnsSet, where we discuss the key implementation issues and present a declarative realization of support set handling in the steps (c)–(g).
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Implementation
+     </section-title>
+     <paragraph>
+      We have implemented the repair answer set computation algorithms as a part of the dlliteplugin plugin of the {an inline-figure} framework, thus providing a means to effectively compute deletion repair answer sets for DL-programs over {a mathematical formula}DL-LiteA ontologies.
+     </paragraph>
+     <paragraph>
+      The {an inline-figure} framework is a system for evaluating Answer Set Programs with external computations. The system is written in C++ and open source available.{sup:6} Implementations of external source functions can be conveniently provided as plugins, which distinguishes the {an inline-figure} system from other ASP solvers. A wide range of such plugins are already available, ranging from string manipulation functions to complex plugins implementing Equilibrium-semantics of Multi-Context Systems.
+     </paragraph>
+     <paragraph>
+      The source code of the new plugin is available at https://github.com/hexhex/dlliteplugin. The dlliteplugin uses the owlcpp{sup:7}[58] library for ontology parsing and invokes the fact++{sup:8} system as a back-end for ontology reasoning tasks. In the sequel, we present an overview of the dlliteplugin architecture and give some implementation details.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Architecture overview
+      </section-title>
+      <paragraph>
+       The architecture of the dlliteplugin is shown in Fig. 2, where arcs model both control and data flow of the system. The DL-program at hand is described by the user in the files, storing the ontology part {a mathematical formula}O and the DL-rules part {a mathematical formula}P of the DL-program Π respectively. After creating the replacement program {a mathematical formula}Πˆ, complete nonground support families for DL-atoms in Π are determined within the dlliteplugin. The support sets in these families are processed declaratively using rules {a mathematical formula}Πsupp (explained in detail below). These rules are then extended with the facts encoding ontology ABox and the program {a mathematical formula}Πˆ. The models of the obtained program encode the repair answer sets and repairs of the original DL-program Π. For evaluating the declarative program, the backend grounder and the solver of the {an inline-figure} system are invoked. Finally, the repair answer set candidates I of Π and their respective repairs {a mathematical formula}A′ are extracted from the computed models. Each such I is already a weak repair answer set of Π. For flp-repair answer sets, an additional flp-minimality check is made.
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Implementation details
+      </section-title>
+      <paragraph>
+       In order to take advantage of existing {an inline-figure} data structures (e.g. for parsing) and optimization methods (such as nogood learning, etc.), a declarative ASP approach was pursued to realize both construction of complete support families and computation of repair answer sets and repairs over {a mathematical formula}DL-LiteA ontologies.
+      </paragraph>
+      <paragraph>
+       First we describe our approach to computing the support families. The routine for computing support families gets a {a mathematical formula}DL-LiteA ontology and a nonground DL-atom as input. After parsing the ontology {a mathematical formula}O using the owlcpp library, its TBox classification is computed. The latter is done declaratively using the program {a mathematical formula}ProgTclass shown in Fig. 3, which exploits a construction for computing unary and binary conflict sets expressed in [74].
+      </paragraph>
+      <paragraph>
+       The program {a mathematical formula}ProgTclass reifies concepts (roles, existential restrictions on roles), as well as positive replacements of their negations. Facts express subsumptions in {a mathematical formula}Pos(T) using predicate sub, role inverses using inv, role functionalities with funct, and the duality of concepts (roles, etc.) and their opposites with op. The rule (1) of {a mathematical formula}ProgTclass transitively closes the subsumption relation, while (2) expresses contraposition for subsumption and (3) derives subsumption relations for roles whose inverses are subsumed. The rules (4)–(7) mimic the construction of binary and unary conflict sets (based on the theoretical results from [74]) that are then stored in the predicates conf and confref respectively. Since the program {a mathematical formula}ProgTclass is positive, it has a single answer set {a mathematical formula}MTclass, from which the support family {a mathematical formula}S for a DL-atom {a mathematical formula}d=DL[λ;Q](X) is conveniently extracted in the following way:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        for every {a mathematical formula}sub(P,Q)∈MTclass, where P is a positive ontology predicate, we add {a mathematical formula}S={P(X→)} to {a mathematical formula}S;
+       </list-item>
+       <list-item label="•">
+        for every {a mathematical formula}sub(P,Q)∈MTclass, where P is a replacement for an existential restriction ∃R, we add {a mathematical formula}S={R(X,Y)} to {a mathematical formula}S;
+       </list-item>
+       <list-item label="•">
+        for every {a mathematical formula}conf(P,P′)∈MTclass, we add {a mathematical formula}S={Pp(Y→),P′(Y→)} to {a mathematical formula}S, if {a mathematical formula}Pp(c→)∈Ad for some {a mathematical formula}c∈C, and there is no {a mathematical formula}S′⊂S such that {a mathematical formula}S′∈S;
+       </list-item>
+       <list-item label="•">
+        for every {a mathematical formula}conf(P,P′)∈MTclass, we add {a mathematical formula}S={Pp(Y→),Pp′(Y→)} to {a mathematical formula}S, if {a mathematical formula}Pp(c→),Pp′(d→)∈Ad for some {a mathematical formula}c→,d→∈C, and there is no {a mathematical formula}S′⊂S such that {a mathematical formula}S′∈S;
+       </list-item>
+       <list-item label="•">
+        for every {a mathematical formula}confref(P)∈MTclass, we add {a mathematical formula}S={Pp(Y,Y)} to {a mathematical formula}S, if {a mathematical formula}Pp(c,d)∈Ad for some {a mathematical formula}c,d∈C;
+       </list-item>
+       <list-item label="•">
+        for every {a mathematical formula}funct(P)∈MTclass, we add {a mathematical formula}S={Pp(Y,Z),Pp(Y,Z′),Z≠Z′} to {a mathematical formula}S, if {a mathematical formula}Pp(c,d),Pp(c,e)∈Ad for some {a mathematical formula}c,d,e∈C;
+       </list-item>
+       <list-item label="•">
+        for every {a mathematical formula}funct(P)∈MTclass, we add {a mathematical formula}S={Pp(Y,Z),P(Y,Z′),Z≠Z′} to {a mathematical formula}S, if {a mathematical formula}Pp(c,d)∈Ad and {a mathematical formula}P(c,e)∈A for some {a mathematical formula}c,d,e∈C.
+       </list-item>
+      </list>
+      <paragraph label="Proposition 73">
+       From Proposition 58, the definition of complete support families and the results in [74], we obtain: The support family constructed from the model{a mathematical formula}MTclassof{a mathematical formula}ProgTclassis complete.
+      </paragraph>
+      <paragraph>
+       We now turn to determining the repair answer sets, for which we use also a declarative approach. More specifically, for every nonground DL-atom {a mathematical formula}a(X→) and its nonground support set {a mathematical formula}Sa(Y→) with {a mathematical formula}Y→=X→X′→, the rules from Fig. 4 are constructed. These form a program {a mathematical formula}Πsupp, which is added to the replacement program {a mathematical formula}Πˆ to filter candidate deletion repair answer sets as done by the algorithm SupRAnsSet. Here {a mathematical formula}r(Sa(Y→)) is a suitable representation of a support set {a mathematical formula}Sa(Y→) for a DL-atom {a mathematical formula}a(X→) using predicates {a mathematical formula}p(X→) for input assertions {a mathematical formula}Pp(X→), resp. {a mathematical formula}pP(X→) ({a mathematical formula}npP(X→)) for ABox assertions {a mathematical formula}P(X→) ({a mathematical formula}¬P(X→)). {a mathematical formula}S¯aA states that the ABox part of {a mathematical formula}Sa is marked for deletion if {a mathematical formula}Sa∩A≠∅, otherwise it is void. Furthermore, {a mathematical formula}Supa is a fresh predicate not occurring in {a mathematical formula}P, that says a has an applicable support set, i.e. its ABox part is either empty or not marked for deletion. The resulting program intuitively prunes candidates {a mathematical formula}Iˆ (resp. encodes deletion repair answer sets) according to the algorithm SupRAnsSet.
+      </paragraph>
+      <paragraph label="Example 74">
+       Consider a simple program {a mathematical formula}Π=〈O,P〉, where{a mathematical formula} The DL-atom {a mathematical formula}a1(X)=DL[Male⊎man;Male](X) has {a mathematical formula}S1a1(X)={Male(X)} and {a mathematical formula}S2a1(X)={Maleman(X)} as its support sets, while the DL-atom {a mathematical formula}a2(X)=DL[;Student](X) has the support set {a mathematical formula}S1a2(X)={Student(X)}. The declarative program {a mathematical formula}Πˆ∪Πsupp∪facts(A) contains the data part {a mathematical formula}facts(A)={pStudent(pat)} encoding the ABox assertion {a mathematical formula}Student(pat) using a fresh predicate {a mathematical formula}pStudent, and the rules {a mathematical formula}Πˆ∪Πsupp shown in Fig. 5, where
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}r(S1a1(X))=pMale(X); {a mathematical formula}S1¯a1A(X)=p¯Male(X); {a mathematical formula}r(S2a1(X))=man(X);
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}S2¯a1A(X)=∅; {a mathematical formula}r(S1a2(X))=pStudent(X); {a mathematical formula}S1¯a2A(X)=p¯Student(X).
+       </list-item>
+      </list>
+      <paragraph label="Proposition 75">
+       The correctness of the described declarative implementation is now formally stated. Let{a mathematical formula}Π=〈O,P〉be a ground DL-program, where{a mathematical formula}Ois a{a mathematical formula}DL-LiteAontology, and let{a mathematical formula}a1,…,anbe the DL-atoms of Π. Let, moreover,{a mathematical formula}S1,…,Snbe complete nonground support families for{a mathematical formula}a1,…,anw.r.t.{a mathematical formula}O, and let{a mathematical formula}Πsuppbe the set of rules of the forms ({a mathematical formula}r1)–({a mathematical formula}r4) constructed for every support set from{a mathematical formula}Sicovering{a mathematical formula}ai,{a mathematical formula}1≤i≤n. Then{a mathematical formula}where{a mathematical formula}facts(A)={pP(c→)|P(c→)∈A}∪{npP(c→)|¬P(c→)∈A}is the set of facts corresponding to the assertions from{a mathematical formula}Aand{a mathematical formula}AS(Πˆ∪Πsupp∪facts(A))|Π={I|Π|I∈AS(Πˆ∪Πsupp∪facts(A))}.
+      </paragraph>
+      <paragraph>
+       Observe that our declarative implementation computes exactly the weak repair answer sets. Thus, in some cases rarely met in practice [30] an additional minimality check is needed to ensure that the identified weak repair answer set is also an flp-repair answer set. This happens in case of cyclic support, i.e. recursion through a DL-atom that makes an atom true [37]. We illustrate this by the following example:
+      </paragraph>
+      <paragraph label="Example 76">
+       Reconsider {a mathematical formula}Π=〈O,P〉 from Example 74. For the interpretation {a mathematical formula}Iˆ={man(pat),ea1,nea2,Supa1{a mathematical formula}pStudent(pat),p¯Student(pat)} we have that {a mathematical formula}(Πˆ∪Πsupp)glIˆ contains the rules (1)–(5), (7), (9), (10'), (11) and (12), where (10') is the rule {a mathematical formula}⊥←ea2. It holds that {a mathematical formula}Iˆ is a minimal model of this reduct, thus an answer set of {a mathematical formula}Πˆ∪Πsupp. As {a mathematical formula}p¯Student(pat)∈I the repair {a mathematical formula}A′=A∖{Student(pat)} is extracted from {a mathematical formula}Iˆ. Let us now look at {a mathematical formula}I|Π={man(pat)}. Certainly, {a mathematical formula}I|Π is a minimal model of the weak reduct{a mathematical formula} where {a mathematical formula}O′=∅, and therefore {a mathematical formula}I|Π is a weak repair answer set of Π. However, {a mathematical formula}I|Π is not an flp-repair answer set of Π, since {a mathematical formula}I′⊂I|Π exists, namely {a mathematical formula}I′=∅, which is a smaller model of the flp reduct{a mathematical formula}
+      </paragraph>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Evaluation
+     </section-title>
+     <paragraph>
+      For evaluating the developed deletion repair answer set computation algorithms based on complete support families, we have built a benchmark suite, consisting of DL-programs over ontologies in {a mathematical formula}DL-LiteA. The assessment of our algorithms concerned the following aspects:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Performance. We evaluated the performance of deletion repair answer set computation in comparison to the standard answer set computation on various benchmarks including Family, Network, Taxi and LUBM. For the Family benchmark we additionally varied the following parameters:
+      </list-item>
+      <list-item label="•">
+       Exploiting DL-programs expressive power. We analyzed how various advanced expressive features allowed in DL-programs like defaults, guesses and recursiveness, influence the repair answer set computation running time (Network, LUBM benchmarks).
+      </list-item>
+      <list-item label="•">
+       Repair quality. The σ-selection functions that we introduced allow one to restrict the repair search space to application-relevant repair candidates, thus ensuring a certain level of quality of the results. We evaluated how the independent σ-selection functions, like bound on the number/type of assertions eligible for deletion influence the overall algorithm runtime.
+      </list-item>
+      <list-item label="•">
+       Real world data. To demonstrate the applicability of the developed algorithms to the real world scenarios, we conducted experiments on the DL-programs from the taxi-driver assignment problem over the MyITS ontology{sup:9} designed for personalized route planning.
+      </list-item>
+     </list>
+     <section label="6.1">
+      <section-title>
+       Platform description
+      </section-title>
+      <paragraph>
+       We have evaluated the repair answer set computation approach on a Linux server with two 12-core AMD 6176 SE CPUs with 128 GB RAM running the HTCondor load distribution system,{sup:10} which is a specialized workload management system for compute-intensive tasks. We used the version 2.3.0 of the {an inline-figure} system. For each run the system usage was limited to two cores and 8 GB RAM. The timeout was set to 300 seconds for each instance. The experimental data are online available.{sup:11}
+      </paragraph>
+      <paragraph>
+       Since to the best of our knowledge no other algorithms for repairing DL-programs are available, we had to proceed with comparison of our approach to the standard answer set computation.
+      </paragraph>
+      <paragraph>
+       The list of systems for DL-programs evaluation includes the following:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        The DReW system{sup:12}[83] is designed for evaluating DL-programs by means of a rewriting to datalog. A straightforward implementation of the repair computation was realized within the DReW system with the naive guess of the repair ABox candidate, followed by a check of its suitability. However, this implementation turned out to be ineffective even on small instances, since in general the search space of the repairs is too big for its full exploitation, and guided search is vital to ensure scalability. We have not performed a full comparison of our implementation with the DReW system, since in its current version negative queries and the negative updates (operator ⩁) are not supported.
+       </list-item>
+       <list-item label="•">
+        The dlplugin of {an inline-figure},{sup:13} which uses the RacerPro reasoner as a back-end for evaluation of the calls to the ontology, is another candidate for comparison. However, since the dlliteplugin used for standard answer set computation for DL-programs over lightweight ontologies scales better than the former [32], we use the latter for comparison in our experiments.
+       </list-item>
+      </list>
+     </section>
+     <section label="6.2">
+      <section-title>
+       Evaluation workflow
+      </section-title>
+      <paragraph>
+       We now describe the general workflow of the experimental evaluation.
+      </paragraph>
+      <paragraph>
+       In the first step of the evaluation process we constructed benchmarks. This was nontrivial, since first very few benchmarks already exist [83] and second it is difficult to synthesize random test instances whose conflict space would effectively reflect realistic scenarios. We exploited the existing ontologies and aimed at building rules and constraints on top of them in such a way that for some data parts the constructed programs become inconsistent.
+      </paragraph>
+      <paragraph>
+       When the scenario was defined, we created shell scripts for instance generation with certain varying parameters (e.g. data size, rules size, TBox size), specific for each benchmark.{sup:14} We then ran the benchmarks using the HTCondor system and finally extracted the results from the log files of the runs.
+      </paragraph>
+      <paragraph>
+       For each benchmark we present our experimental results in tables. The first column, p, in the tables specifies the size of the instance (varied according to certain parameters specific for each benchmark), and the number of generated instances in round brackets. For example, the value {a mathematical formula}10(20) in the first column states that 20 instances with the size of the parameter equal to 10 were evaluated. The rest of the columns vary from benchmark to benchmark. They represent configurations, in which the system was tested: AS (RAS) stands for normal (repair) answer set computation. Restrictions on repairs are applied in some cases the meaning of which is separately clarified where tables are presented. The cells contain combinations of numbers of the form {a mathematical formula}t(m)[n], where t is the total average running time in seconds, m is the number of timeouts and n is the number of (repair) answer sets computed.
+      </paragraph>
+     </section>
+     <section label="6.3">
+      <section-title>
+       Benchmarks
+      </section-title>
+      <paragraph>
+       For the evaluation of the algorithms, we considered the following benchmarks.
+      </paragraph>
+      <list>
+       <list-item label="(1.1)">
+        The Family benchmark describes a scenario that is built from a version of Example 1 with ABoxes {a mathematical formula}A50 and {a mathematical formula}A1000 containing 50 and 1000 children and information about their families;
+       </list-item>
+       <list-item label="(1.2)">
+        The Network benchmark comprises rules with recursion and guessing features over an ontology containing data about availability of nodes and edges of a network. We considered a fragment of the Vienna transport system with 161 nodes, and its part with 67 nodes, covering central area;
+       </list-item>
+       <list-item label="(1.3)">
+        The Taxi benchmark represents a driver-customer assignment problem over an ontology with ABoxes {a mathematical formula}A50 and {a mathematical formula}A500 containing information about 50 and 500 customers respectively. Based on certain conditions about the drivers, customers, their positions and intentions, the customers are assigned to drivers for serving needs of customers;
+       </list-item>
+       <list-item label="(1.4)">
+        The LUBM benchmark is a set of rules with various expressiveness features built over the famous LUBM ontology{sup:15} in its {a mathematical formula}DL-LiteA form containing information about one university. The original version of LUBM is in {a mathematical formula}ALEHI(D) form. For creating the {a mathematical formula}DL-LiteA version of LUBM we rewrote if possible and removed otherwise the TBox axioms that do not fall into the DL {a mathematical formula}DL-LiteA. For ABox generation we used the dedicated Combo tool.{sup:16}
+       </list-item>
+      </list>
+      <section label="6.3.1">
+       <section-title>
+        Family benchmark
+       </section-title>
+       <paragraph>
+        The first benchmark is derived from Example 1. For our evaluation we have constructed different scenarios, varying the size of the TBox, the data part as well as the rule part of the DL-program.
+       </paragraph>
+       <paragraph>
+        1. Size of the data part. In the first setting, we fixed two ABoxes {a mathematical formula}A50 and {a mathematical formula}A1000, where {a mathematical formula}A50 contains 50 children (7 adopted), 20 female and 32 male adults; and for {a mathematical formula}A1000 twenty times as many. Every child has at most two parents of different sex and the number of children per parent varies from 1 to 3. Rules (11) and (12), not involved in conflicts, have been dropped from {a mathematical formula}P. Instances are varied in terms of facts over I included in {a mathematical formula}P. The parameter reflecting the instance size is p, which ranges from 10 to 100. A benchmark instance has size p if for every child c, additional facts {a mathematical formula}boy(c) and {a mathematical formula}isChildOf(c,d) appear in {a mathematical formula}P with a probability {a mathematical formula}p/100, where d is a random male adult non-parent. As the number of facts in {a mathematical formula}P varies, the size of the actual conflict part in the program can be controlled.
+       </paragraph>
+       <paragraph>
+        The results for this benchmark are provided in Table 2. For each probability p we generated 20 random instances with the fixed {a mathematical formula}A50 and {a mathematical formula}A1000 ABoxes, and evaluated the running time for the standard answer set (column AS) and the repair answer set computation (column RAS) with no restrictions on the repairs (column {a mathematical formula}no_restr) as well as limiting the number of allowed assertions for deletion to 10 for {a mathematical formula}A50 and 20 for {a mathematical formula}A1000 (columns {a mathematical formula}lim=10 and {a mathematical formula}lim=20 resp.).
+       </paragraph>
+       <paragraph>
+        The numbers in the second column reveal that all considered instances are inconsistent, which is recognized by the AS solver within 2 milliseconds. In most cases all the repairs are found for both {a mathematical formula}A50 and {a mathematical formula}A1000 except for {a mathematical formula}lim=10 of {a mathematical formula}A50, where the repairs are computed only for some of the instances up to {a mathematical formula}p=60.
+       </paragraph>
+       <paragraph>
+        2. Ontology TBox size. In the second setting, we built instances based on the size of the TBox, leaving the ontology ABox fixed to {a mathematical formula}A50 and the rule part same as in the previous benchmark setting. The TBox axioms from Example 1 are extended by the inclusions {a mathematical formula}P⊑Person for all concepts P, informally stating that every individual known to be either child, adopted, male or female is a person. Moreover, for each concept P from the ontology signature and {a mathematical formula}1≤i≤Tmax, we added the following inclusions with probability {a mathematical formula}p/100 (p ranges from 10, 20 to 90).{a mathematical formula} Intuitively, (1) reflects that a P-member of a social group i is in the class P, while (2) states that each individual having ID of a certain social group i is a person.
+       </paragraph>
+       <paragraph>
+        The evaluation results for this setting are presented in Table 3. One can see that the repair computation is slower then the standard answer set computation, which is more obvious for {a mathematical formula}T5000; This is due to the construction of support sets and their exploitation in the declarative approach for repair answer set computation. In the standard setting, we do not exploit the TBox extensively, and therefore its growing size does not affect the running time. As expected, bounding a number of eliminated facts to k slows down the repair computation process.
+       </paragraph>
+       <paragraph>
+        3. Size of the rule part. The third setting evaluates the influence of the rule part size. Apart from the rules (11) and (12) from Example 1 that were excluded in the previous settings, we also added for {a mathematical formula}1≤i≤Rmax and for {a mathematical formula}1≤j≤i with probability {a mathematical formula}p/100 ({a mathematical formula}10≤p≤70) the following rules:{a mathematical formula} The fresh predicates {a mathematical formula}contacti(c,d) informally mean that d is a contact representative for a child c within a social group i. The rules (1)–(4) state that if a contact for a child was identified, then this contact can be propagated to randomly chosen social groups i and j.
+       </paragraph>
+       <paragraph>
+        The results are presented in Table 4. Standard answer set computation times out even for smaller instances. Intuitively, this is due to the large number of rules in the programs. For a fair comparison, standard answer set optimization techniques that evaluate independent components of a DL-program separately were not considered. We used a monolithic evaluation heuristics instead. The repair model generator does not support module-based heuristics at the moment and the extensions are nontrivial.
+       </paragraph>
+       <paragraph>
+        The maximal number of rules that were added is specified in the column “names”. Each such rule is present in the test instance with probability {a mathematical formula}p/100. We can see that the growing number of rules makes an impact on the running time of the algorithm, which is not surprising, as the added rules introduce conflicts due to a cycle through negation. Restricting the elimination to 10 facts slows down the computation for {a mathematical formula}Rule50 compared to the unrestricted scenario. For larger instance size, i.e. {a mathematical formula}Rules500, this restriction turns out to be too strict, thus no repairs are actually found. Weakening the restriction for larger instance size ({a mathematical formula}Rules5000) produces again some repair answer sets, though only for smaller p. For larger p timeouts result, which is natural as even for a standard ASP solver and consistent DL-programs with thousands of rules, their evaluation is time-consuming.
+       </paragraph>
+      </section>
+      <section label="6.3.2">
+       <section-title>
+        Network benchmark
+       </section-title>
+       <paragraph>
+        In the next scenario, the properties of the nodes and edges in a network are described by a fixed ontology {a mathematical formula}O using predicates {a mathematical formula}Blocked, {a mathematical formula}Broken, {a mathematical formula}Avail for nodes and {a mathematical formula}forbid for edges. The TBox encodes that if an edge is forbidden, then its starting point must be blocked, and if a node is known to be broken, then it is automatically blocked, moreover blocked nodes are not available:{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        We considered two networks, {a mathematical formula}N1 and {a mathematical formula}N2, that are fragments of the Vienna public transportation net. Network {a mathematical formula}N1 corresponds to the central area of the metro lines and has 67 nodes and 117 edges; {a mathematical formula}N2 covers all metro lines and part of the urban railways, and has 161 nodes and 335 edges. In each network we randomly made 30% of the nodes broken and 20% of the edges forbidden; network {a mathematical formula}N2 has in addition 47 blocked nodes. This information is stored in the data part of {a mathematical formula}O.
+       </paragraph>
+       <paragraph>
+        The experiments were run on two DL-programs {a mathematical formula}Pconn and {a mathematical formula}Pguess over {a mathematical formula}O. Both programs contain as facts edges and nodes of the graph, as well as randomly generated facts determining the portion of the nodes on which a condition expressed by the rules of the program is checked. For creating the data part of the {a mathematical formula}Pconn program, we partitioned the set of nodes randomly into two sets, i.e. the set of in nodes and the set of out nodes. For each node n from the in set, the fact {a mathematical formula}in(n) is added with probability {a mathematical formula}p/100. For each node {a mathematical formula}n′ from the set of out nodes, the fact {a mathematical formula}out(n′) is added with probability {a mathematical formula}p′ computed in the following way: if {a mathematical formula}0≤p≤20, then {a mathematical formula}p′=p⁎4/100, if {a mathematical formula}20≤p≤30, then {a mathematical formula}p′=p⁎3/100. {a mathematical formula}Pconn contains, moreover, the following rules:{a mathematical formula} Intuitively, (1)–(4) recursively determine routes over non-blocked (open) nodes, where (3) expresses that by default a route is recommended unless it is known to be forbidden. Rules (5)–(7) encode the requirement that each node from the in set must be connected to at least one node from the out set via a route, which amounts to a variation of a generalized connectivity problem.
+       </paragraph>
+       <paragraph>
+        The running times and repair results for the benchmark with {a mathematical formula}N1 are given in Table 5. The same number of repairs is computed for all of the RAS settings, but the running times for these settings slightly vary as expected. The last column, where only broken nodes and forbidden edges are allowed for removal, has similar running times as the unrestricted setting. This is also the case for network {a mathematical formula}N2 (Table 6), where this restriction does not yield repairs. Here one also needs to remove blocked/unavailable nodes from the ontology in order to obtain repairs.
+       </paragraph>
+       <paragraph>
+        Another setting that we considered is a benchmark over the program {a mathematical formula}Pguess, which has the same rules (1) and (2) as {a mathematical formula}Pconn, while the rest of the rules are as follows:{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        The rule (3*) has an update in the DL-atom; the rule (4*) amounts to guessing for all selected nodes (predicate {a mathematical formula}domain) not known to be unavailable, whether they are blocked or not, i.e. it contains nondeterminism, which makes rule processing challenging. Other nodes are open by default, unless they are known to be broken, which is encoded in the rule (5*). Rules (6*) and (7*) check whether none of the {a mathematical formula}domain nodes is isolated, i.e. does not have a connection to any other node via a route.
+       </paragraph>
+       <paragraph>
+        The results for {a mathematical formula}Pguess with the two networks are in Table 7, Table 8, respectively. The facts {a mathematical formula}domain(n) are added for each node n with probability {a mathematical formula}p/100. For the smaller network {a mathematical formula}N1 one can observe a strict increase in the running time for {a mathematical formula}p=2 and {a mathematical formula}p=10 in the standard answer set computation mode. As many of the instances for smaller p are consistent, due to the guessing rules the standard answer set solver can not compute the answer sets within the time frame of 300 seconds. For bigger p the instances are inconsistent and the conflict is quickly determined by the solver. The results for network {a mathematical formula}N2 in Table 8 show that the guided search (last column) increases the number of found repairs quite a bit, and less timeouts are hit for {a mathematical formula}p=4 and {a mathematical formula}p=8.
+       </paragraph>
+      </section>
+      <section label="6.3.3">
+       <section-title>
+        Taxi benchmark
+       </section-title>
+       <paragraph>
+        The third experimental setting represents a taxi-driver assignment problem. Imagine a system that assigns potential customers to taxi drivers under constraints, using (in a simplistic form) the DL-program {a mathematical formula}Π=〈O,P〉 presented in Fig. 6. The (external) ontology {a mathematical formula}O has a taxonomy {a mathematical formula}T in (1)–(3). The logic program {a mathematical formula}P has the following rules: (5) and (6) single out customers resp. taxi drivers; (7) assigns taxi drivers to customers in the same region; and (8) forbids drivers of electro-cars to serve needs going outside their working region. Finally, the rules (9), (10) and a constraint (11) make sure that each customer is assigned to at least one driver.
+       </paragraph>
+       <paragraph>
+        1. Guided repair search. One might argue that in case of inconsistency there are not many possibilities for repairing the given system. Indeed, for instance, removing information about the drivers seems absurd at first glance, as some individuals are no longer known to be drivers, and thus assumed to be customers by default (5). Observe that a complete removal of driver information will not make the system consistent, but on the contrary will create even more customers, who will then possibly need to be assigned to the drivers. Therefore, it is obvious that the guided repair search is often crucial and it should not only improve the repair quality but also reduce the computation runtime.
+       </paragraph>
+       <paragraph>
+        In this setting we considered the evaluation time of the repair computation under various independent selection functions. The latter include restrictions to a certain set of predicates for deletion (in our case {a mathematical formula}EDriver assertions) and limiting the number of removed facts, predicates and constants. While the latter is natural and can be easily justified, one might wonder when removal of e-car driver is of practical use. We can imagine that e-cars are hybrid and can run on petrol, which for environmental reasons is undesired, and the government wants to reduce petrol usage. However, in case it is vital and some customers are left without drivers, they still can switch back to the petrol energy supply.
+       </paragraph>
+       <paragraph>
+        For the DL-program Π the ABox {a mathematical formula}A50 contains 50 customers, 20 drivers (among them 19 driving electro-cars), and 5 regions; every driver works in 2–4 regions. In the program {a mathematical formula}P from above, facts {a mathematical formula}isIn(c,r), {a mathematical formula}needsTo(c,r),goTo(d,r) for appropriate constants {a mathematical formula}c,d,r from {a mathematical formula}A are randomly added with probability {a mathematical formula}p/100 under the following constraints: persons are in at most one region; customers need to go to at most one region, and their position is known in that case. Furthermore, driver positions are added as facts {a mathematical formula}isIn(d,r) with fixed probabilities of 0.3, 0.7 and 1 growing discretely in accordance with p.
+       </paragraph>
+       <paragraph>
+        The results for {a mathematical formula}A50 are given in Table 9, where the first column shows in parentheses the number of instances generated per value p. The second and third column state results for standard and repair answer set computation, respectively, while the rest of the columns present the running times for repair computation under various selection functions, i.e. in the fourth and fifth column we restricted repairs by allowing removal of only a limited number of assertions (3 and 10) and in the sixth and seventh column we computed repairs where only facts containing 2 predicates and 10 constants are eliminated. Finally in the last column the results for removing only {a mathematical formula}EDriver facts are shown.
+       </paragraph>
+       <paragraph>
+        One can see that bounding the number of removed assertions makes the computation slower. For {a mathematical formula}repdel=EDriver, the guided repair computation effectively reduces the search space, and it helps the solver to find repairs quicker. In fact, the analysis of the program reveals that most of the valid repairs exclude certain {a mathematical formula}EDriver concept memberships, since they often cause the omission of driver-customer assignments and thus violate constraint (11).
+       </paragraph>
+       <paragraph>
+        2. Real world data. For another benchmark, we considered rules on top of the ontology developed in the MyITS project, which enhanced personalized route planning with semantic information [39].{sup:17} That ontology is augmented with axioms (1)–(4) in Fig. 6 and the axiom {a mathematical formula}(5') adjoint⊑¬disjoint, stating that adjoint regions are not disjoint; the resulting ontology has 389 TBox axioms on 339 concepts and 41 roles. This scenario is modeled to demonstrate the applicability of the repair answer set computation approach for TBoxes from a real world domain. We considered DL-programs over two ABoxes {a mathematical formula}A50 and {a mathematical formula}A500 (containing 10 times as many customers, drivers and e-car drivers as {a mathematical formula}A50). Along with customer and driver information from above, the ABoxes also contain data about mutual spatial relations among the districts of Vienna. These relations are stored using the predicates adjoint and disjoint. The rule part of the DL-program has the same rules (5)–(6) and (9)–(11) as in Fig. 6, while the rules (7) and (8) are as follows:{a mathematical formula} Intuitively, the rule (7*) states that a driver can be assigned to a customer only if the driver is going to a region adjoint to the destination region of the customer. Similar as in the previous scenario, some of the assignments are dropped if they involve drivers of e-cars aiming at the regions they are not assigned to. The rule (8*) is the same as the rule (8), with the only difference that the DL-atom involved in it does not have any updates.
+       </paragraph>
+       <paragraph>
+        The benchmark results for this setting and {a mathematical formula}A50 are presented in Table 10. Unsurprisingly, the restriction on the number of assertions allowed for deletion slows down the repair computation again. With the increase of this limit the running time slightly improves. As in the previous setting the restriction of the set of predicates allowed for deletion to {a mathematical formula}EDriver does not yield much of the computation overhead; however, in contrast to the previous setting the number of repairs found decreases. Since the number of districts increased compared to the previous setting, apart from the information about drivers of e-cars, one needs to expand the working area of the drivers too; thus removal of notworksIn facts should again increase the number of obtained repairs.
+       </paragraph>
+       <paragraph>
+        Table 11 presents the results for the ABox {a mathematical formula}A500. Despite a natural increase in running times compared to the smaller ABox, repairs are found in many cases for this setting. While the number of regions stays the same as for {a mathematical formula}A50, proportionally there are more available drivers per district, and more customers can be served.
+       </paragraph>
+      </section>
+      <section label="6.3.4">
+       <section-title>
+        LUBM benchmark
+       </section-title>
+       <paragraph>
+        We have evaluated also DL-programs over the famous LUBM ontology{sup:18} in its {a mathematical formula}DL-LiteA form. For ABox generation we used the dedicated Combo tool.{sup:19} We considered an extended assignment problem in combination with multiple mutually related defaults (see Fig. 7). Informally, the goal of this program is to construct candidate assignments by identifying postdocs helping students with their research work and organizational staff supporting visiting postdocs with language related issues. From every model of the program a set of candidate assignments satisfying additional side constraints expressed by the rules of the program is extracted.
+       </paragraph>
+       <list>
+        <list-item label="•">
+         The rules (6)–(8) encode the default that research assistants are students unless the contrary is derived.
+        </list-item>
+        <list-item label="•">
+         The rule (9) assigns postdocs to every research assistant (who is a student by default). In case the “supposed” student has problems, there is always a person to contact, viz. some assigned postdoc; the possible assignments are collected in the helps. However, a research assistant may happen to be a visiting postdoc and thus a postdoc (axiom (4) in {a mathematical formula}O); then, no help from another postdoc is needed (rule (10)).
+        </list-item>
+        <list-item label="•">
+         Visiting postdocs do not need help with their work-related problems, but they need language support, as (being foreigners) they will not know the local language. Hence, a person who can provide organizational help ought to be found for each postdoc. Rule (11) collects all visiting postdocs into a respective predicate, and rule (12) similarly persons capable of providing organizational help. Rule (13) assigns any such person to a visiting postdoc using the supports predicate.
+        </list-item>
+        <list-item label="•">
+         However, not all people who can provide organizational help are equally good in rule (13), and some may be exempted; in particular, rule (16) exempts international students from organizational help.
+        </list-item>
+        <list-item label="•">
+         As for organizational help, persons are assumed not to be students by default (rules (14)–(15)).
+        </list-item>
+       </list>
+       <paragraph>
+        The absence of answer sets for the program is caused by the cyclic dependencies of a literal from its default negation, which manifests in the rules (9)–(10) and (13)–(16). The results of the experiments are given in Table 12. Standard answer set computation outperforms repair answer set computation; thus in this benchmark inconsistency is found faster than the first repair. There are many DL-atoms without input predicates, so called outer DL-atoms. In the standard answer set mode, for these atoms all relevant constants are retrieved at an early stage, which speeds up the computation. The restricted repairs are found in this benchmark too, and the results are as expected: the stricter the limit, the less repairs are found and the more time is needed. The last column of Table 12 shows the results for removal restricted to InternationalStudents. As one can see, this guided search speeds up the computation but significantly decreases the number of found repairs. Note that allowing deletion of at most 20 facts leads to higher running time than the other restrictions; this is explained by the structure of repairs, which do not involve many different predicates, but the number of facts in each repair is very likely to exceed 20.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      Discussion
+     </section-title>
+     <paragraph>
+      In this section, we discuss extensions of our work for DL-programs on ontologies beyond {a mathematical formula}DL-LiteA and consider related work on inconsistency management in more detail.
+     </paragraph>
+     <section label="7.1">
+      <section-title>
+       Further work
+      </section-title>
+      <paragraph>
+       Our notions of repair and repair answer set naturally generalize to DL-programs over ontologies in other DLs, and similar techniques as above can be employed to compute repair answer sets. Algorithm 2, Algorithm 3 are general and work for arbitrary DLs, and similarly Algorithm 4 works for DLs that admit complete (non-ground) support families. In particular, the approach was extended in [34], [79] to DL-programs over {a mathematical formula}EL ontologies; the {a mathematical formula}EL family [3] includes like the {a mathematical formula}DL-Lite family prominent DLs that are tractable and despite limited expressiveness still useful for many application domains. The general complexity results in Sections 3.1 and 3.3 carry over to the core DL {a mathematical formula}EL, assuming that negative concepts assertions are admissible (which do not affect tractability of standard reasoning tasks). In absence of such assertions, and thus of the update operators ⩁ and ⋂̵, deciding existence of flp-repair answer sets for normal DL-programs drops to {a mathematical formula}NP. However, like for {a mathematical formula}DL-LiteAdeciding weak- or flp-repair answer set existence is {a mathematical formula}NP-hard for DL-programs with simple structure and input-free DL-atoms where deciding answer set existence is tractable [79]. Furthermore, deletion repairs for ORPs over {a mathematical formula}EL ontologies are intractable, even in absence of negative assertions, and so are the other repair notions in Section 3.5 except bounded {a mathematical formula}δ±-change repairs. Intuitively, support sets for DL-atoms over {a mathematical formula}EL ontologies can involve arbitrarily many assertions, and disabling a support set leads to choosing one of them; thus, hypergraph 2-colorability, which is well-known to be {a mathematical formula}NP-complete [44], can be easily expressed. Complete support families for DL-atoms over {a mathematical formula}EL can get very large (exponential size) or even infinite in case of cyclic TBoxes (which are though less frequent in practice [43]).
+      </paragraph>
+      <paragraph>
+       To address these issues, a version of the algorithm for repair answer set computation was given in [34] that operates on incomplete (partial) support families; this algorithm and the underlying framework can be applied to repair DL-programs over ontologies in other DLs as well. It uses hitting sets to disable known support sets of negative DL-atoms and performs evaluation postchecks–if needed–to compensate incompleteness of support families. Moreover, it trades answer completeness for scalability by using minimal hitting sets. A declarative implementation for ontologies in {a mathematical formula}EL is available on top of {an inline-figure}, where partial support families for DL-atoms are computed by unfolding datalog rewritings of queries over an {a mathematical formula}EL ontology; for more details, see [34], [79]. Finally, we remark that the notion of support set has been fruitfully generalized to HEX programs [38], in which instead of an ontology arbitrary external information sources of computation can be accessed from an answer set program [32] (see also Appendix A).
+      </paragraph>
+     </section>
+     <section label="7.2">
+      <section-title>
+       Related work
+      </section-title>
+      <paragraph>
+       Handling inconsistencies in DL-programs is a rather recent issue, which has been targeted in few works, including [72], [40], and these works focused on inconsistency tolerance. Pührer et al. [72] aimed to avoid answer sets that are non-intuitive due to inconsistency in DL-atoms, by dynamically disabling rules that possibly involve spoiled information. Here the underlying assumption is that the ontology can or should not be changed; for the case where changes are possible, ontology repair was posed as an important open issue. Fink [40] addressed inconsistency of DL-programs due to the lack of stability in models by resorting to semi-stable models based on [31], and combined the resulting paracoherent semantics with paraconsistency techniques for handling classical conflicts (i.e., truth of a formula and its negation) similar as in Description Logics [60]. Semi-stable models repair in a sense the DL-program by changing the data part, but are quite different from repair answer sets: indeed, only addition of data is possible, but no deletion; additions are not restricted to ontology assertions; and noticeably, the additions are treated as unjustified beliefs rather than as facts that are true. Finally, additions must be smallest possible (w.r.t. set inclusion), which leads to a complexity increase that makes reasoning from semi-stable models harder than from repair answer sets.
+      </paragraph>
+      <paragraph>
+       Like for DL-programs, for other hybrid formalisms inconsistency management has so far concentrated on inconsistency tolerance rather than repair. For instance, Huang et al. [49] presented a four-valued paraconsistent semantics, based on Belnap's logic [8], for hybrid MKNF knowledge bases [66], which are the most prominent tightly coupled combination of rules and ontologies. Inspired by the paracoherent stable semantics from [75], the work [49] was extended in [48] to handle also incoherent MKNF KBs, i.e. programs in which inconsistency arises as a result of dependency of an atom on its default negation in analogy to [40]. Another direction of inconsistency handling for hybrid MKNF KBs is using the three-valued (well-founded) semantics of Knorr et al. [52], which avoids incoherence for disjunction-free stratified programs. Most recently, this has been extended in [50] with additional truth values to evaluate contradictory pieces of knowledge, such that inconsistency can be modeled with a new truth value and non-contradictory knowledge that is only derivable from the inconsistent part of a KB is still considered to be true in the classical sense, or in another view truth which depends on the inconsistent part of a KB is distinguished from truth derivable without involving any contradictory knowledge (also known as suspicious reasoning). However, these works aim at inconsistency tolerance rather than repair, and are geared in spirit to query answering that is inherent to well-founded semantics.
+      </paragraph>
+      <paragraph>
+       In the context of Description Logics, repairing ontologies has been studied intensively, foremost to handle inconsistency. In particular, Lembo et al. [54] and Bienvenu [12] studied consistent query answering over DL-Lite ontologies based on the repair technique from databases (see [10]). A framework for explaining (negative) query answers under the inconsistency tolerant semantics. In the spirit of minimal change, an inconsistent ontology (with a consistent TBox) is repaired by identifying and eliminating minimal conflict sets causing (i.e., explaining) the inconsistency; this results in maximal deletion repairs. Note that our algorithm SupRAnsSet constructs in its search all maximal deletion repairs; in that it is similar to ABox cleaning [64], [74] (though in general non-maximal repairs are also computed by our method). However, our setting differs also in other respects fundamentally from those in [54], [12]: (i) the ontology is consistent and inconsistency arises only through the interface of a DL-atom; (ii) several DL-atom queries, where each is either an entailment or a non-entailment query, have to be considered en bloc; and (iii) in addition, individual ABox updates are possible.
+      </paragraph>
+      <paragraph>
+       Calvanese et al. [22] considered explaining negative answers to instance queries and unions of conjunctive queries in {a mathematical formula}DL-LiteA, i.e., to give reasons for tuples missing from the output, complementing [16] which considered explanations for positive query answers in {a mathematical formula}DL-Lite. They proposed abductive explanations that correspond to repairs by increasing the ABox, and they characterized the computational complexity of deciding explanation existence and other reasoning problems around explanations, for arbitrary and preferred explanations that amount to non-independent σ-selections. In absence of preferences and with empty ABox, this problem can be seen as a special ORP with a single query and empty update sets, and thus contributes a tractable case. On the other hand, the issues (ii) and (iii) in the previous paragraph apply also here and turn ORPs into multi-abduction problems of positive and negative queries with individual ABox additions; it remains unclear how one could readily exploit the existing abduction algorithms to solve such ORPs efficiently.
+      </paragraph>
+      <paragraph>
+       Repairing inconsistent non-monotonic logic programs is less developed. Sakama and Inoue [76] used extended abduction to delete minimal sets of rules; however, notably also adding rules can remove inconsistency from such a program. This was exploited by Balduccini and Gelfond [7], who proposed consistency-restoring rules that may be added, under Occam's razor, in order to remove inconsistency. Syränen [81] aimed at finding reasons for the absence of answer sets and addressed debugging logic programs based on model-based diagnosis [73], which in a generalized setting was considered by Gebser et al. [45], who provided explanations why interpretations are not answer sets of a program. Repairing rules in a DL-program subsumes repair of ordinary nonmonotonic logic programs, and thus represents a challenge as such, especially if repair goes beyond merely dropping rules. Inconsistent DL-programs can be seen as programs with bugs that need appropriate debugging techniques for fixing. These were studied in [68], where an approach building on [81], [45], [71] was developed. The idea is to proceed in a user-interactive way by stepping through the rules of the DL-program, and to distinguish at each step a set of active rules along with an intermediate interpretation. Faulty rules are identified if a conflict is reached in the stepping process. It would be interesting to see if stepwise debugging and data repair can be fruitfully combined, which remains for future work.
+      </paragraph>
+      <paragraph>
+       Our ideas on domain-dependent restrictions on repairs are related to the inconsistency policy for databases discussed e.g. in [78], [63], where the authors presented preference-based techniques for repairing databases. In the context of DL-programs, this has not been considered before. The complexity of consistent query answering based on preferred repairs over lightweight ontologies (in particular, in {a mathematical formula}DL-Lite{a mathematical formula}R) has been recently studied in [13], where for a number of preferences that amount to non-independent σ-selections intractability was shown, which in most cases is beyond {a mathematical formula}NP.
+      </paragraph>
+     </section>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     Supplement to Section 2
+     <paragraph>
+      This section introduces HEX-programs [38] and explains their correspondence with DL-programs (which are a proper instance of HEX programs). The material is included for the convenience of the reader, as a supplement to ease deeper understanding of the evaluation algorithm for DL-programs, which is in terms of the more general class of HEX programs [30]. However, this appendix is not strictly needed and can be omitted.
+     </paragraph>
+     <section label="A.1">
+      <section-title>
+       HEX-programs
+      </section-title>
+      <paragraph>
+       Apart from the interaction with the DL ontology through a logic program there are other ways of accessing information from different external sources. An important generalization of DL-programs are HEX-programs[38], which accommodate a universal bidirectional interface for arbitrary sources of external computation. This is achieved by means of the notion of an external atom. Using such external atoms, whose semantics is abstractly modeled by an input-output relationship, one can access different kinds of information and reasoning in a single program. HEX-programs have been successfully used in various kinds of applications. Some examples include multi-agent systems, rule-based policy specification, distributed SPARQL processing, to mention a few.
+      </paragraph>
+      <paragraph>
+       We assume that for a given HEX-program the vocabulary consists of mutually disjoint sets {a mathematical formula}C of constants, V of variables, P of predicates, X of external predicates. Next we recall syntax and semantics of HEX-programs.
+      </paragraph>
+      <paragraph label="Definition 77">
+       Syntax. HEX-programs generalize (disjunctive) extended logic programs under the answer set semantics described earlier with external atoms, allowed in the bodies of the rules. External atoms have a list of input parameters (constants or predicate names) and a list of output parameters. External atomAn external atom{a mathematical formula}a(Z→) is of the form{a mathematical formula} where {a mathematical formula}&amp;g∈X, {a mathematical formula}Y→=Y1,…,Yℓ, and {a mathematical formula}X→=X1,…,Xm, such that {a mathematical formula}Yi,Xj∈P∪C∪V, for {a mathematical formula}1≤i≤ℓ and {a mathematical formula}1≤j≤m, and {a mathematical formula}Z→ is the restriction of {a mathematical formula}Y→ and {a mathematical formula}X→ to elements from V.
+      </paragraph>
+      <paragraph>
+       An external atom is ground if {a mathematical formula}Yi∈C∪P for all {a mathematical formula}1≤i≤l and {a mathematical formula}Xj∈C for all {a mathematical formula}1≤j≤m.
+      </paragraph>
+      <paragraph label="Example 78">
+       Consider the external atom {a mathematical formula}a(X→)=&amp;diff[p,q](X→), where p and q are predicates. The atom {a mathematical formula}a(X→) computes the set of all elements X, which are in the extension of p but not in the extension of q. □
+      </paragraph>
+      <paragraph label="Definition 79">
+       HEX-programs are defined as follows: HEX-programA HEX-program consists of rules r of form{a mathematical formula} where each {a mathematical formula}ai is an (ordinary) atom, each {a mathematical formula}bj is either an ordinary atom or an external atom, and {a mathematical formula}n+m&gt;0.
+      </paragraph>
+      <paragraph>
+       Like for ordinary logic programs, we refer to {a mathematical formula}H(r)={a1,…,an} as the head of r, and to {a mathematical formula}B(r)={b1,…,bk,notbk+1,…,notbn} as the body of r.
+      </paragraph>
+      <paragraph label="Example 80">
+       Consider the program Π{a mathematical formula} Informally, this program implements a choice from {a mathematical formula}p(c) and {a mathematical formula}q(c) □
+      </paragraph>
+      <paragraph>
+       A program is ground, no variables occur in it. For non-ground HEX-programs, a suitable safety conditions allows to use a grounding procedure that transforms the program to a ground program with the same answer sets.
+      </paragraph>
+      <paragraph>
+       Semantics. The semantics of a HEX-program is defined via interpretations I over the Herbrand base, which is naturally generalized from ordinary logic programs as follows:
+      </paragraph>
+      <paragraph label="Definition 81">
+       Herbrand baseThe Herbrand Base of a HEX-program Π, denoted {a mathematical formula}HB(Π) is the set of all atoms constructable from the predicates occurring in Π and the constants from {a mathematical formula}C.
+      </paragraph>
+      <paragraph>
+       Given a HEX-program Π, satisfaction of (sets of) literals, rules, etc. O w.r.t. an interpretation I over {a mathematical formula}HB(Π), denoted {a mathematical formula}I⊨O, extends naturally from ordinary [46] to HEX-programs, and the satisfaction of a ground external atom {a mathematical formula}&amp;g[y→](x→) is more involved. It is given by the value of a {a mathematical formula}1+|y→|+|x→|-ary Boolean function {a mathematical formula}f&amp;g. Formally,
+      </paragraph>
+      <paragraph label="Definition 82">
+       SatisfactionLet Π be a HEX-program and {a mathematical formula}I⊆HB(Π) an interpretation. The satisfaction relation is defined as follows:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        for an ordinary atom b, {a mathematical formula}I⊨b, if {a mathematical formula}b∈I, and {a mathematical formula}I⊭b, if {a mathematical formula}b∉I;
+       </list-item>
+       <list-item label="•">
+        for a ground external atom {a mathematical formula}&amp;g[y→](x→), {a mathematical formula}I⊨&amp;g[y→](x→), if {a mathematical formula}f&amp;g(I,y→,x→)=1, and {a mathematical formula}I⊭&amp;g[y→](x→), if {a mathematical formula}f&amp;g(I,y→,x→)=0;
+       </list-item>
+       <list-item label="•">
+        I satisfies an (ordinary or external) literal {a mathematical formula}notb, if {a mathematical formula}I⊭b;
+       </list-item>
+       <list-item label="•">
+        I satisfies a rule of form (A.2), if {a mathematical formula}I⊨ai for some {a mathematical formula}1≤i≤k or {a mathematical formula}I⊭bi for some {a mathematical formula}1≤i≤m or {a mathematical formula}I⊨bi for some {a mathematical formula}m&lt;i≤n;
+       </list-item>
+       <list-item label="•">
+        I satisfies a ground HEX-program Π (I is a model of Π), if {a mathematical formula}I⊨r for all rules r of Π.
+       </list-item>
+      </list>
+      <paragraph label="Definition 83">
+       The answer sets of HEX-programs are defined in terms of the flp-reduct. flp reductLet Π be a HEX-program and let I be an assignment. An flp-reduct of Π w.r.t. I is a program {a mathematical formula}ΠflpI={r∈Π|I⊨B(r)}.
+      </paragraph>
+      <paragraph label="Definition 84">
+       flp-answer setGiven a HEX-program Π, an assignment I is an flp-answer set of Π, if I is a ⊆-minimal model of {a mathematical formula}ΠflpI. {a mathematical formula}ASflp(Π) denotes the set of all flp-answer sets of a HEX-program Π.
+      </paragraph>
+      <paragraph label="Example 85">
+       Recall the HEX-program from Example 80 and consider an assignment {a mathematical formula}I1={d(c)}. The reduct {a mathematical formula}ΠflpI1 of Π relative to {a mathematical formula}I1 is as follows: {a mathematical formula}ΠflpI1={d(c);p(c)←&amp;diff[d,q](c)}. Observe, that {a mathematical formula}I1 is a minimal model of {a mathematical formula}ΠflpI1, therefore {a mathematical formula}I1∈ASflp(Π).The assignment {a mathematical formula}I2={d(c),q(c)} is another flp-answer set of Π. Indeed, the flp-reduct comprises {a mathematical formula}ΠflpI2={d(c);q(c)←&amp;diff[d,p](c)}. As {a mathematical formula}I2 is the minimal model of {a mathematical formula}ΠflpI2, we get that {a mathematical formula}I2∈ASflp(Π). □
+      </paragraph>
+     </section>
+     <section label="A.2">
+      <section-title>
+       From HEX-programs to DL-programs
+      </section-title>
+      <paragraph>
+       We now provide a correlation between DL-programs and HEX-programs.
+      </paragraph>
+      <paragraph>
+       Let {a mathematical formula}Π=〈O,P〉 be a DL-program, where {a mathematical formula}O is a consistent ontology fixed as an external source and {a mathematical formula}P is a set of DL-rules. DL-atoms are encoded as external atoms of the form {a mathematical formula}&amp;DL[c+,c−,r+,r−,Q](x→), where {a mathematical formula}c+,c− ({a mathematical formula}r+,r−) are binary (resp. ternary) predicates and Q is a string which encodes an ontology query. The query Q is a possibly negated ontology concept or a role name, concept or role subsumption or its negation.
+      </paragraph>
+      <paragraph>
+       The oracle function of {a mathematical formula}&amp;DL is defined by{a mathematical formula} where {a mathematical formula}UI(c+,c−,r+,r−) is an update to {a mathematical formula}O, specified by the (extension of the) predicates {a mathematical formula}c+,c−,r+,r−. More specifically, it contains for each {a mathematical formula}c+(C,a)∈I (resp. {a mathematical formula}c−(C,a)∈I), a concept assertion {a mathematical formula}C(a) (resp. {a mathematical formula}¬C(a)). Updates of roles, generated by the predicates {a mathematical formula}r+ and {a mathematical formula}r− are analogous.
+      </paragraph>
+      <paragraph label="Example 86">
+       {a mathematical formula}DL[Male⊎boy;Male](X) from Fig. 1 is translated to {a mathematical formula}&amp;DL[c+,c−,r+,r−,Male](X), s.t. {a mathematical formula}P is extended by the rule {a mathematical formula}c+(Male,X)←boy(X), and the predicate {a mathematical formula}c+ does not occur elsewhere {a mathematical formula}P.The rule (9) of {a mathematical formula}P in Fig. 1 corresponds to the following rules in the HEX-program:{a mathematical formula}
+      </paragraph>
+     </section>
+    </section>
+    <section label="Appendix B">
+     Proofs of Section 3
+     <paragraph label="Proof of Theorem 18">
+      (i) {a mathematical formula}NP-completeness result for normal Π and {a mathematical formula}x=weak.(Membership) Let {a mathematical formula}Π=〈O,P〉 be a normal DL-program, where {a mathematical formula}O=〈T,A〉. The algorithm of deciding whether {a mathematical formula}RAS(Π)≠∅ proceeds as follows: we guess an interpretation I, the values of the DL-atoms and the repair ABox {a mathematical formula}A′. We then check whether I is a repair answer set of Π as follows:
+      <list>
+       evaluate all DL-atoms over {a mathematical formula}O′=〈T,A′〉 and compare their values with the guessed values;check whether I is a minimal model of the reduct {a mathematical formula}PweakI,O′.The check (1) is feasible in polynomial time, which follows from the
+      </list>
+      <paragraph>
+       Proposition 17. As for the check (2), observe that the reduct {a mathematical formula}PweakI,O′ is constructable in polynomial time, and it is a normal positive ASP program, which has a single model. Therefore, the check (2) is also polynomial. The above algorithm solves the target problem, which proves its membership in {a mathematical formula}NP.(Hardness) The {a mathematical formula}NP-hardness is inherited from ordinary normal logic programs, whose repair answer sets coincide with their answer sets; as deciding answer set existence for normal logic programs is {a mathematical formula}NP-hard [61], the result follows.(ii) {a mathematical formula}Σ2P-completeness result for arbitrary Π and {a mathematical formula}x=weak.(Membership) The overall algorithm of deciding the existence of a weak repair answer set proceeds as follows: we guess an interpretation I, values of DL-atoms and an ABox {a mathematical formula}A′ and then check whether:
+      </paragraph>
+      <list>
+       <list-item label="(1)">
+        the real values of DL-atoms over I and {a mathematical formula}O′=〈T,A′〉 coincide with the guessed values;
+       </list-item>
+       <list-item label="(2)">
+        I is a minimal model of {a mathematical formula}PweakI,O′.
+       </list-item>
+      </list>
+      <paragraph>
+       Like in (i) the check (1) is polynomial. {a mathematical formula}PweakI,O is a propositional disjunctive program. Deciding whether I is its minimal model can be verified with a call to an {a mathematical formula}NP oracle, from which the membership in {a mathematical formula}Σ2P follows.(Hardness) Similar like in (i), the hardness results for arbitrary DL-programs and weakRAS-existence are inherited from the answer set existence for ordinary disjunctive logic programs.(iii) {a mathematical formula}Σ2P-completeness result for normal Π and {a mathematical formula}x=flp.(Membership) We can guess a repair {a mathematical formula}A′ together with an interpretation I and then check whether I is an flp-repair answer set of {a mathematical formula}Π′=〈O′,P〉, where {a mathematical formula}O′=〈T,A′〉. Constructing the reduct {a mathematical formula}PflpI,O′ is polynomial, as we only need to pick those rules of Π whose body is satisfied by I, and all DL-atoms can be evaluated in polynomial time. With the reduct {a mathematical formula}PflpI,O′ at hand we then need to check whether
+      </paragraph>
+      <list>
+       <list-item label="(1)">
+        all values of DL-atoms over {a mathematical formula}O′ coincide with the guessed ones;
+       </list-item>
+       <list-item label="(2)">
+        I is a minimal model of {a mathematical formula}PflpI,O′.
+       </list-item>
+      </list>
+      <paragraph>
+       The check (1) can be done in polynomial time. For (2) we have that the interpretation I is not a minimal model of {a mathematical formula}PflpI,O′ iff there exists an interpretation {a mathematical formula}I′⊂I such that {a mathematical formula}I′⊨PflpI,O′. A guess for {a mathematical formula}I′ is verifiable in polynomial time, thus deciding whether I is not an answer set of {a mathematical formula}PflpI,O′ is in {a mathematical formula}NP. From this we get that deciding whether I is an answer set of {a mathematical formula}PflpI,O′ is in {a mathematical formula}co-NP. Hence for the check (ii) we need to make a call to a {a mathematical formula}co-NP oracle. Since having an oracle for {a mathematical formula}co-NP is equivalent to having an oracle for {a mathematical formula}NP, we get that the overall problem can be solved in {a mathematical formula}NPNP=Σ2P.(Hardness) We prove the {a mathematical formula}Σ2p-hardness result by a reduction from deciding validity of a QBF formula{a mathematical formula} where {a mathematical formula}E=χ1∨…∨χr is a DNF formula, and each {a mathematical formula}χk=lk1∧lk2∧lk3 is a conjunction of literals over atoms {a mathematical formula}x1,…,xn,y1,…,ym.For each atom {a mathematical formula}xi we introduce a fresh concept {a mathematical formula}Xi, and for each atom {a mathematical formula}yj we introduce a fresh concept {a mathematical formula}Yj and a fresh logic program predicate {a mathematical formula}yj. Furthermore, we introduce an additional fresh predicate w. Given ϕ, we construct {a mathematical formula}Π=〈∅,A,P〉 with {a mathematical formula}A={X1(b),…,Xn(b)} and {a mathematical formula}P as follows:{a mathematical formula}{a mathematical formula} Intuitively, the rules of the form (1) of {a mathematical formula}P ensure that for each {a mathematical formula}xi at least one of {a mathematical formula}Xi(b) and {a mathematical formula}¬Xi(b) is present in the repair ABox {a mathematical formula}A′, while the rules (2) and (3) forbid that {a mathematical formula}Yj(b) resp. {a mathematical formula}¬Yj(b) is in {a mathematical formula}A′. The rule (4) forces each consistent flp-repair answer set of Π to contain {a mathematical formula}w(b). The rule (5) ensures that the ground atoms of the form {a mathematical formula}yj(b) are also contained in each repair answer set. Finally, the rules of the form (6) are present in {a mathematical formula}P for each clause {a mathematical formula}χk of ϕ. For each literal {a mathematical formula}lkh in {a mathematical formula}χk these rules have a DL-atom {a mathematical formula}f(lkh) in the body, which poses to the ontology under some updates an instance query corresponding to the literal {a mathematical formula}lkh.We now formally show that ϕ is valid iff {a mathematical formula}RASflp(Π)≠∅.{a mathematical formula}(⇒) Let ϕ be valid and let {a mathematical formula}ν(ϕ) be a satisfying assignment, i.e. for all extensions of ν to variables {a mathematical formula}y1,…,ym it holds that {a mathematical formula}ν(ϕ) is true. From this we construct a repair ABox {a mathematical formula}A′ as follows. If {a mathematical formula}ν(xi)=true, then {a mathematical formula}Xi(b)∈A′, otherwise {a mathematical formula}¬Xi(b)∈A′. By construction the repair {a mathematical formula}A′ represents a maximal consistent subset of {a mathematical formula}{Xi(b), {a mathematical formula}¬Xi(b)|1≤i≤n}. Therefore, the constraints (1)–(3) are not violated under {a mathematical formula}A′.We now show that for any interpretation I the body of at least one rule of the form (6) of {a mathematical formula}Π′=〈∅,A′,P〉 must be satisfied by I. Let us consider various possibilities for an interpretation I of {a mathematical formula}Π′.
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}I∩{y1(b),…,ym(b)}=∅. Let us look at an extension {a mathematical formula}ν′ of ν, under which all variables {a mathematical formula}yj of ϕ are false. Since {a mathematical formula}ν′(ϕ)=true, there must exist a clause {a mathematical formula}χk, such that {a mathematical formula}ν′(χk)=true. Consider the rule {a mathematical formula}rk of the form (6) that corresponds to {a mathematical formula}χk. The clause {a mathematical formula}χk is a conjunction of literals, thus all of its conjuncts over {a mathematical formula}yj must be negative. We have that each {a mathematical formula}¬yj occurring in {a mathematical formula}χk corresponds to a DL-atom of the form {a mathematical formula}f(¬yj)=DL[Yj⋂̵yj,Yj⩁w;¬Yj](b). As {a mathematical formula}yj(b)∉I, it holds that {a mathematical formula}λI(f(yj))={¬Yj(b)}, leading to {a mathematical formula}I⊨O′f(¬yj). All DL-atoms of the forms {a mathematical formula}f(xi) and {a mathematical formula}f(¬xi) are satisfied by the construction of {a mathematical formula}A′.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}I∩{y1(b),…ym(b)}≠∅. Let us look at an extension {a mathematical formula}ν′ of ν such that{a mathematical formula} Since {a mathematical formula}ν(ϕ) is a satisfying assignment of ϕ, there must exist a clause {a mathematical formula}χk in ϕ such that {a mathematical formula}ν′(χk)=true. Let us look at the rule {a mathematical formula}rk of the form (6) corresponding to {a mathematical formula}χk. For all literals {a mathematical formula}lkh we have that {a mathematical formula}I⊨f(lkh). Indeed, if {a mathematical formula}lkh is a literal over {a mathematical formula}xi, then the corresponding DL-atom is true by construction of {a mathematical formula}A′. If {a mathematical formula}lkh=yj then as {a mathematical formula}ν′(yj)=true we have that {a mathematical formula}yj(b)∈I and thus {a mathematical formula}λI(f(yj))={Yj(b)}. Similarly, if {a mathematical formula}lkh=¬yj, then {a mathematical formula}λI(f(¬yj))={¬Yj(b)}. Therefore, {a mathematical formula}I⊨f(lkh) for all {a mathematical formula}lkh occurring in {a mathematical formula}χk.
+       </list-item>
+      </list>
+      <paragraph>
+       So we have that for any I the body of at least one rule {a mathematical formula}rk of the form (6) must be satisfied, and hence the rule {a mathematical formula}rk must be present in the reduct {a mathematical formula}PflpI,O′. Moreover, if {a mathematical formula}Π′ has some flp-answer set I, then it must contain {a mathematical formula}w(b) (this follows from {a mathematical formula}w(b)←notw(b)), and thus the rule of the form (4) is not in {a mathematical formula}PflpI,O′. Finally, according to the rules (5) the answer set I should also contain all {a mathematical formula}yj(b) for {a mathematical formula}1≤j≤m.As there are no other atoms which could be in the answer set, we now show that {a mathematical formula}I={w(b),y1(b),…,ym(b)} is a minimal model of {a mathematical formula}PflpI,O. First, obviously I satisfies all rules of the reduct; we only need to show its minimality. Towards a contradiction, assume that there is an interpretation {a mathematical formula}I′⊂I, such that {a mathematical formula}I′⊨PflpI,O′. There are two possibilities: either {a mathematical formula}w(b)∈I′ or {a mathematical formula}w(b)∉I′. The former can not be true, as then there is some {a mathematical formula}yj(b), such that {a mathematical formula}yj(b)∉I′, and hence for some rule r of the form (5) we have that r is not satisfied by {a mathematical formula}I′. If the latter holds, then we know that there are no rules of the form (6), whose body is satisfied by {a mathematical formula}I′. Consider an extension {a mathematical formula}ν″ of the assignment ν to the atoms {a mathematical formula}yj, such that {a mathematical formula}ν″(yj)=true, if {a mathematical formula}yj(b)∈I′, and {a mathematical formula}ν″(yj)=false otherwise. We know that {a mathematical formula}ν″(ϕ)=true, i.e. there is a disjunct {a mathematical formula}χk in ϕ, such that {a mathematical formula}ν″(χk)=true. Let us look at the rule {a mathematical formula}rk corresponding to the disjunct {a mathematical formula}χk. All DL-atoms {a mathematical formula}f(xi) are satisfied by {a mathematical formula}I′, due to the construction of the ABox {a mathematical formula}A′. The DL-atoms of the forms {a mathematical formula}f(yj) are satisfied by {a mathematical formula}I′, because {a mathematical formula}yj(b)∈I′, and thus {a mathematical formula}λI(f(yj))⊨Yj(b). Similarly, the DL-atoms of the form {a mathematical formula}f(¬yj) are satisfied, as for them we have that {a mathematical formula}yj(b)∉I′, and thus {a mathematical formula}λI(f(¬yj))⊨¬Yj(b). Hence {a mathematical formula}I′ must satisfy {a mathematical formula}B(rk); but since {a mathematical formula}w(b)∉I′, we have that {a mathematical formula}I′⊭rk, leading to a contradiction. Therefore, I is indeed an flp-repair answer set of Π.{a mathematical formula}(⇐) Let {a mathematical formula}I∈RASflp(Π) be some flp-repair answer set of Π with a repair ABox {a mathematical formula}A′, i.e. {a mathematical formula}I∈ASflp(〈T,A′,P〉). Since I is a repair answer set, the repair ABox {a mathematical formula}A′ must contain a nonempty consistent subset of {a mathematical formula}{Xi(b),¬Xi(b)}, {a mathematical formula}1≤i≤n because of constraints of the form (1). We construct an assignment ν of ϕ from {a mathematical formula}A′ as follows:{a mathematical formula} We now show that ν is a satisfying assignment of ϕ, i.e. for any extension {a mathematical formula}ν′ of ν to the values of {a mathematical formula}yj, we have that {a mathematical formula}ν′(ϕ)=true. Towards a contradiction, assume that this is not the case, i.e. there exists an extension {a mathematical formula}ν′ of ν to the values of {a mathematical formula}yj, such that {a mathematical formula}ν′(ϕ)=false, that is {a mathematical formula}ν′(χk)=false for all clauses {a mathematical formula}χk of ϕ.Let us now look at the interpretation {a mathematical formula}I′ of {a mathematical formula}Π′, such that {a mathematical formula}yj(b)∈I′, if {a mathematical formula}ν′(yj)=true and {a mathematical formula}yj(b)∉I′, if {a mathematical formula}ν′(yj)=false. We know that {a mathematical formula}I⊃I′ is a minimal model of {a mathematical formula}PflpI,O′. Therefore, it must hold that {a mathematical formula}I′⊭r for some rule r of {a mathematical formula}PflpI,O′, i.e. {a mathematical formula}I′⊨B(r), but {a mathematical formula}I′⊭H(r). Observe that the reduct {a mathematical formula}PflpI,O′ contains only the rules (5) and (6). Since {a mathematical formula}w(b)∉I′ by construction, the rule r that {a mathematical formula}I′ does not satisfy can not be of the form (5), hence it must be of the form (6). Let us look at the corresponding clause {a mathematical formula}χk in ϕ. By our assumption {a mathematical formula}ν′(χk)=false, i.e. there is a conjunct {a mathematical formula}lkh in {a mathematical formula}χk, such that {a mathematical formula}ν′(lkh)=false. We distinguish the following cases:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}lkh is a literal over {a mathematical formula}xi. We know that {a mathematical formula}λI′(f(lkh))=∅, because {a mathematical formula}w(b)∉I. Thus it must be true that {a mathematical formula}A′⊨f(lkh). Since {a mathematical formula}A′ is a repair, by Definition 26 it must be consistent. Thus the query of {a mathematical formula}f(lkh) must be explicitly present in {a mathematical formula}A′, i.e. {a mathematical formula}Xi(b)∈A′, if {a mathematical formula}lkh=xi; {a mathematical formula}¬Xi(b)∈A′, if {a mathematical formula}lkh=¬xi. However, then by construction of {a mathematical formula}ν′ we have that {a mathematical formula}ν(lkh)=true, which leads to a contradiction.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}lkh is a literal over {a mathematical formula}yj. There are two possibilities: either {a mathematical formula}lkh=yj or {a mathematical formula}lkh=¬yj.
+       </list-item>
+      </list>
+      <paragraph>
+       We have shown that {a mathematical formula}ν′ is a satisfying assignment for ϕ for each extension of ν to variables {a mathematical formula}yj, from which the validity of ϕ follows.  □
+      </paragraph>
+     </paragraph>
+     <paragraph label="Proof of Proposition 28">
+      A guess for {a mathematical formula}A′ is verifiable in polynomial time, as deciding all {a mathematical formula}〈T,A′∪Ui〉⊨Qi is polynomial in {a mathematical formula}DL-LiteA[21]. {a mathematical formula}NP-hardness is shown by a reduction from SAT instances {a mathematical formula}ϕ=χ1∧⋯∧χm over atoms {a mathematical formula}x1,…,xn. We construct the ORP {a mathematical formula}R=〈〈T,∅〉,D1,D2〉, using concepts {a mathematical formula}Xi,X¯i for the {a mathematical formula}xi, {a mathematical formula}Cj for the {a mathematical formula}χj, and a fresh concept ν as follows:
+      <list>
+       {a mathematical formula}T={Xj⊑Ci,X¯j′⊑Ci|1≤i≤m,xj∈χi,¬xj′∈χi}{a mathematical formula}D1={〈∅,Ci(b)〉,〈Ui,¬Ci(b)〉,〈Vj,A(b)〉|1≤i≤m,1≤j≤n}, where {a mathematical formula}Ui={X¯k(b),Xk′(b)|xk∈χi,¬xk′∈χi}, {a mathematical formula}1≤i≤m, and {a mathematical formula}Vj={¬Xj(b),¬X¯j(b)}, {a mathematical formula}1≤j≤n; and{a mathematical formula}D2={〈∅,¬Ci(b)〉|1≤i≤m}∪{〈∅,A(b)〉}.Intuitively, by
+      </list>
+      <paragraph>
+       {a mathematical formula}D2 a repair {a mathematical formula}A′ must not contain {a mathematical formula}¬Ci(b) nor {a mathematical formula}A(b), and must be consistent. By {a mathematical formula}D1 the repair must entail {a mathematical formula}Ci(b). Therefore, for each i, the ABox {a mathematical formula}A′ must contain some {a mathematical formula}Xk (resp. {a mathematical formula}X¯k), such that {a mathematical formula}Xk⊑Ci (resp. {a mathematical formula}X¯k⊑Ci). Moreover, adding either {a mathematical formula}Ui or {a mathematical formula}Vj to {a mathematical formula}A′ causes inconsistency. The former implies that {a mathematical formula}A′ contains some {a mathematical formula}¬X¯k(b) (resp. {a mathematical formula}¬Xk(b)) such that {a mathematical formula}xk∈χk ({a mathematical formula}¬xk∈χk), and the latter implies that at least one of {a mathematical formula}¬Xk(b) and {a mathematical formula}¬X¯k(b) must be in {a mathematical formula}A′ for all {a mathematical formula}1≤k≤n. Since in addition the ABox is consistent as argued above, it can not contain both {a mathematical formula}¬X¯k and {a mathematical formula}¬Xk thus {a mathematical formula}A′ represents a consistent choice of literals that satisfies ϕ.We formally show that ϕ is satisfiable iff {a mathematical formula}R has a repair.(⇒) Let ν be a satisfying assignment for ϕ. We construct a repair ABox {a mathematical formula}A′ for {a mathematical formula}R as follows: if a variable {a mathematical formula}xk is set to true in the satisfying assignment of ϕ, then we add {a mathematical formula}Xk(b) and {a mathematical formula}¬X¯k(b) to the ABox {a mathematical formula}A′, otherwise, i.e. if {a mathematical formula}xk is set to false in ν, we add {a mathematical formula}X¯k(b) and {a mathematical formula}¬Xk(b) to {a mathematical formula}A′. We now verify whether the constructed ABox is indeed a repair for {a mathematical formula}R by checking whether it satisfies the conditions (i) to (iii) of Definition 26.
+      </paragraph>
+      <list>
+       <list-item label="(i)">
+        {a mathematical formula}T∪A′ is consistent, since ν is a consistent set of literals (not both {a mathematical formula}Xk(b) and {a mathematical formula}¬Xk(b) (resp. {a mathematical formula}X¯k(b),¬X¯k(b)) can be present in {a mathematical formula}A′).
+       </list-item>
+       <list-item label="(ii)">
+        We check whether for all {a mathematical formula}〈Ui1,Qi1〉∈D1 it holds that {a mathematical formula}T∪A′∪Ui1⊨Qi1. Let us first consider {a mathematical formula}〈∅,Ci〉,1≤i≤m. Observe that ν is a satisfying assignment of ϕ, therefore each clause of ϕ is satisfied under ν. Thus, for each clause either there exists a variable {a mathematical formula}xj occurring as a disjunct in the clause {a mathematical formula}Ci positively and being set to true in the satisfying assignment ν or occurring negatively as a disjunct in {a mathematical formula}Ci and being set to false in ν. By construction of {a mathematical formula}A′, we have that {a mathematical formula}T∪A′⊨Ci(b) for all {a mathematical formula}1≤i≤m due to the inclusion {a mathematical formula}Xj⊑Ci (resp. {a mathematical formula}X¯j⊑Ci). Similarly, we have that for all {a mathematical formula}Ui, {a mathematical formula}A′∪Ui is inconsistent and, therefore trivially entails {a mathematical formula}¬Ci(b). Finally, since the assignment ν is full, each {a mathematical formula}xi has a truth value. Hence, due to the form of updates {a mathematical formula}Vj, we have that {a mathematical formula}A′∪Vj is inconsistent for all j, and thus the queries {a mathematical formula}A(b) are also entailed.
+       </list-item>
+       <list-item label="(iii)">
+        It is left to show that for all {a mathematical formula}〈Ui2,Qi2〉∈D2 we have that {a mathematical formula}T∪A′∪Ui2⊭Qi2. The latter holds since the ontology {a mathematical formula}〈T,A′〉 is consistent, and there is no way to derive either {a mathematical formula}¬C(b) or {a mathematical formula}A(b) by means of the TBox axioms and the facts in {a mathematical formula}A′.
+       </list-item>
+      </list>
+      <paragraph>
+       The above shows that the ABox {a mathematical formula}A′ is indeed a solution to the {a mathematical formula}R.{a mathematical formula}(⇐) Now assume that there exists an ABox {a mathematical formula}A′ that is a solution to {a mathematical formula}R. We show that then the formula ϕ is satisfiable. First since {a mathematical formula}T∪A′∪Vj⊨A(b), {a mathematical formula}T∪A′⊭A(b) and {a mathematical formula}T∪Vj⊭A(b), we have that {a mathematical formula}T∪A′∪Vj must be inconsistent. Moreover, as {a mathematical formula}T∪A′⊭¬Ci(b), we know that the inconsistency must occur due to the facts {a mathematical formula}Xj(b), {a mathematical formula}Xj¯(b). Therefore, for each j either {a mathematical formula}¬Xj(b) or {a mathematical formula}¬X¯j(b) must be in {a mathematical formula}A′. Observe now, that due to {a mathematical formula}〈∅,Ci(b)〉,〈Ui,¬Ci(b)〉∈D1, the ABox {a mathematical formula}A′ must contain such {a mathematical formula}Xj(b) (resp. {a mathematical formula}X¯j(b)), that {a mathematical formula}xj (resp. {a mathematical formula}¬xj) is a disjunct in the clause {a mathematical formula}χi. Moreover, due to {a mathematical formula}〈Ui,¬Ci(b)〉 for some k such that {a mathematical formula}xk∈χi (or {a mathematical formula}¬xk∈χi), it must hold that {a mathematical formula}¬X¯k(b) (resp. {a mathematical formula}¬Xk(b)) is in {a mathematical formula}A′. The above argument shows that the ABox {a mathematical formula}A′ encodes a satisfying assignment ν for ϕ: if {a mathematical formula}Xi(b)∈A′, then {a mathematical formula}ν(xi)=true; if {a mathematical formula}X¯i(b)∈A′, then {a mathematical formula}ν(xi)=false.  □
+      </paragraph>
+     </paragraph>
+     <paragraph label="Proof of Theorem 29">
+      {a mathematical formula}NP-hardness of an ORP holds by a reduction from SAT. Given {a mathematical formula}ϕ=χ1∧⋯∧χm on atoms {a mathematical formula}x1,…,xn, we construct {a mathematical formula}R=〈〈∅,∅〉,D1,D2〉, with concepts {a mathematical formula}Xj,X¯j for the {a mathematical formula}xj and a fresh concept A, such that
+     </paragraph>
+     <list>
+      <list-item label="•">
+       {a mathematical formula}D1={〈Ui,A(b)〉,〈Vj,A(b)〉|1≤i≤m,1≤j≤n}, where {a mathematical formula}Ui={X¯j(b), {a mathematical formula}Xj′(b)|xj∈χi,¬xj′∈χi}, {a mathematical formula}1≤i≤m and {a mathematical formula}Vj={¬Xj(b),¬X¯j(b)}, {a mathematical formula}1≤j≤n, and
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}D2={〈∅,A(b)〉}.
+      </list-item>
+     </list>
+     <paragraph label="Proof of Theorem 37">
+      The guess of the repair {a mathematical formula}A′⊆A out of {a mathematical formula}2n candidates, where {a mathematical formula}n=|A|, is verifiable in polynomial time. The {a mathematical formula}NP-hardness for the cases (i) and (ii) is proved separately.
+     </paragraph>
+     <list>
+      <list-item label="(i)">
+       {a mathematical formula}NP-hardness for (i) is shown by a reduction from SAT instances {a mathematical formula}ϕ=χ1∧⋯∧χm over atoms {a mathematical formula}x1,…,xn. We construct the ORP {a mathematical formula}R=〈〈T,∅〉,D1,D2〉, where all {a mathematical formula}Uik are empty for {a mathematical formula}k∈{1,2}. We use concepts {a mathematical formula}Xj,X¯j,Xj′ for the {a mathematical formula}xj, {a mathematical formula}Ci for the {a mathematical formula}χi as follows:
+       <list>
+        {a mathematical formula}T={Xj⊑Ci,X¯j′⊑Ci,|xj∈χi,¬xj′∈χi,1≤i≤m}∪{X¯k⊑¬Xk′|1≤k≤n}{a mathematical formula}A={Xj(b),X¯j(b)|1≤j≤n}{a mathematical formula}D1={〈∅,Ci(b)〉|1≤i≤m},{a mathematical formula}D2={〈∅,¬(Xj⊑Xj′)〉|1≤j≤n}.We now formally prove that
+       </list>
+       <paragraph>
+        ϕ is satisfied iff {a mathematical formula}σdel solution for {a mathematical formula}R exists.{a mathematical formula}(⇒) Let ϕ be satisfiable, and let ν be a satisfying assignment of ϕ. From this we construct a solution {a mathematical formula}A′ to {a mathematical formula}R as follows: if {a mathematical formula}ν(xj)=true, then {a mathematical formula}Xj(b)∈A′, otherwise, {a mathematical formula}X¯j(b)∈A′. The ontology {a mathematical formula}O′=〈T,A′〉 is clearly consistent. Assume towards a contradiction that {a mathematical formula}A′ is not a solution to {a mathematical formula}R. That is, either (1) {a mathematical formula}D1 contains a tuple {a mathematical formula}〈∅,Qi1〉, such that {a mathematical formula}O′⊭Qi1 or (2) some {a mathematical formula}〈∅,Qj2〉 exists in {a mathematical formula}D2, such that {a mathematical formula}O′⊨Qj2. If (1) holds then {a mathematical formula}Ci(b) is not entailed for some i from {a mathematical formula}O′. That means that there is a conjunct {a mathematical formula}χi∈ϕ, such that for none of its disjuncts {a mathematical formula}xj (resp. {a mathematical formula}¬xj) we have the corresponding assertion {a mathematical formula}Xj(b) (resp. {a mathematical formula}X¯j(b)) in {a mathematical formula}A′. Hence by construction none of the literals in {a mathematical formula}χi is true under ν, meaning that {a mathematical formula}ν(χi)=false and thus {a mathematical formula}ν(ϕ)=false, i.e. contradiction. If (2) holds then for some j we have that {a mathematical formula}Xj(b) and {a mathematical formula}¬Xj′(b) are entailed by {a mathematical formula}O′. As by construction of {a mathematical formula}A′ it holds that {a mathematical formula}A′⊆A, both {a mathematical formula}Xj(b) and {a mathematical formula}¬Xj′(b) are entailed only if {a mathematical formula}Xj(b),X¯j(b)∈A′. This can not happen, as {a mathematical formula}A′ is built from a satisfying assignment ν of ϕ, and thus it represents a consistent set of values for {a mathematical formula}xj. Hence we arrived at a contradiction.{a mathematical formula}(⇐) Let {a mathematical formula}A′ be a {a mathematical formula}σdel solution to {a mathematical formula}R. From this we construct a satisfying assignment ν for ϕ as follows:{a mathematical formula} We show that {a mathematical formula}ν(ϕ)=true. Observe that for every {a mathematical formula}Ci there must exist {a mathematical formula}Xj (resp. {a mathematical formula}X¯j), such that {a mathematical formula}Xj⊑Ci (resp. {a mathematical formula}X¯j⊑Ci) due to the tuples {a mathematical formula}〈∅,Ci(b)〉 in {a mathematical formula}D1 and the fact that {a mathematical formula}A′⊆A. Thus by construction of ν in each clause {a mathematical formula}χi some disjunct is true. It is left to show that ν is well defined, i.e. it is not the case that (i) either {a mathematical formula}ν(xj)=true or {a mathematical formula}ν(xj)=true is defined for every j, and (ii) it is not the case that {a mathematical formula}ν(xj)=true and {a mathematical formula}ν(xj)=false for some j. In other words we need to show that {a mathematical formula}ν(xj)≠ν(¬xj). Towards a contradiction suppose that this is not the case. Then for some i it holds that {a mathematical formula}ν(xj) and {a mathematical formula}ν(¬xj) have the same value. Then {a mathematical formula}Xj(b) and {a mathematical formula}X¯j(b) are entailed from {a mathematical formula}O for some j, and therefore {a mathematical formula}Xj′(b) is also entailed from {a mathematical formula}O due to {a mathematical formula}X¯j⊑Xj′∈T. However, this means that {a mathematical formula}O′⊨¬(Xj⊑Xj′), which is forbidden by the respective tuple {a mathematical formula}〈,¬(Xj⊑Xj′)〉 in {a mathematical formula}D2. The latter means that {a mathematical formula}A′ is not a solution to {a mathematical formula}R, leading to a contradiction. Thus ν is a satisfying assignment of ϕ.
+       </paragraph>
+      </list-item>
+      <list-item label="(ii)">
+       {a mathematical formula}NP-hardness for (ii) is shown by a reduction from monotone not-all-equal SAT (NAE-SAT) instances {a mathematical formula}ϕ=χ1∧⋯∧χm over atoms {a mathematical formula}x1,…,xn[44]. In monotone NAE-SAT, all occurrences of literals in clauses are positive, but a formula is “satisfied” only if there is an assignment under which both a literal assigned to true and a literal assigned to false occur in each clause. We construct ORP {a mathematical formula}R=〈〈∅,∅〉,D1,D2〉, using concepts {a mathematical formula}Xj,X¯j for the {a mathematical formula}xj, {a mathematical formula}Ci for the {a mathematical formula}χi as follows:
+       <list>
+        {a mathematical formula}A={Xj(b),X¯j(b)|1≤j≤n},{a mathematical formula}D1={〈{¬Xj(b)|xj∈χi},Ci(b)〉,〈{¬X¯j′(b)|xj′∈χi},Ci(b)〉|1≤i≤m},{a mathematical formula}D2={〈∅,¬(Xj⊑¬X¯j)〉,〈∅,Ci(b)〉|1≤j≤n,1≤i≤m}.We now formally show that
+       </list>
+       <paragraph>
+        ϕ is a positive instance of monotone NAE-SAT iff the {a mathematical formula}R has some solution.(⇒) Let ϕ be a positive instance of monotone NAE-SAT, and let ν be the witnessing assignment. From this we construct the solution {a mathematical formula}A′ to {a mathematical formula}R as follows. {a mathematical formula}Xi(b)∈A′, if {a mathematical formula}ν(xj)=true, and {a mathematical formula}X¯j(b)∈A′, if {a mathematical formula}ν(xj)=false. Since for every clause {a mathematical formula}χi some {a mathematical formula}xj∈χi must be set to true, we have that some {a mathematical formula}Xj(b)∈A′, and hence the query of {a mathematical formula}〈{¬Xj(b)|xj∈χi},Ci(b)〉∈D1 is satisfied by inconsistency. Similarly, queries of tuples {a mathematical formula}〈{¬X¯j(b)|xj∈χi},Ci(b)〉∈D1 are satisfied, as at least one {a mathematical formula}xj in {a mathematical formula}χi is set to false, and by construction the respective {a mathematical formula}X¯j(b) is in {a mathematical formula}A′. The queries in {a mathematical formula}D2 are satisfied, since ν represents a consistent choice of values for {a mathematical formula}xj, and thus both {a mathematical formula}Xj(b) and {a mathematical formula}X¯j(b) can not be present in {a mathematical formula}A′.(⇐) Let {a mathematical formula}A′ be a solution to the {a mathematical formula}R. From this we construct the assignment of ϕ as follows.{a mathematical formula} Since {a mathematical formula}Ci can not be in {a mathematical formula}A′ by {a mathematical formula}〈∅,Ci〉∈D2 and {a mathematical formula}T=∅, we have that all queries in {a mathematical formula}D1 are entailed by inconsistency introduced by the updates, and hence in every clause at least one of {a mathematical formula}xj must be true and at least one {a mathematical formula}xj′ must be false. Furthermore, the assignment ν represents a consistent set of values for {a mathematical formula}xj by construction, since for all j not both {a mathematical formula}Xj(b) and {a mathematical formula}X¯j(b) can be in {a mathematical formula}A′ due to {a mathematical formula}〈∅,¬(Xj⊑X¯j)〉∈D2. □
+       </paragraph>
+      </list-item>
+     </list>
+     <paragraph label="Proof of Lemma 35">
+      By Proposition 5 inconsistency is introduced in a {a mathematical formula}DL-LiteA ontology with at most 2 ABox assertions, i.e. for every inconsistent {a mathematical formula}A∪T, an ABox {a mathematical formula}A′⊆A exists, such that {a mathematical formula}|A′|≤2, {a mathematical formula}A′∪T⊨α and {a mathematical formula}A′∪T⊨¬α for some assertion α. We have, either {a mathematical formula}|A′|=1, in which case the result is obtained, or there are consistent ABoxes {a mathematical formula}A″⊂A and {a mathematical formula}A‴⊂A, such that {a mathematical formula}A″∪T⊨α and {a mathematical formula}A‴∪T⊨¬α. Again we have {a mathematical formula}|A″|=|A‴|=1.  □
+     </paragraph>
+     <paragraph label="Proof of Theorem 36">
+      The proof exploits the property of ⋢ DL-queries established in Lemma 35, which states that at most one assertion α from {a mathematical formula}A is sufficient to derive the query.Now if {a mathematical formula}T∪Uji⊨Qji, we can drop {a mathematical formula}〈Uji,Qji〉 from {a mathematical formula}R if {a mathematical formula}i=1, and stop if {a mathematical formula}i=2 as no repair exists. Otherwise, we let the set {a mathematical formula}Suppji of {a mathematical formula}Qji contain all assertions α such that {a mathematical formula}T∪{α}∪Uji⊨Qji. Then, any repair {a mathematical formula}A′ must fulfill {a mathematical formula}A′∩Suppj1≠∅ for each j (i.e., be a hitting set), and must be disjoint with each {a mathematical formula}Suppj′2. Let then {a mathematical formula}Sj:=(Suppj1∩A)∖⋃j′Suppj′2. A {a mathematical formula}σdel-repair {a mathematical formula}A′ exists iff each {a mathematical formula}Sj is nonempty; the hitting sets of the {a mathematical formula}Sj are all the {a mathematical formula}σdel-repairs. The construction of the {a mathematical formula}Sj and the check can be done in polynomial time, thus the overall problem is tractable. Note that, furthermore, the (possibly exponentially many) {a mathematical formula}σdel-repairs can be output in total polynomial time.  □
+     </paragraph>
+     <paragraph label="Proof of Theorem 39">
+      We prove the statement for the case when few negative assertions are added to the ABox, i.e. {a mathematical formula}|A′−∖A|≤k. The case when few positive assertion are added to the ABox, i.e. {a mathematical formula}|A′+∖A|≤k is completely symmetric, and our proof can be easily adapted to treat is it as well.We provide an extension of the method for deletion repairs. Assuming that {a mathematical formula}〈T,A〉 is consistent (otherwise no {a mathematical formula}σbop-repair exists), we proceed as follows:
+      <list>
+       Like for deletion repairs, we compute the sets {a mathematical formula}Suppji. We simplify {a mathematical formula}OΠsuppP, resp. quit if no repair can exist, checking also whether {a mathematical formula}Suppji∩A≠∅ (as then {a mathematical formula}Qji is entailed). More specifically, whenever {a mathematical formula}Uji∪A∪T⊨Qji or {a mathematical formula}Suppji∩A≠∅,We then let {a mathematical formula}Sj=Suppj1∖(A∪⋃j′Suppj′2). Similar as in the proof of Theorem 36, the {a mathematical formula}σbop-repairs are then of the form {a mathematical formula}A′=A∪H where {a mathematical formula}H is a hitting set of the {a mathematical formula}Sj, but we must ensure that {a mathematical formula}〈T,A′〉 is consistent as {a mathematical formula}H consists of new assertions.We choose a set {a mathematical formula}H−⊆⋃jSj of at most k negative assertions, which is a partial hitting set, and check that {a mathematical formula}〈T,A∪H−〉 is consistent. If yes, we remove {a mathematical formula}Sj if it intersects with {a mathematical formula}H− and remove otherwise from {a mathematical formula}Sj each positive assertion α such that ¬α is entailed by {a mathematical formula}〈T,A∪H−〉, and all negative assertions.Then, for every hitting set {a mathematical formula}H+ of {a mathematical formula}Sj′, the ABox {a mathematical formula}A′=A∪H−∪H+ is a {a mathematical formula}σbop-repair. On the other hand, some {a mathematical formula}σbop-repair with few negative additions exists only if some choice for {a mathematical formula}H− succeeds.We now show the correctness of the proposed algorithm formally. Suppose that given the Ontology Repair Problem
+      </list>
+      <paragraph>
+       {a mathematical formula}R=〈O,D1,D2〉 as an input to the algorithm from above, the ABox {a mathematical formula}A′ was produced as the output after execution of the Steps 1-3. We prove that the ABox {a mathematical formula}A′ is indeed a {a mathematical formula}σbop-repair for {a mathematical formula}R, i.e. we prove that the conditions that a {a mathematical formula}σbop-repair needs to satisfy are indeed satisfied by {a mathematical formula}A′.
+      </paragraph>
+      <list>
+       <list-item label="(i)">
+        {a mathematical formula}T∪A′∪Uj1⊨Qj1 for all {a mathematical formula}〈Uj1,Qj1〉∈D1. Towards a contradiction, suppose that there is some {a mathematical formula}〈Uji1,Qji1〉∈D1, such that {a mathematical formula}A′∪T∪Uji1⊭Qji1. We know that by construction, it either holds that (1) {a mathematical formula}Uji1∪T⊨Qji1; (2) {a mathematical formula}A∩Suppji1, i.e. {a mathematical formula}A∪T⊨Qji1; (3) {a mathematical formula}H−⊆A′ hits {a mathematical formula}Sji or (4) {a mathematical formula}H+⊆A′ hits {a mathematical formula}Sji. For (1) and (2) we immediately get a contradiction. For (3) it holds that {a mathematical formula}H−∩Suppji1≠∅. Therefore, there is {a mathematical formula}α∈A′, such that {a mathematical formula}{α}∪Uj1∪T⊨Qji1.
+       </list-item>
+       <list-item label="(ii)">
+        {a mathematical formula}T∪A′∪Uj′2⊭Qj′2 for all {a mathematical formula}〈Uj′2,Qj′2〉∈D2. To the contrary, assume that there exists some {a mathematical formula}ji′, such that {a mathematical formula}T∪A′∪Uji′2⊨Qji′2. There are several possibilities: (1) {a mathematical formula}Uji′2∪T⊨Qji′2; (2) there is {a mathematical formula}α∈A, such that {a mathematical formula}{α}∪Uji′2∪T⊨Qji′2; (3) there is {a mathematical formula}α∈H−, such that {a mathematical formula}{α}∪T∪Uji′2⊨Qji′2; (4) there is {a mathematical formula}α∈H+, such that {a mathematical formula}{α}∪T∪Uji′2⊨Qji′2. Observe that if (1) or (2) were the case, then the algorithm would terminate at Step 1, and no repair {a mathematical formula}A′ would be in the output. For the case (3) we have that {a mathematical formula}H−∩Suppji′2≠∅. However, according to the Step 3 of our algorithm, it holds that {a mathematical formula}H−⊆⋃j(Suppj1\(A∪⋃j′Suppj′2)), meaning that {a mathematical formula}H−∩Suppji′2=∅, which leads to a contradiction.
+       </list-item>
+       <list-item label="(iii)">
+        {a mathematical formula}A′⊇A‖A′−∖A|≤k, i.e. there are at most k negative assertions in the ABox {a mathematical formula}A′.Finally, we show that the number of negative assertions in {a mathematical formula}A′\A is indeed bounded by k. Towards a contradiction, suppose that there are more then k negative assertions in {a mathematical formula}A′\A=H+∪H−. According to the Step 3 of our algorithm, it holds that {a mathematical formula}H− contains at most k negative assertions. Therefore, the rest of the negative assertions must be in {a mathematical formula}H+. The set {a mathematical formula}H+ is constructed at Step 4 as a hitting set of sets {a mathematical formula}Sj, which due to the Step 3 contain only positive assertions. Therefore, there are no negative assertions in the set {a mathematical formula}H+, moreover {a mathematical formula}T∪H+∪H− infers only at most k negative assertions, since {a mathematical formula}T contains only positive inclusions and {a mathematical formula}A∪H+∪H−∪T is guaranteed to be consistent at Step 3.
+       </list-item>
+      </list>
+      <paragraph>
+       This shows that the output {a mathematical formula}A′ is indeed a {a mathematical formula}σbop-repair for the {a mathematical formula}R with at most k negative assertions. The case when few positive assertions are allowed for addition is symmetric.Finally, we show that if a given {a mathematical formula}R has {a mathematical formula}σbop repairs, then after executing the Steps 1–3 some {a mathematical formula}σbop repair is found, i.e. {a mathematical formula}A′=A∪H+∪H−, such that {a mathematical formula}|H−|≤k. Assume towards a contradiction that this is not the case. We distinguish the cases based on stages of the algorithm at which the computation could have terminated.
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Suppose that the computation terminated at (1). Then there is some {a mathematical formula}〈Uj2,Qj2〉∈D2, such that either (i) {a mathematical formula}Uj2∪T⊨Qj2 or (ii) {a mathematical formula}A∩Suppj2≠∅. If (i) holds then by monotonicity we have that for any {a mathematical formula}A′ the condition (iii) of Definition 26 is not satisfied, i.e. {a mathematical formula}R does not have any solutions, which contradicts our assumption. If (ii) is the case, then there is some {a mathematical formula}α∈A, such that {a mathematical formula}α∪T⊨Qj2. Again due to monotonicity, for any ABox {a mathematical formula}A′⊇A it is true that {a mathematical formula}A′⊨Qj2. Thus all repairs {a mathematical formula}A′ for {a mathematical formula}R are such that {a mathematical formula}A′⊉A. Therefore, no {a mathematical formula}σbop repair exists for {a mathematical formula}R, contradicting our assumption.
+       </list-item>
+       <list-item label="•">
+        Assume that we have reached (2), and constructed the sets {a mathematical formula}Sj. Suppose that the computation stopped at (2), i.e. no hitting set {a mathematical formula}H of {a mathematical formula}Sj was found. This means that some {a mathematical formula}j1 exists, such that {a mathematical formula}Sj1=∅. Therefore, by construction of {a mathematical formula}Sj1 it holds that {a mathematical formula}Suppj1∖(A∪⋃j′Suppj′2)=∅. Since all {a mathematical formula}〈Uj1,Qj1〉, such that {a mathematical formula}Suppj1∩A≠∅ were removed from {a mathematical formula}D1 at (1), we have that for all {a mathematical formula}α∈Suppj11, it holds that {a mathematical formula}α∈Suppk2 for some k. Hence, for all ABoxes {a mathematical formula}A′=A∪α some {a mathematical formula}〈Uk2,Qk2〉∈D2 exists, such that {a mathematical formula}〈T,A′〉⊨Qk2, meaning that {a mathematical formula}R does not have any solutions, which leads to a contradiction.
+       </list-item>
+       <list-item label="•">
+        Suppose that the state (3) has been reached, i.e. some repair candidate {a mathematical formula}A′=A∪H was identified at (2), where {a mathematical formula}H is a hitting set of {a mathematical formula}Sj. At (3) we picked some set {a mathematical formula}H− and updated every {a mathematical formula}Sj by removing appropriate assertions from {a mathematical formula}Sj. Computation could not have stopped at (3), therefore, we are guaranteed to reach (4). Assume that the algorithm terminated at (4). Then it must be the case that no hitting set {a mathematical formula}H+ of updated {a mathematical formula}Sj has been found at (4); that is for all choices of {a mathematical formula}H− at (3) some {a mathematical formula}j1 exists, such that {a mathematical formula}Sj1=∅ at (4). Consider some particular {a mathematical formula}H−⊆⋃jSj of at most k assertions computed at (3), such that {a mathematical formula}〈T,A∪H−〉 is consistent. We have that {a mathematical formula}Sj1∩H−=∅ at (3), since otherwise {a mathematical formula}Sj1 would have been removed and would have not been considered in the computation of a hitting set {a mathematical formula}H+ at (4). We have that for all positive {a mathematical formula}α∈Sj1, the ontology {a mathematical formula}〈T,A∪H−∪{α}〉 is inconsistent. As {a mathematical formula}〈Uj11,Qj11〉 was not dropped at (1), we have that {a mathematical formula}〈T,Uj11∪A〉⊭Qj11. Therefore, it follows by Lemma 35 that no {a mathematical formula}σbop-repair exists, such that {a mathematical formula}|A′−∖A|≤k, leading to a contradiction.
+       </list-item>
+      </list>
+      <paragraph>
+       We have shown that if {a mathematical formula}R has solutions with at most k negative assertions, then some such solution will be found by our algorithm. The argument can be accordingly adjusted to prove the statement for few positive assertions are allowed for addition.  □
+      </paragraph>
+     </paragraph>
+    </section>
+    <section label="Appendix C">
+     Proofs for Section 4
+     <paragraph label="Proof of Lemma 13">
+      We prove each “if” direction of the statement separately.
+     </paragraph>
+     <list>
+      <list-item label="•">
+       We first show that if {a mathematical formula}I⊨Od then {a mathematical formula}I⊨OdIDL[ϵ;Q](t→). Let {a mathematical formula}I⊨Od. That means that {a mathematical formula}O∪λI(d)⊨Q(t→). By definition, we have that {a mathematical formula}λI(d)={P(t→)|p(t→)∈IandP⊎p∈λ}∪{¬P(t→)|p(t→)∈IandP⩁p∈λ}. Therefore, {a mathematical formula}T∪{Pp⊑P|P⊎p∈λ}∪{Pp⊑¬P|P⩁p∈λ}∪A∪{Pp(t→)∈Ad|p(t→)∈I}⊨λI(d), i.e. {a mathematical formula}OdI⊨λI(d), and hence {a mathematical formula}OdI⊨Q(t→). Therefore, we get that {a mathematical formula}I⊨OdIDL[ϵ;Q](t→).
+      </list-item>
+      <list-item label="•">
+       We now prove the opposite direction, i.e. if {a mathematical formula}I⊨OdIDL[ϵ;Q](t→) then {a mathematical formula}I⊨Od, where {a mathematical formula}d=DL[λ;Q](t→). Let {a mathematical formula}I⊨OdIDL[ϵ;Q](t→). Then we have that {a mathematical formula}Td∪A∪{Pp(t→)∈Ad|p(t→)∈I}⊨Q(t→). By construction of {a mathematical formula}OdI, λ must be as follows: {a mathematical formula}P⊎p∈λ iff {a mathematical formula}Pp⊑P∈Td; {a mathematical formula}P⩁p∈λ iff {a mathematical formula}Pp⊑¬P∈Td. Therefore, for all {a mathematical formula}P′∈sig(A∩(Ad\A)), we have that if {a mathematical formula}Td∪A∪{Pp(t→)|p(t→)∈I}⊨P′(t→′) then {a mathematical formula}T∪A∪λI(d)⊨P′(t→′). As {a mathematical formula}Q∉sig(Ad\A), we obtain that {a mathematical formula}O∪λI(d)⊨Q(t→), and hence {a mathematical formula}I⊨Od.
+      </list-item>
+      <list-item label="•">
+       The last implications, i.e. {a mathematical formula}I⊨OdIDL[ϵ;Q](t→) iff {a mathematical formula}I⊨OdIQ(t→) are immediate from the definition of a DL-atom's satisfaction by an interpretation. □
+      </list-item>
+     </list>
+     <paragraph label="Proof of Theorem 54">
+      (Soundness of RepAns) Let {a mathematical formula}A′ be an output of RepAns. Towards a contradiction, suppose {a mathematical formula}A′∉rep(σ,x)Iˆ|Π(Π). Then {a mathematical formula}Iˆ|Π∉AS(Π′), where {a mathematical formula}Π′=〈T,A′,P〉 and {a mathematical formula}A′ is σ-selected. Clearly, {a mathematical formula}A′ is σ-selected, since otherwise {a mathematical formula}A′∉ORP(Iˆ,Π,σ) and {a mathematical formula}A′ is not in the output. As it holds that {a mathematical formula}Iˆ∈AS(Πˆ), it must hold that either {a mathematical formula}Iˆ is not a compatible set of {a mathematical formula}Π′ or it is not x-founded. If either of these cases is true, then the corresponding procedure CMP or xFND returns false and {a mathematical formula}A′ is not in the output, which leads to contradiction.(Completeness of RepAns) Let {a mathematical formula}rep(σ,x)Iˆ|Π(Π) be the set of all σ-selected repairs for Π that turn {a mathematical formula}Iˆ|Π into an x-repair answer set. Towards a contradiction, assume that there exists some {a mathematical formula}A′∈rep(σ,x)Iˆ|Π(Π) which is not an output of the algorithm RepAns. Then either (1) {a mathematical formula}A′∉ORP(Iˆ,Π,σ); (2) {a mathematical formula}CMP(Iˆ,〈T,A′,P〉)=false or (3) {a mathematical formula}xFND(Iˆ,〈T,A′,P〉)=false. If (1) holds, then {a mathematical formula}A′ is not a solution of the ORP instance. Thus either {a mathematical formula}〈T,A′〉 is unsatisfiable (contradiction to {a mathematical formula}A′∈rep(σ,x)Iˆ|Π(Π) by the definition of repair) or the actual values of the DL-atoms do not coincide with the replacement atoms in {a mathematical formula}Πˆ (contradiction due to the failure of the compatibility check). Finally, if either (2) or (3) holds then we obtain a contradiction, since {a mathematical formula}A′∈rep(σ,x)Iˆ|Π(Π) implies {a mathematical formula}Iˆ|Π should be compatible and x-founded.Soundness and Completeness of RepAnsSet follow immediately from the soundness and completeness of RepAns, respectively, and Proposition 51.  □
+     </paragraph>
+     <paragraph label="Proof of Theorem 55">
+      (i) {a mathematical formula}NP-completeness result for {a mathematical formula}x=weak.(Membership) Given a candidate interpretation {a mathematical formula}I=Iˆ|Π for some {a mathematical formula}Iˆ∈AS(Πˆ), we guess a repair {a mathematical formula}A′ and then check whether I satisfies all rules of the reduct {a mathematical formula}PweakI,O. Both the construction of the reduct {a mathematical formula}PweakI,O and the check whether I satisfies all rules of {a mathematical formula}PweakI,O is polynomial, from which the membership in {a mathematical formula}NP is obtained.(Hardness) To prove {a mathematical formula}NP-hardness, we reduce 3SAT to deciding whether a given interpretation I obtained from answer set {a mathematical formula}Iˆ∈AS(Πˆ) is a weak repair answer set of Π as follows.Let {a mathematical formula}ϕ=C1∧⋯∧Cm be 3SAT instance, where each {a mathematical formula}Cj, {a mathematical formula}1≤j≤m, is a disjunction of three atoms over the variables {a mathematical formula}x1,…,xn. From this we construct a DL-program {a mathematical formula}Π=〈T,A,P〉.
+      <list>
+       As for the TBox {a mathematical formula}T, we introduce concept names {a mathematical formula}Xi and {a mathematical formula}X¯i, for each variable {a mathematical formula}xi occurring in ϕ. Moreover, we introduce a concept name {a mathematical formula}Cj for each clause {a mathematical formula}Cj in ϕ. Then {a mathematical formula}T contains the following axioms:the ABox is {a mathematical formula}A={D(b)}, where D and b are a fresh concept and a fresh constant respectively.As for {a mathematical formula}P, we introduce fresh ground atoms {a mathematical formula}pi(b) (resp. {a mathematical formula}pi¯(b)) for each {a mathematical formula}xi occurring positively (resp. negatively) in ϕ. The rules of {a mathematical formula}P are as follows:{a mathematical formula} where for each {a mathematical formula}xi, we have that {a mathematical formula}Xi⊎pi (resp. {a mathematical formula}X¯i⊎p¯i) occurs in {a mathematical formula}λj if {a mathematical formula}¬xi (resp. {a mathematical formula}xi) is a disjunct in {a mathematical formula}Cj of ϕ. In addition, {a mathematical formula}P contains the facts {a mathematical formula}pi(b) (resp. {a mathematical formula}pi¯(b)) iff {a mathematical formula}xi (resp. {a mathematical formula}x¯i) occurs in some {a mathematical formula}λj.I consists of the atoms that occur as facts in {a mathematical formula}P.For illustration, let
+      </list>
+      <paragraph>
+       {a mathematical formula}ϕ=x1∨¬x2∨x3 with {a mathematical formula}n=3 and {a mathematical formula}m=1. Then the DL-program {a mathematical formula}Π=〈T∪A,P〉 is such that {a mathematical formula}T={X1⊑C1;X¯2⊑C1;X3⊑C1}, {a mathematical formula}A={D(b)} and{a mathematical formula} The interpretation I contains the facts of {a mathematical formula}P, i.e. {a mathematical formula}I={p¯1(b),p2(b),p¯3(b)}. Note that {a mathematical formula}I=Iˆ|Π for some answer set {a mathematical formula}Iˆ of Π. The assignment {a mathematical formula}ν(ϕ) such that {a mathematical formula}ν(x1)=ν(x2)=true, and {a mathematical formula}ν(x3)=false satisfies of ϕ; according to our construction, from {a mathematical formula}ν(ϕ) the repair {a mathematical formula}A′={X1(b),X2(b),X¯3(b)} of Π is obtained.Note that for every Π constructed, all answer sets of {a mathematical formula}Πˆ coincide on the predicates of Π, i.e., {a mathematical formula}Iˆ|Π=Jˆ|Π for every {a mathematical formula}Iˆ,Jˆ∈AS(Πˆ).We claim that ϕ is satisfiable iff {a mathematical formula}I∈RASweak(Π), i.e. there exists an ABox {a mathematical formula}A′ such that I is a weak answer set of {a mathematical formula}Π′=〈T,A′,P〉.{a mathematical formula}(⇒) Suppose that ϕ is satisfiable and {a mathematical formula}ν(ϕ) is a satisfying assignment. From this we construct a repair ABox {a mathematical formula}A′, such that {a mathematical formula}Xi(b)∈A′ (resp. {a mathematical formula}X¯i(b)∈A′), if {a mathematical formula}xi is true (resp. false) under the assignment {a mathematical formula}ν(ϕ).Now we show that I is a weak answer set of {a mathematical formula}Π′=〈T,A′,P〉, and thus a weak repair answer set of Π. Observe that the body of the rule (1) is not satisfied, as {a mathematical formula}D(b)∉A′. Furthermore, the DL-atoms {a mathematical formula}DL[;C1](b),…,DL[;Cm](b) evaluate to true under {a mathematical formula}O′=〈T,A′〉, since {a mathematical formula}O′⊨Cj(b) for all {a mathematical formula}1≤j≤m by construction. Moreover, each {a mathematical formula}dj=DL[λj;¬Cj](b) evaluates to true under I, because the ontology {a mathematical formula}O′∪λI(dj) is unsatisfiable (by construction {a mathematical formula}Xi(b)∈A′ or {a mathematical formula}X¯i(b)∈A′ for some {a mathematical formula}Xi⊑Cj resp. {a mathematical formula}X¯i⊑Cj), and thus each {a mathematical formula}¬Cj(b) is trivially entailed. Therefore, none of the constraints of {a mathematical formula}P is present in the program reduct {a mathematical formula}PweakI,O′. The reduct {a mathematical formula}PweakI,O contains only facts of the program, from which we get that I is a weak repair answer set of Π.{a mathematical formula}(⇐) Let I be a weak repair answer set of Π and let {a mathematical formula}A′ be its respective repair. Then all DL-atoms of Π apart from {a mathematical formula}DL[;D](b) are true. This means that for all {a mathematical formula}Cj it holds that {a mathematical formula}O′⊨Cj(b). The ontology {a mathematical formula}O′=〈T,A′〉 is satisfiable, therefore {a mathematical formula}Xi(b) and {a mathematical formula}X¯i(b) simultaneously can not be in {a mathematical formula}A′. Therefore, either
+      </paragraph>
+      <list>
+       <list-item label="(i)">
+        {a mathematical formula}Cj(b)∈A′ or
+       </list-item>
+       <list-item label="(ii)">
+        {a mathematical formula}X(b)∈A′, such that {a mathematical formula}X⊑Cj is in {a mathematical formula}T.
+       </list-item>
+      </list>
+      <paragraph>
+       If (i) was true, then the bodies of the constraints (4) would be satisfied, which contradicts I being a repair answer set. Thus, it holds that some {a mathematical formula}X(b)∈A′ such that {a mathematical formula}X⊑Cj∈T. Hence, from the repair ABox {a mathematical formula}A′ a satisfying assignment {a mathematical formula}ν(ϕ) can be constructed as follows: {a mathematical formula}ν(ϕ) such that {a mathematical formula}ν(xi)=true (resp. {a mathematical formula}ν(ai)=false) if {a mathematical formula}Xi(b)∈A′ (resp. {a mathematical formula}X¯i(b)∈A′). The assignment {a mathematical formula}ν(ϕ) witnesses satisfiability of ϕ.(ii) {a mathematical formula}Σ2P-completeness result for {a mathematical formula}x=flp.(Membership) We can guess a repair {a mathematical formula}A′ and then check whether I is an flp-repair answer set of {a mathematical formula}Π′=〈O′,P〉, where {a mathematical formula}O′=〈T,A′〉. Constructing the reduct {a mathematical formula}PflpI,O′ is polynomial, as we only need to pick those rules of Π whose body is satisfied by I, and all DL-atoms can be evaluated in polynomial time. As shown in the proof of Theorem 18 the check (i) is polynomial and the check (ii) is in {a mathematical formula}co-{a mathematical formula}NP, from which membership in {a mathematical formula}Σ2P follows.(Hardness) The hardness is shown by the construction in the proof of Theorem 18 (iii). We set {a mathematical formula}I={w(a),y1(a), {a mathematical formula}…,ym(a)} and consider deciding whether {a mathematical formula}I∈RAS(Π), i.e. whether some ABox {a mathematical formula}A′ exists such that {a mathematical formula}I∈AS(Π′), where {a mathematical formula}Π′=〈T,A′P〉. Note that every answer set of {a mathematical formula}Πˆ resp. repair answer set of Π must contain {a mathematical formula}w(a), and that {a mathematical formula}I=Iˆ|Π for some {a mathematical formula}Iˆ∈AS(Πˆ) and {a mathematical formula}ΠflpI,O′={(5),(6)} for every {a mathematical formula}O′=T∪A′. Furthermore, {a mathematical formula}Iˆ|Π=Jˆ|Π for every answer sets {a mathematical formula}Iˆ,Jˆ∈AS(Πˆ).Due to (1)–(3), a repair {a mathematical formula}A′ must be a maximal consistent subset of {a mathematical formula}{Xi(a), {a mathematical formula}¬Xi(a)|1≤i≤n} and thus encode a truth assignment ν to {a mathematical formula}x1,…,xn. Now {a mathematical formula}I∈RASflp(Π) implies that some {a mathematical formula}A′ exists s.t. by minimality of I, for each {a mathematical formula}I′⊆I\{w(a)} some index k exists such that all {a mathematical formula}f(lk1), {a mathematical formula}f(lk2),f(lk3) are true, hence {a mathematical formula}χk is true; therefore, ϕ is true. Conversely, every assignment ν to {a mathematical formula}x1,…,xn witnessing that ϕ is true induces some maximal consistent subset {a mathematical formula}A′⊆{Xi(a), {a mathematical formula}¬Xi(a)|1≤i≤n}. By a slight adaptation of the argument in the proof of Theorem 18, it can be shown that {a mathematical formula}A′∈repflpI(Π); this proves {a mathematical formula}Σ2p-hardness under the asserted restriction.  □
+      </paragraph>
+     </paragraph>
+     <paragraph label="Proof of Proposition 61">
+      {a mathematical formula}(⇒) Suppose {a mathematical formula}d=DL[λ;Q](t→) evaluates w.r.t. {a mathematical formula}O and I to true, i.e., {a mathematical formula}λI(d)∪O⊨Q(t→). Towards a contradiction, assume no {a mathematical formula}S∈SuppO(d) is coherent with I. There are two cases:(1) {a mathematical formula}λI(d)∪O is consistent. Proposition 5 implies that an assertion {a mathematical formula}α∈λI(d)∪A must exist such that {a mathematical formula}T∪{α}⊨Q(t). If {a mathematical formula}α∈A then {a mathematical formula}SuppO(d) contains {a mathematical formula}{α} by (i) of Proposition 58, which trivially is coherent with I and thus contradicts the assumption. If {a mathematical formula}α∈λI(d), then α is an input assertion for d. For {a mathematical formula}αd∈Ad, we then obtain that {a mathematical formula}{αd}∈SuppO(d) according to (i) of Proposition 58, again a contradiction due to coherence with I.(2) {a mathematical formula}λI(d)∪O is inconsistent. From Proposition 5 and consistency of {a mathematical formula}O, it follows that some {a mathematical formula}δ∈λI(d) exists such that either (a) {a mathematical formula}T∪{δ} is inconsistent, or (b) some {a mathematical formula}γ∈A∪λI(d) exists such that {a mathematical formula}T∪{δ,γ} is inconsistent. In case a), we obtain {a mathematical formula}{δd}∈SuppO(d), for the corresponding input assertion {a mathematical formula}δd∈Ad. by (i) of Proposition 58; this is a contradiction, as {a mathematical formula}{δd} is coherent with I. In case b), we similarly conclude that either {a mathematical formula}{δd,γ}∈SuppO(d) or {a mathematical formula}{δd,γd}∈SuppO(d), depending on whether {a mathematical formula}γ∈λI(d), according to (ii) of Proposition 58. Again this is a support set coherent with I, contradiction.{a mathematical formula}(⇐) Suppose some {a mathematical formula}S∈SuppO(d) is coherent with I. Assume towards a contradiction that {a mathematical formula}I⊭Od. Again we consider two cases:(1) {a mathematical formula}Td∪S is consistent. Then, {a mathematical formula}Td∪S⊨Q(t→) by item (i) of Proposition 58. Since S is coherent with I, we conclude that {a mathematical formula}OdI⊨Q(t→) which implies {a mathematical formula}I⊨Od by Proposition 13. Contradiction.(2) {a mathematical formula}Td∪S is inconsistent. Then, due to coherence with I, so is {a mathematical formula}OdI, and trivially {a mathematical formula}OdI⊨Q(t→); again we arrive at a contradiction by concluding that {a mathematical formula}I⊨Od from Proposition 13.  □
+     </paragraph>
+     <paragraph label="Proof of Proposition 63">
+      By Proposition 58 there are two possibilities: either (i) S is unary or (ii) it is binary. In case of (i) we have that S is either a concept or a role assertion, and therefore, it involves at most two constants. For the case (ii) it holds that {a mathematical formula}S∪Td is inconsistent. Hence S represents a binary conflict set. It has been shown in [55] that S can be a binary conflict set only due to one of the following reasons:
+     </paragraph>
+     <list>
+      As we have considered all possibilities for binary conflict sets, the statement is proved.  □
+     </list>
+     <paragraph label="Proof of Proposition 71">
+      Assume that I is an answer set of {a mathematical formula}Π=〈O,P〉, where {a mathematical formula}O=〈T,A〉 and that {a mathematical formula}Iˆ is a compatible set for {a mathematical formula}Π′=〈O′,P〉 where {a mathematical formula}O′=〈T,A′〉 and {a mathematical formula}A′⊃A. Towards contradiction, suppose I is not an answer set of Π. Hence, {a mathematical formula}I=Iˆ|Π is not a minimal model of {a mathematical formula}Π′flpI,O=〈T,A′,PflpI,O〉. That is, some {a mathematical formula}I′⊂I exists such that {a mathematical formula}I′⊨O′PflpI,O. We then obtain that also {a mathematical formula}I′⊨OPflpI,O; this contradicts {a mathematical formula}I∈AS(Π). Indeed, suppose that {a mathematical formula}I′⊭OPflpI,O. Then some rule {a mathematical formula}r∈PflpI,O of form (1) is violated wrt. {a mathematical formula}I′ and {a mathematical formula}O, i.e., (i) {a mathematical formula}I′⊨Obi for each {a mathematical formula}1≤i≤k, (ii) {a mathematical formula}I′⊭Obj for each {a mathematical formula}k&lt;j≤m, and (iii) {a mathematical formula}I′⊭Oah for each {a mathematical formula}1≤h≤n. By monotonicity of {a mathematical formula}I⊨Oa w.r.t. I and {a mathematical formula}O, we conclude {a mathematical formula}I′⊨O′bi, {a mathematical formula}I′⊭O′bj (as {a mathematical formula}Iˆ is a compatible set for both {a mathematical formula}Πˆ and {a mathematical formula}Π′ˆ), and {a mathematical formula}I⊭Obj, and {a mathematical formula}I′⊭O′ah. But then {a mathematical formula}I′⊭O′PflpI,O, which is a contradiction. Hence, {a mathematical formula}I′ does not exist and I is an answer set of {a mathematical formula}Π′.  □
+     </paragraph>
+     <paragraph label="Proof of Theorem 72">
+      (Soundness) Suppose SupRAnsSet outputs {a mathematical formula}I=Iˆ|Π. We can get to (h) only if {a mathematical formula}Iˆ is an answer set of {a mathematical formula}Πˆ; furthermore, by setting {a mathematical formula}SgrIˆ to {a mathematical formula}Gr(S,Iˆ,A) in (b) and by the further modifications, it is ensured at (h) that each DL-atom {a mathematical formula}a∈Dp has some coherent support set that matches with {a mathematical formula}A′ (i.e., {a mathematical formula}Gr(S,Iˆ,A′)(a)≠∅), while no DL-atom {a mathematical formula}a′∈Dn has such a support set. Thus from Proposition 61, it follows that {a mathematical formula}Iˆ is a compatible set for {a mathematical formula}Π′=〈T∪A′,P〉; hence {a mathematical formula}I⊨Π′. Furthermore, as {a mathematical formula}flpFND(Iˆ,T∪A′,P) succeeds, I is a minimal model of {a mathematical formula}Π′flpI,O. Hence I is an answer set of {a mathematical formula}Π′, and thus a deletion repair answer set of Π.(Completeness) Suppose I is a deletion repair answer set. That is, for some {a mathematical formula}A′⊆A, we have that I is an answer set of {a mathematical formula}Π′=〈T∪A′,P〉. This implies Proposition 50 that {a mathematical formula}Iˆ is an answer set of {a mathematical formula}Πˆ and thus will be considered in (b), with {a mathematical formula}Dp and {a mathematical formula}Dn reflecting the (correct) guess for {a mathematical formula}I⊨O′a for each DL-atom a, where {a mathematical formula}O′=T∪A′. From Proposition 61 and completeness of S, we obtain that each {a mathematical formula}a∈Dp has {a mathematical formula}Gr(S,Iˆ,A′)(a)≠∅ and each {a mathematical formula}a∈Dn has {a mathematical formula}Gr(S,Iˆ,A′)(a)=∅. The initial {a mathematical formula}SgrIˆ is such that {a mathematical formula}Gr(S,Iˆ,A′)(a)⊆SgrIˆ=Gr(S,Iˆ,A)(a) holds for each DL-atom a; in further steps, the algorithm removes all support sets {a mathematical formula}S∈Gr(S,Iˆ,A)(a) for {a mathematical formula}a∈Dp from {a mathematical formula}SgrIˆ(a) such that such that {a mathematical formula}S∩S′∩A≠∅ for some support set {a mathematical formula}S′∈Gr(S,Iˆ,A)(a′) and {a mathematical formula}a′∈Dn, and removes all assertions in {a mathematical formula}S′∩A from {a mathematical formula}A. Importantly no removed S is in {a mathematical formula}Gr(S,Iˆ,A′)(a), since by the assertion that {a mathematical formula}T∪A is consistent, {a mathematical formula}|S′∩A|=1 must hold. Thus step (g) will be reached, and the variable {a mathematical formula}A′ is assigned an ABox {a mathematical formula}A″ such that {a mathematical formula}A′⊆A″⊆A. Since {a mathematical formula}Iˆ is a compatible set for {a mathematical formula}Π″=〈T∪A″,P〉 and I is an answer set of {a mathematical formula}Π′, by Proposition 71I is also an answer set of {a mathematical formula}Π″, and thus I is a minimal model of {a mathematical formula}Π″flpI,O=〈T∪A″,PflpI,O〉. Hence, the test {a mathematical formula}flpFND(Iˆ,T∪A′,P) in step (h) (where {a mathematical formula}A′ has value {a mathematical formula}A″) succeeds, and {a mathematical formula}IˆΠ, i.e, I is output.  □
+     </paragraph>
+    </section>
+    <section label="Appendix D">
+     Proofs for Section 5
+     <paragraph label="Proof (sketch) of Proposition 73">
+      For {a mathematical formula}DL-LiteA ontologies classification can be modeled declaratively as a reachability problem, what is exactly reflected in the rules (1), (2) and (3). The conflict sets in turn are found by means of the rules (4)–(7) and analysis of functional roles. As a result the program {a mathematical formula}ProgTclass computes all concept and role inclusions that follow from the TBox as well as all unary and binary conflict sets (whose construction is sound and complete based on the results in [74]). All support sets of type (i) of Proposition 58 are extracted from subsumptions and unary conflict sets, while the support sets of type (ii) correspond to binary conflict sets. As according to Proposition 58 there are no other types of support sets from the model {a mathematical formula}MTclass of {a mathematical formula}ProgTclass, a complete support family for a given DL-atom can be extracted.  □
+     </paragraph>
+     <paragraph label="Proof of Proposition 75">
+      We separately prove {a mathematical formula}AS(Πˆ∪Πsupp∪facts(A))|Π⊆RASweak(Π) and {a mathematical formula}AS(Πˆ∪Πsupp∪facts(A))|Π⊇RASweak(Π), i.e., correctness and completeness of the provided implementation.(⊆) Assume towards a contradiction that {a mathematical formula}AS(Πˆ∪Πsupp∪facts(A))|Π⊈RASweak(Π). Then there exists an element {a mathematical formula}I∈AS(Πˆ∪Πsupp∪facts(A)), such that {a mathematical formula}I|Π∉RASweak(Π). This means that for all {a mathematical formula}A′⊆A, it holds that {a mathematical formula}I|Π∉ASweak(Π′) with {a mathematical formula}Π′=〈T,A′,P〉. Consider the ABox {a mathematical formula}A″={P(c→)|pP(c→)∈I|facts(A),p¯P(c→)∉I},{sup:20} which is a particular subset of {a mathematical formula}A. We have that {a mathematical formula}I|Π∉ASweak(Π″) with {a mathematical formula}Π″=〈T,A″,P〉. Thus one of the following must be true: (i) no extension of {a mathematical formula}I|Π with guessed values of replacement atoms is a model of {a mathematical formula}Πˆ″, (ii) no model of {a mathematical formula}Πˆ″ is a compatible set for {a mathematical formula}Π″ or (iii) there exists {a mathematical formula}I′⊂I|Π, which is a model of {a mathematical formula}PweakI|Π,O″.The case (i) is irrelevant, as {a mathematical formula}I|Πˆ satisfies all rules of {a mathematical formula}Πˆ due to {a mathematical formula}I∈AS(Πˆ∪Πsupp∪facts(A)) and {a mathematical formula}Πˆ″=Πˆ. We next show that (ii) can not hold by deriving a contradiction. Indeed, assume that (ii) holds, then as {a mathematical formula}I|Πˆ is a model of {a mathematical formula}Πˆ, it is not a compatible set for Π. Therefore there exists a DL-atom {a mathematical formula}ai in {a mathematical formula}Π″, such that its real value is different from the guessed value in {a mathematical formula}I|Πˆ. Suppose first that {a mathematical formula}I|Π⊨ai, but {a mathematical formula}neai∈I|Πˆ. By Proposition 61 there must exist a support set {a mathematical formula}S∈Si, such that S is coherent with {a mathematical formula}I|Π and its ABox part {a mathematical formula}SA is in {a mathematical formula}A″. If {a mathematical formula}SA is nonempty, then due to the rule of the form ({a mathematical formula}r4) of {a mathematical formula}Πsupp we get that {a mathematical formula}S¯A must be in I, but then {a mathematical formula}SA is not present in {a mathematical formula}A″. Therefore, {a mathematical formula}SA must be empty, i.e. S must contain only input assertions. However, then the body of the constraint ({a mathematical formula}r2) of {a mathematical formula}Πsupp is satisfied, contradicting {a mathematical formula}I∈AS(Πˆ∪Πsupp∪facts(A)). In conclusion, this shows that (ii) does not hold, and in particular that {a mathematical formula}I|Πˆ is a compatible set for Π.Finally, the last possibility is that (iii) holds, meaning that there is an interpretation {a mathematical formula}I′⊂I|Π which is a model of {a mathematical formula}PweakI|Π,O″. The interpretations {a mathematical formula}I|Π and {a mathematical formula}I′ differ on the set {a mathematical formula}M=I|Π\I′, containing only ground atoms from the language of Π. Let us now look at the interpretation {a mathematical formula}I″=I\M. We know that I is an answer set of {a mathematical formula}Πˆ∪Πsupp∪facts(A), i.e. it is a minimal model of {a mathematical formula}ΠˆglI∪ΠsuppglI∪facts(A). Therefore, there must exist some rule {a mathematical formula}rglI either in (1) {a mathematical formula}ΠˆglI or in (2) {a mathematical formula}ΠsuppglI, which {a mathematical formula}I″ does not satisfy, i.e. {a mathematical formula}I″⊨B(rglI) and {a mathematical formula}I″⊭H(rglI).Assume that (1) holds. Then the rule {a mathematical formula}rglI must involve some replacement atoms {a mathematical formula}ea occurring positively. Otherwise {a mathematical formula}I′⊭rglI, and since this rule is also in {a mathematical formula}PweakI|Π,O″, we have that {a mathematical formula}I′ is not a model of {a mathematical formula}PweakI|Π,O″, leading to a contradiction. Furthermore, we know that {a mathematical formula}I|Πˆ is a compatible set. Therefore, {a mathematical formula}rweakI,O″ is the rule {a mathematical formula}rglI without replacement atoms in its body; but then {a mathematical formula}I′⊭rweakI,O″, and hence {a mathematical formula}I′ is not a model of {a mathematical formula}PweakI|Π,O″.Now assume that (2) holds, i.e. there is a rule {a mathematical formula}rglI∈ΠsuppglI, such that {a mathematical formula}I″⊨B(rglI), but {a mathematical formula}I″⊭H(rglI). The rule {a mathematical formula}rglI can not be a constraint of the forms {a mathematical formula}r1, {a mathematical formula}r2, since then {a mathematical formula}I⊃I″ is not an answer set of {a mathematical formula}Πˆ∪Πsupp∪facts(A), leading to a contradiction. Therefore, r must be of the form {a mathematical formula}r3 or {a mathematical formula}r4. However, the latter is not possible either, since the set of atoms M on which I and {a mathematical formula}I″ differ contains only atoms from the signature of Π, and {a mathematical formula}H(rglI) does not fall into this set, meaning that {a mathematical formula}I⊭rglI, which contradicts to {a mathematical formula}I∈AS(Πˆ∪facts(A)∪Πsupp).(⊇) Suppose that {a mathematical formula}I∈RASweak(Π), but there is no {a mathematical formula}I′⊇I, such that {a mathematical formula}I′∈AS(Πˆ∪Πsupp∪facts(A)). By definition of repair answer sets, some {a mathematical formula}A′⊂A exists, such that {a mathematical formula}I∈ASweak(Π′), where {a mathematical formula}Π′=〈T,A′,P〉. We construct the interpretation {a mathematical formula}I′ by extending I with
+      <list>
+       {a mathematical formula}{ea|I⊨O′a}∪{nea|I⊭O′a}, i.e. facts stating the values of the replacement atoms under I and {a mathematical formula}A′;{a mathematical formula}facts(A);{a mathematical formula}{p¯P(c→)|P(c→)∈A\A′};{a mathematical formula}Supai(c→) encoding information about support sets of {a mathematical formula}ai(c→) coherent with I.First consider (i).
+      </list>
+      <paragraph>
+       {a mathematical formula}I′ immediately satisfies all facts as well as all rules in {a mathematical formula}ΠˆglI′. This means that there must be some rule {a mathematical formula}rglI′ in {a mathematical formula}ΠsuppglI′ that is not satisfied, i.e. {a mathematical formula}I′⊨B(rglI′), but {a mathematical formula}I′⊭H(rglI′). By construction of {a mathematical formula}I′ and Proposition 61, if {a mathematical formula}ea∈I′ (resp. {a mathematical formula}nea∈I′) then {a mathematical formula}Supa∈I′ (resp. {a mathematical formula}Supa∉I′), therefore r can not be of the form ({a mathematical formula}r1) or ({a mathematical formula}r2). Suppose that r is of the form ({a mathematical formula}r3). We have that some DL-atom a has a support set whose ABox part is in {a mathematical formula}A′ or empty. Then by construction of {a mathematical formula}I′ the head of the rule {a mathematical formula}rglI′ has to be satisfied. Therefore, the rule r must be of the form {a mathematical formula}(r4). Then {a mathematical formula}I⊭O′a for some DL-atom a, such that there is a support set for a which is coherent with I and its ABox part is either empty or present in {a mathematical formula}A. In both cases by Proposition 61 we get that {a mathematical formula}I⊨O′a, which leads to a contradiction.Let us now look at (ii), i.e. some interpretation {a mathematical formula}I″⊂I′ exists such that {a mathematical formula}I″⊨(Πˆ∪Πsupp∪facts(A))glI′. Note that {a mathematical formula}I″ and {a mathematical formula}I′ can not differ only on replacement atoms, since for each DL-atom a, either {a mathematical formula}ea or {a mathematical formula}nea must be in {a mathematical formula}I″. As {a mathematical formula}I′ already contains the corresponding replacement atoms, removal of any such atom will violate the satisfaction of some guessing rule {a mathematical formula}ea∨nea in {a mathematical formula}ΠˆglI′. Suppose that {a mathematical formula}I″\I′ contains some atoms from Π. Consider {a mathematical formula}I″|Π, which is a subset of I. Observe that {a mathematical formula}I″|Π can not be a model of {a mathematical formula}PweakI,O′, because {a mathematical formula}I⊃I″|Π is its minimal model. Therefore, some rule {a mathematical formula}rweakI,O′ must exist in the reduct {a mathematical formula}PweakI,O′ which is not satisfied by {a mathematical formula}I″|Π, i.e. {a mathematical formula}I″|Π⊨B(rweakI,O′) but {a mathematical formula}I″|Π⊭H(rweakI,O′). By construction of the weak reduct this rule does not contain any DL-atoms. Let us look at the corresponding rule in the reduct {a mathematical formula}ΠˆglI″. The rule {a mathematical formula}rglI″ either does not contain any replacement atoms or contains only positive atoms {a mathematical formula}ea such that {a mathematical formula}ea∈I″ (by construction of the GL-reduct). Therefore {a mathematical formula}I″⊨B(rglI′), but {a mathematical formula}I″⊭H(rglI′), contradicting {a mathematical formula}I″⊨ΠˆglI′.Suppose that the interpretations {a mathematical formula}I′ and {a mathematical formula}I″ differ only on the facts over predicates in {a mathematical formula}Πsupp. We know that the rule {a mathematical formula}rglI′, where r is of the form ({a mathematical formula}r1) is not present in {a mathematical formula}ΠsuppglI′, moreover, {a mathematical formula}I″⊭r′glI′ for {a mathematical formula}r′ of the form ({a mathematical formula}r2). If the difference {a mathematical formula}I′\I″ contains {a mathematical formula}Supa, then it must contain some atoms from {a mathematical formula}r(Sa) too. Moreover, these atoms must be related to the ABox facts, which are present in {a mathematical formula}I′. This, however, means that some fact in {a mathematical formula}facts(A) is not satisfied, contradicting {a mathematical formula}I″⊨(Πˆ∪Πsupp∪facts(A))glI′. Finally, {a mathematical formula}I″∖I′ can not contain elements {a mathematical formula}S¯aA, as then the rule {a mathematical formula}rglI′ for r of the form ({a mathematical formula}r4) is not satisfied by {a mathematical formula}I″.  □
+      </paragraph>
+     </paragraph>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

@@ -1,0 +1,1505 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Semantic Frame Identification with Distributed Word Representations</title>
+<!--Generated on Tue Jun 10 19:24:39 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Semantic Frame Identification with Distributed Word Representations</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Karl Moritz Hermann<math xmlns="http://www.w3.org/1998/Math/MathML" id="m1" class="ltx_Math" alttext="{}^{\ddagger}" display="inline"><msup><mi/><mo>‡</mo></msup></math>    Dipanjan Das<math xmlns="http://www.w3.org/1998/Math/MathML" id="m2" class="ltx_Math" alttext="{}^{\dagger}" display="inline"><msup><mi/><mo>†</mo></msup></math>    Jason Weston<math xmlns="http://www.w3.org/1998/Math/MathML" id="m3" class="ltx_Math" alttext="{}^{\dagger}" display="inline"><msup><mi/><mo>†</mo></msup></math>    Kuzman Ganchev<math xmlns="http://www.w3.org/1998/Math/MathML" id="m4" class="ltx_Math" alttext="{}^{\dagger}" display="inline"><msup><mi/><mo>†</mo></msup></math>
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m5" class="ltx_Math" alttext="{}^{\ddagger}" display="inline"><msup><mi/><mo>‡</mo></msup></math>Department of Computer Science, University of Oxford, Oxford OX1 3QD, United Kingdom 
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m6" class="ltx_Math" alttext="{}^{\dagger}" display="inline"><msup><mi/><mo>†</mo></msup></math> Google Inc., 76 9th Avenue, New York, NY 10011, United States
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">karl.moritz.hermann@cs.ox.ac.uk
+<br class="ltx_break"/></span>{<span class="ltx_text ltx_font_typewriter">dipanjand,kuzman</span>}<span class="ltx_text ltx_font_typewriter">@google.com  jaseweston@gmail.com
+<br class="ltx_break"/></span>
+</span><span class="ltx_author_notes"><span>  The majority of this research was carried out during an internship at Google.</span></span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">We present a novel technique for semantic frame identification
+using distributed representations of predicates and their syntactic context;
+this technique leverages
+automatic syntactic parses and a generic set of
+word embeddings. Given labeled
+data annotated with frame-semantic
+parses, we learn a model that projects the set of word representations for the
+syntactic context around a predicate to a low dimensional representation.
+The latter is used for semantic frame identification; with a standard
+argument identification method inspired by prior work, we achieve
+state-of-the-art results on FrameNet-style frame-semantic analysis.
+Additionally, we report strong results on PropBank-style semantic role labeling
+in comparison to prior work.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Distributed representations of words have proved useful for a number of tasks. By providing richer representations of meaning than what can be encompassed in a discrete representation, such approaches have successfully been applied to tasks such as sentiment analysis <cite class="ltx_cite">[<a href="#bib.bib18" title="Semi-supervised recursive autoencoders for predicting sentiment distributions" class="ltx_ref">24</a>]</cite>, topic classification <cite class="ltx_cite">[<a href="#bib.bib19" title="Inducing crosslingual distributed representations of words" class="ltx_ref">16</a>]</cite> or word-word similarity <cite class="ltx_cite">[<a href="#bib.bib20" title="Vector-based models of semantic composition" class="ltx_ref">20</a>]</cite>.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">We present a new technique for semantic <span class="ltx_text ltx_font_bold">frame</span> identification that leverages distributed word representations.
+According to the theory of frame semantics <cite class="ltx_cite">[<a href="#bib.bib165" title="Frame Semantics" class="ltx_ref">12</a>]</cite>, a semantic frame represents an event or scenario, and possesses frame elements (or semantic <span class="ltx_text ltx_font_bold">roles</span>) that participate in the event. Most work on frame-semantic parsing
+has usually divided the task into two major subtasks: <span class="ltx_text ltx_font_italic">frame identification</span>, namely the disambiguation of a given predicate to a frame, and <span class="ltx_text ltx_font_italic">argument identification</span> (or semantic role labeling), the analysis of words and phrases in the sentential context that satisfy the frame’s semantic roles <cite class="ltx_cite">[<a href="#bib.bib72" title="Probabilistic frame-semantic parsing" class="ltx_ref">8</a>, <a href="#bib.bib10" title="Frame-semantic parsing" class="ltx_ref">7</a>]</cite>.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>There are exceptions, wherein the task has been modeled using a pipeline of three classifiers that perform frame identification, a binary stage that classifies candidate arguments, and argument identification on the filtered candidates <cite class="ltx_cite">[<a href="#bib.bib144" title="SemEval-2007 Task 19: frame semantic structure extraction" class="ltx_ref">1</a>, <a href="#bib.bib85" title="LTH: semantic structure extraction using nonprojective dependency trees" class="ltx_ref">15</a>]</cite>.</span></span></span> Here, we focus on the first subtask of frame identification for given predicates; we use our novel method (§<a href="#S3" title="3 Frame Identification with Embeddings ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>) in conjunction with a standard argument identification model (§<a href="#S4" title="4 Argument Identification ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>) to perform full frame-semantic parsing.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">We present experiments on two tasks. First, we show that for frame identification on
+the FrameNet corpus <cite class="ltx_cite">[<a href="#bib.bib28" title="The berkeley framenet project" class="ltx_ref">2</a>, <a href="#bib.bib166" title="Background to FrameNet" class="ltx_ref">11</a>]</cite>, we outperform the prior state of the art <cite class="ltx_cite">[<a href="#bib.bib10" title="Frame-semantic parsing" class="ltx_ref">7</a>]</cite>.
+Moreover, for full frame-semantic parsing, with the presented frame identification technique followed by our argument identification method, we report the best results on this task to date.
+Second, we present results on PropBank-style semantic role labeling
+<cite class="ltx_cite">[<a href="#bib.bib30" title="The Proposition bank: an annotated corpus of semantic roles" class="ltx_ref">22</a>, <a href="#bib.bib46" title="The NomBank project: an interim report" class="ltx_ref">19</a>, <a href="#bib.bib93" title="Semantic role labeling: an introduction to the special issue" class="ltx_ref">21</a>]</cite>, that
+approach strong baselines, and are on par with prior state of the art <cite class="ltx_cite">[<a href="#bib.bib45" title="The importance of syntactic parsing and inference in semantic role labeling" class="ltx_ref">23</a>]</cite>.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Overview</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">Early work in frame-semantic analysis was pioneered by
+<cite class="ltx_cite">Gildea and Jurafsky (<a href="#bib.bib33" title="Automatic labeling of semantic roles" class="ltx_ref">2002</a>)</cite>.
+Subsequent work in this area focused on either the FrameNetor PropBankframeworks, and research
+on the latter has been more popular. Since the CoNLL 2004-2005 shared
+tasks <cite class="ltx_cite">[<a href="#bib.bib28a" title="Introduction to the CoNLL-2004 shared task: semantic role labeling" class="ltx_ref">4</a>, <a href="#bib.bib27" title="Introduction to the CoNLL-2005 shared task: semantic role labeling" class="ltx_ref">5</a>]</cite>
+on PropBank semantic role labeling (SRL), it has been
+treated as an important NLP problem. However, research has mostly focused on
+argument analysis, skipping the frame disambiguation step, and its interaction
+with argument identification.</p>
+</div>
+<div id="S2.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.1 </span>Frame-Semantic Parsing</h3>
+
+<div id="S2.SS1.p1" class="ltx_para">
+<p class="ltx_p">Closely related to SRL, frame-semantic parsing consists of the resolution of
+predicate sense into a frame, and the analysis of the frame’s arguments.
+Work in this area exclusively uses the FrameNet full text annotations.
+<cite class="ltx_cite">Johansson and Nugues (<a href="#bib.bib85" title="LTH: semantic structure extraction using nonprojective dependency trees" class="ltx_ref">2007</a>)</cite> presented the best performing system at SemEval
+2007 <cite class="ltx_cite">[<a href="#bib.bib144" title="SemEval-2007 Task 19: frame semantic structure extraction" class="ltx_ref">1</a>]</cite>, and <cite class="ltx_cite">Das<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib72" title="Probabilistic frame-semantic parsing" class="ltx_ref">2010</a>)</cite> improved performance, and later
+set the current state of the art on this task <cite class="ltx_cite">[<a href="#bib.bib10" title="Frame-semantic parsing" class="ltx_ref">7</a>]</cite>.
+We briefly discuss FrameNet, and subsequently PropBank annotation conventions here.</p>
+</div>
+<div id="S2.F1" class="ltx_figure"><img src="P14-1136/image001.png" id="S2.F1.g1" class="ltx_graphics ltx_centering" width="676" height="872" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Example sentences with frame-semantic analyses. FrameNet annotation
+conventions are used in (a) while (b) denotes PropBank conventions.
+</div>
+</div>
+<div id="S2.SS1.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">FrameNet</span>  The FrameNetproject <cite class="ltx_cite">[<a href="#bib.bib28" title="The berkeley framenet project" class="ltx_ref">2</a>]</cite> is a lexical database that contains
+information about words and phrases (represented as lemmas conjoined with
+a coarse part-of-speech tag) termed as lexical units, with a set of semantic
+frames that they could evoke. For each frame, there is a list of associated frame elements
+(or roles, henceforth), that are also distinguished as core or non-core.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>Additional information
+such as finer distinction of the coreness properties of roles,
+the relationship between frames, and that of roles are also present, but we do not
+leverage that information in this work.</span></span></span>
+Sentences are annotated using this universal frame inventory.
+For example, consider the pair of sentences in Figure <a href="#S2.F1" title="Figure 1 ‣ 2.1 Frame-Semantic Parsing ‣ 2 Overview ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>(a).
+<span class="ltx_text ltx_font_sansserif ltx_font_smallcaps ltx_font_small">Commerce_buy</span> is a frame that can be evoked by morphological variants
+of the two example lexical units <span class="ltx_text ltx_font_italic">buy</span>.<span class="ltx_text ltx_font_smallcaps">V</span> and <span class="ltx_text ltx_font_italic">sell</span>.<span class="ltx_text ltx_font_smallcaps">V</span>.
+<span class="ltx_text ltx_font_sansserif ltx_font_small">Buyer</span>, <span class="ltx_text ltx_font_sansserif ltx_font_small">Seller</span> and <span class="ltx_text ltx_font_sansserif ltx_font_small">Goods</span> are some example roles
+for this frame.</p>
+</div>
+<div id="S2.SS1.p3" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">PropBank</span>  The PropBankproject <cite class="ltx_cite">[<a href="#bib.bib30" title="The Proposition bank: an annotated corpus of semantic roles" class="ltx_ref">22</a>]</cite> is
+another popular resource related to semantic role labeling.
+The PropBankcorpus has verbs annotated with sense frames and their arguments.
+Like FrameNet, it also has a lexical database that stores type information about verbs, in the form
+of sense frames and the possible semantic roles each frame could take. There are
+modifier roles that are shared across verb frames, somewhat similar to the non-core
+roles in FrameNet. Figure <a href="#S2.F1" title="Figure 1 ‣ 2.1 Frame-Semantic Parsing ‣ 2 Overview ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>(b) shows annotations for
+two verbs “bought” and “sold”, with their lemmas (akin to the lexical units in FrameNet)
+and their verb frames <span class="ltx_text ltx_font_sansserif ltx_font_small">buy.01</span> and <span class="ltx_text ltx_font_sansserif ltx_font_small">sell.01</span>. Generic core role labels (of which
+there are seven, namely <span class="ltx_text ltx_font_sansserif ltx_font_small">A0</span>-<span class="ltx_text ltx_font_sansserif ltx_font_small">A5</span> and <span class="ltx_text ltx_font_sansserif ltx_font_small">AA</span>) for the verb frames
+are marked in the figure.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>NomBank <cite class="ltx_cite">[<a href="#bib.bib46" title="The NomBank project: an interim report" class="ltx_ref">19</a>]</cite> is a similar resource for nominal predicates,
+but we do not consider it in our experiments.</span></span></span> A key difference between the two annotation systems is that PropBankuses a local frame inventory, where frames are predicate-specific. Moreover, role labels, although few in number,
+take specific meaning for each verb frame.
+Figure <a href="#S2.F1" title="Figure 1 ‣ 2.1 Frame-Semantic Parsing ‣ 2 Overview ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> highlights this difference:
+while both <span class="ltx_text ltx_font_italic">sell</span>.<span class="ltx_text ltx_font_smallcaps">v</span> and <span class="ltx_text ltx_font_italic">buy</span>.<span class="ltx_text ltx_font_smallcaps">v</span> are members of the
+same frame in FrameNet, they evoke different frames in PropBank.
+In spite of this difference, nearly identical statistical models could be employed
+for both frameworks.</p>
+</div>
+<div id="S2.SS1.p4" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Modeling</span>  In this paper, we model the frame-semantic parsing problem in two stages:
+<span class="ltx_text ltx_font_bold">frame identification</span> and <span class="ltx_text ltx_font_bold">argument identification</span>. As mentioned in §<a href="#S1" title="1 Introduction ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+these correspond to a frame disambiguation stage,<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>For example in PropBank,
+the lexical unit <span class="ltx_text ltx_font_italic">buy</span>.<span class="ltx_text ltx_font_smallcaps">V</span> has three verb frames and in sentential
+context, we want to disambiguate its frame. (Although PropBank never formally uses the term lexical unit, we adopt
+its usage from the frame semantics literature.)</span></span></span> and a stage that finds the various
+arguments that fulfill the frame’s semantic roles within the sentence, respectively. This resembles the
+framework of <cite class="ltx_cite">Das<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib10" title="Frame-semantic parsing" class="ltx_ref">2014</a>)</cite>, who solely focus on FrameNet corpora,
+unlike this paper. The novelty of this paper lies in the frame identification stage (§<a href="#S3" title="3 Frame Identification with Embeddings ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>).
+Note that this two-stage approach is unusual for the PropBank corpora when compared
+to prior work, where the vast majority of published papers have not focused on the
+verb frame disambiguation problem at all, only focusing on the role labeling stage (see
+the overview paper of <cite class="ltx_cite">Màrquez<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib93" title="Semantic role labeling: an introduction to the special issue" class="ltx_ref">2008</a>)</cite> for example).</p>
+</div>
+</div>
+<div id="S2.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.2 </span>Distributed Frame Identification</h3>
+
+<div id="S2.SS2.p1" class="ltx_para">
+<p class="ltx_p">We present a model that takes word embeddings as input and
+learns to identify semantic frames. A word embedding is a
+distributed representation of meaning where each word is represented as a vector
+in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m1" class="ltx_Math" alttext="\mathbb{R}^{n}" display="inline"><msup><mi>ℝ</mi><mi>n</mi></msup></math>. Such representations allow a model to share meaning between
+similar words, and have been used to capture semantic, syntactic and
+morphological content <cite class="ltx_cite">[<a href="#bib.bib32" title="A unified architecture for natural language processing: deep neural networks with multitask learning" class="ltx_ref">6</a>, <a href="#bib.bib47" title="Word representations: a simple and general method for semi-supervised learning" class="ltx_ref">25</a>, <span class="ltx_text ltx_font_italic">inter alia</span>]</cite>.
+We use word embeddings to represent the syntactic context of a particular
+predicate instance as a vector. For example, consider the sentence “He runs the
+company.” The predicate <em class="ltx_emph">runs</em> has two syntactic dependents – a subject and direct
+object (but no prepositional phrases or clausal complements). We could represent
+the syntactic context of <em class="ltx_emph">runs</em> as a vector with blocks for all the possible
+dependents warranted by a syntactic parser; for example, we could assume that
+positions <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m2" class="ltx_Math" alttext="0\ldots n" display="inline"><mrow><mn>0</mn><mo>⁢</mo><mi mathvariant="normal">…</mi><mo>⁢</mo><mi>n</mi></mrow></math> in the vector correspond to the subject dependent, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m3" class="ltx_Math" alttext="n{+}1\ldots 2n" display="inline"><mrow><mi>n</mi><mo>+</mo><mrow><mn>1</mn><mo>⁢</mo><mi mathvariant="normal">…</mi><mo>⁢</mo><mn>2</mn><mo>⁢</mo><mi>n</mi></mrow></mrow></math>
+correspond to the clausal complement dependent, and so forth. Thus, the context
+is a vector in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m4" class="ltx_Math" alttext="\mathbb{R}^{nk}" display="inline"><msup><mi>ℝ</mi><mrow><mi>n</mi><mo>⁢</mo><mi>k</mi></mrow></msup></math> with the embedding of <em class="ltx_emph">He</em> at the subject position, the
+embedding of <em class="ltx_emph">company</em> in direct object position and zeros everywhere else.
+Given input vectors of this form for our training data, we learn a matrix that maps this high dimensional
+and sparse representation into a lower dimensional space. Simultaneously, the model
+learns an embedding for all the possible labels (i.e. the frames in a given
+lexicon). At inference time, the predicate-context is mapped to the low dimensional space,
+and we choose the nearest frame label as our classification. We next describe this model in detail.</p>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Frame Identification with Embeddings</h2>
+<span class="ltx_ERROR undefined">{SCfigure*}</span>
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">[25][t]
+
+<img src="P14-1136/image002.png" id="S3.p1.g1" class="ltx_graphics ltx_centering" width="318" height="134" alt=""/>
+<span class="ltx_text ltx_caption ltx_align_center"> 
+Context representation extraction for the embedding model. Given a dependency
+parse (1) the model extracts all words matching a set of paths from the frame
+evoking predicate and its direct dependents (2). The model computes a composed
+representation of the predicate instance by using distributed vector
+representations for words (3) – the (red) vertical embedding vectors for each
+word are concatenated into a long vector. Finally, we learn a
+linear transformation function parametrized by the context blocks (4).
+</span></p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">We continue using the example sentence from
+§<a href="#S2.SS2" title="2.2 Distributed Frame Identification ‣ 2 Overview ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>: “He runs the company.” where we want to
+disambiguate the frame of <em class="ltx_emph">runs</em> in context. First, we extract
+the words in the syntactic context of <em class="ltx_emph">runs</em>; next, we concatenate
+their word embeddings as described in §<a href="#S2.SS2" title="2.2 Distributed Frame Identification ‣ 2 Overview ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a> to create an
+initial vector space representation. Subsequently, we learn a
+mapping from this initial representation into a low-dimensional space; we also learn an
+embedding for each possible frame label in the same low-dimensional space. The goal of
+learning is to make sure that the correct frame label is as close as possible to the
+mapped context, while competing frame labels are farther away.</p>
+</div>
+<div id="S3.p3" class="ltx_para">
+<p class="ltx_p">Formally, let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m1" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> represent the actual sentence with a marked
+predicate, along with the associated
+syntactic parse tree; let our initial representation of the predicate context be <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m2" class="ltx_Math" alttext="g(x)" display="inline"><mrow><mi>g</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></math>.
+Suppose that the word
+embeddings we start with are of dimension <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m3" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>. Then <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m4" class="ltx_Math" alttext="g" display="inline"><mi>g</mi></math> is a function from a
+parsed sentence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m5" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m6" class="ltx_Math" alttext="\mathbb{R}^{nk}" display="inline"><msup><mi>ℝ</mi><mrow><mi>n</mi><mo>⁢</mo><mi>k</mi></mrow></msup></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m7" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> is the number of
+possible syntactic context types. For example <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m8" class="ltx_Math" alttext="g" display="inline"><mi>g</mi></math> selects some important
+positions relative to the predicate, and reserves a block in its output space
+for the embedding of words found at that position. Suppose <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m9" class="ltx_Math" alttext="g" display="inline"><mi>g</mi></math>
+considers clausal complements and direct objects. Then <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m10" class="ltx_Math" alttext="g:X\rightarrow\mathbb{R}^{2n}" display="inline"><mrow><mi>g</mi><mo>:</mo><mrow><mi>X</mi><mo>→</mo><msup><mi>ℝ</mi><mrow><mn>2</mn><mo>⁢</mo><mi>n</mi></mrow></msup></mrow></mrow></math>
+and for the example sentence it has zeros in positions <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m11" class="ltx_Math" alttext="0\ldots n" display="inline"><mrow><mn>0</mn><mo>⁢</mo><mi mathvariant="normal">…</mi><mo>⁢</mo><mi>n</mi></mrow></math> and the
+embedding of the word <em class="ltx_emph">company</em> in positions <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m12" class="ltx_Math" alttext="n{+}1\ldots 2n" display="inline"><mrow><mi>n</mi><mo>+</mo><mrow><mn>1</mn><mo>⁢</mo><mi mathvariant="normal">…</mi><mo>⁢</mo><mn>2</mn><mo>⁢</mo><mi>n</mi></mrow></mrow></math>.</p>
+<table id="S3.Ex1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex1.m1" class="ltx_Math" alttext="g(x)=[0,\ldots,0,\text{embedding of \emph{company}}]." display="block"><mrow><mrow><mrow><mi>g</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mo>[</mo><mrow><mn>0</mn><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mn>0</mn><mo>,</mo><mrow><mtext>embedding of </mtext><mtext><em xmlns="http://www.w3.org/1999/xhtml" class="ltx_emph">company</em></mtext></mrow></mrow><mo>]</mo></mrow></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">Section <a href="#S3.SS1" title="3.1 Context Representation Extraction ‣ 3 Frame Identification with Embeddings ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a> describes the context positions we use in our
+experiments. Let the low dimensional space we map to be <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m13" class="ltx_Math" alttext="\mathbb{R}^{m}" display="inline"><msup><mi>ℝ</mi><mi>m</mi></msup></math> and the learned
+mapping be <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m14" class="ltx_Math" alttext="M:\mathbb{R}^{nk}\rightarrow\mathbb{R}^{m}" display="inline"><mrow><mi>M</mi><mo>:</mo><mrow><msup><mi>ℝ</mi><mrow><mi>n</mi><mo>⁢</mo><mi>k</mi></mrow></msup><mo>→</mo><msup><mi>ℝ</mi><mi>m</mi></msup></mrow></mrow></math>.
+The mapping <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m15" class="ltx_Math" alttext="M" display="inline"><mi>M</mi></math> is a linear transformation, and we learn it using the <span class="ltx_text ltx_font_smallcaps ltx_font_small">Wsabie</span>algorithm <cite class="ltx_cite">[<a href="#bib.bib27a" title="WSABIE: scaling up to large vocabulary image annotation" class="ltx_ref">29</a>]</cite>. <span class="ltx_text ltx_font_smallcaps ltx_font_small">Wsabie</span>also learns an embedding for each frame label (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m16" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math>, henceforth).
+In our setting, this means that each frame corresponds to a point in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m17" class="ltx_Math" alttext="\mathbb{R}^{m}" display="inline"><msup><mi>ℝ</mi><mi>m</mi></msup></math>.
+If we have <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m18" class="ltx_Math" alttext="F" display="inline"><mi>F</mi></math> possible frames we can store those parameters in an <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m19" class="ltx_Math" alttext="F\times m" display="inline"><mrow><mi>F</mi><mo>×</mo><mi>m</mi></mrow></math> matrix, one <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m20" class="ltx_Math" alttext="m" display="inline"><mi>m</mi></math>-dimensional point
+for each frame, which we will refer to as the linear mapping <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m21" class="ltx_Math" alttext="Y" display="inline"><mi>Y</mi></math>.
+Let the lexical unit (the lemma conjoined with a coarse POS tag) for the
+marked predicate be <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m22" class="ltx_Math" alttext="\ell" display="inline"><mi mathvariant="normal">ℓ</mi></math>. We denote the frames that associate
+with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m23" class="ltx_Math" alttext="\ell" display="inline"><mi mathvariant="normal">ℓ</mi></math> in the frame lexicon<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup>
+The frame lexicon stores the frames, corresponding
+semantic roles and the lexical units associated with the frame.
+</span></span></span>
+and our training corpus as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m24" class="ltx_Math" alttext="F_{\ell}" display="inline"><msub><mi>F</mi><mi mathvariant="normal">ℓ</mi></msub></math>. <span class="ltx_text ltx_font_smallcaps ltx_font_small">Wsabie</span>performs gradient-based updates
+on an objective that tries to minimize the distance between <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m25" class="ltx_Math" alttext="M(g(x))" display="inline"><mrow><mi>M</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>g</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></math> and the
+embedding of the correct label <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m26" class="ltx_Math" alttext="Y(y)" display="inline"><mrow><mi>Y</mi><mo>⁢</mo><mrow><mo>(</mo><mi>y</mi><mo>)</mo></mrow></mrow></math>, while maintaining a large distance
+between <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m27" class="ltx_Math" alttext="M(g(x))" display="inline"><mrow><mi>M</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>g</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></math> and the other possible labels <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m28" class="ltx_Math" alttext="Y(\bar{y})" display="inline"><mrow><mi>Y</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mi>y</mi><mo stretchy="false">¯</mo></mover><mo>)</mo></mrow></mrow></math> in the confusion
+set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m29" class="ltx_Math" alttext="F_{\ell}" display="inline"><msub><mi>F</mi><mi mathvariant="normal">ℓ</mi></msub></math>. At disambiguation time, we use a simple dot product similarity as
+our distance metric, meaning that the model chooses a label by computing the
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m30" class="ltx_Math" alttext="\mbox{argmax}_{y}s(x,y)" display="inline"><mrow><msub><mtext>argmax</mtext><mi>y</mi></msub><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow></math> where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m31" class="ltx_Math" alttext="s(x,y)=M(g(x))\cdot Y(y)" display="inline"><mrow><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mrow><mrow><mi>M</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>g</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow><mo>⋅</mo><mi>Y</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><mi>y</mi><mo>)</mo></mrow></mrow></mrow></math>, where the
+<span class="ltx_text ltx_markedasmath">argmax</span> iterates over the possible frames <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m33" class="ltx_Math" alttext="y\in F_{\ell}" display="inline"><mrow><mi>y</mi><mo>∈</mo><msub><mi>F</mi><mi mathvariant="normal">ℓ</mi></msub></mrow></math> if <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m34" class="ltx_Math" alttext="\ell" display="inline"><mi mathvariant="normal">ℓ</mi></math> was
+seen in the lexicon or the
+training data, or <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m35" class="ltx_Math" alttext="y\in F" display="inline"><mrow><mi>y</mi><mo>∈</mo><mi>F</mi></mrow></math>, if it was unseen.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">6</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">6</sup>
+This disambiguation scheme is similar to the one adopted by
+<cite class="ltx_cite">Das<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib10" title="Frame-semantic parsing" class="ltx_ref">2014</a>)</cite>, but they use unlemmatized words to define
+their confusion set.
+</span></span></span>
+Model learning is performed using the margin ranking loss function as described
+in <cite class="ltx_cite">Weston<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib27a" title="WSABIE: scaling up to large vocabulary image annotation" class="ltx_ref">2011</a>)</cite>, and in more detail in section <a href="#S3.SS2" title="3.2 Learning ‣ 3 Frame Identification with Embeddings ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.</p>
+</div>
+<div id="S3.p4" class="ltx_para">
+<p class="ltx_p">Since <span class="ltx_text ltx_font_smallcaps ltx_font_small">Wsabie</span>learns a single mapping from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m1" class="ltx_Math" alttext="g(x)" display="inline"><mrow><mi>g</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></math> to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m2" class="ltx_Math" alttext="\mathbb{R}^{m}" display="inline"><msup><mi>ℝ</mi><mi>m</mi></msup></math>, parameters are
+shared between different words and different frames. So for example “He
+<em class="ltx_emph">runs</em> the company” could help the model disambiguate “He <em class="ltx_emph">owns</em> the
+company.” Moreover, since <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m3" class="ltx_Math" alttext="g(x)" display="inline"><mrow><mi>g</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></math> relies on word embeddings rather than word
+identities, information is shared between words. For example
+“<em class="ltx_emph">He</em> runs <em class="ltx_emph">the company</em>” could help us to learn about “<em class="ltx_emph">She</em>
+runs <em class="ltx_emph">a corporation</em>”.</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Context Representation Extraction</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">In principle <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m1" class="ltx_Math" alttext="g(x)" display="inline"><mrow><mi>g</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></math> could be any feature function, but we performed an
+initial investigation of two particular variants. In both variants,
+our representation is a block vector where each block corresponds to a syntactic position relative to the predicate, and each block’s values correspond to the embedding of the word at that position.</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Direct Dependents</span>  The first context function we
+considered corresponds to the examples in §<a href="#S3" title="3 Frame Identification with Embeddings ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+To elaborate, the positions of interest are the labels of the direct dependents of
+the predicate, so <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m1" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> is the number of labels that the dependency parser can
+produce. For example, if the label on the edge between <em class="ltx_emph">runs</em> and
+<em class="ltx_emph">He</em> is <span class="ltx_text ltx_font_sansserif ltx_font_small">nsubj</span>, we would put the embedding of <em class="ltx_emph">He</em> in the
+block corresponding to <span class="ltx_text ltx_font_sansserif ltx_font_small">nsubj</span>. If a label occurs multiple times, then
+the embeddings of the words below this label are averaged.</p>
+</div>
+<div id="S3.SS1.p3" class="ltx_para">
+<p class="ltx_p">Unfortunately, using only the direct dependents can miss a lot of
+useful information. For example, topicalization can place discriminating
+information farther from the predicate. Consider “He <span class="ltx_text ltx_font_italic">runs</span> the <span class="ltx_text ltx_font_italic">company</span>.” vs.
+“It was the <span class="ltx_text ltx_font_italic">company</span> that he <span class="ltx_text ltx_font_italic">runs</span>.” In the second sentence, the discriminating
+word, <em class="ltx_emph">company</em> dominates the predicate <em class="ltx_emph">runs</em>. Similarly,
+predicates in embedded clauses may have a distant agent which
+cannot be captured using direct dependents.
+Consider
+“<span class="ltx_text ltx_font_italic">The athlete</span> <span class="ltx_text ltx_font_italic">ran</span> the marathon.” vs. “<span class="ltx_text ltx_font_italic">The athlete</span>
+prepared himself for three months to <span class="ltx_text ltx_font_italic">run</span> the marathon.”
+In the second example, for the predicate <em class="ltx_emph">run</em>, the agent <em class="ltx_emph">The athlete</em>
+is not a direct dependent, but is connected via a longer dependency path.</p>
+</div>
+<div id="S3.SS1.p4" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Dependency Paths</span>  To capture more relevant context,
+we developed a second context function as follows.
+We scanned the training data for a given
+task (either the PropBank or the FrameNet domains) for the
+dependency paths that connected the gold predicates to the gold semantic arguments.
+This set of dependency paths were deemed as possible positions
+in the initial vector space representation. In addition, akin to the first context function,
+we also added all dependency labels to the context set.
+Thus for this context function, the block cardinality <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m1" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> was
+the sum of the number of scanned gold dependency path types and the
+number of dependency labels.
+Given a predicate in its sentential context, we therefore extract only those
+context words that appear in positions warranted by the above set.
+See Figure <a href="#S3" title="3 Frame Identification with Embeddings ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> for an illustration of this process.</p>
+</div>
+<div id="S3.SS1.p5" class="ltx_para">
+<p class="ltx_p">We performed initial experiments using context extracted from 1) direct
+dependents, 2) dependency paths, and 3) both. For all our experiments, setting
+3) which concatenates the direct dependents and dependency path always dominated
+the other two, so we only report results for this setting.</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Learning</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">We model our objective function following <cite class="ltx_cite">Weston<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib27a" title="WSABIE: scaling up to large vocabulary image annotation" class="ltx_ref">2011</a>)</cite>, using a
+weighted approximate-rank pairwise loss, learned with stochastic gradient
+descent. The mapping from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m1" class="ltx_Math" alttext="g(x)" display="inline"><mrow><mi>g</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></math> to the low dimensional space <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m2" class="ltx_Math" alttext="\mathbb{R}^{m}" display="inline"><msup><mi>ℝ</mi><mi>m</mi></msup></math> is a
+linear transformation, so the model parameters to be learnt are the
+matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m3" class="ltx_Math" alttext="M\in\mathbb{R}^{nk\times m}" display="inline"><mrow><mi>M</mi><mo>∈</mo><msup><mi>ℝ</mi><mrow><mrow><mi>n</mi><mo>⁢</mo><mi>k</mi></mrow><mo>×</mo><mi>m</mi></mrow></msup></mrow></math> as well as the embedding of each possible frame label,
+represented as another
+matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m4" class="ltx_Math" alttext="Y\in\mathbb{R}^{F\times m}" display="inline"><mrow><mi>Y</mi><mo>∈</mo><msup><mi>ℝ</mi><mrow><mi>F</mi><mo>×</mo><mi>m</mi></mrow></msup></mrow></math> where there are <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m5" class="ltx_Math" alttext="F" display="inline"><mi>F</mi></math> frames in total.
+The training objective function minimizes:</p>
+<table id="S3.Ex2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex2.m1" class="ltx_Math" alttext="\sum_{x}\sum_{\bar{y}}L\big(rank_{y}(x)\big)\max(0,\gamma+s(x,y)-s(x,\bar{y}))." display="block"><mrow><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>x</mi></munder><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mover accent="true"><mi>y</mi><mo stretchy="false">¯</mo></mover></munder><mrow><mi>L</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><msub><mi>k</mi><mi>y</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow><mo>)</mo></mrow><mo>⁢</mo><mrow><mo movablelimits="false">max</mo><mo>⁡</mo><mrow><mo>(</mo><mrow><mn>0</mn><mo>,</mo><mrow><mi>γ</mi><mo>+</mo><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mover accent="true"><mi>y</mi><mo stretchy="false">¯</mo></mover></mrow><mo>)</mo></mrow></mrow></mrow></mrow><mo>)</mo></mrow></mrow></mrow></mrow></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m6" class="ltx_Math" alttext="x,y" display="inline"><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow></math> are the training inputs and their corresponding correct frames,
+and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m7" class="ltx_Math" alttext="\bar{y}" display="inline"><mover accent="true"><mi>y</mi><mo stretchy="false">¯</mo></mover></math> are negative frames, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m8" class="ltx_Math" alttext="\gamma" display="inline"><mi>γ</mi></math> is the margin. Here, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m9" class="ltx_Math" alttext="rank_{y}(x)" display="inline"><mrow><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><msub><mi>k</mi><mi>y</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></math> is the rank of the positive frame <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m10" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math> relative to all the negative frames:</p>
+<table id="S3.Ex3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex3.m1" class="ltx_Math" alttext="rank_{y}(x)=\sum_{\bar{y}}I(s(x,y)\leq\gamma+s(x,\bar{y}))," display="block"><mrow><mi>r</mi><mi>a</mi><mi>n</mi><msub><mi>k</mi><mi>y</mi></msub><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow><mo>=</mo><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mover accent="true"><mi>y</mi><mo stretchy="false">¯</mo></mover></munder><mi>I</mi><mrow><mo>(</mo><mi>s</mi><mrow><mo>(</mo><mi>x</mi><mo>,</mo><mi>y</mi><mo>)</mo></mrow><mo>≤</mo><mi>γ</mi><mo>+</mo><mi>s</mi><mrow><mo>(</mo><mi>x</mi><mo>,</mo><mover accent="true"><mi>y</mi><mo stretchy="false">¯</mo></mover><mo>)</mo></mrow><mo>)</mo></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m11" class="ltx_Math" alttext="L(\eta)" display="inline"><mrow><mi>L</mi><mo>⁢</mo><mrow><mo>(</mo><mi>η</mi><mo>)</mo></mrow></mrow></math> converts the rank to a weight. Choosing <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m12" class="ltx_Math" alttext="L(\eta)=C\eta" display="inline"><mrow><mrow><mi>L</mi><mo>⁢</mo><mrow><mo>(</mo><mi>η</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mi>C</mi><mo>⁢</mo><mi>η</mi></mrow></mrow></math> for any positive constant <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m13" class="ltx_Math" alttext="C" display="inline"><mi>C</mi></math> optimizes the mean rank,
+whereas a weighting such as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m14" class="ltx_Math" alttext="L(\eta)=\sum_{i=1}^{\eta}1/i" display="inline"><mrow><mrow><mi>L</mi><mo>⁢</mo><mrow><mo>(</mo><mi>η</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>η</mi></msubsup><mrow><mn>1</mn><mo>/</mo><mi>i</mi></mrow></mrow></mrow></math> (adopted here)
+optimizes the top of the ranked list, as described
+in <cite class="ltx_cite">[<a href="#bib.bib26" title="Ranking with ordered weighted pairwise classification" class="ltx_ref">26</a>]</cite>. To train with such an objective, stochastic gradient is employed.
+For speed the computation of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m15" class="ltx_Math" alttext="rank_{y}(x)" display="inline"><mrow><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><msub><mi>k</mi><mi>y</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></math> is then replaced with a sampled approximation:
+sample <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m16" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math> items <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m17" class="ltx_Math" alttext="\bar{y}" display="inline"><mover accent="true"><mi>y</mi><mo stretchy="false">¯</mo></mover></math> until a violation is found, i.e. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m18" class="ltx_Math" alttext="\max(0,\gamma+s(x,\bar{y})-s(x,y)))&gt;0" display="inline"><mrow><mo>max</mo><mrow><mo>(</mo><mn>0</mn><mo>,</mo><mi>γ</mi><mo>+</mo><mi>s</mi><mrow><mo>(</mo><mi>x</mi><mo>,</mo><mover accent="true"><mi>y</mi><mo stretchy="false">¯</mo></mover><mo>)</mo></mrow><mo>-</mo><mi>s</mi><mrow><mo>(</mo><mi>x</mi><mo>,</mo><mi>y</mi><mo>)</mo></mrow><mo>)</mo></mrow><mo>)</mo><mo>&gt;</mo><mn>0</mn></mrow></math>
+and then approximate the rank with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m19" class="ltx_Math" alttext="(F-1)/N" display="inline"><mrow><mrow><mo>(</mo><mrow><mi>F</mi><mo>-</mo><mn>1</mn></mrow><mo>)</mo></mrow><mo>/</mo><mi>N</mi></mrow></math>, see <cite class="ltx_cite">Weston<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib27a" title="WSABIE: scaling up to large vocabulary image annotation" class="ltx_ref">2011</a>)</cite> for more details on this procedure.
+For the choices of the stochastic gradient learning rate, margin (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m20" class="ltx_Math" alttext="\gamma" display="inline"><mi>γ</mi></math>) and dimensionality (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m21" class="ltx_Math" alttext="m" display="inline"><mi>m</mi></math>), please
+refer to §<a href="#S5.SS4" title="5.4 Experimental Setup for FrameNet ‣ 5 Experiments ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.4</span></a>-§<a href="#S5.SS5" title="5.5 Experimental Setup for PropBank ‣ 5 Experiments ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.5</span></a>.</p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p">Note that an alternative approach
+could learn only the matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m1" class="ltx_Math" alttext="M" display="inline"><mi>M</mi></math>, and then use a <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m2" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>-nearest
+neighbor classifier in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m3" class="ltx_Math" alttext="\mathbb{R}^{m}" display="inline"><msup><mi>ℝ</mi><mi>m</mi></msup></math>, as in <cite class="ltx_cite">Weinberger and Saul (<a href="#bib.bib42" title="Distance metric learning for large margin nearest neighbor classification" class="ltx_ref">2009</a>)</cite>. The advantage
+of learning
+an embedding for the frame labels is that at inference time we
+need to consider only the set of labels for classification rather than all training examples.
+Additionally, since we use a frame lexicon that gives us the possible frames for
+a given predicate, we usually only consider a handful of candidate labels.
+If we used all training examples for a given predicate for finding a nearest-neighbor match
+at inference time, we would have to consider many more candidates, making
+the process very slow.</p>
+</div>
+<div id="S3.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_t" style="width:72.3pt;" width="72.3pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m1" class="ltx_Math" alttext="\bullet" display="inline"><mo>∙</mo></math><span class="ltx_text ltx_font_small"> starting word of </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m2" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:119.2pt;" width="119.2pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m3" class="ltx_Math" alttext="\bullet" display="inline"><mo>∙</mo></math><span class="ltx_text ltx_font_small"> POS of the starting word of </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m4" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l" style="width:72.3pt;" width="72.3pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m5" class="ltx_Math" alttext="\bullet" display="inline"><mo>∙</mo></math><span class="ltx_text ltx_font_small"> ending word of </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m6" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:119.2pt;" width="119.2pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m7" class="ltx_Math" alttext="\bullet" display="inline"><mo>∙</mo></math><span class="ltx_text ltx_font_small"> POS of the ending word of </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m8" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l" style="width:72.3pt;" width="72.3pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m9" class="ltx_Math" alttext="\bullet" display="inline"><mo>∙</mo></math><span class="ltx_text ltx_font_small"> head word of </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m10" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:119.2pt;" width="119.2pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m11" class="ltx_Math" alttext="\bullet" display="inline"><mo>∙</mo></math><span class="ltx_text ltx_font_small"> POS of the head word of </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m12" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l" style="width:72.3pt;" width="72.3pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m13" class="ltx_Math" alttext="\bullet" display="inline"><mo>∙</mo></math><span class="ltx_text ltx_font_small"> bag of words in </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m14" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:119.2pt;" width="119.2pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m15" class="ltx_Math" alttext="\bullet" display="inline"><mo>∙</mo></math><span class="ltx_text ltx_font_small"> bag of POS tags in </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m16" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l" style="width:72.3pt;" width="72.3pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m17" class="ltx_Math" alttext="\bullet" display="inline"><mo>∙</mo></math><span class="ltx_text ltx_font_small"> a bias feature</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r" style="width:119.2pt;" width="119.2pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m18" class="ltx_Math" alttext="\bullet" display="inline"><mo>∙</mo></math><span class="ltx_text ltx_font_small"> voice of the predicate use</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:72.3pt;" colspan="2" width="72.3pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m19" class="ltx_Math" alttext="\bullet" display="inline"><mo>∙</mo></math><span class="ltx_text ltx_font_small"> word cluster of </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m20" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math><span class="ltx_text ltx_font_small">’s head</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:72.3pt;" colspan="2" width="72.3pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m21" class="ltx_Math" alttext="\bullet" display="inline"><mo>∙</mo></math><span class="ltx_text ltx_font_small"> word cluster of </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m22" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math><span class="ltx_text ltx_font_small">’s head conjoined with word cluster of the predicate</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m23" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo>*</mo></msup></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:72.3pt;" colspan="2" width="72.3pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m24" class="ltx_Math" alttext="\bullet" display="inline"><mo>∙</mo></math><span class="ltx_text ltx_font_small"> dependency path between </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m25" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math><span class="ltx_text ltx_font_small">’s head and the predicate</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:72.3pt;" colspan="2" width="72.3pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m26" class="ltx_Math" alttext="\bullet" display="inline"><mo>∙</mo></math><span class="ltx_text ltx_font_small"> the set of dependency labels of the predicate’s children</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:72.3pt;" colspan="2" width="72.3pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m27" class="ltx_Math" alttext="\bullet" display="inline"><mo>∙</mo></math><span class="ltx_text ltx_font_small"> dependency path conjoined with the POS tag of </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m28" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math><span class="ltx_text ltx_font_small">’s head</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:72.3pt;" colspan="2" width="72.3pt"><span class="ltx_text ltx_font_small"></span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m29" class="ltx_Math" alttext="\bullet" display="inline"><mo>∙</mo></math><span class="ltx_text ltx_font_small"> dependency path conjoined with the word cluster of </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m30" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math><span class="ltx_text ltx_font_small">’s head</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:72.3pt;" colspan="2" width="72.3pt"><span class="ltx_text ltx_font_small"></span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m31" class="ltx_Math" alttext="\bullet" display="inline"><mo>∙</mo></math><span class="ltx_text ltx_font_small"> position of </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m32" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math><span class="ltx_text ltx_font_small"> with respect to the predicate (</span><span class="ltx_text ltx_font_italic ltx_font_small">before, after, overlap or identical</span><span class="ltx_text ltx_font_small">)</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:72.3pt;" colspan="2" width="72.3pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m33" class="ltx_Math" alttext="\bullet" display="inline"><mo>∙</mo></math><span class="ltx_text ltx_font_small"> whether the subject of the predicate is missing (</span><span class="ltx_text ltx_font_italic ltx_font_small">missingsubj</span><span class="ltx_text ltx_font_small">)</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r" style="width:72.3pt;" colspan="2" width="72.3pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m34" class="ltx_Math" alttext="\bullet" display="inline"><mo>∙</mo></math><span class="ltx_text ltx_font_small"> </span><span class="ltx_text ltx_font_italic ltx_font_small">missingsubj</span><span class="ltx_text ltx_font_small">, conjoined with the dependency path</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_l ltx_border_r" style="width:72.3pt;" colspan="2" width="72.3pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m35" class="ltx_Math" alttext="\bullet" display="inline"><mo>∙</mo></math><span class="ltx_text ltx_font_small"> </span><span class="ltx_text ltx_font_italic ltx_font_small">missingsubj</span><span class="ltx_text ltx_font_small">, conjoined with the dependency path from
+the verb dominating the predicate to </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m36" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math><span class="ltx_text ltx_font_small">’s head</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 1: </span>Argument identification features. The span in consideration is termed <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m42" class="ltx_Math" alttext="a" display="inline"><mi mathsize="normal" stretchy="false">a</mi></math>.
+Every feature in this list has two versions, one conjoined with the
+given role <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m43" class="ltx_Math" alttext="r" display="inline"><mi mathsize="normal" stretchy="false">r</mi></math> and the other conjoined with both <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m44" class="ltx_Math" alttext="r" display="inline"><mi mathsize="normal" stretchy="false">r</mi></math> and the frame <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m45" class="ltx_Math" alttext="y" display="inline"><mi mathsize="normal" stretchy="false">y</mi></math>.
+The feature with a <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m46" class="ltx_Math" alttext="{}^{*}" display="inline"><msup><mi/><mo mathsize="normal" stretchy="false">*</mo></msup></math> superscript is only conjoined with the role to reduce its sparsity.
+
+</div>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Argument Identification</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">Here, we briefly describe the argument identification model used
+in our frame-semantic parsing experiments, post frame identification.
+Given <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m1" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math>, the sentence with a marked predicate,
+the argument identification model assumes that the predicate frame <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m2" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math>
+has been disambiguated. From a frame lexicon, we look up the
+set of semantic roles <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m3" class="ltx_Math" alttext="\mathcal{R}_{y}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">ℛ</mi><mi>y</mi></msub></math> that associate with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m4" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math>.
+This set also contains the null role <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m5" class="ltx_Math" alttext="r_{\emptyset}" display="inline"><msub><mi>r</mi><mi mathvariant="normal">∅</mi></msub></math>. From <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m6" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math>,
+a rule-based candidate argument extraction algorithm extracts a set
+of spans <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m7" class="ltx_Math" alttext="\mathcal{A}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒜</mi></math> that could potentially serve as the overt<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">7</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">7</sup>
+By overtness, we mean the non-null instantiation
+of a semantic role in a frame-semantic parse.
+</span></span></span>
+arguments
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m8" class="ltx_Math" alttext="\mathcal{A}_{y}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒜</mi><mi>y</mi></msub></math> for
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m9" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math> (see §<a href="#S5.SS4" title="5.4 Experimental Setup for FrameNet ‣ 5 Experiments ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.4</span></a>-§<a href="#S5.SS5" title="5.5 Experimental Setup for PropBank ‣ 5 Experiments ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.5</span></a> for the details of the
+candidate argument extraction algorithms).</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Learning</span>  Given training data of the form <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m1" class="ltx_Math" alttext="\langle\langle x^{(i)},y^{(i)},\mathcal{M}^{(i)}\rangle\rangle_{i=1}^{N}" display="inline"><msubsup><mrow><mo>⟨</mo><mrow><mo>⟨</mo><mrow><msup><mi>x</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup><mo>,</mo><msup><mi>y</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup><mo>,</mo><msup><mi class="ltx_font_mathcaligraphic">ℳ</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup></mrow><mo>⟩</mo></mrow><mo>⟩</mo></mrow><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>N</mi></msubsup></math>, where,</p>
+<table id="S4.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E1.m1" class="ltx_Math" alttext="\mathcal{M}=\{(r,a\}:r\in\mathcal{R}_{y},a\in\mathcal{A}\cup\mathcal{A}_{y}\}," display="block"><mrow><mrow><mi class="ltx_font_mathcaligraphic">ℳ</mi><mo>=</mo><mrow><mo>{</mo><mrow><mrow><mo>(</mo><mrow><mi>r</mi><mo>,</mo><mi>a</mi></mrow><mo>}</mo></mrow><mo separator="true">:</mo><mrow><mrow><mi>r</mi><mo>∈</mo><msub><mi class="ltx_font_mathcaligraphic">ℛ</mi><mi>y</mi></msub></mrow><mo>,</mo><mrow><mi>a</mi><mo>∈</mo><mrow><mi class="ltx_font_mathcaligraphic">𝒜</mi><mo>∪</mo><msub><mi class="ltx_font_mathcaligraphic">𝒜</mi><mi>y</mi></msub></mrow></mrow></mrow></mrow><mo>}</mo></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+<p class="ltx_p">a set of tuples that associates each role <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m2" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math> in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m3" class="ltx_Math" alttext="\mathcal{R}_{y}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">ℛ</mi><mi>y</mi></msub></math> with a span
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m4" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math> according to the gold data.
+Note that this mapping associates spans with the null role <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m5" class="ltx_Math" alttext="r_{\emptyset}" display="inline"><msub><mi>r</mi><mi mathvariant="normal">∅</mi></msub></math> as well.
+We optimize the following log-likelihood to train our model:</p>
+<table id="S4.Ex4" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex4.m1" class="ltx_Math" alttext="\max_{\boldsymbol{\theta}}\displaystyle\sum_{i=1}^{N}\sum_{j=1}^{\mid\mathcal{%&#10;M}^{(i)}\mid}\log p_{\boldsymbol{\theta}}\big((r,a)_{j}|x,y,\mathcal{R}_{y}%&#10;\big)-C\|\boldsymbol{\theta}\|^{2}_{2}" display="block"><mrow><munder><mo movablelimits="false">max</mo><mi>𝜽</mi></munder><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>N</mi></munderover><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mrow><mo fence="true">∣</mo><msup><mi class="ltx_font_mathcaligraphic">ℳ</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msup><mo fence="true">∣</mo></mrow></munderover><mi>log</mi><msub><mi>p</mi><mi>𝜽</mi></msub><mrow><mo mathsize="1.1em" stretchy="false">(</mo><msub><mrow><mo>(</mo><mi>r</mi><mo>,</mo><mi>a</mi><mo>)</mo></mrow><mi>j</mi></msub><mo>|</mo><mi>x</mi><mo>,</mo><mi>y</mi><mo>,</mo><msub><mi class="ltx_font_mathcaligraphic">ℛ</mi><mi>y</mi></msub><mo mathsize="1.1em" stretchy="false">)</mo></mrow><mo>-</mo><mi>C</mi><mo>∥</mo><mi>𝜽</mi><msubsup><mo>∥</mo><mn>2</mn><mn>2</mn></msubsup></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m6" class="ltx_Math" alttext="p_{\boldsymbol{\theta}}" display="inline"><msub><mi>p</mi><mi>𝜽</mi></msub></math> is a log-linear model normalized over the set
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m7" class="ltx_Math" alttext="\mathcal{R}_{y}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">ℛ</mi><mi>y</mi></msub></math>, with features described in Table <a href="#S3.T1" title="Table 1 ‣ 3.2 Learning ‣ 3 Frame Identification with Embeddings ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>. We
+set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m8" class="ltx_Math" alttext="C=1.0" display="inline"><mrow><mi>C</mi><mo>=</mo><mn>1.0</mn></mrow></math> and use L-BFGS <cite class="ltx_cite">[<a href="#bib.bib100" title="On the limited memory BFGS method for large scale optimization" class="ltx_ref">18</a>]</cite> for training.</p>
+</div>
+<div id="S4.p3" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Inference</span>  Although our learning mechanism uses
+a local log-linear model, we perform inference globally on a per-frame basis by
+applying hard structural constraints. Following
+<cite class="ltx_cite">Das<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib10" title="Frame-semantic parsing" class="ltx_ref">2014</a>)</cite> and <cite class="ltx_cite">Punyakanok<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib45" title="The importance of syntactic parsing and inference in semantic role labeling" class="ltx_ref">2008</a>)</cite> we use the
+log-probability of the local classifiers as a score in an integer linear program
+(ILP) to assign roles subject to hard constraints described in
+§<a href="#S5.SS4" title="5.4 Experimental Setup for FrameNet ‣ 5 Experiments ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.4</span></a> and §<a href="#S5.SS5" title="5.5 Experimental Setup for PropBank ‣ 5 Experiments ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.5</span></a>.
+We use an off-the-shelf ILP solver for inference.</p>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Experiments</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">In this section, we present our experiments and the results achieved.
+We evaluate our novel frame identification approach in isolation
+and also conjoined with argument identification resulting in full
+frame-semantic structures; before presenting our model’s performance
+we first focus on the datasets, baselines and the experimental setup.</p>
+</div>
+<div id="S5.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.1 </span>Data</h3>
+
+<div id="S5.SS1.p1" class="ltx_para">
+<p class="ltx_p">We evaluate our models on both FrameNet- and PropBank-style structures. For
+FrameNet, we use the full-text annotations in the FrameNet 1.5
+release<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">8</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">8</sup>See <span class="ltx_text ltx_font_typewriter">https://framenet.icsi.berkeley.edu</span>.</span></span></span> which was
+used by <cite class="ltx_cite"/>§3.2]das-etal-semafor-2013. We used the same test set as
+Das et al. containing 23 documents with 4,458 predicates. Of the remaining 55
+documents, 16 documents were randomly chosen for development.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">9</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">9</sup>These
+documents are listed in appendix <a href="#A1" title="Appendix A Development Data ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">A</span></a>.</span></span></span></p>
+</div>
+<div id="S5.SS1.p2" class="ltx_para">
+<p class="ltx_p">For experiments with PropBank, we used the Ontonotes corpus <cite class="ltx_cite">[<a href="#bib.bib9" title="OntoNotes: the 90" class="ltx_ref">14</a>]</cite>, version
+4.0, and only made use of the Wall Street Journal
+documents; we used sections 2-21 for training, section 24 for development
+and section 23 for testing. This resembles the setup used by <cite class="ltx_cite">Punyakanok<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib45" title="The importance of syntactic parsing and inference in semantic role labeling" class="ltx_ref">2008</a>)</cite>.
+All the verb frame files in Ontonotes were used for creating our frame
+lexicon.</p>
+</div>
+</div>
+<div id="S5.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.2 </span>Frame Identification Baselines</h3>
+
+<div id="S5.SS2.p1" class="ltx_para">
+<p class="ltx_p">For comparison, we implemented a set of baseline models, with
+varying feature configurations. The baselines use a
+log-linear model that models the following probability at training time:</p>
+<table id="S5.E2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.E2.m1" class="ltx_Math" alttext="p(y|x,\ell)=\frac{e^{\boldsymbol{\psi}\cdot\mathbf{f}(y,x,\ell)}}{\sum_{\bar{y%&#10;}\in F_{\ell}}e^{\boldsymbol{\psi}\cdot\mathbf{f}(\bar{y},x,\ell)}}" display="block"><mrow><mi>p</mi><mrow><mo>(</mo><mi>y</mi><mo>|</mo><mi>x</mi><mo>,</mo><mi mathvariant="normal">ℓ</mi><mo>)</mo></mrow><mo>=</mo><mfrac><msup><mi>e</mi><mrow><mrow><mi>𝝍</mi><mo>⋅</mo><mi>𝐟</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>y</mi><mo>,</mo><mi>x</mi><mo>,</mo><mi mathvariant="normal">ℓ</mi></mrow><mo>)</mo></mrow></mrow></msup><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mrow><mover accent="true"><mi>y</mi><mo stretchy="false">¯</mo></mover><mo>∈</mo><msub><mi>F</mi><mi mathvariant="normal">ℓ</mi></msub></mrow></msub><msup><mi>e</mi><mrow><mrow><mi>𝝍</mi><mo>⋅</mo><mi>𝐟</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><mover accent="true"><mi>y</mi><mo stretchy="false">¯</mo></mover><mo>,</mo><mi>x</mi><mo>,</mo><mi mathvariant="normal">ℓ</mi></mrow><mo>)</mo></mrow></mrow></msup></mrow></mfrac></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+<p class="ltx_p">At test time, this model chooses the best frame as
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m1" class="ltx_Math" alttext="\mbox{argmax}_{y}\boldsymbol{\psi}\cdot\mathbf{f}(y,x,\ell)" display="inline"><mrow><mrow><mrow><msub><mtext>argmax</mtext><mi>y</mi></msub><mo>⁢</mo><mi>𝝍</mi></mrow><mo>⋅</mo><mi>𝐟</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>y</mi><mo>,</mo><mi>x</mi><mo>,</mo><mi mathvariant="normal">ℓ</mi></mrow><mo>)</mo></mrow></mrow></math> where
+<span class="ltx_text ltx_markedasmath">argmax</span> iterates over the possible frames <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m3" class="ltx_Math" alttext="y\in F_{\ell}" display="inline"><mrow><mi>y</mi><mo>∈</mo><msub><mi>F</mi><mi mathvariant="normal">ℓ</mi></msub></mrow></math> if <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m4" class="ltx_Math" alttext="\ell" display="inline"><mi mathvariant="normal">ℓ</mi></math> was
+seen in the lexicon or the training data, or <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m5" class="ltx_Math" alttext="y\in F" display="inline"><mrow><mi>y</mi><mo>∈</mo><mi>F</mi></mrow></math>, if it was unseen, like
+the disambiguation scheme of §<a href="#S3" title="3 Frame Identification with Embeddings ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>. We train
+this model by maximizing <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m6" class="ltx_Math" alttext="L_{2}" display="inline"><msub><mi>L</mi><mn>2</mn></msub></math> regularized log-likelihood, using L-BFGS;
+the regularization constant was set to 0.1 in all experiments.</p>
+</div>
+<div id="S5.SS2.p2" class="ltx_para">
+<p class="ltx_p">For comparison with our model from §<a href="#S3" title="3 Frame Identification with Embeddings ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+which we call <span class="ltx_text ltx_font_smallcaps ltx_font_small">Wsabie Embedding</span>, we implemented two baselines
+with the log-linear model. Both the baselines use features very similar to the
+input representations described in §<a href="#S3.SS1" title="3.1 Context Representation Extraction ‣ 3 Frame Identification with Embeddings ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>. The first one
+computes the direct dependents and dependency paths as described
+in §<a href="#S3.SS1" title="3.1 Context Representation Extraction ‣ 3 Frame Identification with Embeddings ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a> but conjoins them with the word identity rather
+than a word embedding. Additionally, this model uses the un-conjoined words as
+backoff features. This would be a standard NLP approach for the frame
+identification problem, but is surprisingly competitive with the state of the
+art. We call this baseline <span class="ltx_text ltx_font_smallcaps ltx_font_small">Log-Linear Words</span>. The second
+baseline, tries to decouple the <span class="ltx_text ltx_font_smallcaps ltx_font_small">Wsabie</span>training from the embedding input, and
+trains a log linear model using the embeddings. So the second baseline has the
+same input representation as <span class="ltx_text ltx_font_smallcaps ltx_font_small">Wsabie Embedding</span> but uses a
+log-linear model instead of <span class="ltx_text ltx_font_smallcaps ltx_font_small">Wsabie</span>. We call this model
+<span class="ltx_text ltx_font_smallcaps ltx_font_small">Log-Linear Embedding</span>.</p>
+</div>
+<div id="S5.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td"/>
+<th class="ltx_td"/>
+<th class="ltx_td ltx_align_center" colspan="3"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Semafor Lexicon</span></th>
+<th class="ltx_td ltx_align_center" colspan="3"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Full Lexicon</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_t" rowspan="4"><span class="ltx_text ltx_font_italic ltx_font_small">Development Data</span></th>
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_small">Model</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">All</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">Ambiguous</span></th>
+<th class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">Rare</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">All</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">Ambiguous</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Rare</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Log-Linear Words</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">96.21</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">90.41</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">95.75</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">96.37</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">90.41</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">96.07</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Log-Linear Embedding</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">96.06</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">90.56</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_small">95.38</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">96.19</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">90.49</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">95.70</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Wsabie Embedding (§<a href="#S3" title="3 Frame Identification with Embeddings ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>)</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_bold ltx_font_small">96.90</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_bold ltx_font_small">92.73</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_rr"><span class="ltx_text ltx_font_bold ltx_font_small">96.44</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_bold ltx_font_small">96.99</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_bold ltx_font_small">93.12</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">96.39</span></td></tr>
+</tbody>
+</table>
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td"/>
+<th class="ltx_td"/>
+<td class="ltx_td ltx_align_center" colspan="4"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Semafor Lexicon</span></td>
+<td class="ltx_td ltx_align_center" colspan="3"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Full Lexicon</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td"/>
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_small">Model</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">All</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">Ambiguous</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">Rare</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">Unseen</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">All</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">Ambiguous</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Rare</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_t" rowspan="5"><span class="ltx_text ltx_font_italic ltx_font_small">Test Data</span></th>
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_t"><cite class="ltx_cite">Das<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib10" title="Frame-semantic parsing" class="ltx_ref">2014</a>)</cite><span class="ltx_text ltx_font_small"> supervised</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">82.97</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">69.27</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">80.97</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">23.08</span></td>
+<td class="ltx_td ltx_border_r ltx_border_t" colspan="3"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"><cite class="ltx_cite">Das<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib10" title="Frame-semantic parsing" class="ltx_ref">2014</a>)</cite><span class="ltx_text ltx_font_small"> best</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">83.60</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">69.19</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">82.31</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_small">42.67</span></td>
+<td class="ltx_td ltx_border_r" colspan="3"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Log-Linear Words</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">84.71</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">70.97</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">81.70</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">27.27</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">87.44</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">70.97</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">87.10</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Log-Linear Embedding</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">83.42</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">68.70</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">80.95</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_small">27.97</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">86.20</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">68.70</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">86.03</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Wsabie Embedding (§<a href="#S3" title="3 Frame Identification with Embeddings ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>)</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_bold ltx_font_small">86.58</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_bold ltx_font_small">73.67</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_bold ltx_font_small">85.04</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_rr"><span class="ltx_text ltx_font_bold ltx_font_small">44.76</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_bold ltx_font_small">88.73</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_bold ltx_font_small">73.67</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">89.38</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 2: </span>
+
+Frame identification results for FrameNet.
+See §<a href="#S5.SS6" title="5.6 FrameNet Results ‣ 5 Experiments ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.6</span></a>.
+</div>
+</div>
+<div id="S5.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td"/>
+<th class="ltx_td"/>
+<td class="ltx_td ltx_align_center" colspan="3"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Semafor Lexicon</span></td>
+<td class="ltx_td ltx_align_center" colspan="3"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Full Lexicon</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td"/>
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_small">Model</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">Precision</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">Recall</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m1" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">Precision</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">Recall</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m2" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_t" rowspan="3"><span class="ltx_text ltx_font_italic ltx_font_small">Development Data</span></th>
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Log-Linear Words</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">89.43</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">75.98</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">82.16</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">89.41</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">76.05</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">82.19</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Wsabie Embedding (§<a href="#S3" title="3 Frame Identification with Embeddings ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>)</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_small">89.89</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_small">76.40</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_bold ltx_font_small">82.59</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_small">89.94</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_small">76.27</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">82.54</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_tt"><span class="ltx_text ltx_font_small">Das et al. supervised</span><cite class="ltx_cite"/></th>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">67.81</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">60.68</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_tt"><span class="ltx_text ltx_font_small">64.05</span></td>
+<td class="ltx_td ltx_border_r ltx_border_tt" colspan="3"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l"><span class="ltx_text ltx_font_small">Das et al. best</span><cite class="ltx_cite"/></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">68.33</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">61.14</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_small">64.54</span></td>
+<td class="ltx_td ltx_border_r" colspan="3"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Log-Linear Words</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">71.16</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">63.56</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">67.15</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">73.35</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">65.27</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">69.08</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Wsabie Embedding (§<a href="#S3" title="3 Frame Identification with Embeddings ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>)</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_bold ltx_font_small">72.79</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_bold ltx_font_small">64.95</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_rr"><span class="ltx_text ltx_font_bold ltx_font_small">68.64</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_bold ltx_font_small">74.44</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_bold ltx_font_small">66.17</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">70.06</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 3: </span>
+Full structure prediction results for FrameNet; this reports frame and
+argument identification performance jointly. We skip
+<span class="ltx_text ltx_font_smallcaps">Log-Linear Embedding</span> because it underperforms all other
+models by a large margin.
+
+</div>
+</div>
+</div>
+<div id="S5.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.3 </span>Common Experimental Setup</h3>
+
+<div id="S5.SS3.p1" class="ltx_para">
+<p class="ltx_p">We process our PropBank and FrameNet training, development and test corpora
+with a shift-reduce dependency parser that uses the Stanford conventions <cite class="ltx_cite">[<a href="#bib.bib7" title="Stanford typed dependencies manual" class="ltx_ref">9</a>]</cite>
+and uses an arc-eager transition system with beam size of 8; the parser and its features
+are described by <cite class="ltx_cite">Zhang and Nivre (<a href="#bib.bib43" title="Transition-based dependency parsing with rich non-local features" class="ltx_ref">2011</a>)</cite>.
+Before parsing the data, it is tagged with a POS tagger trained
+with a conditional random field <cite class="ltx_cite">[<a href="#bib.bib1" title="Conditional random fields: probabilistic models for segmenting and labeling sequence data" class="ltx_ref">17</a>]</cite> with
+the following emission features: word, the word cluster,
+word suffixes of length 1, 2 and 3, capitalization, whether it has a hyphen,
+digit and punctuation.
+Beyond the bias transition feature, we have two cluster features for the left
+and right words in the transition. We use Brown clusters learned
+using the algorithm of <cite class="ltx_cite">Uszkoreit and Brants (<a href="#bib.bib44" title="Distributed word clustering for large scale class-based language modeling in machine translation" class="ltx_ref">2008</a>)</cite> on
+a large English newswire corpus for cluster features. We use the same word
+clusters
+for the argument identification features in Table <a href="#S3.T1" title="Table 1 ‣ 3.2 Learning ‣ 3 Frame Identification with Embeddings ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.</p>
+</div>
+<div id="S5.SS3.p2" class="ltx_para">
+<p class="ltx_p">We learn the initial embedding representations for our frame
+identification model (§<a href="#S3" title="3 Frame Identification with Embeddings ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>) using a deep neural language model
+similar to the one proposed by <cite class="ltx_cite">Bengio<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib25" title="A neural probabilistic language model" class="ltx_ref">2003</a>)</cite>. We use 3 hidden
+layers
+each with 1024 neurons and learn a 128-dimensional embedding from a large corpus
+containing over 100 billion tokens. In order to speed up learning,
+we use an unnormalized output layer and a hinge-loss objective. The objective
+tries to ensure that the correct word scores higher than a random incorrect
+word, and we train with minibatch stochastic gradient descent.</p>
+</div>
+</div>
+<div id="S5.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.4 </span>Experimental Setup for FrameNet</h3>
+
+<div id="S5.SS4.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Hyperparameters</span> For our frame identification model with embeddings, we search for the <span class="ltx_text ltx_font_smallcaps ltx_font_small">Wsabie</span>hyperparameters using the development data. We search for the
+stochastic gradient learning rate in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS4.p1.m1" class="ltx_Math" alttext="\{\underline{0.0001},0.001,0.01\}" display="inline"><mrow><mo>{</mo><mrow><munder accentunder="true"><mn>0.0001</mn><mo>¯</mo></munder><mo>,</mo><mn>0.001</mn><mo>,</mo><mn>0.01</mn></mrow><mo>}</mo></mrow></math>, the margin
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS4.p1.m2" class="ltx_Math" alttext="\gamma\in\{0.001,\underline{0.01},0.1,1\}" display="inline"><mrow><mi>γ</mi><mo>∈</mo><mrow><mo>{</mo><mrow><mn>0.001</mn><mo>,</mo><munder accentunder="true"><mn>0.01</mn><mo>¯</mo></munder><mo>,</mo><mn>0.1</mn><mo>,</mo><mn>1</mn></mrow><mo>}</mo></mrow></mrow></math> and the dimensionality
+of the final vector space <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS4.p1.m3" class="ltx_Math" alttext="m\in\{\underline{256},512\}" display="inline"><mrow><mi>m</mi><mo>∈</mo><mrow><mo>{</mo><mrow><munder accentunder="true"><mn>256</mn><mo>¯</mo></munder><mo>,</mo><mn>512</mn></mrow><mo>}</mo></mrow></mrow></math>, to maximize
+the frame identification accuracy of <span class="ltx_text ltx_font_italic">ambiguous</span> lexical units; by ambiguous,
+we imply lexical units that appear in the training data or the lexicon with
+more than one semantic frame. The underlined
+values are the chosen hyperparameters used to analyze the test data.</p>
+</div>
+<div id="S5.SS4.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Argument Candidates</span> The candidate argument extraction method used for the FrameNet data,
+(as mentioned in §<a href="#S4" title="4 Argument Identification ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>) was adapted from the algorithm
+of <cite class="ltx_cite">Xue and Palmer (<a href="#bib.bib5" title="Calibrating features for semantic role labeling" class="ltx_ref">2004</a>)</cite> applied to dependency trees. Since the original
+algorithm was designed for verbs, we added a few extra rules to
+handle non-verbal predicates: we added 1) the predicate itself as a candidate
+argument, 2) the span ranging from the sentence
+position to the right of the predicate
+to the rightmost index of the subtree headed by the predicate’s head; this helped
+capture cases like “a <span class="ltx_text ltx_font_italic">few</span> <span class="ltx_text" style="text-decoration:underline;">months</span>” (where <span class="ltx_text ltx_font_italic">few</span> is
+the predicate and <span class="ltx_text" style="text-decoration:underline;">months</span> is the argument),
+and 3) the span ranging from the leftmost index
+of the subtree headed by the predicate’s head to the position immediately
+before the predicate, for cases like “<span class="ltx_text" style="text-decoration:underline;">your gift</span> <span class="ltx_text ltx_font_italic">to</span> Goodwill” (where
+<span class="ltx_text ltx_font_italic">to</span> is the predicate and <span class="ltx_text" style="text-decoration:underline;">your gift</span> is the argument).<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">10</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">10</sup>
+Note that <cite class="ltx_cite">Das<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib10" title="Frame-semantic parsing" class="ltx_ref">2014</a>)</cite> describe the state of the art in
+FrameNet-based analysis, but their argument identification strategy considered
+all possible dependency subtrees in a parse, resulting in a much larger search
+space.</span></span></span></p>
+</div>
+<div id="S5.SS4.p3" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Frame Lexicon</span>  In our experimental setup,
+we scanned the XML files in the “frames” directory of the FrameNet 1.5 release,
+which lists all the frames, the corresponding roles and the associated lexical units,
+and created a frame lexicon to be used in our frame and argument
+identification models. We noted that this renders every lexical unit
+as <span class="ltx_text ltx_font_italic">seen</span>; in other words, at frame disambiguation time on our test set,
+for all instances, we only had to score the frames in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS4.p3.m1" class="ltx_Math" alttext="F_{\ell}" display="inline"><msub><mi>F</mi><mi mathvariant="normal">ℓ</mi></msub></math> for a predicate with lexical unit <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS4.p3.m2" class="ltx_Math" alttext="\ell" display="inline"><mi mathvariant="normal">ℓ</mi></math> (see §<a href="#S3" title="3 Frame Identification with Embeddings ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> and §<a href="#S5.SS2" title="5.2 Frame Identification Baselines ‣ 5 Experiments ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.2</span></a>). We call this setup <span class="ltx_text ltx_font_smallcaps ltx_font_small">Full Lexicon</span>. While comparing with prior state of the art on the same corpus, we noted
+that <cite class="ltx_cite">Das<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib10" title="Frame-semantic parsing" class="ltx_ref">2014</a>)</cite> found several unseen predicates at test time.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">11</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">11</sup>
+Instead of using the frame files, Das et al. built a frame lexicon
+from FrameNet’s exemplars and the training corpus.</span></span></span> For fair comparison,
+we took the lexical units for the predicates that Das et al. considered as
+seen, and constructed a lexicon with only those; training instances, if any,
+for the unseen predicates under Das et al.’s setup were thrown out as well.
+We call this setup <span class="ltx_text ltx_font_smallcaps ltx_font_small">Semafor Lexicon</span>.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">12</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">12</sup>We got Das et al.<cite class="ltx_cite"/>’s seen predicates
+from the authors.</span></span></span> We also experimented on the set of unseen instances
+used by Das et al.</p>
+</div>
+<div id="S5.SS4.p4" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">ILP constraints</span>  For FrameNet, we used three ILP constraints
+during argument identification (§<a href="#S4" title="4 Argument Identification ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>). 1) each
+span could have only one role, 2) each core role could be present only once,
+and 3) all overt arguments had to be non-overlapping.</p>
+</div>
+</div>
+<div id="S5.SS5" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.5 </span>Experimental Setup for PropBank</h3>
+
+<div id="S5.SS5.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Hyperparameters</span>  As in §<a href="#S5.SS4" title="5.4 Experimental Setup for FrameNet ‣ 5 Experiments ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.4</span></a>,
+we made a hyperparameter sweep in the same space. The chosen learning rate was
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS5.p1.m1" class="ltx_Math" alttext="0.01" display="inline"><mn>0.01</mn></math>, while the other values were <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS5.p1.m2" class="ltx_Math" alttext="\gamma=0.01" display="inline"><mrow><mi>γ</mi><mo>=</mo><mn>0.01</mn></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS5.p1.m3" class="ltx_Math" alttext="m=512" display="inline"><mrow><mi>m</mi><mo>=</mo><mn>512</mn></mrow></math>. Ambiguous
+lexical units were used for this selection process.</p>
+</div>
+<div id="S5.SS5.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Argument Candidates</span> 
+For PropBankwe use the algorithm of <cite class="ltx_cite">Xue and Palmer (<a href="#bib.bib5" title="Calibrating features for semantic role labeling" class="ltx_ref">2004</a>)</cite> applied to dependency
+trees.</p>
+</div>
+<div id="S5.SS5.p3" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Frame Lexicon</span> 
+For the PropBankexperiments
+we scanned the frame files for propositions in Ontonotes 4.0, and stored
+possible core roles for each verb frame. The lexical units were simply the verb
+associating with the verb frames. There were no unseen verbs at test time.</p>
+</div>
+<div id="S5.SS5.p4" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">ILP constraints</span> 
+We used the constraints of <cite class="ltx_cite">Punyakanok<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib45" title="The importance of syntactic parsing and inference in semantic role labeling" class="ltx_ref">2008</a>)</cite>.</p>
+</div>
+<div id="S5.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_small">Model</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">All</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">Ambiguous</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Rare</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Log-Linear Words</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">94.21</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">90.54</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">93.33</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Log-Linear Embedding</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">93.81</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">89.86</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">93.73</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Wsabie Embedding (§<a href="#S3" title="3 Frame Identification with Embeddings ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>)</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_small">94.79</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_small">91.52</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">92.55</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_t" colspan="4"><span class="ltx_text ltx_font_small">Dev data </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m1" class="ltx_Math" alttext="\uparrow" display="inline"><mo>↑</mo></math><span class="ltx_text ltx_font_small"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m2" class="ltx_Math" alttext="\downarrow" display="inline"><mo>↓</mo></math><span class="ltx_text ltx_font_small"> Test data</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_small">Model</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">All</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">Ambiguous</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Rare</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Log-Linear Words</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">94.74</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">92.07</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">91.32</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Log-Linear Embedding</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">94.04</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">90.95</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">90.97</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_l"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Wsabie Embedding (§<a href="#S3" title="3 Frame Identification with Embeddings ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">94.56</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">91.82</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">90.62</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 4: </span>
+Frame identification accuracy results for PropBank. The model and the column names
+have the same semantics as Table <a href="#S5.T2" title="Table 2 ‣ 5.2 Frame Identification Baselines ‣ 5 Experiments ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</div>
+</div>
+<div id="S5.T5" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_small">Model</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">P</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">R</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T5.m1" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Log-Linear Words</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">80.02</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">75.58</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">77.74</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Wsabie Embedding (§<a href="#S3" title="3 Frame Identification with Embeddings ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>)</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_small">80.06</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_small">75.74</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">77.84</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_t" colspan="4"><span class="ltx_text ltx_font_small">Dev data </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T5.m2" class="ltx_Math" alttext="\uparrow" display="inline"><mo>↑</mo></math><span class="ltx_text ltx_font_small"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T5.m3" class="ltx_Math" alttext="\downarrow" display="inline"><mo>↓</mo></math><span class="ltx_text ltx_font_small"> Test data</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_small">Model</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">P</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">R</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T5.m4" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Log-Linear Words</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">81.55</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">77.83</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">79.65</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_l"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Wsabie Embedding (§<a href="#S3" title="3 Frame Identification with Embeddings ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>)</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">81.32</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">77.97</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">79.61</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 5: </span>
+Full frame-structure prediction results for Propbank. This is a metric
+that takes into account frames and arguments together. See §<a href="#S5.SS7" title="5.7 PropBank Results ‣ 5 Experiments ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.7</span></a>
+for more details.
+
+</div>
+</div>
+<div id="S5.T6" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_small">Model</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">P</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">R</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T6.m1" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Log-Linear Words</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">77.29</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">71.50</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">74.28</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Wsabie Embedding (§<a href="#S3" title="3 Frame Identification with Embeddings ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>)</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">77.13</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">71.32</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">74.11</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_t" colspan="4"><span class="ltx_text ltx_font_small">Dev data </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T6.m2" class="ltx_Math" alttext="\uparrow" display="inline"><mo>↑</mo></math><span class="ltx_text ltx_font_small"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T6.m3" class="ltx_Math" alttext="\downarrow" display="inline"><mo>↓</mo></math><span class="ltx_text ltx_font_small"> Test data</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_small">Model</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">P</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">R</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T6.m4" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Log-Linear Words</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">79.47</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">75.11</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">77.23</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l"><span class="ltx_text ltx_font_smallcaps ltx_font_small">Wsabie Embedding (§<a href="#S3" title="3 Frame Identification with Embeddings ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>)</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">79.36</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">75.04</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">77.14</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_small">Punyakanok et al. </span><span class="ltx_text ltx_font_italic ltx_font_small">Collins<cite class="ltx_cite"/></span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">75.92</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">71.45</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">73.62</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l"><span class="ltx_text ltx_font_small">Punyakanok et al. </span><span class="ltx_text ltx_font_italic ltx_font_small">Charniak<cite class="ltx_cite"/></span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">77.09</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">75.51</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">76.29</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_l"><span class="ltx_text ltx_font_small">Punyakanok et al. </span><span class="ltx_text ltx_font_italic ltx_font_small">Combined<cite class="ltx_cite"/></span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">80.53</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">76.94</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">78.69</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 6: </span>
+Argument only evaluation (semantic role labeling metrics) using the CoNLL 2005 shared task
+evaluation script <cite class="ltx_cite">[<a href="#bib.bib27" title="Introduction to the CoNLL-2005 shared task: semantic role labeling" class="ltx_ref">5</a>]</cite>. Results from <cite class="ltx_cite">Punyakanok<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib45" title="The importance of syntactic parsing and inference in semantic role labeling" class="ltx_ref">2008</a>)</cite> are taken from Table 11
+of that paper.
+
+</div>
+</div>
+</div>
+<div id="S5.SS6" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.6 </span>FrameNet Results</h3>
+
+<div id="S5.SS6.p1" class="ltx_para">
+<p class="ltx_p">Table <a href="#S5.T2" title="Table 2 ‣ 5.2 Frame Identification Baselines ‣ 5 Experiments ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> presents accuracy results on frame identification.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">13</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">13</sup>We do not
+report partial frame accuracy that has been reported by prior work.</span></span></span>
+We present results on all predicates, ambiguous
+predicates seen in the lexicon or the training data, and rare ambiguous
+predicates that appear <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS6.p1.m1" class="ltx_Math" alttext="\leq 11" display="inline"><mrow><mi/><mo>≤</mo><mn>11</mn></mrow></math> times in the training data.
+The <span class="ltx_text ltx_font_smallcaps ltx_font_small">Wsabie Embedding</span> model from §<a href="#S3" title="3 Frame Identification with Embeddings ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> performs
+significantly better than the <span class="ltx_text ltx_font_smallcaps ltx_font_small">Log-Linear Words</span>
+baseline, while <span class="ltx_text ltx_font_smallcaps ltx_font_small">Log-Linear Embedding</span> underperforms in every
+metric.
+For the <span class="ltx_text ltx_font_smallcaps ltx_font_small">Semafor Lexicon</span> setup, we also compare with
+the state of the art from <cite class="ltx_cite">Das<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib10" title="Frame-semantic parsing" class="ltx_ref">2014</a>)</cite>,
+who used a semi-supervised learning method to improve upon a supervised
+latent-variable log-linear model.
+For unseen predicates from the Das et al. system, we perform better as well.
+Finally, for the <span class="ltx_text ltx_font_smallcaps ltx_font_small">Full Lexicon</span> setting, the absolute accuracy numbers are even
+better for our best model. Table <a href="#S5.T3" title="Table 3 ‣ 5.2 Frame Identification Baselines ‣ 5 Experiments ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> presents results
+on the full frame-semantic parsing task (measured by a reimplementation
+of the SemEval 2007 shared task evaluation script) when our argument identification model (§<a href="#S4" title="4 Argument Identification ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>)
+is used after frame identification. We notice similar trends as in Table <a href="#S5.T2" title="Table 2 ‣ 5.2 Frame Identification Baselines ‣ 5 Experiments ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+and our results outperform the previously published best results, setting a new
+state of the art.</p>
+</div>
+</div>
+<div id="S5.SS7" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.7 </span>PropBank Results</h3>
+
+<div id="S5.SS7.p1" class="ltx_para">
+<p class="ltx_p">Table <a href="#S5.T4" title="Table 4 ‣ 5.5 Experimental Setup for PropBank ‣ 5 Experiments ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> shows frame identification results on the
+PropBankdata. On the development set, our best model performs with
+the highest accuracy on all and ambiguous predicates, but performs worse
+on rare ambiguous predicates. On the test set, the <span class="ltx_text ltx_font_smallcaps ltx_font_small">Log-Linear
+Words</span> baseline performs best by a very narrow margin. See
+§<a href="#S6" title="6 Discussion ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> for a discussion.</p>
+</div>
+<div id="S5.SS7.p2" class="ltx_para">
+<p class="ltx_p">Table <a href="#S5.T5" title="Table 5 ‣ 5.5 Experimental Setup for PropBank ‣ 5 Experiments ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> presents results where we measure
+precision, recall and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS7.p2.m1" class="ltx_Math" alttext="F_{1}" display="inline"><msub><mi>F</mi><mn>1</mn></msub></math> for frames and arguments together; this strict
+metric penalizes arguments for mismatched frames, like in
+Table <a href="#S5.T3" title="Table 3 ‣ 5.2 Frame Identification Baselines ‣ 5 Experiments ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>. We see the same trend as in
+Table <a href="#S5.T4" title="Table 4 ‣ 5.5 Experimental Setup for PropBank ‣ 5 Experiments ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+Finally,
+Table <a href="#S5.T6" title="Table 6 ‣ 5.5 Experimental Setup for PropBank ‣ 5 Experiments ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> presents SRL results that measures argument
+performance only, irrespective of the frame; we use the evaluation script
+from CoNLL 2005 <cite class="ltx_cite">[<a href="#bib.bib27" title="Introduction to the CoNLL-2005 shared task: semantic role labeling" class="ltx_ref">5</a>]</cite>. We note that with a better
+frame identification model, our performance on SRL improves in general. Here, too, the embedding
+model barely misses the performance of the best baseline, but we are at par and
+sometimes
+better than the single parser setting of a state-of-the-art SRL system
+<cite class="ltx_cite">[<a href="#bib.bib45" title="The importance of syntactic parsing and inference in semantic role labeling" class="ltx_ref">23</a>]</cite>.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">14</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">14</sup>The last row
+of Table <a href="#S5.T6" title="Table 6 ‣ 5.5 Experimental Setup for PropBank ‣ 5 Experiments ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> refers to a system which used the combination
+of two syntactic parsers as input.</span></span></span></p>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Discussion</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">For FrameNet, the <span class="ltx_text ltx_font_smallcaps ltx_font_small">Wsabie Embedding</span> model we propose strongly
+outperforms the baselines on all metrics, and sets a new state of the art.
+We believe that the <span class="ltx_text ltx_font_smallcaps ltx_font_small">Wsabie
+Embedding</span> model performs better than the <span class="ltx_text ltx_font_smallcaps ltx_font_small">Log-Linear Embedding</span>
+baseline (that uses the same input representation) because the former setting
+allows examples
+with different labels and confusion sets to share information; this is due to
+the fact that all labels live in the same label space, and a single projection
+matrix is shared across the examples to map the input features to this space.
+Consequently, the <span class="ltx_text ltx_font_smallcaps ltx_font_small">Wsabie Embedding</span> model can share more
+information between different examples in the training data than the
+<span class="ltx_text ltx_font_smallcaps ltx_font_small">Log-Linear Embedding</span> model. Since the
+<span class="ltx_text ltx_font_smallcaps ltx_font_small">Log-Linear Words</span> model
+always performs better than the <span class="ltx_text ltx_font_smallcaps ltx_font_small">Log-Linear Embedding</span> model, we
+conclude that the primary benefit does not come from the input embedding representation.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">15</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">15</sup>One
+could imagine training a <span class="ltx_text ltx_font_smallcaps ltx_font_small">Wsabie</span>model with word features, but we did not
+perform this experiment.</span></span></span></p>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p class="ltx_p">On the PropBankdata, we see that the
+<span class="ltx_text ltx_font_smallcaps ltx_font_small">Log-Linear Words</span> baseline has roughly the same performance as
+our model on most metrics: slightly better on the test data and slightly worse
+on the development data. This can be partially explained with the significantly
+larger
+training set size for PropBank, making features based on words more useful.
+Another important distinction between PropBankand FrameNetis that
+the latter shares frames between multiple lexical units. The effect of this is clearly
+observable from the “Rare” column in
+Table <a href="#S5.T4" title="Table 4 ‣ 5.5 Experimental Setup for PropBank ‣ 5 Experiments ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>. <span class="ltx_text ltx_font_smallcaps ltx_font_small">Wsabie Embedding</span> performs
+poorly in this setting while <span class="ltx_text ltx_font_smallcaps ltx_font_small">Log-Linear Embedding</span>
+performs well. Part of the explanation has to do with the
+specifics of <span class="ltx_text ltx_font_smallcaps ltx_font_small">Wsabie</span>training. Recall that the <span class="ltx_text ltx_font_smallcaps ltx_font_small">Wsabie
+Embedding</span> model needs to estimate the label location in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p2.m1" class="ltx_Math" alttext="\mathbb{R}^{m}" display="inline"><msup><mi>ℝ</mi><mi>m</mi></msup></math> for each frame.
+In other words, it must estimate 512 parameters based on at most 10 training examples.
+However, since the input representation is shared across all frames, every other
+training example from all the lexical units affects the optimal estimate, since
+they all modify the joint parameter matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p2.m2" class="ltx_Math" alttext="M" display="inline"><mi>M</mi></math>. By contrast, in the log-linear
+models each label has its own set of parameters, and they interact only via the
+normalization constant. The <span class="ltx_text ltx_font_smallcaps ltx_font_small">Log-Linear Words</span> model does not
+have this entanglement, but cannot share information between words. For
+PropBank, these drawbacks and benefits balance out and we see similar
+performance for <span class="ltx_text ltx_font_smallcaps ltx_font_small">Log-Linear Words</span> and
+<span class="ltx_text ltx_font_smallcaps ltx_font_small">Log-Linear Embedding</span>. For FrameNet, estimating
+the label embedding is not as
+much of a problem because even if a lexical unit is rare, the potential frames
+can be frequent. For example, we might have seen the <span class="ltx_text ltx_font_sansserif ltx_font_smallcaps ltx_font_small">Sending</span> frame many times,
+even though <em class="ltx_emph">telex</em>.<span class="ltx_text ltx_font_smallcaps">V</span> is a rare lexical unit.</p>
+</div>
+<div id="S6.p3" class="ltx_para">
+<p class="ltx_p">In comparison to prior work on FrameNet, even our baseline models outperform the previous
+state of the art. A particularly interesting comparison is between our
+<span class="ltx_text ltx_font_smallcaps ltx_font_small">Log-Linear Words</span> baseline and the supervised model
+of <cite class="ltx_cite">Das<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib10" title="Frame-semantic parsing" class="ltx_ref">2014</a>)</cite>. They also use a log-linear model, but they
+incorporate a latent variable that uses WordNet <cite class="ltx_cite">[<a href="#bib.bib168" title="WordNet: an electronic lexical database" class="ltx_ref">10</a>]</cite> to get lexical-semantic
+relationships and smooths over frames for ambiguous lexical units. It is
+possible that this reduces the model’s power and causes it to over-generalize.
+Another difference is that when training the log-linear model, they normalize
+over all frames, while we normalize over the allowed frames for the current
+lexical unit. This would tend to encourage their model to expend more of its
+modeling power to rule out possibilities that will be pruned out at test time.</p>
+</div>
+</div>
+<div id="S7" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">7 </span>Conclusion</h2>
+
+<div id="S7.p1" class="ltx_para">
+<p class="ltx_p">We have presented a simple model that outperforms the
+prior state of the art on FrameNet-style frame-semantic parsing, and
+performs at par with
+one of the previous-best single-parser systems on PropBankSRL. Unlike
+<cite class="ltx_cite">Das<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib10" title="Frame-semantic parsing" class="ltx_ref">2014</a>)</cite>, our model does not rely on heuristics to
+construct a similarity graph and leverage WordNet; hence, in principle it
+is generalizable to varying domains, and to other languages. Finally, we presented results on PropBank-style
+semantic role labeling with a system that included the task of
+automatic verb frame identification, in tune with the FrameNet literature;
+we believe that such a system
+produces more interpretable output, both from the perspective of human understanding
+as well as downstream applications, than pipelines that are oblivious to the
+verb frame, only focusing on argument analysis.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">We thank Emily Pitler for comments on an early draft, and the anonymous reviewers for their
+valuable feedback.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib144" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Baker, M. Ellsworth and K. Erk</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">SemEval-2007 Task 19: frame semantic structure extraction</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS1.p1" title="2.1 Frame-Semantic Parsing ‣ 2 Overview ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib28" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. F. Baker, C. J. Fillmore and J. B. Lowe</span><span class="ltx_text ltx_bib_year">(1998)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The berkeley framenet project</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS1.p2" title="2.1 Frame-Semantic Parsing ‣ 2 Overview ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib25" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Bengio, R. Ducharme, P. Vincent and C. Jauvin</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A neural probabilistic language model</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">3</span>, <span class="ltx_text ltx_bib_pages"> pp. 1137–1155</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS3.p2" title="5.3 Common Experimental Setup ‣ 5 Experiments ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.3</span></a>.
+</span></li>
+<li id="bib.bib28a" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">X. Carreras and L. Màrquez</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Introduction to the CoNLL-2004 shared task: semantic role labeling</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Overview ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib27" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">X. Carreras and L. Màrquez</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Introduction to the CoNLL-2005 shared task: semantic role labeling</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Overview ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S5.SS7.p2" title="5.7 PropBank Results ‣ 5 Experiments ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.7</span></a>,
+<a href="#S5.T6" title="Table 6 ‣ 5.5 Experimental Setup for PropBank ‣ 5 Experiments ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib32" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Collobert and J. Weston</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A unified architecture for natural language processing: deep neural networks with multitask learning</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p1" title="2.2 Distributed Frame Identification ‣ 2 Overview ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Das, D. Chen, A. F. T. Martins, N. Schneider and N. A. Smith</span><span class="ltx_text ltx_bib_year">(2014)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Frame-semantic parsing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">40</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 9–56</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#A1.p1" title="Appendix A Development Data ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">A</span></a>,
+<a href="#S1.p2" title="1 Introduction ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p3" title="1 Introduction ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS1.p1" title="2.1 Frame-Semantic Parsing ‣ 2 Overview ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>,
+<a href="#S2.SS1.p4" title="2.1 Frame-Semantic Parsing ‣ 2 Overview ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>,
+<a href="#S3.p3" title="3 Frame Identification with Embeddings ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S4.p3" title="4 Argument Identification ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>,
+<a href="#S5.SS4.p2" title="5.4 Experimental Setup for FrameNet ‣ 5 Experiments ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.4</span></a>,
+<a href="#S5.SS4.p3" title="5.4 Experimental Setup for FrameNet ‣ 5 Experiments ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.4</span></a>,
+<a href="#S5.SS6.p1" title="5.6 FrameNet Results ‣ 5 Experiments ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.6</span></a>,
+<a href="#S5.T2" title="Table 2 ‣ 5.2 Frame Identification Baselines ‣ 5 Experiments ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S5.T3" title="Table 3 ‣ 5.2 Frame Identification Baselines ‣ 5 Experiments ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S6.p3" title="6 Discussion ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>,
+<a href="#S7.p1" title="7 Conclusion ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+</span></li>
+<li id="bib.bib72" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Das, N. Schneider, D. Chen and N. A. Smith</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Probabilistic frame-semantic parsing</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS1.p1" title="2.1 Frame-Semantic Parsing ‣ 2 Overview ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_manual"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. de Marneffe and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Stanford typed dependencies manual</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://nlp.stanford.edu/software/dependencies_manual.pdf" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS3.p1" title="5.3 Common Experimental Setup ‣ 5 Experiments ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.3</span></a>.
+</span></li>
+<li id="bib.bib168" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_editor">C. Fellbaum (Ed.)</span><span class="ltx_text ltx_bib_year">(1998)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">WordNet: an electronic lexical database</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p3" title="6 Discussion ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib166" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. J. Fillmore, C. R. Johnson and M. R.L. Petruck</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Background to FrameNet</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">International Journal of Lexicography</span> <span class="ltx_text ltx_bib_volume">16</span> (<span class="ltx_text ltx_bib_number">3</span>).
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib165" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. J. Fillmore</span><span class="ltx_text ltx_bib_year">(1982)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Frame Semantics</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_inbook">Linguistics in the Morning Calm</span>,
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib33" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Gildea and D. Jurafsky</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatic labeling of semantic roles</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">28</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 245–288</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Overview ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Hovy, M. Marcus, M. Palmer, L. Ramshaw and R. Weischedel</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">OntoNotes: the 90</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS1.p2" title="5.1 Data ‣ 5 Experiments ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>.
+</span></li>
+<li id="bib.bib85" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Johansson and P. Nugues</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">LTH: semantic structure extraction using nonprojective dependency trees</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS1.p1" title="2.1 Frame-Semantic Parsing ‣ 2 Overview ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib19" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Klementiev, I. Titov and B. Bhattarai</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Inducing crosslingual distributed representations of words</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Lafferty, A. McCallum and F. Pereira</span><span class="ltx_text ltx_bib_year">(2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Conditional random fields: probabilistic models for segmenting and labeling sequence data</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS3.p1" title="5.3 Common Experimental Setup ‣ 5 Experiments ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.3</span></a>.
+</span></li>
+<li id="bib.bib100" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. C. Liu and J. Nocedal</span><span class="ltx_text ltx_bib_year">(1989)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">On the limited memory BFGS method for large scale optimization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Math. Programming</span> <span class="ltx_text ltx_bib_volume">45</span> (<span class="ltx_text ltx_bib_number">3</span>).
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p2" title="4 Argument Identification ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib46" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Meyers, R. Reeves, C. Macleod, R. Szekely, V. Zielinska, B. Young and R. Grishman</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The NomBank project: an interim report</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS1.p3" title="2.1 Frame-Semantic Parsing ‣ 2 Overview ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Mitchell and M. Lapata</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Vector-based models of semantic composition</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib93" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Màrquez, X. Carreras, K. C. Litkowski and S. Stevenson</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Semantic role labeling: an introduction to the special issue</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">34</span> (<span class="ltx_text ltx_bib_number">2</span>).
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS1.p4" title="2.1 Frame-Semantic Parsing ‣ 2 Overview ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib30" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Palmer, D. Gildea and P. Kingsbury</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The Proposition bank: an annotated corpus of semantic roles</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">31</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 71–106</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS1.p3" title="2.1 Frame-Semantic Parsing ‣ 2 Overview ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib45" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">V. Punyakanok, D. Roth and W. Yih</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The importance of syntactic parsing and inference in semantic role labeling</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">34</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 257–287</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.p3" title="4 Argument Identification ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>,
+<a href="#S5.SS1.p2" title="5.1 Data ‣ 5 Experiments ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>,
+<a href="#S5.SS5.p4" title="5.5 Experimental Setup for PropBank ‣ 5 Experiments ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.5</span></a>,
+<a href="#S5.SS7.p2" title="5.7 PropBank Results ‣ 5 Experiments ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.7</span></a>,
+<a href="#S5.T6" title="Table 6 ‣ 5.5 Experimental Setup for PropBank ‣ 5 Experiments ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Socher, J. Pennington, E. H. Huang, A. Y. Ng and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Semi-supervised recursive autoencoders for predicting sentiment distributions</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib47" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Turian, L. Ratinov and Y. Bengio</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Word representations: a simple and general method for semi-supervised learning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Stroudsburg, PA, USA</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p1" title="2.2 Distributed Frame Identification ‣ 2 Overview ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib26" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Usunier, D. Buffoni and P. Gallinari</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Ranking with ordered weighted pairwise classification</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p1" title="3.2 Learning ‣ 3 Frame Identification with Embeddings ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib44" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Uszkoreit and T. Brants</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Distributed word clustering for large scale class-based language modeling in machine translation</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS3.p1" title="5.3 Common Experimental Setup ‣ 5 Experiments ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.3</span></a>.
+</span></li>
+<li id="bib.bib42" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[28]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Q. Weinberger and L. K. Saul</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Distance metric learning for large margin nearest neighbor classification</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">10</span>, <span class="ltx_text ltx_bib_pages"> pp. 207–244</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p2" title="3.2 Learning ‣ 3 Frame Identification with Embeddings ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib27a" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[29]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Weston, S. Bengio and N. Usunier</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">WSABIE: scaling up to large vocabulary image annotation</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p1" title="3.2 Learning ‣ 3 Frame Identification with Embeddings ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>,
+<a href="#S3.p3" title="3 Frame Identification with Embeddings ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[30]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Xue and M. Palmer</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Calibrating features for semantic role labeling</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS4.p2" title="5.4 Experimental Setup for FrameNet ‣ 5 Experiments ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.4</span></a>,
+<a href="#S5.SS5.p2" title="5.5 Experimental Setup for PropBank ‣ 5 Experiments ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.5</span></a>.
+</span></li>
+<li id="bib.bib43" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[31]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Zhang and J. Nivre</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Transition-based dependency parsing with rich non-local features</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS3.p1" title="5.3 Common Experimental Setup ‣ 5 Experiments ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.3</span></a>.
+</span></li>
+</ul>
+</div>
+<div id="A1" class="ltx_appendix">
+<h2 class="ltx_title ltx_title_appendix"><span class="ltx_tag ltx_tag_appendix">Appendix A </span>Development Data</h2>
+
+<div id="A1.T7" class="ltx_table">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_t"><span class="ltx_text ltx_font_bold">Number</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Filename</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_t">dev-1</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">LUCorpus-v0.3__20000420_xin_eng-NEW.xml</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l">dev-2</td>
+<td class="ltx_td ltx_align_left ltx_border_r">NTI__SouthAfrica_Introduction.xml</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l">dev-3</td>
+<td class="ltx_td ltx_align_left ltx_border_r">LUCorpus-v0.3__CNN_AARONBROWN_ENG_20051101_215800.partial-NEW.xml</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l">dev-4</td>
+<td class="ltx_td ltx_align_left ltx_border_r">LUCorpus-v0.3__AFGP-2002-600045-Trans.xml</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l">dev-5</td>
+<td class="ltx_td ltx_align_left ltx_border_r">PropBank__TicketSplitting.xml</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l">dev-6</td>
+<td class="ltx_td ltx_align_left ltx_border_r">Miscellaneous__Hijack.xml</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l">dev-7</td>
+<td class="ltx_td ltx_align_left ltx_border_r">LUCorpus-v0.3__artb_004_A1_E1_NEW.xml</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l">dev-8</td>
+<td class="ltx_td ltx_align_left ltx_border_r">NTI__WMDNews_042106.xml</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l">dev-9</td>
+<td class="ltx_td ltx_align_left ltx_border_r">C-4__C-4Text.xml</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l">dev-10</td>
+<td class="ltx_td ltx_align_left ltx_border_r">ANC__EntrepreneurAsMadonna.xml</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l">dev-11</td>
+<td class="ltx_td ltx_align_left ltx_border_r">NTI__LibyaCountry1.xml</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l">dev-12</td>
+<td class="ltx_td ltx_align_left ltx_border_r">NTI__NorthKorea_NuclearOverview.xml</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l">dev-13</td>
+<td class="ltx_td ltx_align_left ltx_border_r">LUCorpus-v0.3__20000424_nyt-NEW.xml</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l">dev-14</td>
+<td class="ltx_td ltx_align_left ltx_border_r">NTI__WMDNews_062606.xml</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l">dev-15</td>
+<td class="ltx_td ltx_align_left ltx_border_r">ANC__110CYL070.xml</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l">dev-16</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r">LUCorpus-v0.3__CNN_ENG_20030614_173123.4-NEW-1.xml</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 7: </span>List of files used as development set for the FrameNet 1.5 corpus.</div>
+</div>
+<div id="A1.p1" class="ltx_para">
+<p class="ltx_p">Table <a href="#A1.T7" title="Table 7 ‣ Appendix A Development Data ‣ Semantic Frame Identification with Distributed Word Representations" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a> features a list of the 16 randomly selected
+documents from the FrameNet 1.5 corpus, which we used for development. The
+resultant development set consists of roughly 4,500 predicates.
+We use the same test set as in <cite class="ltx_cite">Das<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib10" title="Frame-semantic parsing" class="ltx_ref">2014</a>)</cite>, containing 23
+documents and 4,458 predicates.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 19:24:39 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

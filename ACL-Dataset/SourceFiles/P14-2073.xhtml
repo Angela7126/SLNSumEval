@@ -1,0 +1,713 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Particle Filter Rejuvenation and Latent Dirichlet Allocation</title>
+<!--Generated on Wed Jun 11 17:56:33 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Particle Filter Rejuvenation and Latent Dirichlet Allocation</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Chandler May,<math xmlns="http://www.w3.org/1998/Math/MathML" id="m1" class="ltx_Math" alttext="{}^{\dagger}" display="inline"><msup><mi/><mo>†</mo></msup></math> Alex Clemmer<math xmlns="http://www.w3.org/1998/Math/MathML" id="m2" class="ltx_Math" alttext="{}^{\ddagger}" display="inline"><msup><mi/><mo>‡</mo></msup></math> 
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Benjamin Van Durme<math xmlns="http://www.w3.org/1998/Math/MathML" id="m3" class="ltx_Math" alttext="{}^{\dagger}" display="inline"><msup><mi/><mo>†</mo></msup></math> 
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m4" class="ltx_Math" alttext="{}^{\dagger}" display="inline"><msup><mi/><mo>†</mo></msup></math>Human Language Technology Center of Excellence 
+<br class="ltx_break"/>Johns Hopkins University 
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m5" class="ltx_Math" alttext="{}^{\ddagger}" display="inline"><msup><mi/><mo>‡</mo></msup></math>Microsoft 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter ltx_font_small">cjmay@jhu.edu<span class="ltx_text ltx_font_serif">, </span>clemmer.alexander@gmail.com<span class="ltx_text ltx_font_serif">, </span>vandurme@cs.jhu.edu</span>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Previous research has established several methods of <em class="ltx_emph">online</em>
+learning for latent Dirichlet allocation (LDA). However,
+<em class="ltx_emph">streaming</em> learning for LDA—allowing only one pass over the
+data and constant storage complexity—is not as well explored. We
+use reservoir sampling to reduce the storage complexity of a
+previously-studied online algorithm, namely the particle filter, to
+constant. We then show that a simpler particle filter
+implementation performs just as well, and that the quality of the
+initialization dominates other factors of performance.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">We extend a popular model, latent Dirichlet allocation (LDA),
+to unbounded streams of documents. In order for
+inference to be practical in this setting it must use constant space
+asymptotically and run in pseudo-linear time, perhaps <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p1.m1" class="ltx_Math" alttext="O(n)" display="inline"><mrow><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></mrow></math> or
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p1.m2" class="ltx_Math" alttext="O(n\log n)" display="inline"><mrow><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>n</mi><mo>⁢</mo><mrow><mi>log</mi><mo>⁡</mo><mi>n</mi></mrow></mrow><mo>)</mo></mrow></mrow></math>.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Canini<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib19" title="Online inference of topics with latent Dirichlet allocation" class="ltx_ref">2009</a>)</cite> presented a method for LDA inference based on
+particle filters, where a sample set of models is updated online with
+each new token observed from a stream. In general, these models should be
+regularly resampled and rejuvenated using Markov Chain
+Monte Carlo (MCMC) steps over the history in order
+to improve the efficiency of the particle filter <cite class="ltx_cite">[<a href="#bib.bib5" title="Following a moving target—Monte Carlo inference for dynamic Bayesian models" class="ltx_ref">10</a>]</cite>.
+The particle filter of <cite class="ltx_cite">Canini<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib19" title="Online inference of topics with latent Dirichlet allocation" class="ltx_ref">2009</a>)</cite> rejuvenates over
+independent draws from the history by storing all past observations
+and states. This algorithm thus has linear storage complexity
+and is not an online learning algorithm in a strict
+sense <cite class="ltx_cite">[<a href="#bib.bib12" title="Using rejuvenation to improve particle filtering for Bayesian word segmentation" class="ltx_ref">6</a>]</cite>.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">In the current work we propose using reservoir sampling in the
+rejuvenation step to reduce the storage complexity of the particle
+filter to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p3.m1" class="ltx_Math" alttext="O(1)" display="inline"><mrow><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><mn>1</mn><mo>)</mo></mrow></mrow></math>.
+This improvement is practically useful in the large-data setting
+and is also
+scientifically interesting in that it recovers some of the
+cognitive plausibility which originally motivated <cite class="ltx_cite">Börschinger and Johnson (<a href="#bib.bib12" title="Using rejuvenation to improve particle filtering for Bayesian word segmentation" class="ltx_ref">2012</a>)</cite>.
+However, in experiments on the dataset studied by <cite class="ltx_cite">Canini<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib19" title="Online inference of topics with latent Dirichlet allocation" class="ltx_ref">2009</a>)</cite>,
+we show that rejuvenation does not benefit the particle filter’s
+performance. Rather, performance is dominated by the effects of random
+initialization (a problem for which we provide a correction while abiding
+by the same constraints as <cite class="ltx_cite">Canini<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib19" title="Online inference of topics with latent Dirichlet allocation" class="ltx_ref">2009</a>)</cite>). This result
+re-opens the
+question of whether rejuvenation is of practical importance in
+online learning for static Bayesian models.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Latent Dirichlet Allocation</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">For a sequence of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m1" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math> words collected into documents of varying
+length, we denote the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m2" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math>-th word as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m3" class="ltx_Math" alttext="w_{j}" display="inline"><msub><mi>w</mi><mi>j</mi></msub></math>, and the document it occurs in
+as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m4" class="ltx_Math" alttext="d_{i}" display="inline"><msub><mi>d</mi><mi>i</mi></msub></math>. LDA <cite class="ltx_cite">[<a href="#bib.bib16" title="Latent Dirichlet allocation" class="ltx_ref">3</a>]</cite> “explains” the occurrence of each word by postulating
+that a document was generated by repeatedly: (1) sampling a topic <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m5" class="ltx_Math" alttext="z" display="inline"><mi>z</mi></math>
+from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m6" class="ltx_Math" alttext="\theta^{(d)}" display="inline"><msup><mi>θ</mi><mrow><mo>(</mo><mi>d</mi><mo>)</mo></mrow></msup></math>, the document-specific mixture of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m7" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math> topics, and (2)
+sampling a word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m8" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m9" class="ltx_Math" alttext="\phi^{(z)}" display="inline"><msup><mi>ϕ</mi><mrow><mo>(</mo><mi>z</mi><mo>)</mo></mrow></msup></math>, the probability distribution
+the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m10" class="ltx_Math" alttext="z" display="inline"><mi>z</mi></math>-th topic defines over the vocabulary.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">The goal is to infer <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m1" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m2" class="ltx_Math" alttext="\phi" display="inline"><mi>ϕ</mi></math>, under the model:</p>
+<table id="S7.EGx1" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S2.Ex1" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex1.m1" class="ltx_Math" alttext="\displaystyle w_{i}\mid z_{i},\phi^{(z_{i})}" display="inline"><mrow><msub><mi>w</mi><mi>i</mi></msub><mo>∣</mo><msub><mi>z</mi><mi>i</mi></msub><mo>,</mo><msup><mi>ϕ</mi><mrow><mo>(</mo><msub><mi>z</mi><mi>i</mi></msub><mo>)</mo></mrow></msup></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex1.m2" class="ltx_Math" alttext="\displaystyle\sim\text{Categorical}(\phi^{(z_{i})})" display="inline"><mrow><mi/><mo>∼</mo><mrow><mtext>Categorical</mtext><mo>⁢</mo><mrow><mo>(</mo><msup><mi>ϕ</mi><mrow><mo>(</mo><msub><mi>z</mi><mi>i</mi></msub><mo>)</mo></mrow></msup><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S2.Ex2" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex2.m1" class="ltx_Math" alttext="\displaystyle\phi^{(z)}" display="inline"><msup><mi>ϕ</mi><mrow><mo>(</mo><mi>z</mi><mo>)</mo></mrow></msup></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex2.m2" class="ltx_Math" alttext="\displaystyle\sim\text{Dirichlet}(\beta)" display="inline"><mrow><mi/><mo>∼</mo><mrow><mtext>Dirichlet</mtext><mo>⁢</mo><mrow><mo>(</mo><mi>β</mi><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S2.Ex3" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex3.m1" class="ltx_Math" alttext="\displaystyle z_{i}\mid\theta^{(d_{i})}" display="inline"><mrow><msub><mi>z</mi><mi>i</mi></msub><mo>∣</mo><msup><mi>θ</mi><mrow><mo>(</mo><msub><mi>d</mi><mi>i</mi></msub><mo>)</mo></mrow></msup></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex3.m2" class="ltx_Math" alttext="\displaystyle\sim\text{Categorical}(\theta^{(d_{i})})" display="inline"><mrow><mi/><mo>∼</mo><mrow><mtext>Categorical</mtext><mo>⁢</mo><mrow><mo>(</mo><msup><mi>θ</mi><mrow><mo>(</mo><msub><mi>d</mi><mi>i</mi></msub><mo>)</mo></mrow></msup><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S2.Ex4" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex4.m1" class="ltx_Math" alttext="\displaystyle\theta^{(d)}" display="inline"><msup><mi>θ</mi><mrow><mo>(</mo><mi>d</mi><mo>)</mo></mrow></msup></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex4.m2" class="ltx_Math" alttext="\displaystyle\sim\text{Dirichlet}(\alpha)" display="inline"><mrow><mi/><mo>∼</mo><mrow><mtext>Dirichlet</mtext><mo>⁢</mo><mrow><mo>(</mo><mi>α</mi><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">Computing <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m1" class="ltx_Math" alttext="\phi" display="inline"><mi>ϕ</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m2" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math> exactly is generally intractable,
+motivating methods for approximate inference such as variational
+Bayesian inference <cite class="ltx_cite">[<a href="#bib.bib16" title="Latent Dirichlet allocation" class="ltx_ref">3</a>]</cite>, expectation propagation
+<cite class="ltx_cite">[<a href="#bib.bib1" title="Expectation-propagation for the generative aspect model" class="ltx_ref">17</a>]</cite>, and collapsed Gibbs sampling <cite class="ltx_cite">[<a href="#bib.bib17" title="Finding scientific topics" class="ltx_ref">11</a>]</cite>.</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p">A limitation of these techniques is they require multiple passes over
+the data to obtain good samples of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p4.m1" class="ltx_Math" alttext="\phi" display="inline"><mi>ϕ</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p4.m2" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math>. This
+requirement makes them impractical when the corpus is too large to fit
+directly into memory and in particular when the corpus grows without
+bound. This motivates online learning techniques, including
+sampling-based methods <cite class="ltx_cite">[<a href="#bib.bib18" title="Topic models over text streams: a study of batch and online unsupervised learning" class="ltx_ref">2</a>, <a href="#bib.bib19" title="Online inference of topics with latent Dirichlet allocation" class="ltx_ref">7</a>]</cite>
+and stochastic variational inference <cite class="ltx_cite">[<a href="#bib.bib22" title="Online learning for latent Dirichlet allocation" class="ltx_ref">12</a>, <a href="#bib.bib21" title="Sparse stochastic inference for latent Dirichlet allocation" class="ltx_ref">15</a>, <a href="#bib.bib6" title="Stochastic variational inference" class="ltx_ref">13</a>]</cite>.
+However, where
+these approaches generally assume the ability to draw independent samples
+from the full
+dataset, we consider the case when it is infeasible to access arbitrary
+elements from the history.
+The one existing algorithm that can be directly applied under this constraint,
+to our knowledge,
+is the streaming variational Bayes framework <cite class="ltx_cite">[<a href="#bib.bib9" title="Streaming variational Bayes" class="ltx_ref">4</a>]</cite>
+in which the posterior is recursively updated as new data arrives
+using a variational approximation.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Online LDA Using Particle Filters</h2>
+<span class="ltx_ERROR undefined">{algorithm}</span>
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">[t]</p>
+<span class="ltx_inline-block" style="border:1px solid #000000;padding-top:12pt;padding-bottom:12pt;">
+<p class="ltx_p"><span class="ltx_text ltx_font_small">initialize weights </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m1" class="ltx_Math" alttext="\omega^{(p)}_{0}=1/P" display="inline"><mrow><msubsup><mi>ω</mi><mn>0</mn><mrow><mo>(</mo><mi>p</mi><mo>)</mo></mrow></msubsup><mo>=</mo><mrow><mn>1</mn><mo>/</mo><mi>P</mi></mrow></mrow></math><span class="ltx_text ltx_font_small"> for </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m2" class="ltx_Math" alttext="p=1,\ldots,P" display="inline"><mrow><mi>p</mi><mo>=</mo><mrow><mn>1</mn><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mi>P</mi></mrow></mrow></math></p><span class="ltx_ERROR undefined">\For</span>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m3" class="ltx_Math" alttext="i=1,\ldots,N" display="inline"><mrow><mi>i</mi><mo>=</mo><mrow><mn>1</mn><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mi>N</mi></mrow></mrow></math><span class="ltx_text ltx_font_small"> 
+</span><span class="ltx_ERROR undefined">\For</span><span class="ltx_text ltx_font_small"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m4" class="ltx_Math" alttext="p=1,\ldots,P" display="inline"><mrow><mi>p</mi><mo>=</mo><mrow><mn>1</mn><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mi>P</mi></mrow></mrow></math><span class="ltx_text ltx_font_small"> 
+set </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m5" class="ltx_Math" alttext="\omega^{(p)}_{i}=\omega^{(p)}_{i-1}\mathbf{P}(w_{i}\mid\mathbf{z}^{(p)}_{i-1},%&#10;\mathbf{w}_{i-1})" display="inline"><mrow><msubsup><mi>ω</mi><mi>i</mi><mrow><mo>(</mo><mi>p</mi><mo>)</mo></mrow></msubsup><mo>=</mo><msubsup><mi>ω</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow><mrow><mo>(</mo><mi>p</mi><mo>)</mo></mrow></msubsup><mi>𝐏</mi><mrow><mo>(</mo><msub><mi>w</mi><mi>i</mi></msub><mo>∣</mo><msubsup><mi>𝐳</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow><mrow><mo>(</mo><mi>p</mi><mo>)</mo></mrow></msubsup><mo>,</mo><msub><mi>𝐰</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>)</mo></mrow></mrow></math><span class="ltx_text ltx_font_small"></span></p>
+<p class="ltx_p"><span class="ltx_text ltx_font_small">sample </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m6" class="ltx_Math" alttext="z_{i}^{(p)}" display="inline"><msubsup><mi>z</mi><mi>i</mi><mrow><mo>(</mo><mi>p</mi><mo>)</mo></mrow></msubsup></math><span class="ltx_text ltx_font_small"> w.p. </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m7" class="ltx_Math" alttext="\mathbf{P}(z_{i}^{(p)}\mid\mathbf{z}_{i-1}^{(p)},\mathbf{w}_{i})" display="inline"><mrow><mi>𝐏</mi><mrow><mo>(</mo><msubsup><mi>z</mi><mi>i</mi><mrow><mo>(</mo><mi>p</mi><mo>)</mo></mrow></msubsup><mo>∣</mo><msubsup><mi>𝐳</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow><mrow><mo>(</mo><mi>p</mi><mo>)</mo></mrow></msubsup><mo>,</mo><msub><mi>𝐰</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math><span class="ltx_text ltx_font_small">.
+
+</span><span class="ltx_ERROR undefined">\If</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m8" class="ltx_Math" alttext="\|\mathbf{\omega}\|_{2}^{-2}\leq" display="inline"><mrow><msubsup><mrow><mo fence="true">∥</mo><mi>ω</mi><mo fence="true">∥</mo></mrow><mn>2</mn><mrow><mo>-</mo><mn>2</mn></mrow></msubsup><mo>≤</mo><mi/></mrow></math><span class="ltx_text ltx_font_small"> ESS
+</span><span class="ltx_ERROR undefined">\For</span><span class="ltx_text ltx_font_small"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m9" class="ltx_Math" alttext="j\in\mathcal{R}(i)" display="inline"><mrow><mi>j</mi><mo>∈</mo><mrow><mi class="ltx_font_mathcaligraphic">ℛ</mi><mo>⁢</mo><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></mrow></mrow></math><span class="ltx_text ltx_font_small"> 
+</span><span class="ltx_ERROR undefined">\For</span><span class="ltx_text ltx_font_small"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m10" class="ltx_Math" alttext="p=1,\ldots,P" display="inline"><mrow><mi>p</mi><mo>=</mo><mrow><mn>1</mn><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mi>P</mi></mrow></mrow></math><span class="ltx_text ltx_font_small"> 
+sample </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m11" class="ltx_Math" alttext="z_{j}^{(p)}" display="inline"><msubsup><mi>z</mi><mi>j</mi><mrow><mo>(</mo><mi>p</mi><mo>)</mo></mrow></msubsup></math><span class="ltx_text ltx_font_small"> w.p. </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m12" class="ltx_Math" alttext="\mathbf{P}(z_{j}^{(p)}\mid\mathbf{z}_{i\backslash j}^{(p)},\mathbf{w}_{i})" display="inline"><mrow><mi>𝐏</mi><mrow><mo>(</mo><msubsup><mi>z</mi><mi>j</mi><mrow><mo>(</mo><mi>p</mi><mo>)</mo></mrow></msubsup><mo>∣</mo><msubsup><mi>𝐳</mi><mrow><mi>i</mi><mo>\</mo><mi>j</mi></mrow><mrow><mo>(</mo><mi>p</mi><mo>)</mo></mrow></msubsup><mo>,</mo><msub><mi>𝐰</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math><span class="ltx_text ltx_font_small"></span></p>
+<p class="ltx_p"><span class="ltx_text ltx_font_small">set </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m13" class="ltx_Math" alttext="\omega_{i}^{(p)}=1/P" display="inline"><mrow><msubsup><mi>ω</mi><mi>i</mi><mrow><mo>(</mo><mi>p</mi><mo>)</mo></mrow></msubsup><mo>=</mo><mrow><mn>1</mn><mo>/</mo><mi>P</mi></mrow></mrow></math><span class="ltx_text ltx_font_small"> for each particle</span></p>
+<p class="ltx_p"><span class="ltx_text ltx_caption ltx_font_small">Particle filtering for LDA.</span><span class="ltx_text ltx_font_small"></span></p>
+</span>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">Particle filters are a family of sequential Monte Carlo (SMC) sampling
+algorithms designed to estimate the posterior distribution of a system
+with dynamic state
+<cite class="ltx_cite">[<a href="#bib.bib2" title="Sequential Monte Carlo methods in practice" class="ltx_ref">8</a>]</cite>. A particle filter approximates the posterior by
+a weighted
+sample of points, or particles, from the state space.
+The particle cloud is updated recursively
+for each new observation using importance sampling (an approach
+called <em class="ltx_emph">sequential importance sampling</em>).</p>
+</div>
+<div id="S3.p3" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite">Canini<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib19" title="Online inference of topics with latent Dirichlet allocation" class="ltx_ref">2009</a>)</cite> apply this approach to
+LDA after analytically integrating out <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m1" class="ltx_Math" alttext="\phi" display="inline"><mi>ϕ</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m2" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math>, obtaining a
+Rao-Blackwellized particle filter <cite class="ltx_cite">[<a href="#bib.bib10" title="Rao-Blackwellised particle filtering for dynamic Bayesian networks" class="ltx_ref">9</a>]</cite> that estimates
+the collapsed posterior <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m3" class="ltx_Math" alttext="\mathbf{P}(\mathbf{z}\mid\mathbf{w})" display="inline"><mrow><mi>𝐏</mi><mrow><mo>(</mo><mi>𝐳</mi><mo>∣</mo><mi>𝐰</mi><mo>)</mo></mrow></mrow></math>.
+In this setting, the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m4" class="ltx_Math" alttext="P" display="inline"><mi>P</mi></math> particles are samples of the topic
+assignment vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m5" class="ltx_Math" alttext="\mathbf{z}^{(p)}" display="inline"><msup><mi>𝐳</mi><mrow><mo>(</mo><mi>p</mi><mo>)</mo></mrow></msup></math>, and they are propagated forward
+in state space one token at a time.
+In general, the larger <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m6" class="ltx_Math" alttext="P" display="inline"><mi>P</mi></math> is, the more accurately we
+approximate the posterior; for small <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m7" class="ltx_Math" alttext="P" display="inline"><mi>P</mi></math>,
+the approximation of the tails of the posterior will be particularly
+poor <cite class="ltx_cite">[<a href="#bib.bib4" title="Filtering via simulation: auxiliary particle filters" class="ltx_ref">19</a>]</cite>.
+However, a larger value of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m8" class="ltx_Math" alttext="P" display="inline"><mi>P</mi></math> increases the runtime and storage
+requirements of the algorithm.</p>
+</div>
+<div id="S3.p4" class="ltx_para">
+<p class="ltx_p">We now describe
+the Rao-Blackwellized particle filter for LDA in detail (pseudocode
+is given in Algorithm <a href="#S3" title="3 Online LDA Using Particle Filters ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>).
+At the moment token <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m1" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math> is observed, the particles form a
+discrete approximation of the posterior up to the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m2" class="ltx_Math" alttext="(i-1)" display="inline"><mrow><mo>(</mo><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow><mo>)</mo></mrow></math>-th word:</p>
+<table id="S7.EGx2" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S3.Ex5" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex5.m1" class="ltx_Math" alttext="\displaystyle\mathbf{P}(\mathbf{z}_{i-1}\mid\mathbf{w}_{i-1})\approx\sum_{p}%&#10;\omega_{i-1}^{(p)}I_{\mathbf{z}_{i-1}}(\mathbf{z}_{i-1}^{(p)})" display="inline"><mrow><mi>𝐏</mi><mrow><mo>(</mo><msub><mi>𝐳</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>∣</mo><msub><mi>𝐰</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>)</mo></mrow><mo>≈</mo><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>p</mi></munder></mstyle><msubsup><mi>ω</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow><mrow><mo>(</mo><mi>p</mi><mo>)</mo></mrow></msubsup><msub><mi>I</mi><msub><mi>𝐳</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub></msub><mrow><mo>(</mo><msubsup><mi>𝐳</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow><mrow><mo>(</mo><mi>p</mi><mo>)</mo></mrow></msubsup><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m3" class="ltx_Math" alttext="I_{\mathbf{z}}(\mathbf{z}^{\prime})" display="inline"><mrow><msub><mi>I</mi><mi>𝐳</mi></msub><mo>⁢</mo><mrow><mo>(</mo><msup><mi>𝐳</mi><mo>′</mo></msup><mo>)</mo></mrow></mrow></math> is the indicator function,
+evaluating to 1 if <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m4" class="ltx_Math" alttext="\mathbf{z}=\mathbf{z}^{\prime}" display="inline"><mrow><mi>𝐳</mi><mo>=</mo><msup><mi>𝐳</mi><mo>′</mo></msup></mrow></math> and 0 otherwise.
+Now each particle <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m5" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math> is propagated forward by drawing a topic
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m6" class="ltx_Math" alttext="z_{i}^{(p)}" display="inline"><msubsup><mi>z</mi><mi>i</mi><mrow><mo>(</mo><mi>p</mi><mo>)</mo></mrow></msubsup></math> from the conditional posterior distribution
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m7" class="ltx_Math" alttext="\mathbf{P}(z_{i}^{(p)}\mid\mathbf{z}_{i-1}^{(p)},\mathbf{w}_{i})" display="inline"><mrow><mi>𝐏</mi><mrow><mo>(</mo><msubsup><mi>z</mi><mi>i</mi><mrow><mo>(</mo><mi>p</mi><mo>)</mo></mrow></msubsup><mo>∣</mo><msubsup><mi>𝐳</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow><mrow><mo>(</mo><mi>p</mi><mo>)</mo></mrow></msubsup><mo>,</mo><msub><mi>𝐰</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math>
+and scaling the particle weight by
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m8" class="ltx_Math" alttext="\mathbf{P}(w_{i}\mid\mathbf{z}_{i-1}^{(p)},\mathbf{w}_{i-1})" display="inline"><mrow><mi>𝐏</mi><mrow><mo>(</mo><msub><mi>w</mi><mi>i</mi></msub><mo>∣</mo><msubsup><mi>𝐳</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow><mrow><mo>(</mo><mi>p</mi><mo>)</mo></mrow></msubsup><mo>,</mo><msub><mi>𝐰</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>)</mo></mrow></mrow></math>. The particle
+cloud now approximates the posterior up to the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m9" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math>-th word:</p>
+<table id="S7.EGx3" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S3.Ex6" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex6.m1" class="ltx_Math" alttext="\displaystyle\mathbf{P}(\mathbf{z}_{i}\mid\mathbf{w}_{i})\approx\sum_{p}\omega%&#10;_{i}^{(p)}I_{\mathbf{z}_{i}}(\mathbf{z}_{i}^{(p)})." display="inline"><mrow><mi>𝐏</mi><mrow><mo>(</mo><msub><mi>𝐳</mi><mi>i</mi></msub><mo>∣</mo><msub><mi>𝐰</mi><mi>i</mi></msub><mo>)</mo></mrow><mo>≈</mo><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>p</mi></munder></mstyle><msubsup><mi>ω</mi><mi>i</mi><mrow><mo>(</mo><mi>p</mi><mo>)</mo></mrow></msubsup><msub><mi>I</mi><msub><mi>𝐳</mi><mi>i</mi></msub></msub><mrow><mo>(</mo><msubsup><mi>𝐳</mi><mi>i</mi><mrow><mo>(</mo><mi>p</mi><mo>)</mo></mrow></msubsup><mo>)</mo></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">Dropping the superscript <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m10" class="ltx_Math" alttext="(p)" display="inline"><mrow><mo>(</mo><mi>p</mi><mo>)</mo></mrow></math> for notational convenience,
+the conditional posterior used in the propagation step is given by</p>
+<table id="S7.EGx4" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S3.Ex7" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex7.m1" class="ltx_Math" alttext="\displaystyle\mathbf{P}(z_{i}|\mathbf{z}_{i-1},\mathbf{w}_{i})" display="inline"><mrow><mi>𝐏</mi><mrow><mo>(</mo><msub><mi>z</mi><mi>i</mi></msub><mo>|</mo><msub><mi>𝐳</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi>𝐰</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex7.m2" class="ltx_Math" alttext="\displaystyle\propto\mathbf{P}(z_{i},w_{i}\mid\mathbf{z}_{i-1},\mathbf{w}_{i-1})" display="inline"><mrow><mo>∝</mo><mi>𝐏</mi><mrow><mo>(</mo><msub><mi>z</mi><mi>i</mi></msub><mo>,</mo><msub><mi>w</mi><mi>i</mi></msub><mo>∣</mo><msub><mi>𝐳</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi>𝐰</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S3.Ex8" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex8.m2" class="ltx_Math" alttext="\displaystyle=\frac{n^{(w_{i})}_{z_{i},i\backslash i}+\beta}{n^{(\cdot)}_{z_{i%&#10;},i\backslash i}+W\beta}\frac{n^{(d_{i})}_{z_{i},i\backslash i}+\alpha}{n^{(d_%&#10;{i})}_{\cdot,i\backslash i}+T\alpha}" display="inline"><mrow><mi/><mo>=</mo><mrow><mstyle displaystyle="true"><mfrac><mrow><msubsup><mi>n</mi><mrow><msub><mi>z</mi><mi>i</mi></msub><mo>,</mo><mrow><mi>i</mi><mo>\</mo><mi>i</mi></mrow></mrow><mrow><mo>(</mo><msub><mi>w</mi><mi>i</mi></msub><mo>)</mo></mrow></msubsup><mo>+</mo><mi>β</mi></mrow><mrow><msubsup><mi>n</mi><mrow><msub><mi>z</mi><mi>i</mi></msub><mo>,</mo><mrow><mi>i</mi><mo>\</mo><mi>i</mi></mrow></mrow><mrow><mo>(</mo><mo>⋅</mo><mo>)</mo></mrow></msubsup><mo>+</mo><mrow><mi>W</mi><mo>⁢</mo><mi>β</mi></mrow></mrow></mfrac></mstyle><mo>⁢</mo><mstyle displaystyle="true"><mfrac><mrow><msubsup><mi>n</mi><mrow><msub><mi>z</mi><mi>i</mi></msub><mo>,</mo><mrow><mi>i</mi><mo>\</mo><mi>i</mi></mrow></mrow><mrow><mo>(</mo><msub><mi>d</mi><mi>i</mi></msub><mo>)</mo></mrow></msubsup><mo>+</mo><mi>α</mi></mrow><mrow><msubsup><mi>n</mi><mrow><mo>⋅</mo><mo>,</mo><mrow><mi>i</mi><mo>\</mo><mi>i</mi></mrow></mrow><mrow><mo>(</mo><msub><mi>d</mi><mi>i</mi></msub><mo>)</mo></mrow></msubsup><mo>+</mo><mrow><mi>T</mi><mo>⁢</mo><mi>α</mi></mrow></mrow></mfrac></mstyle></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m11" class="ltx_Math" alttext="n^{(w_{i})}_{z_{i},i\backslash i}" display="inline"><msubsup><mi>n</mi><mrow><msub><mi>z</mi><mi>i</mi></msub><mo>,</mo><mrow><mi>i</mi><mo>\</mo><mi>i</mi></mrow></mrow><mrow><mo>(</mo><msub><mi>w</mi><mi>i</mi></msub><mo>)</mo></mrow></msubsup></math> is the number of times word
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m12" class="ltx_Math" alttext="w_{i}" display="inline"><msub><mi>w</mi><mi>i</mi></msub></math> has been assigned topic <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m13" class="ltx_Math" alttext="z_{i}" display="inline"><msub><mi>z</mi><mi>i</mi></msub></math> so far, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m14" class="ltx_Math" alttext="n^{(\cdot)}_{z_{i},i\backslash i}" display="inline"><msubsup><mi>n</mi><mrow><msub><mi>z</mi><mi>i</mi></msub><mo>,</mo><mrow><mi>i</mi><mo>\</mo><mi>i</mi></mrow></mrow><mrow><mo>(</mo><mo>⋅</mo><mo>)</mo></mrow></msubsup></math> is the number of times any word has been assigned
+topic <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m15" class="ltx_Math" alttext="z_{i}" display="inline"><msub><mi>z</mi><mi>i</mi></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m16" class="ltx_Math" alttext="n^{(d_{i})}_{z_{i},i\backslash i}" display="inline"><msubsup><mi>n</mi><mrow><msub><mi>z</mi><mi>i</mi></msub><mo>,</mo><mrow><mi>i</mi><mo>\</mo><mi>i</mi></mrow></mrow><mrow><mo>(</mo><msub><mi>d</mi><mi>i</mi></msub><mo>)</mo></mrow></msubsup></math> is the number of times
+topic <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m17" class="ltx_Math" alttext="z_{i}" display="inline"><msub><mi>z</mi><mi>i</mi></msub></math> has been assigned to any word in document <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m18" class="ltx_Math" alttext="d_{i}" display="inline"><msub><mi>d</mi><mi>i</mi></msub></math>, and
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m19" class="ltx_Math" alttext="n^{(d_{i})}_{\cdot,i\backslash i}" display="inline"><msubsup><mi>n</mi><mrow><mo>⋅</mo><mo>,</mo><mrow><mi>i</mi><mo>\</mo><mi>i</mi></mrow></mrow><mrow><mo>(</mo><msub><mi>d</mi><mi>i</mi></msub><mo>)</mo></mrow></msubsup></math> is the number of words observed in
+document <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m20" class="ltx_Math" alttext="d_{i}" display="inline"><msub><mi>d</mi><mi>i</mi></msub></math>.
+The particle weights are scaled as</p>
+<table id="S7.EGx5" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S3.Ex9" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex9.m1" class="ltx_Math" alttext="\displaystyle\frac{\omega_{i}^{(p)}}{\omega_{i-1}^{(p)}}" display="inline"><mstyle displaystyle="true"><mfrac><msubsup><mi>ω</mi><mi>i</mi><mrow><mo>(</mo><mi>p</mi><mo>)</mo></mrow></msubsup><msubsup><mi>ω</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow><mrow><mo>(</mo><mi>p</mi><mo>)</mo></mrow></msubsup></mfrac></mstyle></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex9.m2" class="ltx_Math" alttext="\displaystyle\propto\frac{\mathbf{P}(w_{i}\mid\mathbf{z}_{i}^{(p)},\mathbf{w}_%&#10;{i})\mathbf{P}(z_{i}^{(p)}\mid\mathbf{z}_{i-1}^{(p)})}{Q(z_{i}^{(p)}\mid%&#10;\mathbf{z}_{i-1}^{(p)},\mathbf{w}_{i})}" display="inline"><mrow><mi/><mo>∝</mo><mstyle displaystyle="true"><mfrac><mrow><mi>𝐏</mi><mrow><mo>(</mo><msub><mi>w</mi><mi>i</mi></msub><mo>∣</mo><msubsup><mi>𝐳</mi><mi>i</mi><mrow><mo>(</mo><mi>p</mi><mo>)</mo></mrow></msubsup><mo>,</mo><msub><mi>𝐰</mi><mi>i</mi></msub><mo>)</mo></mrow><mi>𝐏</mi><mrow><mo>(</mo><msubsup><mi>z</mi><mi>i</mi><mrow><mo>(</mo><mi>p</mi><mo>)</mo></mrow></msubsup><mo>∣</mo><msubsup><mi>𝐳</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow><mrow><mo>(</mo><mi>p</mi><mo>)</mo></mrow></msubsup><mo>)</mo></mrow></mrow><mrow><mi>Q</mi><mrow><mo>(</mo><msubsup><mi>z</mi><mi>i</mi><mrow><mo>(</mo><mi>p</mi><mo>)</mo></mrow></msubsup><mo>∣</mo><msubsup><mi>𝐳</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow><mrow><mo>(</mo><mi>p</mi><mo>)</mo></mrow></msubsup><mo>,</mo><msub><mi>𝐰</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow></mfrac></mstyle></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S3.Ex10" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex10.m2" class="ltx_Math" alttext="\displaystyle=\mathbf{P}(w_{i}\mid\mathbf{z}_{i-1}^{(p)},\mathbf{w}_{i-1})" display="inline"><mrow><mo>=</mo><mi>𝐏</mi><mrow><mo>(</mo><msub><mi>w</mi><mi>i</mi></msub><mo>∣</mo><msubsup><mi>𝐳</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow><mrow><mo>(</mo><mi>p</mi><mo>)</mo></mrow></msubsup><mo>,</mo><msub><mi>𝐰</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m21" class="ltx_Math" alttext="Q" display="inline"><mi>Q</mi></math> is the proposal distribution for the particle state transition; in our case,</p>
+<table id="S7.EGx6" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S3.Ex11" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex11.m1" class="ltx_Math" alttext="\displaystyle Q(z_{i}^{(p)}\mid\mathbf{z}_{i-1}^{(p)},\mathbf{w}_{i})=\mathbf{%&#10;P}(z_{i}^{(p)}\mid\mathbf{z}_{i-1}^{(p)},\mathbf{w}_{i})," display="inline"><mrow><mi>Q</mi><mrow><mo>(</mo><msubsup><mi>z</mi><mi>i</mi><mrow><mo>(</mo><mi>p</mi><mo>)</mo></mrow></msubsup><mo>∣</mo><msubsup><mi>𝐳</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow><mrow><mo>(</mo><mi>p</mi><mo>)</mo></mrow></msubsup><mo>,</mo><msub><mi>𝐰</mi><mi>i</mi></msub><mo>)</mo></mrow><mo>=</mo><mi>𝐏</mi><mrow><mo>(</mo><msubsup><mi>z</mi><mi>i</mi><mrow><mo>(</mo><mi>p</mi><mo>)</mo></mrow></msubsup><mo>∣</mo><msubsup><mi>𝐳</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow><mrow><mo>(</mo><mi>p</mi><mo>)</mo></mrow></msubsup><mo>,</mo><msub><mi>𝐰</mi><mi>i</mi></msub><mo>)</mo></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">minimizing the variance of the importance weights conditioned on <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m22" class="ltx_Math" alttext="\mathbf{w}_{i}" display="inline"><msub><mi>𝐰</mi><mi>i</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m23" class="ltx_Math" alttext="\mathbf{z}_{i-1}" display="inline"><msub><mi>𝐳</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub></math> <cite class="ltx_cite">[<a href="#bib.bib10" title="Rao-Blackwellised particle filtering for dynamic Bayesian networks" class="ltx_ref">9</a>]</cite>.</p>
+</div>
+<div id="S3.p5" class="ltx_para">
+<p class="ltx_p">Over time the particle weights tend to diverge. To combat this
+inefficiency, after every state transition we estimate the effective
+sample size (ESS) of the particle weights as
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p5.m1" class="ltx_Math" alttext="\|\mathbf{\omega}_{i}\|_{2}^{-2}" display="inline"><msubsup><mrow><mo fence="true">∥</mo><msub><mi>ω</mi><mi>i</mi></msub><mo fence="true">∥</mo></mrow><mn>2</mn><mrow><mo>-</mo><mn>2</mn></mrow></msubsup></math>
+<cite class="ltx_cite">[<a href="#bib.bib3" title="Sequential Monte Carlo methods for dynamic systems" class="ltx_ref">14</a>]</cite> and resample the particles when that estimate
+drops below a prespecified threshold. Several resampling strategies
+have been proposed <cite class="ltx_cite">[<a href="#bib.bib10" title="Rao-Blackwellised particle filtering for dynamic Bayesian networks" class="ltx_ref">9</a>]</cite>; we perform multinomial resampling
+as in
+<cite class="ltx_cite">Pitt and Shephard (<a href="#bib.bib4" title="Filtering via simulation: auxiliary particle filters" class="ltx_ref">1999</a>)</cite> and <cite class="ltx_cite">Ahmed<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib20" title="Unified analysis of streaming news" class="ltx_ref">2011</a>)</cite>, treating the weights as
+unnormalized probability masses on the particles.</p>
+</div>
+<div id="S3.p6" class="ltx_para">
+<p class="ltx_p">After resampling we are likely to have several copies of the same
+particle, yielding a degenerate approximation to the posterior.
+To reintroduce diversity to the particle cloud we take
+MCMC steps over a sequence of states from the history
+<cite class="ltx_cite">[<a href="#bib.bib10" title="Rao-Blackwellised particle filtering for dynamic Bayesian networks" class="ltx_ref">9</a>, <a href="#bib.bib5" title="Following a moving target—Monte Carlo inference for dynamic Bayesian models" class="ltx_ref">10</a>]</cite>. We call the indices of these states the
+rejuvenation sequence, denoted <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p6.m1" class="ltx_Math" alttext="\mathcal{R}(i)" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">ℛ</mi><mo>⁢</mo><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></mrow></math> <cite class="ltx_cite">[<a href="#bib.bib19" title="Online inference of topics with latent Dirichlet allocation" class="ltx_ref">7</a>]</cite>.
+The transition probability for a state <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p6.m2" class="ltx_Math" alttext="j\in\mathcal{R}(i)" display="inline"><mrow><mi>j</mi><mo>∈</mo><mrow><mi class="ltx_font_mathcaligraphic">ℛ</mi><mo>⁢</mo><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></mrow></mrow></math> is given by</p>
+<table id="S7.EGx7" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S3.Ex12" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex12.m1" class="ltx_Math" alttext="\displaystyle\mathbf{P}(z_{j}\mid\mathbf{z}_{N\backslash j},\mathbf{w}_{N})%&#10;\propto\frac{n^{(w_{j})}_{z_{j},N\backslash j}+\beta}{n^{(\cdot)}_{z_{j},N%&#10;\backslash j}+W\beta}\frac{n^{(d_{j})}_{z_{j},N\backslash j}+\alpha}{n^{(d_{j}%&#10;)}_{\cdot,N\backslash j}+T\alpha}" display="inline"><mrow><mi>𝐏</mi><mrow><mo>(</mo><msub><mi>z</mi><mi>j</mi></msub><mo>∣</mo><msub><mi>𝐳</mi><mrow><mi>N</mi><mo>\</mo><mi>j</mi></mrow></msub><mo>,</mo><msub><mi>𝐰</mi><mi>N</mi></msub><mo>)</mo></mrow><mo>∝</mo><mstyle displaystyle="true"><mfrac><mrow><msubsup><mi>n</mi><mrow><msub><mi>z</mi><mi>j</mi></msub><mo>,</mo><mrow><mi>N</mi><mo>\</mo><mi>j</mi></mrow></mrow><mrow><mo>(</mo><msub><mi>w</mi><mi>j</mi></msub><mo>)</mo></mrow></msubsup><mo>+</mo><mi>β</mi></mrow><mrow><msubsup><mi>n</mi><mrow><msub><mi>z</mi><mi>j</mi></msub><mo>,</mo><mrow><mi>N</mi><mo>\</mo><mi>j</mi></mrow></mrow><mrow><mo>(</mo><mo>⋅</mo><mo>)</mo></mrow></msubsup><mo>+</mo><mrow><mi>W</mi><mo>⁢</mo><mi>β</mi></mrow></mrow></mfrac></mstyle><mstyle displaystyle="true"><mfrac><mrow><msubsup><mi>n</mi><mrow><msub><mi>z</mi><mi>j</mi></msub><mo>,</mo><mrow><mi>N</mi><mo>\</mo><mi>j</mi></mrow></mrow><mrow><mo>(</mo><msub><mi>d</mi><mi>j</mi></msub><mo>)</mo></mrow></msubsup><mo>+</mo><mi>α</mi></mrow><mrow><msubsup><mi>n</mi><mrow><mo>⋅</mo><mo>,</mo><mrow><mi>N</mi><mo>\</mo><mi>j</mi></mrow></mrow><mrow><mo>(</mo><msub><mi>d</mi><mi>j</mi></msub><mo>)</mo></mrow></msubsup><mo>+</mo><mrow><mi>T</mi><mo>⁢</mo><mi>α</mi></mrow></mrow></mfrac></mstyle></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where subscript <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p6.m3" class="ltx_Math" alttext="N\backslash j" display="inline"><mrow><mi>N</mi><mo>\</mo><mi>j</mi></mrow></math> denotes counts up to token <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p6.m4" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math>, excluding those for token <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p6.m5" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math>.</p>
+</div>
+<div id="S3.p7" class="ltx_para">
+<p class="ltx_p">The rejuvenation sequence can be chosen by the practitioner.
+Choosing a long sequence (large <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p7.m1" class="ltx_Math" alttext="\left|\mathcal{R}(i)\right|" display="inline"><mrow><mo fence="true">|</mo><mrow><mi class="ltx_font_mathcaligraphic">ℛ</mi><mo>⁢</mo><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></mrow><mo fence="true">|</mo></mrow></math>) may result in
+a more accurate posterior approximation but also increases runtime
+and storage requirements. The tokens in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p7.m2" class="ltx_Math" alttext="\mathcal{R}(i)" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">ℛ</mi><mo>⁢</mo><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></mrow></math> may be chosen uniformly
+at random from the history or under a biased scheme that favors
+recent observations. The particle filter studied empirically
+by <cite class="ltx_cite">Canini<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib19" title="Online inference of topics with latent Dirichlet allocation" class="ltx_ref">2009</a>)</cite> stored the entire history, incurring
+linear storage complexity in the size of the stream.
+<cite class="ltx_cite">Ahmed<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib20" title="Unified analysis of streaming news" class="ltx_ref">2011</a>)</cite> instead sampled ten documents from the most recent
+1000, achieving constant storage complexity at the cost of a recency
+bias. If we want to fit a model to a long non-i.i.d. stream,
+we require an unbiased rejuvenation sequence as well as sub-linear
+storage complexity.</p>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Reservoir Sampling</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">Reservoir sampling is a widely-used family of algorithms for choosing
+an array (“reservoir”) of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m1" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> items. The most common example,
+presented in <cite class="ltx_cite">Vitter (<a href="#bib.bib15" title="Random sampling with a reservoir" class="ltx_ref">1985</a>)</cite> as Algorithm R, chooses <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m2" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>
+elements of a stream such that each possible subset of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m3" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> elements is
+equiprobable. This effects sampling <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m4" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> items uniformly
+without replacement,
+using runtime <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m5" class="ltx_Math" alttext="O(n)" display="inline"><mrow><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><mi>n</mi><mo>)</mo></mrow></mrow></math> (constant per update) and storage <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m6" class="ltx_Math" alttext="O(k)" display="inline"><mrow><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></mrow></math>.</p>
+</div><span class="ltx_ERROR undefined">{algorithm}</span>
+<div id="S4.p2" class="ltx_para">
+<span class="ltx_inline-block" style="border:1px solid #000000;padding-top:12pt;padding-bottom:12pt;">
+<p class="ltx_p"><span class="ltx_text ltx_font_small">Initialize </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m1" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math><span class="ltx_text ltx_font_small">-element array </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m2" class="ltx_Math" alttext="R" display="inline"><mi>R</mi></math><span class="ltx_text ltx_font_small">  
+Stream </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m3" class="ltx_Math" alttext="S" display="inline"><mi>S</mi></math><span class="ltx_text ltx_font_small">  
+</span><span class="ltx_ERROR undefined">\For</span><span class="ltx_text ltx_font_small"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m4" class="ltx_Math" alttext="i=1,\ldots,k" display="inline"><mrow><mi>i</mi><mo>=</mo><mrow><mn>1</mn><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mi>k</mi></mrow></mrow></math><span class="ltx_text ltx_font_small"> 
+</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m5" class="ltx_Math" alttext="R[i]\leftarrow S[i]" display="inline"><mrow><mrow><mi>R</mi><mo>⁢</mo><mrow><mo>[</mo><mi>i</mi><mo>]</mo></mrow></mrow><mo>←</mo><mrow><mi>S</mi><mo>⁢</mo><mrow><mo>[</mo><mi>i</mi><mo>]</mo></mrow></mrow></mrow></math><span class="ltx_text ltx_font_small">  
+
+</span><span class="ltx_ERROR undefined">\For</span><span class="ltx_text ltx_font_small"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m6" class="ltx_Math" alttext="i=k+1,\ldots,length(S)" display="inline"><mrow><mi>i</mi><mo>=</mo><mrow><mrow><mi>k</mi><mo>+</mo><mn>1</mn></mrow><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mrow><mi>l</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mrow><mo>(</mo><mi>S</mi><mo>)</mo></mrow></mrow></mrow></mrow></math><span class="ltx_text ltx_font_small"> 
+</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m7" class="ltx_Math" alttext="j\leftarrow random(1,i)" display="inline"><mrow><mi>j</mi><mo>←</mo><mrow><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mn>1</mn><mo>,</mo><mi>i</mi></mrow><mo>)</mo></mrow></mrow></mrow></math><span class="ltx_text ltx_font_small"> 
+</span><span class="ltx_ERROR undefined">\If</span><span class="ltx_text ltx_font_small"> </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m8" class="ltx_Math" alttext="j\leq k" display="inline"><mrow><mi>j</mi><mo>≤</mo><mi>k</mi></mrow></math><span class="ltx_text ltx_font_small"> 
+</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m9" class="ltx_Math" alttext="R[j]\leftarrow S[i]" display="inline"><mrow><mrow><mi>R</mi><mo>⁢</mo><mrow><mo>[</mo><mi>j</mi><mo>]</mo></mrow></mrow><mo>←</mo><mrow><mi>S</mi><mo>⁢</mo><mrow><mo>[</mo><mi>i</mi><mo>]</mo></mrow></mrow></mrow></math><span class="ltx_text ltx_font_small"></span></p>
+<p class="ltx_p"><span class="ltx_text ltx_caption ltx_font_small">Algorithm R for reservoir sampling</span><span class="ltx_text ltx_font_small"></span></p>
+</span>
+</div>
+<div id="S4.p3" class="ltx_para">
+<p class="ltx_p">To ensure constant space over an unbounded stream,
+we draw the rejuvenation sequence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m1" class="ltx_Math" alttext="\mathcal{R}(i)" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">ℛ</mi><mo>⁢</mo><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></mrow></math> uniformly from a reservoir.
+As
+each token of the training data is ingested by the particle filter, we
+decide to insert that token into the reservoir, or not,
+independent of the other tokens in the current document. Thus, at the
+end of step <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m2" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math> of the particle filter, each of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m3" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math> tokens seen so
+far in the training sequence has an equal probability of being in the
+reservoir, hence being selected for rejuvenation.</p>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Experiments</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">We evaluate our particle filter on three datasets studied in
+<cite class="ltx_cite">Canini<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib19" title="Online inference of topics with latent Dirichlet allocation" class="ltx_ref">2009</a>)</cite>: <span class="ltx_text ltx_font_typewriter">diff3</span>, <span class="ltx_text ltx_font_typewriter">rel3</span>, and
+<span class="ltx_text ltx_font_typewriter">sim3</span>. Each of these datasets is a collection of posts under
+three categories from the 20 Newsgroups
+dataset.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup><span class="ltx_text ltx_font_typewriter">diff3</span>: {<span class="ltx_text ltx_font_typewriter">rec.sport.baseball,
+sci.space, alt.atheism</span>}; <span class="ltx_text ltx_font_typewriter">rel3</span>:
+<span class="ltx_text ltx_font_typewriter">talk.politics.</span>{<span class="ltx_text ltx_font_typewriter">misc, guns, mideast</span>}; and <span class="ltx_text ltx_font_typewriter">sim3</span>:
+<span class="ltx_text ltx_font_typewriter">comp.</span>{<span class="ltx_text ltx_font_typewriter">graphics, os.ms-windows.misc, windows.x</span>}.</span></span></span> We use
+a 60% training/40% testing split of this data that is available online.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup><a href="http://qwone.com/~jason/20Newsgroups/20news-bydate.tar.gz" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">http://qwone.com/~jason/20Newsgroups/20news-bydate.tar.gz</span></a></span></span></span></p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">We preprocess the data by splitting each line on non-alphabet
+characters, converting the resulting tokens to lower-case, and
+filtering out any tokens that appear in a list of common English stop
+words. In addition, we remove the header of every file and filter
+every line that does not contain a non-trailing space (which removes
+embedded ASCII-encoded attachments). Finally, we shuffle the order of
+the documents. After these steps, we compute the vocabulary for each
+dataset as the set of all non-singleton types in the training data
+augmented with a special out-of-vocabulary symbol.</p>
+</div>
+<div id="S5.p3" class="ltx_para">
+<p class="ltx_p">During training we report the out-of-sample NMI, calculated by holding the word proportions <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p3.m1" class="ltx_Math" alttext="\phi" display="inline"><mi>ϕ</mi></math> fixed, running five sweeps of collapsed Gibbs sampling on the test set, and computing the topic for each document as the topic assigned to the most tokens in that document. Two Gibbs sweeps have been shown to yield good performance in practice <cite class="ltx_cite">[<a href="#bib.bib14" title="Efficient methods for topic model inference on streaming document collections" class="ltx_ref">23</a>]</cite>; we increase the number of sweeps to five after inspecting the stability on our dataset.
+The variance of the particle filter is often large, so for each experiment we perform 30 runs and plot the mean NMI inside bands spanning one sample standard deviation in either direction.</p>
+</div>
+<div id="S5.SS0.SSS0.P1" class="ltx_paragraph">
+<h3 class="ltx_title ltx_title_paragraph">Fixed Initialization.</h3>
+
+<div id="S5.SS0.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">Our first set of experiments has a similar
+parameterization<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS0.SSS0.P1.p1.m1" class="ltx_Math" alttext="T=3,\alpha=\beta=0.1,P=100,ess=20,\left|\mathcal{R}(i)\right|=30" display="inline"><mrow><mrow><mrow><mi>T</mi><mo>=</mo><mn>3</mn></mrow><mo>,</mo><mrow><mi>α</mi><mo>=</mo><mi>β</mi><mo>=</mo><mn>0.1</mn></mrow></mrow><mo>,</mo><mrow><mrow><mi>P</mi><mo>=</mo><mn>100</mn></mrow><mo>,</mo><mrow><mrow><mrow><mi>e</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>s</mi></mrow><mo>=</mo><mn>20</mn></mrow><mo>,</mo><mrow><mrow><mo fence="true">|</mo><mrow><mi class="ltx_font_mathcaligraphic">ℛ</mi><mo>⁢</mo><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></mrow><mo fence="true">|</mo></mrow><mo>=</mo><mn>30</mn></mrow></mrow></mrow></mrow></math></span></span></span>
+to the experiments of <cite class="ltx_cite">Canini<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib19" title="Online inference of topics with latent Dirichlet allocation" class="ltx_ref">2009</a>)</cite> except we draw the rejuvenation sequence from a reservoir.
+We initialize the particle filter with 200 Gibbs sweeps on the first 10% of each dataset. Then, for each dataset, for rejuvenation disabled, rejuvenation based on a reservoir of size 1000, and rejuvenation based on the entire history (in turn), we perform 30 runs of the particle filter from that fixed initial model. Our results (Figure <a href="#S5.F1" title="Figure 1 ‣ Fixed Initialization. ‣ 5 Experiments ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>) resemble those of <cite class="ltx_cite">Canini<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib19" title="Online inference of topics with latent Dirichlet allocation" class="ltx_ref">2009</a>)</cite>; we believe the discrepancies are mostly attributable to differences in preprocessing.</p>
+</div>
+<div id="S5.F1" class="ltx_figure"><img src="P14-2073/image003.png" id="S5.F1.g1" class="ltx_graphics ltx_centering" width="271" height="271" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span><span class="ltx_text ltx_font_small">Fixed initialization with different reservoir sizes.</span></div>
+</div>
+<div id="S5.SS0.SSS0.P1.p2" class="ltx_para">
+<p class="ltx_p">In these experiments, the initial model was not chosen arbitrarily. Rather, an initial model that yielded out-of-sample NMI close to the initial out-of-sample NMI scores reported in the previous study was chosen from a set of 100 candidates.</p>
+</div>
+</div>
+<div id="S5.SS0.SSS0.P2" class="ltx_paragraph">
+<h3 class="ltx_title ltx_title_paragraph">Variable Initialization.</h3>
+
+<div id="S5.SS0.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">We now investigate the significance of the initial model selection step used in the previous experiments.
+We run a new set of experiments in which the reservoir size is held fixed at 1000 and the size of the initialization sample is varied. Specifically, we vary the size of the initialization sample, in documents, between zero (corresponding to no Gibbs initialization), 30, 100, and 300, and also perform a run of batch Gibbs sampling (with no particle filter). In each case, 2000 Gibbs sweeps are performed. In these experiments, the initial models are not held fixed; for each of the 30 runs for each dataset, the initial model was generated by a different Gibbs chain. The results for these experiments, depicted in Figure <a href="#S5.F2" title="Figure 2 ‣ Variable Initialization. ‣ 5 Experiments ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>, indicate that the size of the initialization sample improves mean NMI and reduces variance, and that the variance of the particle filter itself is dominated by the variance of the initial model.</p>
+</div>
+<div id="S5.F2" class="ltx_figure"><img src="P14-2073/image002.png" id="S5.F2.g1" class="ltx_graphics ltx_centering" width="271" height="271" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 2: </span><span class="ltx_text ltx_font_small">Variable initialization with different initialization sample sizes.</span></div>
+</div>
+</div>
+<div id="S5.SS0.SSS0.P3" class="ltx_paragraph">
+<h3 class="ltx_title ltx_title_paragraph">Tuned Initialization.</h3>
+
+<div id="S5.SS0.SSS0.P3.p1" class="ltx_para">
+<p class="ltx_p">We observed previously that variance in the Gibbs initialization of the model contributes significantly to variance of the overall algorithm, as measured by NMI. With this in mind, we consider whether we can reduce variance in the initialization by tuning the initial model. Thus we perform a set of experiments in which we perform Gibbs initialization 20 times on the initialization set, setting the particle filter’s initial model to the model out of these 20 with the highest in-sample NMI. This procedure is performed independently for each run of the particle filter. We may not always have labeled data for initialization, so we also consider a variation in which Gibbs initialization is performed 20 times on the first 80% of the initialization sample, held-out perplexity (per word) is estimated on the remaining 20%, using a first-moment particle learning approximation <cite class="ltx_cite">[<a href="#bib.bib11" title="A recursive estimate for the predictive likelihood in a topic model" class="ltx_ref">20</a>]</cite>, and the particle filter is started from the model out of these 20 with the lowest held-out perplexity. The results, shown in Figure <a href="#S5.F3" title="Figure 3 ‣ Tuned Initialization. ‣ 5 Experiments ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>, show that we can ameliorate the variance due to initialization by tuning the initial model to NMI or perplexity.</p>
+</div>
+<div id="S5.F3" class="ltx_figure"><img src="P14-2073/image001.png" id="S5.F3.g1" class="ltx_graphics ltx_centering" width="271" height="271" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 3: </span><span class="ltx_text ltx_font_small">Variable initialization with tuning.</span></div>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Discussion</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">Motivated by a desire for cognitive plausibility,
+<cite class="ltx_cite">Börschinger and Johnson (<a href="#bib.bib13" title="A particle filter algorithm for Bayesian wordsegmentation" class="ltx_ref">2011</a>)</cite> used a particle filter to learn Bayesian
+word segmentation models, following the work of
+<cite class="ltx_cite">Canini<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib19" title="Online inference of topics with latent Dirichlet allocation" class="ltx_ref">2009</a>)</cite>. They later showed that rejuvenation improved
+performance <cite class="ltx_cite">[<a href="#bib.bib12" title="Using rejuvenation to improve particle filtering for Bayesian word segmentation" class="ltx_ref">6</a>]</cite>, but this impaired cognitive
+plausibility by necessitating storage of all previous states and
+observations. We attempted to correct this by drawing the
+rejuvenation sequence from a reservoir, but our results indicate that
+the particle filter for LDA on our dataset is highly sensitive to
+initialization and not influenced by rejuvenation.</p>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p class="ltx_p">In the experiments of <cite class="ltx_cite">Börschinger and Johnson (<a href="#bib.bib12" title="Using rejuvenation to improve particle filtering for Bayesian word segmentation" class="ltx_ref">2012</a>)</cite>, the particle
+cloud appears to be resampled once per utterance with a large
+rejuvenation sequence;<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>
+The ESS threshold is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p2.m1" class="ltx_Math" alttext="P" display="inline"><mi>P</mi></math>; the
+rejuvenation sequence is 100 or 1600 utterances,
+almost one sixth of the training data.</span></span></span>
+each particle takes many more rejuvenation MCMC steps than
+new state transitions and thus resembles a batch MCMC sampler.
+In our experiments resampling is done on the order of once
+per document,
+leading to less than one rejuvenation step per transition.
+Future work should carefully note this ratio: sampling
+history much more often than new states improves performance
+but contradicts the intuition behind particle filters.</p>
+</div>
+<div id="S6.p3" class="ltx_para">
+<p class="ltx_p">We have also shown that tuning the initial model using in-sample NMI or held-out perplexity can improve mean NMI and reduce variance.
+Perplexity (or likelihood) is often used to estimate model performance in LDA <cite class="ltx_cite">[<a href="#bib.bib16" title="Latent Dirichlet allocation" class="ltx_ref">3</a>, <a href="#bib.bib17" title="Finding scientific topics" class="ltx_ref">11</a>, <a href="#bib.bib23" title="Evaluation methods for topic models" class="ltx_ref">22</a>, <a href="#bib.bib22" title="Online learning for latent Dirichlet allocation" class="ltx_ref">12</a>]</cite>, and does not compare the inferred model against gold-standard labels,
+yet it appears to be a good proxy for NMI in our experiment.
+Thus, if initialization continues to be crucial to performance, at least we may have the flexibility of initializing without gold-standard labels.</p>
+</div>
+<div id="S6.p4" class="ltx_para">
+<p class="ltx_p">We have focused on NMI as our evaluation metric for comparison with <cite class="ltx_cite">Canini<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib19" title="Online inference of topics with latent Dirichlet allocation" class="ltx_ref">2009</a>)</cite>. However, evaluation of topic models is a subject of considerable debate <cite class="ltx_cite">[<a href="#bib.bib23" title="Evaluation methods for topic models" class="ltx_ref">22</a>, <a href="#bib.bib14" title="Efficient methods for topic model inference on streaming document collections" class="ltx_ref">23</a>, <a href="#bib.bib8" title="Automatic evaluation of topic coherence" class="ltx_ref">18</a>, <a href="#bib.bib7" title="Optimizing semantic coherence in topic models" class="ltx_ref">16</a>]</cite> and it may be informative to investigate the effects of initialization and rejuvenation using other metrics such as perplexity or semantic coherence.</p>
+</div>
+</div>
+<div id="S7" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">7 </span>Conclusion</h2>
+
+<div id="S7.p1" class="ltx_para">
+<p class="ltx_p">We have proposed reservoir sampling for reducing the storage complexity
+of a particle filter from linear to constant. This work was motivated
+as an expected improvement on the model of <cite class="ltx_cite">Canini<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib19" title="Online inference of topics with latent Dirichlet allocation" class="ltx_ref">2009</a>)</cite>. However,
+in the process of establishing an empirical baseline we discovered that
+rejuvenation does not play a significant role in the experiments of
+<cite class="ltx_cite">Canini<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib19" title="Online inference of topics with latent Dirichlet allocation" class="ltx_ref">2009</a>)</cite>. Moreover, we found that performance of the particle
+filter was strongly affected by the random initialization of the model,
+and suggested a simple approach to reduce the variability therein
+without using additional data. In conclusion, it is now an open question
+whether—and if so, under what assumptions—rejuvenation benefits
+particle filters for LDA and similar static Bayesian models.</p>
+</div>
+<div id="S7.SS0.SSS0.P1" class="ltx_paragraph">
+<h3 class="ltx_title ltx_title_paragraph">Acknowledgments</h3>
+
+<div id="S7.SS0.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">We thank Frank Ferraro, Keith Levin, and Mark Dredze for discussions.</p>
+</div>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Ahmed, Q. Ho, J. Eisenstein, E. P. Xing, A. J. Smola and C. H. Teo</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Unified analysis of streaming news</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 267–276</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p5" title="3 Online LDA Using Particle Filters ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S3.p7" title="3 Online LDA Using Particle Filters ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Banerjee and S. Basu</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Topic models over text streams: a study of batch and online unsupervised learning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 431–436</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Latent Dirichlet Allocation ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib16" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. M. Blei, A. Y. Ng and M. I. Jordan</span><span class="ltx_text ltx_bib_year">(2003-01)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Latent Dirichlet allocation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">3</span>, <span class="ltx_text ltx_bib_pages"> pp. 993–1022</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Latent Dirichlet Allocation ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.p3" title="2 Latent Dirichlet Allocation ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S6.p3" title="6 Discussion ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Broderick, N. Boyd, A. Wibisono, A. C. Wilson and M. I. Jordan</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Streaming variational Bayes</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Latent Dirichlet Allocation ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Börschinger and M. Johnson</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A particle filter algorithm for Bayesian wordsegmentation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 10–18</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p1" title="6 Discussion ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Börschinger and M. Johnson</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Using rejuvenation to improve particle filtering for Bayesian word segmentation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 85–89</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p3" title="1 Introduction ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S6.p1" title="6 Discussion ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>,
+<a href="#S6.p2" title="6 Discussion ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib19" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. R. Canini, L. Shi and T. L. Griffiths</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Online inference of topics with latent Dirichlet allocation</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p3" title="1 Introduction ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p4" title="2 Latent Dirichlet Allocation ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.p3" title="3 Online LDA Using Particle Filters ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S3.p6" title="3 Online LDA Using Particle Filters ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S3.p7" title="3 Online LDA Using Particle Filters ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S5.SS0.SSS0.P1.p1" title="Fixed Initialization. ‣ 5 Experiments ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>,
+<a href="#S5.p1" title="5 Experiments ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>,
+<a href="#S6.p1" title="6 Discussion ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>,
+<a href="#S6.p4" title="6 Discussion ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>,
+<a href="#S7.p1" title="7 Conclusion ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_editor">A. Doucet, N. de Freitas and N. Gordon (Eds.)</span><span class="ltx_text ltx_bib_year">(2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Sequential Monte Carlo methods in practice</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Springer</span>, <span class="ltx_text ltx_bib_place">New York</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p2" title="3 Online LDA Using Particle Filters ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Doucet, N. de Freitas, K. Murphy and S. Russell</span><span class="ltx_text ltx_bib_year">(2000)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Rao-Blackwellised particle filtering for dynamic Bayesian networks</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 176–183</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p3" title="3 Online LDA Using Particle Filters ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S3.p4" title="3 Online LDA Using Particle Filters ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S3.p5" title="3 Online LDA Using Particle Filters ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S3.p6" title="3 Online LDA Using Particle Filters ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">W. R. Gilks and C. Berzuini</span><span class="ltx_text ltx_bib_year">(2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Following a moving target—Monte Carlo inference for dynamic Bayesian models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of the Royal Statistical Society</span> <span class="ltx_text ltx_bib_volume">63</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 127–146</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.p6" title="3 Online LDA Using Particle Filters ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib17" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. L. Griffiths and M. Steyvers</span><span class="ltx_text ltx_bib_year">(2004-04)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Finding scientific topics</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Proceedings of the National Academy of Sciences</span> <span class="ltx_text ltx_bib_volume">101</span> (<span class="ltx_text ltx_bib_number">suppl 1</span>), <span class="ltx_text ltx_bib_pages"> pp. 5228–5235</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Latent Dirichlet Allocation ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S6.p3" title="6 Discussion ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib22" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. D. Hoffman, D. M. Blei and F. Bach</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Online learning for latent Dirichlet allocation</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Latent Dirichlet Allocation ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S6.p3" title="6 Discussion ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. D. Hoffman, D. M. Blei, C. Wang and J. Paisley</span><span class="ltx_text ltx_bib_year">(2013-05)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Stochastic variational inference</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">14</span>, <span class="ltx_text ltx_bib_pages"> pp. 1303–1347</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Latent Dirichlet Allocation ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. S. Liu and R. Chen</span><span class="ltx_text ltx_bib_year">(1998-09)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Sequential Monte Carlo methods for dynamic systems</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of the American Statistical Association</span> <span class="ltx_text ltx_bib_volume">93</span> (<span class="ltx_text ltx_bib_number">443</span>), <span class="ltx_text ltx_bib_pages"> pp. 1032–1044</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p5" title="3 Online LDA Using Particle Filters ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib21" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Mimno, M. D. Hoffman and D. M. Blei</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Sparse stochastic inference for latent Dirichlet allocation</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p4" title="2 Latent Dirichlet Allocation ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Mimno, H. M. Wallach, E. Talley, M. Leenders and A. McCallum</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Optimizing semantic coherence in topic models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 262–272</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p4" title="6 Discussion ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Minka and J. Lafferty</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Expectation-propagation for the generative aspect model</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 352–359</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Latent Dirichlet Allocation ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Newman, J. H. Lau, K. Grieser and T. Baldwin</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatic evaluation of topic coherence</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 100–108</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p4" title="6 Discussion ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. K. Pitt and N. Shephard</span><span class="ltx_text ltx_bib_year">(1999-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Filtering via simulation: auxiliary particle filters</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of the American Statistical Association</span> <span class="ltx_text ltx_bib_volume">94</span> (<span class="ltx_text ltx_bib_number">446</span>), <span class="ltx_text ltx_bib_pages"> pp. 590–599</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p3" title="3 Online LDA Using Particle Filters ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S3.p5" title="3 Online LDA Using Particle Filters ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. G. Scott and J. Baldridge</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A recursive estimate for the predictive likelihood in a topic model</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS0.SSS0.P3.p1" title="Tuned Initialization. ‣ 5 Experiments ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib15" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. S. Vitter</span><span class="ltx_text ltx_bib_year">(1985-03)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Random sampling with a reservoir</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">ACM Transactions on Mathematical Software</span> <span class="ltx_text ltx_bib_volume">11</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 37–57</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p1" title="4 Reservoir Sampling ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib23" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. M. Wallach, I. Murray, R. Salakhutdinov and D. Mimno</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Evaluation methods for topic models</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.p3" title="6 Discussion ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>,
+<a href="#S6.p4" title="6 Discussion ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+<li id="bib.bib14" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Yao, D. Mimno and A. McCallum</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Efficient methods for topic model inference on streaming document collections</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 937–946</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p3" title="5 Experiments ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>,
+<a href="#S6.p4" title="6 Discussion ‣ Particle Filter Rejuvenation and Latent Dirichlet Allocation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 17:56:33 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

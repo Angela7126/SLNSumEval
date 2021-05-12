@@ -1,0 +1,826 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_para" id="p1">
+      <p class="ltx_p">
+       1]
+       LeiCui
+       2]
+       DongdongZhang
+       2]
+       ShujieLiu
+       3]
+       QimingChen
+       2]
+       MuLi
+       2]
+       MingZhou
+       1]
+       MuyunYang
+       [1]SchoolofComputerScienceandTechnology,HarbinInstituteofTechnology,Harbin,P.R.China
+       <span class="ltx_text ltx_font_typewriter">
+        leicui@hit.edu.cn,ymy@mtlab.hit.edu.cn
+        <span class="ltx_ERROR undefined">
+         \affil
+        </span>
+       </span>
+       [2]MicrosoftResearch,Beijing,P.R.China
+       {
+       dozhang,shujliu,muli,mingzhou
+       }
+       @microsoft.com
+       [3]ShanghaiJiaoTongUniversity,Shanghai,P.R.China
+       <span class="ltx_text ltx_font_typewriter">
+        simoncqm@gmail.com
+       </span>
+      </p>
+     </div>
+     <div class="ltx_para" id="p2">
+      <p class="ltx_p">
+       UTF8gkai
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Making translation decisions is a difficult task in many Statistical Machine Translation (SMT) systems. Current translation modeling approaches usually use context dependent information to disambiguate translation candidates. For example, translation sense disambiguation approaches
+        [4, 5]
+        are proposed for phrase-based SMT systems. Meanwhile, for hierarchical phrase-based or syntax-based SMT systems, there is also much work involving rich contexts to guide rule selection
+        [15, 21, 23, 35]
+        . Although these methods are effective and proven successful in many SMT systems, they only leverage within-sentence contexts which are insufficient in exploring broader information. For example, the word
+        driver
+        often means “the operator of a motor vehicle” in common texts. But in the sentence “Finally, we write the user response to the buffer, i.e., pass it to our driver”, we understand that
+        driver
+        means “computer program”. In this case, people understand the meaning because of the IT topical context which goes beyond sentence-level analysis and requires more relevant knowledge. Therefore, it is important to leverage topic information to learn smarter translation models and achieve better translation performance.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        Topic modeling is a useful mechanism for discovering and characterizing various semantic concepts embedded in a collection of documents. Attempts on topic-based translation modeling include topic-specific lexicon translation models
+        [37, 38]
+        , topic similarity models for synchronous rules
+        [34]
+        , and document-level translation with topic coherence
+        [36]
+        . In addition, topic-based approaches have been used in domain adaptation for SMT
+        [31, 30]
+        , where they view different topics as different domains. One typical property of these approaches in common is that they only utilize parallel data where document boundaries are explicitly given. In this way, the topic of a sentence can be inferred with document-level information using off-the-shelf topic modeling toolkits such as Latent Dirichlet Allocation (LDA)
+        [3]
+        or Hidden Topic Markov Model (HTMM)
+        [14]
+        . Most of them also assume that the input must be in document level. However, this situation does not always happen since there is considerable amount of parallel data which does not have document boundaries. In addition, contemporary SMT systems often works on sentence level rather than document level due to the efficiency. Although we can easily apply LDA at the sentence level, it is quite difficult to infer the topic accurately with only a few words in the sentence. This makes previous approaches inefficient when applied them in real-world commercial SMT systems. Therefore, we need to devise a systematical approach to enriching the sentence and inferring its topic more accurately.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        In this paper, we propose a novel approach to learning topic representations for sentences. Since the information within the sentence is insufficient for topic modeling, we first enrich sentence contexts via Information Retrieval (IR) methods using content words in the sentence as queries, so that topic-related monolingual documents can be collected. These topic-related documents are utilized to learn a specific topic representation for each sentence using a neural network based approach. Neural network is an effective technique for learning different levels of data representations. The levels inferred from neural network correspond to distinct levels of concepts, where high-level representations are obtained from low-level bag-of-words input. It is able to detect correlations among any subset of input features through non-linear transformations, which demonstrates the superiority of eliminating the effect of noisy words which are irrelevant to the topic. Our problem fits well into the neural network framework and we expect that it can further improve inferring the topic representations for sentences.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        To incorporate topic representations as translation knowledge into SMT, our neural network based approach directly optimizes similarities between the source language and target language in a compact topic space. This underlying topic space is learned from sentence-level parallel data in order to share topic information across the source and target languages as much as possible. Additionally, our model can be discriminatively trained with a large number of training instances, without expensive sampling methods such as in LDA or HTMM, thus it is more practicable and scalable. Finally, we associate the learned representation to each bilingual translation rule. Topic-related rules are selected according to distributional similarity with the source text, which helps hypotheses generation in SMT decoding. We integrate topic similarity features in the log-linear model and evaluate the performance on the NIST Chinese-to-English translation task. Experimental results demonstrate that our model significantly improves translation accuracy over a state-of-the-art baseline.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Background: Deep Learning
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        Deep learning is an active topic in recent years which has triumphed in many machine learning research areas. This technique began raising public awareness in the mid-2000s after researchers showed how a multi-layer feed-forward neural network can be effectively trained. The training procedure often involves two phases: a layer-wise unsupervised pre-training phase and a supervised fine-tuning phase. For pre-training, Restricted Boltzmann Machine (RBM)
+        [16]
+        , auto-encoding
+        [1]
+        and sparse coding
+        [20]
+        are most frequently used. Unsupervised pre-training trains the network one layer at a time and helps guide the parameters of the layer towards better regions in parameter space
+        [2]
+        . Followed by fine-tuning in this parameter region, deep learning is able to achieve state-of-the-art performance in various research areas, including breakthrough results on the ImageNet dataset for objective recognition
+        [19]
+        , significant error reduction in speech recognition
+        [10]
+        , etc.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p2">
+       <p class="ltx_p">
+        Deep learning has also been successfully applied in a variety of NLP tasks such as part-of-speech tagging, chunking, named entity recognition, semantic role labeling
+        [8]
+        , parsing
+        [28]
+        , sentiment analysis
+        [29]
+        , etc. Most NLP research converts a high-dimensional and sparse binary representation into a low-dimensional and real-valued representation. This low-dimensional representation is usually learned from huge amount of monolingual texts in the pre-training phase, and then fine-tuned towards task-specific criterion. Inspired by previous successful research, we first learn sentence representations using topic-related monolingual texts in the pre-training phase, and then optimize the bilingual similarity by leveraging sentence-level parallel data in the fine-tuning phase.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Topic Similarity Model with Neural Network
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        In this section, we explain our neural network based topic similarity model in detail, as well as how to incorporate the topic similarity features into SMT decoding procedure. Figure
+        1
+        sketches the high-level overview which illustrates how to learn topic representations using sentence-level parallel data. Given a parallel sentence pair
+        ⟨f,e⟩
+        , the first step is to treat
+        f
+        and
+        e
+        as queries, and use IR methods to retrieve relevant documents to enrich contextual information for them. Specifically, the ranking model we used is a Vector Space Model (VSM), where the query and document are converted into tf-idf weighted vectors. The most relevant
+        N
+        documents
+        𝐝f
+        and
+        𝐝e
+        are retrieved and converted to a high-dimensional, bag-of-words input
+        f
+        and
+        e
+        for the representation learning
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p2">
+       <p class="ltx_p">
+        There are two phases in our neural network training process: pre-training and fine-tuning. In the pre-training phase (Section 3.1), we build two neural networks with the same structure but different parameters to learn a low-dimensional representation for sentences in two different languages. Then, in the fine-tuning phase (Section 3.2), our model directly optimizes the similarity of two low-dimensional representations, so that it highly correlates to SMT decoding. Finally, the learned representation is used to calculate similarities which are integrated as features in SMT decoding procedure (Section 3.3).
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S3.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.1
+        </span>
+        Pre-training using denoising auto-encoder
+       </h3>
+       <div class="ltx_para" id="S3.SS1.p1">
+        <p class="ltx_p">
+         In the pre-training phase, we leverage neural network structures to transform high-dimensional sparse vectors to low-dimensional dense vectors. The topic similarity is calculated on top of the learned dense vectors. This dense representation should preserve the information from the bag-of-words input, meanwhile alleviate data sparse problem. Therefore, we use a specially designed mechanism called auto-encoder to solve this problem. Auto-encoder
+         [1]
+         is one of the basic building blocks of deep learning. Assuming that the input is a
+         n
+         -of-
+         V
+         binary vector
+         x
+         representing the bag-of-words (
+         V
+         is the vocabulary size), an auto-encoder consists of an encoding process
+         g⁢(𝐱)
+         and a decoding process
+         h⁢(g⁢(𝐱))
+         . The objective of the auto-encoder is to minimize the reconstruction error
+         ℒ⁢(h⁢(g⁢(𝐱)),𝐱)
+         . Our goal is to learn a low-dimensional vector which can preserve information from the original
+         n
+         -of-
+         V
+         vector.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p2">
+        <p class="ltx_p">
+         One problem with auto-encoder is that it treats all words in the same way, making no distinguishment between function words and content words. The representation learned by auto-encoders tends to be influenced by the function words, thereby it is not robust. To alleviate this problem,
+         Vincent et al. (2008)
+         proposed the Denoising Auto-Encoder (DAE), which aims to reconstruct a clean, “repaired” input from a corrupted, partially destroyed vector. This is done by corrupting the initial input
+         x
+         to get a partially destroyed version
+         𝐱~
+         . DAE is capable of capturing the global structure of the input while ignoring the noise. In our task, for each sentence, we treat the retrieved
+         N
+         relevant documents as a single large document and convert it to a bag-of-words vector
+         x
+         in Figure
+         2
+         . With DAE, the input
+         x
+         is manually corrupted by applying masking noise (randomly mask 1 to 0) and getting
+         𝐱~
+         . Denoising training is considered as “filling in the blanks”
+         [33]
+         , which means the masking components can be recovered from the non-corrupted components. For example, in IT related texts, if the word
+         driver
+         is masked, it should be predicted through hidden units in neural networks by active signals such as “buffer”, “user response”, etc.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS1.p3">
+        <p class="ltx_p">
+         In our case, the encoding process transforms the corrupted input
+         𝐱~
+         into
+         g⁢(𝐱~)
+         with two layers: a linear layer connected with a non-linear layer. Assuming that the dimension of the
+         g⁢(𝐱~)
+         is
+         L
+         , the linear layer forms a
+         L×V
+         matrix
+         W
+         which projects the
+         n
+         -of-
+         V
+         vector to a
+         L
+         -dimensional hidden layer. After the bag-of-words input has been transformed, they are fed into a subsequent layer to model the highly non-linear relations among words:
+        </p>
+        𝐳=f⁢(W⁢𝐱~+𝐛)
+
+(1)
+        <p class="ltx_p">
+         where
+         z
+         is the output of the non-linear layer,
+         b
+         is a
+         L
+         -length bias vector.
+         f⁢(⋅)
+         is a non-linear function, where common choices include sigmoid function, hyperbolic function, “hard” hyperbolic function, rectifier function, etc. In this work, we use the rectifier function as our non-linear function due to its efficiency and better performance
+         [13]
+         :
+        </p>
+        r⁢e⁢c⁢(x)={xif x&gt;00otherwise
+
+(2)
+       </div>
+       <div class="ltx_para" id="S3.SS1.p4">
+        <p class="ltx_p">
+         The decoding process consists of a linear layer and a non-linear layer with similar network structures, but different parameters. It transforms the
+         L
+         -dimensional vector
+         g⁢(𝐱~)
+         to a
+         V
+         -dimensional vector
+         h⁢(g⁢(𝐱~))
+         . To minimize reconstruction error with respect to
+         𝐱~
+         , we define the loss function as the L2-norm of the difference between the uncorrupted input and reconstructed input:
+        </p>
+        ℒ⁢(h⁢(g⁢(𝐱~)),𝐱)=∥h⁢(g⁢(𝐱~))-𝐱∥2
+
+(3)
+       </div>
+       <div class="ltx_para" id="S3.SS1.p5">
+        <p class="ltx_p">
+         Multi-layer neural networks are trained with the standard back-propagation algorithm
+         [26]
+         . The gradient of the loss function is calculated and back-propagated to the previous layer to update its parameters. Training neural networks involves many factors such as the learning rate and the length of hidden layers. We will discuss the optimization of these parameters in Section 4.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.2
+        </span>
+        Fine-tuning with parallel data
+       </h3>
+       <div class="ltx_para" id="S3.SS2.p1">
+        <p class="ltx_p">
+         In the fine-tuning phase, we stack another layer on top of the two low-dimensional vectors to maximize the similarity between source and target languages. The similarity scores are integrated into the standard log-linear model for making translation decisions. Since the vectors from DAE are trained using information from monolingual training data independently, these vectors may be inadequate to measure bilingual topic similarity due to their different topic spaces. Therefore, in this stage, parallel sentence pairs are used to help connecting the vectors from different languages because they express the same topic. In fact, the objective of fine-tuning is to discover a latent topic space which is shared by both languages as much as possible. This shared topic space is particularly useful when the SMT decoder tries to match the source texts and translation candidates in the target language.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p2">
+        <p class="ltx_p">
+         Given a parallel sentence pair
+         ⟨f,e⟩
+         , the DAE learns representations for
+         f
+         and
+         e
+         respectively, as
+         𝐳f=g⁢(𝐟)
+         and
+         𝐳e=g⁢(𝐞)
+         in Figure
+         1
+         . We then take two vectors as the input to calculate their similarity. Consequently, the whole neural network can be fine-tuned towards the supervised criteria with the help of parallel data. The similarity score of the representation pair
+         ⟨𝐳f,𝐳e⟩
+         is defined as the cosine similarity of the two vectors:
+        </p>
+        s⁢i⁢m⁢(f,e)=cos⁡(𝐳f,𝐳e)=𝐳f⋅𝐳e∥𝐳f∥⁢∥𝐳e∥
+
+(4)
+       </div>
+       <div class="ltx_para" id="S3.SS2.p3">
+        <p class="ltx_p">
+         Since a parallel sentence pair should have the same topic, our goal is to maximize the similarity score between the source sentence and target sentence. Inspired by the contrastive estimation method
+         [27]
+         , for each parallel sentence pair
+         ⟨f,e⟩
+         as a positive instance, we select another sentence pair
+         ⟨f′,e′⟩
+         from the training data and treat
+         ⟨f,e′⟩
+         as a negative instance. To make the similarity of the positive instance larger than the negative instance by some margin
+         η
+         , we utilize the following pairwise ranking loss:
+        </p>
+        ℒ⁢(f,e)=max⁡{0,η-s⁢i⁢m⁢(f,e)+s⁢i⁢m⁢(f,e′)}
+
+(5)
+        <p class="ltx_p">
+         where
+         η=12-s⁢i⁢m⁢(f,f′)
+         . The rationale behind this criterion is, the smaller
+         s⁢i⁢m⁢(f,f′)
+         is, the more we should penalize negative instances.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p4">
+        <p class="ltx_p">
+         To effectively train the model in this task, negative instances must be selected carefully. Since different sentences may have very similar topic distributions, we select negative instances that are dissimilar with the positive instances based on the following criteria:
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p5">
+        <ol class="ltx_enumerate" id="I1">
+         <li class="ltx_item" id="I1.i1" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_enumerate">
+           1.
+          </span>
+          <div class="ltx_para" id="I1.i1.p1">
+           <p class="ltx_p">
+            For each positive instance
+            ⟨f,e⟩
+            , we select
+            e′
+            which contains at least 30% different content words from
+            e
+            .
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I1.i2" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_enumerate">
+           2.
+          </span>
+          <div class="ltx_para" id="I1.i2.p1">
+           <p class="ltx_p">
+            If we cannot find such
+            e′
+            , remove
+            ⟨f,e⟩
+            from the training instances for network learning.
+           </p>
+          </div>
+         </li>
+        </ol>
+       </div>
+       <div class="ltx_para" id="S3.SS2.p6">
+        <p class="ltx_p">
+         The model minimizes the pairwise ranking loss across all training instances:
+        </p>
+        ℒ=∑⟨f,e⟩ℒ⁢(f,e)
+
+(6)
+       </div>
+       <div class="ltx_para" id="S3.SS2.p7">
+        <p class="ltx_p">
+         We used standard back-propagation algorithm to further fine-tune the neural network parameters
+         W
+         and
+         b
+         in Equation (1). The learned neural networks are used to obtain sentence topic representations, which will be further leveraged to infer topic representations of bilingual translation rules.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.3
+        </span>
+        Integration into SMT decoding
+       </h3>
+       <div class="ltx_para" id="S3.SS3.p1">
+        <p class="ltx_p">
+         We incorporate the learned topic similarity scores into the standard log-linear framework for SMT. When a synchronous rule
+         ⟨α,γ⟩
+         is extracted from a sentence pair
+         ⟨f,e⟩
+         , a triple instance
+         ℐ=(⟨α,γ⟩,⟨f,e⟩,c)
+         is collected for inferring the topic representation of
+         ⟨α,γ⟩
+         , where
+         c
+         is the count of rule occurrence. Following
+         [7]
+         , we give a count of one for each phrase pair occurrence and a fractional count for each hierarchical phrase pair. The topic representation of
+         ⟨α,γ⟩
+         is then calculated as the weighted average:
+        </p>
+        𝐳α=∑(⟨α,γ⟩,⟨f,e⟩,c)∈𝒯{c×𝐳f}∑(⟨α,γ⟩,⟨f,e⟩,c)∈𝒯{c}
+
+(7)
+        𝐳γ=∑(⟨α,γ⟩,⟨f,e⟩,c)∈𝒯{c×𝐳e}∑(⟨α,γ⟩,⟨f,e⟩,c)∈𝒯{c}
+
+(8)
+        <p class="ltx_p">
+         where
+         𝒯
+         denotes all instances for the rule
+         ⟨α,γ⟩
+         ,
+         𝐳α
+         and
+         𝐳γ
+         are the source-side and target-side topic vectors respectively.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS3.p2">
+        <p class="ltx_p">
+         By measuring the similarity between the source texts and bilingual translation rules, the SMT decoder is able to encourage topic relevant translation candidates and penalize topic irrelevant candidates. Therefore, it helps to train a smarter translation model with the embedded topic information. Given a source sentence
+         s
+         to be translated, we define the similarity as follows:
+        </p>
+        S⁢i⁢m⁢(𝐳s,𝐳α)=cos⁡(𝐳s,𝐳α)
+
+(9)
+        S⁢i⁢m⁢(𝐳s,𝐳γ)=cos⁡(𝐳s,𝐳γ)
+
+(10)
+        <p class="ltx_p">
+         where
+         𝐳s
+         is the topic representation of
+         s
+         . The similarity calculated against
+         𝐳α
+         or
+         𝐳γ
+         denotes the source-to-source or the source-to-target similarity.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS3.p3">
+        <p class="ltx_p">
+         We also consider the topic sensitivity estimation since general rules have flatter distributions while topic-specific rules have sharper distributions. A standard entropy metric is used to measure the sensitivity of the source-side of
+         ⟨α,γ⟩
+         as:
+        </p>
+        S⁢e⁢n⁢(α)=-∑i=1|𝐳α|zα⁢i×log⁡zα⁢i
+
+(11)
+        <p class="ltx_p">
+         where
+         zα⁢i
+         is a component in the vector
+         𝐳α
+         . The target-side sensitivity
+         S⁢e⁢n⁢(γ)
+         can be calculated in a similar way. The larger the sensitivity is, the more topic-specific the rule manifests.
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS3.p4">
+        <p class="ltx_p">
+         In addition to traditional SMT features, we add new topic-related features into the standard log-linear framework. For the SMT system, the best translation candidate
+         e^
+         is given by:
+        </p>
+        e^=arg⁢maxeP(e|f)
+
+(12)
+        <p class="ltx_p">
+         where the translation probability is given by:
+        </p>
+        P(e|f)∝∑iwi⋅logϕi(f,e)=∑jwj⋅log⁡ϕj⁢(f,e)︸Standard+∑kwk⋅log⁡ϕk⁢(f,e)︸Topic related
+
+(13)
+        <p class="ltx_p">
+         where
+         ϕj⁢(f,e)
+         is the standard feature function and
+         wj
+         is the corresponding feature weight.
+         ϕk⁢(f,e)
+         is the topic-related feature function and
+         wk
+         is the feature weight. The detailed feature description is as follows:
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS3.p5">
+        <p class="ltx_p">
+         Standard features
+         : Translation model, including translation probabilities and lexical weights for both directions (4 features), 5-gram language model (1 feature), word count (1 feature), phrase count (1 feature), NULL penalty (1 feature), number of hierarchical rules used (1 feature).
+        </p>
+       </div>
+       <div class="ltx_para" id="S3.SS3.p6">
+        <p class="ltx_p">
+         Topic-related features
+         : rule similarity scores (2 features), rule sensitivity scores (2 features).
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Experiments
+      </h2>
+      <div class="ltx_subsection" id="S4.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.1
+        </span>
+        Setup
+       </h3>
+       <div class="ltx_para" id="S4.SS1.p1">
+        <p class="ltx_p">
+         We evaluate the performance of our neural network based topic similarity model on a Chinese-to-English machine translation task. In neural network training, a large number of monolingual documents are collected in both source and target languages. The documents are mainly from two domains: news and weblog. We use Chinese and English Gigaword corpus (Version 5) which are mainly from news domain. In addition, we also collect weblog documents with a variety of topics from the web. The total data statistics are presented in Table
+         1
+         . These documents are built in the format of inverted index using Lucene
+         , which can be efficiently retrieved by the parallel sentence pairs. The most relevant
+         N
+         documents are collected, where we experiment with
+         N={1,5,10,20,50}
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p2">
+        <p class="ltx_p">
+         We implement a distributed framework to speed up the training process of neural networks. The network is learned with mini-batch asynchronous gradient descent with the adaptive learning rate procedure called AdaGrad
+         [11]
+         . We use 32 model replicas in each iteration during the training. The model parameters are averaged after each iteration and sent to each replica for the next iteration. The vocabulary size for the input layer is 100,000, and we choose different lengths for the hidden layer as
+         L={100,300,600,1000}
+         in the experiments. In the pre-training phase, all parallel data is fed into two neural networks respectively for DAE training, where network parameters
+         W
+         and
+         b
+         are randomly initialized. In the fine-tuning phase, for each parallel sentence pair, we randomly select other ten sentence pairs which satisfy the criterion as negative instances. These training instances are leveraged to optimize the similarity of two vectors.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p3">
+        <p class="ltx_p">
+         In SMT training, an in-house hierarchical phrase-based SMT decoder is implemented for our experiments. The CKY decoding algorithm is used and cube pruning is performed with the same default parameter settings as in
+         Chiang (2007)
+         . The parallel data we use is released by LDC
+         . In total, the datasets contain nearly 1.1 million sentence pairs. Translation models are trained over the parallel data that is automatically word-aligned using GIZA++ in both directions, and the diag-grow-final heuristic is used to refine symmetric word alignment. An in-house language modeling toolkit is used to train the 5-gram language model with modified Kneser-Ney smoothing
+         [17]
+         . The English monolingual data used for language modeling is the same as in Table
+         1
+         . The NIST 2003 dataset is the development data. The testing data consists of NIST 2004, 2005, 2006 and 2008 datasets. The evaluation metric for the overall translation quality is case-insensitive BLEU4
+         [25]
+         . The reported BLEU scores are averaged over 5 times of running MERT
+         [24]
+         . A statistical significance test is performed using the bootstrap re-sampling method
+         [18]
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.2
+        </span>
+        Baseline
+       </h3>
+       <div class="ltx_para" id="S4.SS2.p1">
+        <p class="ltx_p">
+         The baseline is a re-implementation of the Hiero system
+         [7]
+         . The phrase pairs that appear only once in the parallel data are discarded because most of them are noisy. We also use the fix-discount method in
+         Foster et al. (2006)
+         for phrase table smoothing. This implementation makes the system perform much better and the translation model size is much smaller.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p2">
+        <p class="ltx_p">
+         We compare our method with the LDA-based approach proposed by
+         Xiao et al. (2012)
+         . In
+         [34]
+         , the topic of each sentence pair is exactly the same as the document it belongs to. Since some of our parallel data does not have document-level information, we rely on the IR method to retrieve the most relevant document and simulate this approach. The PLDA toolkit
+         [22]
+         is used to infer topic distributions, which takes 34.5 hours to finish.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.3
+        </span>
+        Effect of retrieved documents and length of hidden layers
+       </h3>
+       <div class="ltx_para" id="S4.SS3.p1">
+        <p class="ltx_p">
+         We illustrate the relationship among translation accuracy (BLEU), the number of retrieved documents (
+         N
+         ) and the length of hidden layers (
+         L
+         ) on different testing datasets. The results are shown in Figure
+         3
+         . The best translation accuracy is achieved when
+         N
+         =10 for most settings. This confirms that enriching the source text with topic-related documents is very useful in determining topic representations, thereby help to guide the synchronous rule selection. However, we find that as
+         N
+         becomes larger in the experiments, e.g.
+         N
+         =50, the translation accuracy drops drastically. As more documents are retrieved, less relevant information is also used to train the neural networks. Irrelevant documents bring so many unrelated topic words hence degrade neural network learning performance.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS3.p2">
+        <p class="ltx_p">
+         Another important factor is the length of hidden layers
+         L
+         in the network. In deep learning, this parameter is often empirically tuned with human efforts. As shown in Figure
+         3
+         , the translation accuracy is better when
+         L
+         is relatively small. Actually, there is no obvious distinction of the performance when
+         L
+         is less than 600. However, when
+         L
+         equals 1,000, the translation accuracy is inferior to other settings. The main reason is that parameters in the neural networks are too many to be effectively trained. As we know when
+         L
+         =1000, there are a total of
+         100,000×1,000
+         parameters between the linear and non-linear layers in the network. Limited training data prevents the model from getting close to the global optimum. Therefore, the model is likely to fall in local optima and lead to unacceptable representations.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS4">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.4
+        </span>
+        Effect of topic related features
+       </h3>
+       <div class="ltx_para" id="S4.SS4.p1">
+        <p class="ltx_p">
+         We evaluate the performance of adding new topic-related features to the log-linear model and compare the translation accuracy with the method in
+         [34]
+         . To make different methods comparable, we set the dimension of topic representation as 100 for all settings. This takes 10 hours in pre-training phase and 22 hours in fine-tuning phase. Table
+         2
+         shows how the accuracy is improved with more features added. The results confirm that topic information is indispensable for SMT since both
+         [34]
+         and our neural network based method significantly outperforms the baseline system. Our method improves 0.86 BLEU points at most and 0.76 BLEU points on average over the baseline. We observe that source-side similarity is more effective than target-side similarity, but their contributions are cumulative. This proves that bilingually induced topic representation with neural network helps the SMT system disambiguate translation candidates. Furthermore, rule sensitivity features improve SMT performance compared with only using similarity features. Because topic-specific rules usually have a larger sensitivity score, they can beat general rules when they obtain the same similarity score against the input sentence. Finally, when all new features are integrated, the performance is the best, preforming substantially better than
+         [34]
+         with 0.39 BLEU points on average.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS4.p2">
+        <p class="ltx_p">
+         It is worth mentioning that the performance of
+         [34]
+         is similar to the settings with
+         N
+         =1 and
+         L
+         =100 in Figure
+         3
+         . This is not simply coincidence since we can interpret their approach as a special case in our neural network method: when a parallel sentence pair has document-level information, that document will be retrieved for training; otherwise, the most relevant document will be retrieved from the monolingual data. Therefore, our method can be viewed as a more general framework than previous LDA-based approaches.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS5">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.5
+        </span>
+        Discussion
+       </h3>
+       <div class="ltx_para" id="S4.SS5.p1">
+        <p class="ltx_p">
+         In this section, we give a case study to explain why our method works. An example of translation rule disambiguation for a sentence from the NIST 2005 dataset is shown in Figure
+         4
+         . We find that the topic of this sentence is about “rescue after a natural disaster”. Under this topic, the Chinese rule “åé X” should be translated to “deliver X” or “distribute X”. However, the baseline system prefers “send X” rather than those two candidates. Although the translation probability of “send X” is much higher, it is inappropriate in this context since it is usually used in IT texts. For example,
+         ⟨
+         åéé®ä»¶, send emails
+         ⟩
+         ,
+         ⟨
+         åéä¿¡æ¯, send messages
+         ⟩
+         and
+         ⟨
+         åéæ°æ®, send data
+         ⟩
+         . In contrast, with our neural network based approach, the learned topic distributions of “deliver X” or “distribute X” are more similar with the input sentence than “send X”, which is shown in Figure
+         4
+         . The similarity scores indicate that “deliver X” and “distribute X” are more appropriate to translate the sentence. Therefore, adding topic-related features is able to keep the topic consistency and substantially improve the translation accuracy.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Related Work
+      </h2>
+      <div class="ltx_para" id="S5.p1">
+       <p class="ltx_p">
+        Topic modeling was first leveraged to improve SMT performance in
+        [37, 38]
+        . They proposed a bilingual topical admixture approach for word alignment and assumed that each word-pair follows a topic-specific model. They reported extensive empirical analysis and improved word alignment accuracy as well as translation quality. Following this work,
+        [34]
+        extended topic-specific lexicon translation models to hierarchical phrase-based translation models, where the topic information of synchronous rules was directly inferred with the help of document-level information. Experiments show that their approach not only achieved better translation performance but also provided a faster decoding speed compared with previous lexicon-based LDA methods.
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p2">
+       <p class="ltx_p">
+        Another direction of approaches leveraged topic modeling techniques for domain adaptation.
+        Tam et al. (2007)
+        used bilingual LSA to learn latent topic distributions across different languages and enforce one-to-one topic correspondence during model training. They incorporated the bilingual topic information into language model adaptation and lexicon translation model adaptation, achieving significant improvements in the large-scale evaluation.
+        [30]
+        investigated the relationship between out-of-domain bilingual data and in-domain monolingual data via topic mapping using HTMM methods. They estimated phrase-topic distributions in translation model adaptation and generated better translation quality. Recently,
+        Chen et al. (2013)
+        proposed using vector space model for adaptation where genre resemblance is leveraged to improve translation accuracy. We also investigated multi-domain adaptation where explicit topic information is used to train domain specific models
+        [9]
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S5.p3">
+       <p class="ltx_p">
+        Generally, most previous research has leveraged conventional topic modeling techniques such as LDA or HTMM. In our work, a novel neural network based approach is proposed to infer topic representations for parallel data. The advantage of our method is that it is applicable to both sentence-level and document-level SMT, since we do not place any restrictions on the input. In addition, our method directly maximizes the similarity between parallel sentence pairs, which is ideal for SMT decoding. Compared to document-level topic
+modeling which uses the topic of a document for all sentences
+within the document
+        [34]
+        , our contributions are:
+       </p>
+       <ul class="ltx_itemize" id="I2">
+        <li class="ltx_item" id="I2.i1" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_itemize">
+          •
+         </span>
+         <div class="ltx_para" id="I2.i1.p1">
+          <p class="ltx_p">
+           We proposed a more general approach to leveraging topic information for SMT by using IR methods to get a collection of related documents, regardless of whether or not document boundaries are explicitly given.
+          </p>
+         </div>
+        </li>
+        <li class="ltx_item" id="I2.i2" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_itemize">
+          •
+         </span>
+         <div class="ltx_para" id="I2.i2.p1">
+          <p class="ltx_p">
+           We used neural networks to learn topic representations more accurately, with more practicable and scalable modeling techniques.
+          </p>
+         </div>
+        </li>
+        <li class="ltx_item" id="I2.i3" style="list-style-type:none;">
+         <span class="ltx_tag ltx_tag_itemize">
+          •
+         </span>
+         <div class="ltx_para" id="I2.i3.p1">
+          <p class="ltx_p">
+           We directly optimized bilingual topic similarity in the deep learning framework with the help of sentence-level parallel data, so that the learned representation could be easily used in SMT decoding procedure.
+          </p>
+         </div>
+        </li>
+       </ul>
+      </div>
+     </div>
+     <div class="ltx_section" id="S6">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        6
+       </span>
+       Conclusion and Future Work
+      </h2>
+      <div class="ltx_para" id="S6.p1">
+       <p class="ltx_p">
+        In this paper, we propose a neural network based approach to learning bilingual topic representation for SMT. We enrich contexts of parallel sentence pairs with topic related monolingual data and obtain a set of documents to represent sentences. These documents are converted to a bag-of-words input and fed into neural networks. The learned low-dimensional vector is used to obtain the topic representations of synchronous rules. In SMT decoding, appropriate rules are selected to best match source texts according to their similarity in the topic space. Experimental results show that our approach is promising for SMT systems to learn a better translation model. It is a significant improvement over the state-of-the-art Hiero system, as well as a conventional LDA-based method.
+       </p>
+      </div>
+      <div class="ltx_para" id="S6.p2">
+       <p class="ltx_p">
+        In the future research, we will extend our neural network methods to address document-level translation, where topic transition between sentences is a crucial problem to be solved. Since the translation of the current sentence is usually influenced by the topic of previous sentences, we plan to leverage recurrent neural networks to model this phenomenon, where the history translation information is naturally combined in the model.
+       </p>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

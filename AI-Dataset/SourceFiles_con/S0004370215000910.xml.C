@@ -1,0 +1,1028 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Law and logic: A review from an argumentation perspective.
+   </title>
+   <abstract>
+    This article reviews legal applications of logic, with a particularly marked concern for logical models of legal argument. We argue that the law is a rich test bed and important application field for logic-based AI research. First applications of logic to the representation of legal regulations are reviewed, where the main emphasis is on representation and where the legal conclusions follow from that representation as a matter of deduction. This includes the representation of deontic concepts, normative positions, legal ontologies, time and change. Then legal applications of logic are reviewed where legal rules are not just applied but are the object of reasoning and discourse. This includes arguing about applying statutory rules in unforeseen circumstances, interpretative reasoning in light of the facts of a case, and evidential reasoning to establish the facts of a case. This part of the review has special emphasis on argumentation-based approaches. This also holds for the final part, which discusses formal models of legal procedure and of multi-agent interaction in legal proceedings. The review concludes with identifying some of the main open research problems. The review shows that modern legal applications of logic confirm the recent trend of widening the scope of logic from deduction to information flow, argumentation and interaction.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Law is of vital importance to society, promoting justice and stability and affecting many people in important aspects of their private and public life. Creating and applying law involves information processing, reasoning, decision making and communication, so the law is a natural application field for artificial intelligence. While AI could be applied to the law in many ways (for example, natural-language processing to extract meaningful information from documents, datamining and machine learning to extract trends and patterns from large bodies of precedents), the fact that law is part of society makes logic particularly relevant to the law. Since law has social objectives and social effects, it must be understood by those affected by it, and its application must be explained and justified. Hence the importance of clarity of meaning and soundness of reasoning, and hence the importance of logic for the law and for legal applications of AI [33].
+     </paragraph>
+     <paragraph>
+      This review aims to introduce AI researchers to the law as a rich test bed and important application field for logic-based AI research, with a particularly marked concern for logical models of legal argument. As a test bed, the law provides real, documented examples instead of artificial toy examples, and as an application field it may result in AI applications from which society as a whole, not just industry or consumers, can benefit. At first sight, one might think that such testing and application boils down to the use of techniques for knowledge representation and automated deduction. Once a legal text and a body of facts have been clearly represented in a formal language, the legal conclusions would follow from that representation as a matter of deduction. However, this view is too simplistic. For one thing it ignores that law is not just a conceptual or axiomatic system but has social objectives and social effects, which may require that a legal rule is overridden or changed. Moreover, legislators can never fully predict in which circumstances the law has to be applied, so legislation has to be formulated in general and abstract terms, such as ‘duty of care’, ‘misuse of trade secrets’ or ‘intent’, and qualified with general exception categories, such as ‘selfdefence’, ‘force majeure’ or ‘unreasonable’. Such concepts and exceptions must be interpreted in concrete cases, which creates uncertainty and room for disagreement. This is reinforced by the fact that legal cases often involve conflicting interests of opposing parties. The prosecution in a criminal case wants the accused convicted while the accused wants to be acquitted. The plaintiff in a civil law suit wants to be awarded compensation for damages, while the defendant wants to avoid having to pay. The tax authority in a tax case wants to receive as much tax as possible, while the tax payer wants to pay as little as possible. All these aspects of the law, i.e., its orientation to future and not fully anticipated situations, the tension between the general terms of the law and the particulars of a case, and the adversarial nature of legal procedures, make that legal reasoning goes beyond the literal meaning of the legal rules and involves appeals to precedent, principle, policy and purpose, and involves the attack as well as the construction of arguments. A central notion then in the law is that of argumentation. Indeed, the formal and computational study of argumentation is an area of AI where AI-and-law researchers have not just applied AI techniques but where they have also contributed significantly to their development. For this reason, legal applications of logical argumentation techniques will be an important part of this review.
+     </paragraph>
+     <paragraph>
+      A legal case has various aspects, each with its own modes of reasoning: determining the facts, classifying the facts under legal concepts or conditions, and deriving legal consequences from the thus classified facts. When determining the facts, the modes of reasoning are often probabilistic and may involve reasoning about causation and about mental attitudes such as intent. Classifying the facts under legal concepts involves interpretation in a broad sense, i.e., the ampliative reasoning process which, on the basis of legal sources, determines the content of legal norms and concepts (legal interpretation in a strict sense, i.e., the attribution of a meaning to a specific legal provision in cases of doubt is an aspect of that). Here the prevailing modes of reasoning are analogy, appeals to precedent or policy, and the balancing of interests. Finally, when deriving legal consequences from the classified facts, the main modes of reasoning are deductive but with room for nonmonotonic techniques to deal with exceptions to rules, either statutory or based on principle and purpose, and to choose between conflicting rules on the basis of the general hierarchy of legal systems, with rules from different sources.
+     </paragraph>
+     <paragraph>
+      Another important characteristic of the law is its institutional nature. Law is not just a body of rules but also consists of institutions for creating (legislators), applying (judges and administrators) and enforcing (police and administrators) these rules. Also, legal norms do not exist in isolation but as elements of legal systems, where different kinds of norms exist. Certain norms directly govern individual behaviour, establishing permissions, obligations, prohibitions or rights (e.g. a prohibition to smoke in school premises). Other norms establish when the conditions of a behaviour-governing norm are satisfied (e.g., a norms establishing what counts as a school premise). Again other norms determine under what conditions new valid norms are created (e.g. a statute empowering a city council to regulate smoking). Then there are norms which determine who should adjudicate conflicts according to the existing norms (e.g., a law giving justices of peace the power to decide cases concerning the violation of smoke rules). And there are norms that confer powers to enforce norms (e.g., a regulation giving police officers the power to issue fines for the violation of smoke prohibitions).
+     </paragraph>
+     <paragraph>
+      From this analysis it appears that different kinds of agents, with different functions engage in legal reasoning in different contexts: the addressees of the norms (the citizens), the producers of the norms (the legislators), the appliers of the norms (the judges and administrators), and the enforcers of the norms (the administrators/police officers). The reasoning forms employed in the law may thus not only depend on the nature of the issue addressed but also on the context in which the reasoning takes place. For example, legislators may apply cost-benefit or game-theoretic analyses when determining the best way to regulate something, citizens or companies may use planning techniques to determine the most profitable tax arrangements, and social benefit clerks may use deductive rule application to decide on unemployment benefit applications. However, to keep this review within reasonable size, we will not discuss all these contexts but primarily focus on the ‘paradigmatic’ context of a court proceeding, where a judge has to adjudicate a conflict between two adversaries.
+     </paragraph>
+     <paragraph>
+      The remainder of this review is organised as follows. We will first in Section 2 review uses of logic in modelling reasoning with legal rules (whether from statutes or case law), assuming that the facts of a case match the rules' conditions and that the law is drafted so as to enforce a unique outcome in each case. In Section 3 we review logical models of legal reasoning about legal rules in light of the facts of a case. Subtopics here are dealing with reasons not to apply an applicable statutory rule and with the interpretation of legal concepts as they appear in the conditions of legal rules. Our review in this section will have special emphasis on argumentation-based approaches. In Section 4 we discuss models of reasoning to establish the facts of a case, that is, models of rational legal proof. Here we will contrast argumentation-based with narrative and Bayesian approaches and address the logical nature of burdens of proof and presumptions. Finally, in Section 5 we review formal accounts of the interaction between the participants in legal procedures. Here too argumentation is important but in the sense of being a rational process of resolution of conflicts of opinion.
+     </paragraph>
+    </section>
+    <section label="2">
+     Reasoning with the law
+     <paragraph>
+      In this section we review uses of logic to model reasoning with legal rules. Three subtopics here are using logic for concept analysis and clear drafting, using deduction to model the law as an axiomatic system, and using nonmonotonic techniques for representing rule-exception structures and legal hierarchies (while assuming that the law maker uses these structures and hierarchies to enforce a unique outcome).
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       Logic for resolving syntactic ambiguities and supporting clear drafting
+      </section-title>
+      <paragraph>
+       One use of logic in the law is motivated by the idea that logic provides a more precise and perspicuous way of conveying the content of legal norms than the natural language used by legislators and jurists. Thus, by reformulating a set of legal prescriptions as a set of logical axioms, a legal analyst can specify clearly how she understands such prescriptions, overcoming the syntactic ambiguities of natural language. For instance, consider a prescription such as “Persons having a degree in economics and in law can apply to the post”. By modelling this as{a mathematical formula} or alternatively as{a mathematical formula} we distinguish one of the two possible ways of understanding the logical-linguistic structure of this prescription. We specify whether successful application is conditional on the possession one of the two degrees or on the possession of both of them. Logical syntax can be used in this way by the interpreter/analyst of legislation or by the legislator itself. In the first case, alternative logical structures of an existing legislative document are distinguished, so as to identify a range of possible interpretive choices. In the second case, a single logical structure is incorporated in the legislative document from the start, so that structural ambiguity is prevented from arising.
+      </paragraph>
+      <paragraph>
+       Both these uses of logic have been advocated by the legal theorist Allen, who since the 1950s (see [10]) has proposed to use logical forms for improving the analysis and the drafting of legal texts, in particular contracts and legislation. Allen developed a method called normalisation for rewriting a natural language text in such way that logical ambiguities are removed. The method involves the following steps [12]:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        distinguish propositional components of the input text
+       </list-item>
+       <list-item label="2.">
+        label them with propositional constants
+       </list-item>
+       <list-item label="3.">
+        specify the alternative structural interpretations by using such constants and logical connectives
+       </list-item>
+       <list-item label="4.">
+        reinsert the propositional components embedding them in the appropriate logical structures.
+       </list-item>
+      </list>
+      <paragraph>
+       Logical connectives are in this method expressed using expressions that are similar to the locutions through which logical structures are expressed in natural language, but whose logical meaning is signalled by using special typographical forms such as capitalisation. For instance the prescription above could be (step 1) reformulated as: if [A: the person has a degree in economics] and/or [B: the person has a degree in law] then [C: the person can apply]. Then (step 2), the following logical interpretations of it could be distinguished
+      </paragraph>
+      <list>
+       <list-item label="(a)">
+        IF A AND B THEN C,
+       </list-item>
+       <list-item label="(b)">
+        IF A OR B THEN C,
+       </list-item>
+       <list-item label="(c)">
+        IF A AND B THEN C, BUT OTHERWISE NOT,
+       </list-item>
+       <list-item label="(d)">
+        IF A OR B THEN C, BUT OTHERWISE NOT,
+       </list-item>
+      </list>
+      <paragraph>
+       which correspond, in the usual logical syntax, to (a) {a mathematical formula}(A∧B)→C, (b) {a mathematical formula}(A∨B)→C, (c) {a mathematical formula}(A∧B)↔C, (d) {a mathematical formula}(A∨B)↔C. Finally, the selected interpretation, e.g. (d), can be reformulated in logically enhanced natural language, as follows:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        IF
+       </list-item>
+       <list-item label="2.">
+        THEN
+       </list-item>
+       <list-item label="3.">
+        BUT OTHERWISE NOT
+       </list-item>
+      </list>
+      <paragraph>
+       The proposal of Allen has led to the development of some software tools to support the normalisation process [13] and to some attempts at producing official legal documents in normalised forms [69]. The use of normalisation in drafting official texts has not been so far successful, in particular, since the separation of propositional components often leads to longer and inelegant versions of the text. On the other hand, as an analytical tool for the analysis of structural ambiguities in legal documents, Allen's method has been valuable. His idea to embed logical connectives in natural language texts and to use indenting to specify the scope of such connectives corresponds to the practice later adopted in environments for the development of experts systems, such as in the modelling component of Oracle Policy Automation, a suite of software products for modelling and deploying business and legal rules within enterprises and public administration, which originates from an environment for developing legal expert systems [87].
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Law as an axiomatic system
+      </section-title>
+      <paragraph>
+       Rather than focusing on a single legislative or contractual provision, as in the normalisation approach, logic may be used to capture the content of a whole body of law through a set of logical axioms, to logically analyse the implications of that body of law for specific cases. For this purpose the rules directly expressing the content of a legal source may be supplemented with further rules specifying when the predicates in a legal rule are satisfied (for example, listing the kinds of “competent officers” who can fine smokers). Once it is agreed that a set of legal norms {a mathematical formula}L provides an adequate representation of the law and that a set of factual statements {a mathematical formula}F provides an adequate representation of the facts at issue, then determining whether a legal qualification ϕ (an obligation, a permission, the validity of a contract, etc.) holds in situation {a mathematical formula}F can be done by checking whether ϕ is logically entailed by {a mathematical formula}F∪L.
+      </paragraph>
+      <paragraph>
+       This idea was expressed in general terms by the legal theorists Alchourrón and Bulygin [3] and was developed in a logic programming framework by Sergot et al. [162]. The latter contribution was hugely influential for the development of computational representations of legislation, showing how logic programming enables intuitively appealing representations that can be directly deployed to generate automatic inferences. Here is how a legislative rule from the British Nationality act is modelled as a Horn clause (where variables are embedded into the predicates, for the sake of readability):
+      </paragraph>
+      <list>
+       <list-item>
+        xis a British citizen
+       </list-item>
+       <list-item>
+        IFxwas born in the U.K. ANDxwas born on date y
+       </list-item>
+       <list-item>
+        ANDyis after or on commencement
+       </list-item>
+       <list-item>
+        ANDxhas a parent who qualifies under 1.1 on datey
+       </list-item>
+      </list>
+      <paragraph>
+       Moving from a single rule to the whole act, Sergot et al. propose the use of an and/or tree to capture the overall logical structure, where further clauses determine the conditions under which the predicates in the body of higher level rules hold.
+      </paragraph>
+      <paragraph>
+       This paper also discusses to which extent logic programming's negation as failure provides an appropriate formalisation of negation as occurring in legislation. This discussion anticipates subsequent debates on non-monotonic inference in the law and on the burden of proof, to which we shall refer in the following sections. Negation as failure can be useful in modelling legislation since the law often determines that the negation of a proposition A is to be assumed unless it can be shown that A is the case, for example, if A is some exceptional circumstance (see further Section 2.6). However, negation as failure is inappropriate for negative facts of which the law requires that they are established on the basis of specific grounds. For example, social benefit laws might imply different entitlements for married and non-married people, and in such cases any marital status needs to be proven.
+      </paragraph>
+      <paragraph>
+       The idea of representing legislation as a logic program has led to a number of applications, such as [161] and [35] and has more generally inspired the development of legal knowledge-based systems. It has also been theoretically influential, such as in the use of the Event Calculus of [92] to capture the temporal dynamics of legal norms and legal facts [78] and in the use of metalogics for modelling legal reasoning [25].
+      </paragraph>
+      <paragraph>
+       Viewing the law as an axiomatic system has had some success, especially in the application of knowledge-based systems in large-scale processing of administrative law. Here the use of rule-based systems has been proved to greatly reduce two major sources of errors in the processing of social benefit applications by ‘street-level bureaucrats’: their incomplete knowledge of the relevant regulations and their inability to handle the often complex conditions of the regulations [164]. Another area in which rule-based systems have proved useful is regulatory compliance. Here rule-based systems are used to represent the legislation with which a business must comply and the ‘business rules’ that the business has adopted to comply with this legislation. In the following subsections we review some theoretical elaborations of the axiomatic approach.
+      </paragraph>
+     </section>
+     <section label="2.3">
+      <section-title>
+       Applications of deontic logic
+      </section-title>
+      <paragraph>
+       Legal systems establish obligations, prohibitions and permissions, and provide for sanctions. Deontic logic is the branch of logic that formalises these notions. It thus also provides a logical basis on which further concepts, such as legal right and powers, can be defined.
+      </paragraph>
+      <paragraph>
+       Von Wright [174] introduced what it now called standard deontic logic (SLD). According to the axiomatisation provided in [80], SDL is characterised by the following definitions, axioms and inference rules:{a mathematical formula} The theorems of SDL include distribution and aggregation principles for O: {a mathematical formula}O(ϕ∧ψ)⊃(Oϕ∧Oψ) and {a mathematical formula}(Oϕ∧Oψ)⊃O(ϕ∧ψ). Other interesting theorems concern the possibility of weakening obligations and permissions: {a mathematical formula}Oϕ⊃O(ϕ∨ψ) and {a mathematical formula}Pϕ⊃P(ϕ∨ψ).
+      </paragraph>
+      <paragraph>
+       SDL can be given a possible-worlds semantics based on a triple {a mathematical formula}M=〈W,I,R〉, where as usual W is a set of worlds, I is an interpretation function which assigns to each sentence a truth value in every world and R is a serial accessibility relation between worlds. R expresses deontic accessibility, or relative ideality: the worlds {a mathematical formula}wj for which {a mathematical formula}R(wi,wj) holds are the ideal worlds relative to {a mathematical formula}wi, i.e., the worlds where everything that should be realised in {a mathematical formula}wi has become reality. In relation to such a structure, we can say that {a mathematical formula}Oϕ is true in {a mathematical formula}wi iff ϕ is true in every world {a mathematical formula}wj such that {a mathematical formula}R(wi,wj), i.e., if ϕ is true in every ideal (law-abiding) world relatively to {a mathematical formula}wi.
+      </paragraph>
+      <paragraph>
+       Deontic logic differs from alethic modal logic in a fundamental regard. While in alethic modal logic the necessity of proposition ϕ implies ϕ's truth, in deontic logic {a mathematical formula}Oϕ→ϕ cannot be a logical truth, since obligations can be violated, i.e., it may be case that {a mathematical formula}Oϕ∧¬ϕ. However, SDL can be reduced to alethic modal logic by introducing a logical constant expressing the idea of compliance (or violation). Formalising an idea originally due to Leibniz [94], Kanger reduced deontic logic to alethic modal logic, on the basis of (a) the definition {a mathematical formula}Oϕ≡□(Q⊃ϕ), where Q means “All requirements are met,” and (b) the assumption that compliance is possible, i.e., that {a mathematical formula}◇Q[80]. Thus, that ϕ is legally obligatory means that ϕ is necessarily implied by compliance with the law, compliance being possible. A similar reduction of deontic logic to alethic modal logic was proposed by Anderson [14], on the basis of (a) the definition {a mathematical formula}Oϕ≡□(¬ϕ⊃V), where V means “there is a violation of a requirement”, and (b) the assumption that there can be no violation, i.e., that {a mathematical formula}◇¬V. Thus, that ϕ is legally obligatory means that ¬ϕ entails a violation of the law, non-violation being possible. The two reductions can be unified by equating compliance with non-violation ({a mathematical formula}Q≡¬V). Anderson's idea has been adopted as a characterisation of a legal obligation by various authors, such as [11], and has been an ingredient of various logical systems, such as in [109], in which it is embedded in dynamic logic.
+      </paragraph>
+      <section label="2.3.1">
+       <section-title>
+        Criticisms of SDL
+       </section-title>
+       <paragraph>
+        The way SDL defines the relation between obligation, permission and prohibition seems plausible and is often encoded in legal knowledge-based systems, even though these systems almost never support the full reasoning power of SDL. Nevertheless, in the philosophical literature SDL has been heavily criticised. Many criticisms point to some apparently absurd consequences, the so-called deontic paradoxes, which are implied by SDL. For instance, in SDL for any proposition ϕ, {a mathematical formula}Oϕ entails {a mathematical formula}O(ϕ∨ψ). To take the original example from Ross [146], the obligation to post a letter thus implies the obligation to post it or burn it. Similarly, the debtor's obligation to pay the creditor implies the obligation to pay him or to punch him. To some such inferences are counterintuitive but others argue that the counterintuitiveness disappears if deontic logic is not seen as a way of deriving new norms but as a way of determining what should be done in order to comply with a given a set of norms [75]. Thus, if the law requires us to realise ϕ, we should not be surprised that this means that we should also realise {a mathematical formula}ϕ∨ψ. This does not mean that, given a normative set including an explicit obligation {a mathematical formula}Oϕ, the conclusion that {a mathematical formula}O(ϕ∨ψ) may be the content of a sensible communication. On the contrary, it could be misleading under the conversational implicature that a normative message should indicate all the available information concerning what is needed to comply with a norm. On this account the counterintuitiveness of the inference is not a logical but a pragmatic matter.
+       </paragraph>
+       <paragraph>
+        The idea of distinguishing a set of original norms from the obligations derivable from such norms according to deontic logic [4], [2], [102] has inspired the input–output logic of [103], where a legal code is seen as a set of conditional norms, i.e., a set of ordered pairs {a mathematical formula}(a,x), delivering output x under input a, the input being represented by a set of factual circumstances or previously derived normative conclusions.
+       </paragraph>
+       <paragraph>
+        Other philosophical criticisms of SDL concern so-called contrary-to-duty (CTD) obligations, which specify what has to be done in repair of violation of another obligation. In particular timeless versions of CTDs, where the violation and the repair occur at the same time, pose problems for SDL. Consider, for instance, the so-called paradox of the gentle murderer [56]:
+       </paragraph>
+       <list>
+        <list-item label="(1)">
+         it is obligatory that you do not kill, {a mathematical formula}O¬K
+        </list-item>
+        <list-item label="(2)">
+         if you kill, then it is obligatory that at least you kill gently, {a mathematical formula}K→OKG
+        </list-item>
+        <list-item label="(3)">
+         it is a logical truth that if you kill gently you kill, {a mathematical formula}⊢(KG→K)
+        </list-item>
+        <list-item label="(4)">
+         you kill, K.
+        </list-item>
+       </list>
+       <paragraph>
+        Intuitively, the natural-language version of this example makes sense but when formalised in SDL the sentences are jointly inconsistent. From premises 2–4, both {a mathematical formula}O¬K and {a mathematical formula}OKG can be derived, and the latter together with (3) entails {a mathematical formula}OK, which contradicts premise 1. The issue here is that there are three possible situations to be considered: ¬K, the ideal case, {a mathematical formula}K∧KG, the sub-ideal state and {a mathematical formula}K∧¬KG, the sub-sub-ideal state. What we would like to say in such a case is that ¬K is obligatory, but that in the context where K regrettably obtains, KG should also obtain, rather than ¬KG. For capturing this idea, dyadic deontic logics were introduced, whose semantics is based on the idea of a relative ideality, based on a preference relation among worlds: an obligation {a mathematical formula}O(ϕ/ψ) is true if ϕ is true in all the best worlds in which ψ is true [76]. A refinement of this idea is provided by Prakken and Sergot [139], who argue that worlds have to be ordered on the basis of the extent to which they comply with the set of the original explicit obligations (for example, those issued by a legislator).
+       </paragraph>
+       <paragraph>
+        While such “paradoxes” are hotly debated in deontic logic, legal logicians and AI &amp; law researchers have paid relatively little attention to them. One reason may be that legal practice has ways to get around them. In some cases, as for Ross's paradox, the (apparently) paradoxical conclusion is useless, so that the paradox never arises in practice. A judge would, if someone burns the letter he should mail, simply convict for not having mailed it. With other paradoxes, as for the gentle murderer, the law does not provide premises from which the paradox can be derived. In particular, the law does not deal with different layers of subideality by establishing contextual obligations (the obligation to kill gently, in case you are killing), but rather by graduating sanctions in correspondence to the gravity of the situation (e.g., establishing an increased sanction for cruel or premeditated killings). Thus in a legal version of the gentle-murderer there would be only one legal obligation, namely, not to kill, and killing gently would simply be punished less severely than killing cruelly.
+       </paragraph>
+       <paragraph>
+        Some philosophers and legal theorists have argued that SDL's account of permission fails to distinguish between strong or explicit permissions, explicitly established through permissive norms, and weak permissions, consisting in the mere absence of a prohibition of the contrary [175, Ch. 5, Section 13]. This distinction was formalised by Alchourrón and Bulygin [1], [3], who distinguish a legal code α, as a set of norms, from the metalinguistic assertions about such a code, which they call normative propositions. They correspondingly distinguish a logic of norms, such as SDL, from a logic of normative propositions, which is defined on the basic of the logic of norms, but does not coincide with the latter. In their logic of normative propositions they define two notions of permission, both relative to a legal code α: strong permission, denoted as {a mathematical formula}Pαsϕ, which asserts that {a mathematical formula}Pϕ is a logical consequence of α ({a mathematical formula}Psαϕ=Pϕ∈Cn(α)) and weak permission, denoted as {a mathematical formula}Pαwϕ, which asserts that {a mathematical formula}O¬ϕ is not a consequence of α ({a mathematical formula}Pαwϕ=O¬ϕ∉Cn(α)).
+       </paragraph>
+       <paragraph>
+        In legal systems, explicit permissions usually have the function of defeating present and preventing future obligations [5]. Thus if a permissive norm conflicts with an obligation-providing norm, the permissive norm can best be modelled as an exception to the obligation-providing norm in some suitable framework for defeasible reasoning [66]. However, this does not discredit SDL, since it is just a matter of embedding SDL's account of the relations between obligations, permissions and prohibitions in a nonmonotonic context [125].
+       </paragraph>
+      </section>
+      <section label="2.3.2">
+       <section-title>
+        Representing legal relations and normative positions
+       </section-title>
+       <paragraph>
+        An important legal use of deontic logic is in the logical characterisation of the various legal positions or relations that may exist between normative agents as regards an action or state of affairs. For instance, to model a debit–credit relationship concerning a payment, we must specify who bears the obligation (the debtor), and so is responsible in case of violation, and who is meant to benefit from the payment, and so is entitled to claim it (the creditor). Logical accounts of normative positions and relations can be very useful in developing compact and precise formal regulations for human or artificial agents, for instance, when governing access to personal data or digital goods.
+       </paragraph>
+       <paragraph>
+        The starting point of most formal analyses of legal relations was provided by the legal theorist Hohfeld [81], [82] who distinguished two quartets of fundamental legal concepts:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         The Right-quartet: (1) x's Right toward y, (2) y's Duty towards x, (3) x's Noright toward y, and (4) y's Privilege towards x.
+        </list-item>
+        <list-item label="•">
+         The Power-quartet: (1) x's Power toward y, (2) y's Subjection towards x (1), (3) x's Disability toward y, and (4) y's Immunity towards x.
+        </list-item>
+       </list>
+       <paragraph>
+        The first quartet concerns whether two persons are connected by a right-relation, one being the right-holder and the other being the duty-bearer, for instance, as a creditor and a debtor of a payment. The second quartet concerns whether the two persons are connected by a power relation, so that one can change right or power relations held by the latter. For example, if y makes a promise to x, then x has the power to create a right-relation between them by accepting the promise. According to Hohfeld's analysis, in both quartets (1) is correlative to (2) and is opposite to (3), while (3) is correlative to (4), which is opposite to (3). See Fig. 1, in which nodes connected with horizontal links are correlatives and nodes connected with vertical links are opposites. By understanding correlation as logical equivalence and opposition as contradiction, a logical analysis of both quartets can be provided.
+       </paragraph>
+       <paragraph>
+        A formalisation of the Hohfeldian squares was developed by Allen [11]. His formalisation of the Rights quartet was built upon the idea of a directed action, represented as {a mathematical formula}D24(ϕ,y,x), which means that ϕ is realised by y for x. Then {a mathematical formula}Right(ϕ,y,x), i.e., x has a right that y does ϕ, is defined as {a mathematical formula}OD24(ϕ,y,x), which means that is obligatory that ϕ is done by y for x. Power is defined as the ability of the power-holder to generate a legal relation. For instance, {a mathematical formula}Power(x,OD24(ϕ,x,y)) means that x has the power to generate x's own duty toward y to do ϕ, i.e., that there exists a situation (e.g. issuing a promise) such that x can realise it and which according to the law would bring about the obligation.
+       </paragraph>
+       <paragraph>
+        Lindahl [96], building on the work by Kanger [91], addressed legal relations by combining an action operator Do with deontic operators, so that {a mathematical formula}ODo(x,ϕ) expresses x's obligation to see to it that ϕ. A multi-party legal relationship with regard to a proposition ϕ is constructed by considering mutually consistent permissions and obligations of the parties with regard to the action of (not) seeing to it that (not) ϕ. This approach was further developed by Jones and Sergot [88], who expanded Lindahl's analysis by combining standard deontic logic with the E action logic of [123]. The modal E operator captures the idea of bringing-it-about that, i.e., {a mathematical formula}Eiϕ expresses the idea that i's initiative necessarily realises ϕ, which possibly would not have taken place without this initiative. The E modality is thus similar to the STIT operator of [28], used in the deontic logic of [83]. Jones and Sergot's framework enables a fine-grained analysis of normative positions, which among other things allows a precise definition of the distinction between rights and permissions (as Jones and Sergot interpret these terms). For instance, it enables us to specify whether patient a's normative position with regard to access to his medical data A, is such that the patient just has the permission both to do that and not to do that ({a mathematical formula}PEaA∧PEa¬A), or whether in addition the doctor b is also forbidden to impede the patient's access ({a mathematical formula}PEaA∧PEa¬A∧O¬Eb¬A). In the first case, the patient is merely permitted to access his medical data, in the second case he has the right to do so. In [160] a method is presented for exhaustively specifying and computing the normative positions of two parties concerning an action. Such methods are useful for disambiguating security or access policies in the same way as propositional logic can be used to disambiguate legislation.
+       </paragraph>
+       <paragraph>
+        Jones and Sergot [89] provide a fresh analysis of the concept of power, by combining three ingredients: a deontic logic, the E action logic and a connective {a mathematical formula}⇒s of a normal conditional logic. The proposition {a mathematical formula}ϕ⇒sψ is understood as meaning that ϕ counts as ψ according to institution s. In this framework, agent x's power to bring about the institutional result ψ through action Eϕ (e.g., a power to commit oneself through a promise) is represented as {a mathematical formula}Eaϕ⇒sEaψ, namely, as the proposition that seeing to it that ϕ counts as seeing to it that ψ. Thus the power to oblige oneself to do A by promising to do it, is represented, for instance, as {a mathematical formula}EaPromised(A)⇒sEaOA (by bringing about that he promises to do A, a also brings about that he has the obligation to do A). In [19] and [20] the idea of normative power is deployed to provide an account of agent-based interactions in the framework of electronic institutions.
+       </paragraph>
+       <paragraph>
+        Herrestad &amp; Krogh [79] refine standard deontic logic with the idea of a directed obligation (in contrast to Allen's [11] idea of a directed action). In their framework, {a mathematical formula}Oyϕ means that bearer y is responsible for the realisation of ϕ and {a mathematical formula}Oxϕ means that ϕ ought to be for the benefit of x. The Hohfeldian right of x toward y concerning ϕ is then modelled as {a mathematical formula}Oxyϕ≡Oyϕ∧Oxϕ. This idea was further developed by Sartor [153], who represents y's obligation to do ϕ for the benefit of x as {a mathematical formula}OyEx(ϕ), where the bearer is the author of the obligatory action. This article provides a corresponding analysis of power relations and distinguishes different kinds of rights and powers (see also [61]).
+       </paragraph>
+      </section>
+     </section>
+     <section label="2.4">
+      <section-title>
+       Modelling legal concepts and definitions
+      </section-title>
+      <paragraph>
+       While legal codes ultimately establish deontic conclusions, i.e., obligations, permissions and prohibitions, not all legal norms directly perform this function. Many norms instead establish intermediate legal qualifications, on the basis of which, through one or more inference steps, obligations, permissions and prohibitions can be established. For instance, while certain norms establish that the owner of an object is permitted to use it and has the power of disposing of it – every other person being forbidden to use that object and incapable of disposing of it unless authorised by the owner –, other norms establish under what conditions a person acquires ownership of an object. At the bottom of such a pyramid of norms and legal predicates, we find certain non-legal facts – such as linguistic utterances (the statement “I sell x to you”), mental states (the intention to sell x), or material operations (the delivery of x) –, but to get from there to deontic conclusions a chain of inferences is needed, each leading to intermediate legal classifications until deontic conclusions are obtained.
+      </paragraph>
+      <paragraph>
+       The legal theorist Ross [147] argued that the conceptual role of an intermediate legal predicate ϕ is constituted exactly by the network of rules which establish when ϕ holds and what follows from ϕ. For a recent discussion of this idea, see [154]. This approach has been formalised by Lindahl and Odelstad [97], who propose to represent codes of legal norms as joining-systems, where every legal norm models a relationship {a mathematical formula}(ϕ,ψ), where antecedent ϕ and conclusion ψ pertain to different strata of a multi-layered system, each stratum being a set of propositions ordered according to a Boolean algebra.
+      </paragraph>
+      <paragraph>
+       Logical models of non-deontic legal norms have also been inspired by Searle's distinction between regulative (deontic) and constitutive norms, the latter being viewed as count-as connections, namely, as having the form: “X counts as Y in context C” [159]. In particular, Sergot and Jones [89] have modelled counts-as in a normal conditional logic. In their formalism the conditional {a mathematical formula}⇒s expresses counts-as connections established by the institution s, connections through which “particular kinds of acts or particular kinds of states of affairs count as sufficient conditions for guaranteeing the applicability of particular classificatory categories”. In particular, j's empowerment to bring about outcome ψ (e.g. a marriage), by bringing about ϕ (the marriage ceremony), is modelled through a conditional {a mathematical formula}Ejϕ⇒sEjψ, according to which the first action counts-as the latter. The {a mathematical formula}⇒s connective is linked by an axiom schema {a mathematical formula}(ϕ⇒sψ)→Ds(ϕ→ψ) to a normal modal operator {a mathematical formula}Ds which expresses in general the constraints that characterise institution s. In [70] norms establishing counts-as connections are distinguished from assertions about the connections resulting from such norms.
+      </paragraph>
+      <paragraph>
+       Entailments involving legal concepts may be determined through the definition of the concepts at issue. For instance, a legal norm may define a sale as a contract for the transfer of the property of good in exchange for a price, while further norms may establish specific legal effects of a sale in addition to those of contracts in general, such as a buyer's right to the restitution of the price if the purchased object is unfit for its use. Similar definitions and rules can be provided for subtypes of sale and for other contracts, such as loans or leases. As a result of such definitions, legal concepts appear to be naturally connected into hierarchical and other relationships, more specific concepts inheriting the properties of more general ones. Such conceptual definitions and relationships have suggested the possibility of representing legal concepts through computational ontologies [31], [114], [55], and of linking legal ontologies on the one hand to abstract foundational ontologies [71] and on the other hand to specific domain ontologies covering the object of particular regulations (for an example of a legal domain ontology, see [50]). Among the attempts at providing logical definitions of conceptual structures for the law, we can the mention the following related ontologies: the LRI-core ontology [43], which aims at providing an account of legal knowledge based on common-sense, and the LKIF core ontology of basic legal concepts, providing an OWL implementation of LRI-Core [169]. A different approach has been developed by the Core Legal Ontology-CLO [58], where legal concepts are linked to the ontological primitives of the foundational ontology DOLCE [57].
+      </paragraph>
+      <paragraph>
+       Sometimes, the term “legal ontology” is used to include attempts to identify the basic structures of legal knowledge, even without providing a computational ontology in the strict sense. As such attempts we can mention the Functional Ontology for Law-FOLaw [167], specifying dependencies between types of knowledge in legal reasoning, McCarty's Language of Legal Discourse[105], which has been applied to the formal definition of the concept of ownership [106] and Hage and Verheij's [73] model of the law as a set of logically connected states of affairs.
+      </paragraph>
+      <paragraph>
+       The logical definition of legal ontologies has enabled both novel analyses of legal concepts and useful applications, which can be implemented by using representation languages and description logics, such as OWL and its extensions, supported by sophisticated development environments and powerful inference engines. However, the typical forms of reasoning that are enabled by ontological formalisms, such as subsumption and instantiation, cannot address certain fundamental aspects of legal reasoning, such as those pertaining to defeasibility, open texture and vagueness. For this purpose other kinds of knowledge representation and reasoning are needed, as will be further discussed in Section 3.
+      </paragraph>
+     </section>
+     <section label="2.5">
+      <section-title>
+       Time and change in legal regulations
+      </section-title>
+      <paragraph>
+       Legal norms exist in time: they are created by appropriate events, such as legislative acts, judicial decisions or private contracts, and may be terminated by the same kinds of events. Moreover, legal obligations, permissions and other legal properties and relationships also exist in time, being triggered and terminated by the conditions contemplated by valid legal norms. Consider, for instance, how a new regulation {a mathematical formula}r1, issued at time {a mathematical formula}t0 may establish a new tax a on transactions on derivatives, to be applied from time {a mathematical formula}t1. On the basis of {a mathematical formula}r1 any such transaction happening after {a mathematical formula}t1 would generate an obligation to pay the tax, an obligation that will persist until the time {a mathematical formula}t3 when the tax is paid. Assume that at time {a mathematical formula}t4 a regulation {a mathematical formula}r2 is issued which abolishes tax a and substitutes it with tax b. Then transactions taking place after {a mathematical formula}t4 will no longer generate obligations to pay a, but rather obligations to pay b. Finally, consider the position of a tax authority, who has the task of assessing compliance with tax law and issuing sanctions for violations. After time {a mathematical formula}t4 the tax authority will have to apply two different regulations, regulation {a mathematical formula}r1 with regard to transactions having taken place between {a mathematical formula}t1 and {a mathematical formula}t4 and regulation {a mathematical formula}r2 to transactions having taken place after {a mathematical formula}t4. Consider also that a further regulation {a mathematical formula}r3 may come in at time {a mathematical formula}t5, which does not explicitly abrogate tax b but establishes that transactions concerning certain kinds of “good” derivative, e.g. those meant to hedge contracting parties against risks, are not taxed, i.e., that there is no obligation to pay tax b on them. Then, from the moment when {a mathematical formula}r3 become applicable, a conflict will emerge with regard to any transaction h on hedge derivatives subsequently concluded, since according to {a mathematical formula}r2, tax b has to be paid on h while according to {a mathematical formula}r3 this is not the case. Assume that {a mathematical formula}r3 has priority over {a mathematical formula}r1, on the grounds that it is both more recent and more specific. Then only {a mathematical formula}r3 should be applied to transaction h, which would be exempted from taxation. A further temporal complication would emerge if the new rule {a mathematical formula}r3 were declared to be retroactive since time {a mathematical formula}t6, which is anterior to time {a mathematical formula}t5 when {a mathematical formula}r3 was issued. This would mean that the competent authority would have to apply two different rules to assess a transaction on hedge derivatives having happened at a time t such that {a mathematical formula}t6&lt;t&lt;t5, depending on when the case is assessed: if the assessment takes place before {a mathematical formula}t5, then {a mathematical formula}r3 will have to be applied, if the assessment takes place after {a mathematical formula}t5, then {a mathematical formula}r2 will have to be applied. In this section we shall briefly present some logical models of the temporal dynamics we have just described.
+      </paragraph>
+      <paragraph>
+       Hernandez and Sartor [77] proposed to address temporal reasoning with norms through an extension of the Event Calculus of [92]. Conditional norms that initiate a legal predicates are represented in the form
+      </paragraph>
+      <list>
+       <list-item>
+        N:  Condition initiates Effect
+       </list-item>
+      </list>
+      <paragraph>
+       where N is the norm-name, Condition is the conditioning event and Effect is the resulting predicate. An example is
+      </paragraph>
+      <list>
+       <list-item>
+        n1:  Xsells derivativeYtoZinitiatesO(Xpays €100 tax)
+       </list-item>
+      </list>
+      <paragraph>
+       According to this norm, the sale of a derivative at a time {a mathematical formula}t1 initiates a tax obligation, which persists until an event happens triggering the termination of this obligation. To deal with the temporal dimension of norms themselves, the event-calculus definitions for initiation/termination are modified by adding the requirement that initiation/termination is established by a norm which is applicable at the time when the initiating or terminating event takes place. A norm's applicability, in its turn, requires the norm's validity, a property that is initiated and terminated by other norms, such as those conferring the power to issue new norms to a legislator.
+      </paragraph>
+      <paragraph>
+       Governatori et al. [68] also address the issue of the persistence of legal effects in a logic programming framework, using a temporal version of defeasible logic. They distinguish two kinds of legal rules: rules having persistent effects and rules having co-occurrent effects. The first have effects that are initiated by the realisation of the rule's conditions, and continue after that until a terminating event takes place, while the second have effects that hold only as long as their conditions hold (e.g., the rule requiring that one does not smoke as long as one is in a public office).
+      </paragraph>
+      <paragraph>
+       In the approaches so far presented legal dynamics is addressed through defeasible temporal persistence, with regard to both the validity/applicability of the concerned legal norms and the effects established by valid norms. Thus a legal knowledge base always grows with the addition of new norms, the termination of the validity of a norm determining the inapplicability of that norm to subsequent cases (for a similar approach, see [180]).
+      </paragraph>
+      <paragraph>
+       A different perspective on legal change is provided by the seminal contribution of Alchourrón and Makinson [6]. They adopt a monotonic logic such as SDL for legal inference, but a legal system is assumed to contract when certain content is retracted from it, i.e., when a legal authority requires that the legal system no longer entails such content. The problem is that there may be different ways to trim a knowledge base so that a certain content is no longer derivable. For instance, consider the legal knowledge {a mathematical formula}K={OA,OB}, and assume that the legislator rejects the conjunction {a mathematical formula}OA∧OB. A new KB from which the rejected conjunction is no longer inferable is obtainable either by removing {a mathematical formula}OA or by removing {a mathematical formula}OB. Alchourrón and Makinson address this issue by observing that the hierarchical relations between norms in a legal system induce an ordering over the subsets of the system. Thus they assume that the contraction delivers the intersection of the highest-ranked subsets of the original system which do not entail the removed conclusion (on ordering norm sets, see [152] and [74]). A problem with this approach is that it may lead to an excessive trimming of the original knowledge base. In particular, a general norm may have to be removed to include a particular exception contradicting the general norm only in a particular case. Moreover, we need to consider that legal reasoning proceeds through multiple steps, and usually when a conflict emerges we compare the directly conflicting norms, rather than extend the comparison to the norms which enable us to infer the antecedent conditions of the latter (see [133], or [121] for general considerations on why belief-revision approaches may fail to take into account inferential connections). To address this issue Maranão [104] proposes that a legal knowledge base should be refined rather than contracted, a result which should be obtained by changing the original norms rather than deleting some of them, in such a way as to affect only the rules directly involved in the conflict and to minimise change.
+      </paragraph>
+      <paragraph>
+       Governatori and Rotolo [150] combine defeasible reasoning and revision (modification) of normative systems, to account for the persistence of legal effects, the introduction of exceptions to norms, and change or removal of norms in a legal system. In particular, developing the approach in [67], they cope with retroactive changes by making the content of a rule and its applicability dependent on two temporal indexes, the time when the rule's antecedent is satisfied and the time when the rule is applied. This enables them to model how at a later time a decision maker may apply to a past event norms that did not exist, or had a different content, at the time when the event took place.
+      </paragraph>
+     </section>
+     <section label="2.6">
+      <section-title>
+       Exceptions and hierarchies
+      </section-title>
+      <paragraph>
+       So far everything has been compatible with viewing the law as an axiomatic system, where rules and facts are represented in a logical language and deductive logic is used to derive legal consequences from the representations. At first sight, it might be thought that the axiomatic approach to the law is committed to deductive logic. However, this approach has been broadened to include nonmonotonic techniques to deal with two very common structural features of legal regulations, the separation of general rules and exceptions, and the use of hierarchies over legislative sources to resolve conflicts between different regulations within a normative system. The first uses of non-monotonic logics in AI &amp; law were to address these features. For example, [162], [35], [151] used logic programming with negation as failure, [62] used [60]'s logic for conditional entailment, [133], [134] used an argumentation-based version of extended logic programming and [93] used assumption-based logic programming.
+      </paragraph>
+      <paragraph>
+       For dealing with exceptions, three different techniques from nonmonotonic logic can be used. The first technique adds an additional condition ‘unless there is an exception’ to every rule and combines it with some kind of nonprovability operator or assumption technique. Thus, for example, a legal rule “an offer and an acceptance create a binding contract” with an exception in case the offeree was insane when accepting the offer can be (semiformally) represented as follows (where ∼ stands for nonprovability).
+      </paragraph>
+      <list>
+       <list-item>
+        {a mathematical formula}r1: offer ∧ acceptance ∧∼ exception(r1) ⇒ bindingContract
+       </list-item>
+       <list-item>
+        {a mathematical formula}r2: insane ⇒ exception(r1)
+       </list-item>
+       <list-item>
+        {a mathematical formula}r3: insane ⇒ ¬ bindingContract
+       </list-item>
+      </list>
+      <paragraph>
+       A variant of this technique instead builds the no-exception requirement into the logic of rule application [151], [72], [134], so that {a mathematical formula}r1 does not need an explicit exception clause. This technique resembles [119]'s notion of undercutting defeaters.
+      </paragraph>
+      <paragraph>
+       Another technique for representing exceptions states a priority between a general rule and an exception:
+      </paragraph>
+      <list>
+       <list-item>
+        {a mathematical formula}r1: offer ∧ acceptance ⇒ bindingContract
+       </list-item>
+       <list-item>
+        {a mathematical formula}r2: insane ⇒ ¬ bindingContract
+       </list-item>
+       <list-item>
+        {a mathematical formula}r1&lt;r2
+       </list-item>
+      </list>
+      <paragraph>
+       This method can be used in any nonmonotonic logic that allows for the use of preferences to resolve conflicts.
+      </paragraph>
+      <paragraph>
+       One concern in early AI &amp; law applications of nonmonotonic logic was that in legal practice priority information is often not simply given but can itself be argued about. For instance, several preference criteria, such as recency and specificity, may be conflicting, so that it must be determined which one of them prevails on legal grounds. This led to a first contribution of AI &amp; law to general AI research, namely, nonmonotonic logics with dynamic priorities, e.g. [134] (recently generalised by Modgil [110] in his extended abstract argumentation frameworks). Others, e.g. [62] and [93] argued that dynamic priorities can be modelled by clever knowledge representation within an existing nonmonotonic logic. More recently, accounts of exceptions and hierarchies have been combined with deontic notions in Defeasible Logic [16], [66] and a logic of imperatives [74].
+      </paragraph>
+      <paragraph>
+       Although these nonmonotonic techniques technically deviate from deductive logic, they still essentially remain within the axiomatic view on legal reasoning: the separation of general rules and exceptions is a straightforward representational technique, while normative hierarchies just add one element to the representation, namely, priority relations between rules. Given these techniques, the logical consequences of a representation are still clearly defined. While technically most nonmonotonic logics allow for alternative conclusion sets, in legal practice statutory rule-exception structures and legislative hierarchies still usually yield unambiguous outcomes. More often, conflicts arise not from competing norms but from the variety of ways in which legal rules can be interpreted. A real challenge for the axiomatic view on legal reasoning is the gap between the general legal language and the particulars of a case. Because of this gap, disagreement can arise, and it will arise because of the conflicts of interests between the parties.
+      </paragraph>
+      <paragraph>
+       At first sight, it might be thought that such disagreements are resolved in concrete cases by courts, so that additional interpretation rules can be found in case law. If different courts disagree on an interpretation, such disagreements could be represented with the ‘traditional’ nonmonotonic techniques for handling conflicting rules, such as giving priority to the ruling stated the higher court, or being subsequent in time. However, such case-based interpretation rules are often case-specific, so a new case will rarely exactly match the precedent, and consequently, techniques for handling conflicting rules fall short. Instead, reasoning forms are needed in which case-law rules can be refined and modified, in which factors and reasons play an important role, and in which analogies between cases can be drawn and criticised (on analogy in legal theory see [44]). Such observations led to a shift in focus away from ‘traditional’ nonmonotonic logics and towards argumentation-based approaches. In AI &amp; law research, the notion of legal argument had been central since its very beginning [107], [59], [144] but with the development in general AI of logical argumentation frameworks such as [118], [119], [163] and [51] this work could be given logical foundations.
+      </paragraph>
+      <paragraph>
+       In the next section we review this work on logical models of legal argument.
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     Reasoning about the law
+     <paragraph>
+      We now turn to legal applications of logic where legal rules are not just applied but are the object of reasoning and discourse. We first discuss some reasoning forms that lawyers employ when there are reasons not to apply an applicable statutory rule. We then turn to the interpretation of legal concepts as they appear in the conditions of legal rules (whether these rules are from statutes or precedent). This often involves the creation and change by courts of further rules in light of the facts of a case. Our review therefore involves a detailed study of the interaction between rules and cases in interpretative reasoning. We conclude with accounts of legal interpretation as a form of decision making.
+     </paragraph>
+     <paragraph>
+      Our review in this section will have special emphasis on argumentation-based approaches. Therefore we give a brief sketch of the logical tools assumed in this section.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Formal preliminaries
+      </section-title>
+      <paragraph>
+       Much work reviewed in this section uses Dung's [51] notion of an abstract argumentation framework (AF), which is a pair {a mathematical formula}(A,D), where {a mathematical formula}A is a set of arguments and {a mathematical formula}D⊆A×A is a binary relation of defeat[51].{sup:1} We say that A strictly defeats B if A defeats B while B does not defeat A. A semantics for AFs returns sets of arguments called extensions, which are internally coherent and defend themselves against each attack.
+      </paragraph>
+      <paragraph>
+       Formally, let ({a mathematical formula}A,D) be an AF. For any {a mathematical formula}X∈A, X is acceptable w.r.t. a set {a mathematical formula}S⊆A iff ∀Y, ({a mathematical formula}Y,X) {a mathematical formula}∈D implies {a mathematical formula}∃Z∈S s.t. ({a mathematical formula}Z,Y) {a mathematical formula}∈D. Let {a mathematical formula}S⊆A be conflict free, i.e., there are no {a mathematical formula}A,B in S such that {a mathematical formula}(A,B)∈D. Then S is: an admissible set iff {a mathematical formula}X∈S implies X is acceptable w.r.t. S; a complete extension iff {a mathematical formula}X∈S whenever X is acceptable w.r.t. S; a preferred extension iff it is a set inclusion maximal complete extension; the grounded extension iff it is the set inclusion minimal complete extension; a stable extension iff it is preferred and {a mathematical formula}∀Y∉S, {a mathematical formula}∃X∈S s.t. ({a mathematical formula}X,Y) {a mathematical formula}∈D.
+      </paragraph>
+      <paragraph>
+       Much work reviewed in this section generates a Dung-Style AF from a logical account of the structure of arguments and the nature of defeat. For a recent review of some main approaches to structured argumentation see [86]. Usually an argument is defined as a deduction or inference tree created by applying inference rules, starting with a knowledge base in some logical language. In some approaches an argument is simply a proof from consistent premises in some given logic (such as e.g. classical logic), other work abstracts from the logical language and the origin of the inference rules. Sometimes two classes of strict (or deductive) and defeasible inference rules are distinguished. Informally, if an inference rule's antecedents are accepted, then if the rule is strict, its consequent must be accepted no matter what, while if the rule is defeasible, its consequent must be accepted if there are no good reasons not to accept it. Accordingly, approaches with only strict rules usually only allow arguments to be attacked on their premises, while approaches with defeasible rules (also) allow attacks on applications of defeasible inference rules or on conclusions of arguments. Some approaches allow for preferences to resolve conflicts between arguments and thus distinguish between an attack and a defeat relation between arguments. Other approaches do not allow for preferences and thus equate attack and defeat. In both cases it is the defeat relation that, together with the set of all arguments constructible from a knowledge base, forms a Dung-Style AF. Finally, in some work preference relations between arguments are themselves the outcome of argumentation.
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Reasoning about statutory rules
+      </section-title>
+      <paragraph>
+       Sometimes a clash between the general legal language and the particulars of a case arises when a statutory rule whose conditions are met and whose statutory exceptions do not apply should nevertheless not be applied for some non-statutory reason. A famous case, described by [52] is that of a grandfather killed by his grandson, where the grandson still claimed his share in the inheritance. Although the grandson satisfied all conditions of the relevant inheritance law, the court still denied his claim by appealing to the principle that no one should profit from their own wrongdoing.
+      </paragraph>
+      <paragraph>
+       An early principled account of this phenomenon was Hage &amp; Verheij's so-called Reason-Based Logic (RBL, see [72], [170], [173]). RBL was meant to capture how principles, goals and rules give rise to reasons for and against a proposition and how these reasons can be weighed to draw conclusions. RBL was influenced by [142]'s theory of practical reasoning, which was in turn influenced by [117]'s theory of defeasible reasons, which Pollock later in [118], [119] developed into the first full-fledged argumentation-based nonmonotonic logic.
+      </paragraph>
+      <paragraph>
+       Hage and Verheij stress that rule application is much more than simple modus ponens. It involves reasoning about the validity and applicability of a rule, and weighing reasons for and against the rule's consequent. RBL reflects a distinction between two levels of legal knowledge. The primary level includes principles and goals, while the secondary level includes rules. Principles and goals express reasons for or against a conclusion. Without the secondary level these reasons would in each case have to be weighed to obtain a conclusion, but according to Hage and Verheij rules express the outcome of such a weighing process. Therefore, a rule does not only generate a reason for its consequent but also generates a so-called ‘exclusionary’ reason against applying the principles underlying the rule: the rule replaces the reasons on which it is based. This view is similar to Dworkin's well-known view that while principles are weighed against each other, rules apply in an all-or-nothing fashion [52]. However, according to [173] this difference is just a matter of degree: if new reasons come up, which were not taken into account in formulating the rule, then these new reasons are not excluded by the rule; the reason based on the rule still has to be compared with the reasons based on the new principles. Consequently, in RBL rules and principles are syntactically indistinguishable; their difference is only reflected in their degree of interaction with other rules and principles.
+      </paragraph>
+      <paragraph>
+       Consider the following example. Suppose a local administration body is considering reasons pro and con banning vehicles in a park. A reason pro is to promote peaceful recreation in the park, while a reason con is that allowing vehicles to cross the park can help reducing traffic congestion in the neighbourhood. Suppose the administration is of the opinion that the pro reason outweighs the con reason and therefore prohibits vehicles to enter the park. This rule then not only provides a reason why vehicles are not allowed to enter the park, but also an exclusionary reason against the avoiding-congestion reason, which can therefore not be used to argue for an exception to the rule. But suppose next that a park visitor is struck by a heart attack and must be quickly transported to the hospital. This creates a reason why a car should be allowed to enter the park in order to take the person to the hospital. This reason was not considered when deciding to adopt the rule, so it is not excluded by the rule and thus gives rise to a reason against the rule's conclusion. This reason must then be weighed against the reason pro the conclusion created by the rule.
+      </paragraph>
+      <paragraph>
+       As a logical formalism RBL has not been taken up by many others and its logical mechanisms can be largely reused in the other nonmonotonic logics mentioned above. For these reasons we will not present its details here. However, as a conceptual analysis of legal reasoning with rules, reasons, principles, values and goals it has been very influential, witness the large body of later AI &amp; law work addressing these issues.
+      </paragraph>
+     </section>
+     <section label="3.3">
+      <section-title>
+       Legal interpretation
+      </section-title>
+      <paragraph>
+       Non-statutory exceptions to statutory rules, although logically and philosophically very interesting, are nevertheless rare in practice, in part since general statutory exceptions such as ‘selfdefence’, ‘force majeure’ or ‘unreasonable’ are often sufficient to cope with the unforeseen. Issues concerning the relation between the general and the particular arise much more frequently when the conditions of a rule have to be interpreted. Then the rules often ‘run out’, that is, neither legislation nor case law contains precise information on how the conditions of legal rules can be established.
+      </paragraph>
+      <paragraph>
+       What are the reasoning forms in such cases? They can be found in their most explicit form in common-law jurisdictions, in which judicial precedents can be legally binding beyond the decided case, so that court decisions legally constrain the decision in new cases. This leads to reasoning forms where rules are formulated by courts in the context of particular cases and are constantly refined and modified to fit new circumstances that were not taken into account in earlier decisions. These reasoning forms can to a lesser extent also be found in civil-law jurisdictions, since interpretations of the law by higher civil-law courts, even though strictly speaking not binding beyond the decided case, still tend to be followed by lower courts.
+      </paragraph>
+      <section label="3.3.1">
+       <section-title>
+        Reasoning with factors
+       </section-title>
+       <paragraph>
+        Much AI &amp; law work on the interpretation of legal concepts centres around the notion of a factor (sometimes called a reason), an idea going back to the HYPO system of Ashley [21] and the CATO system of Aleven [7], [8]. Factors are abstractions of fact patterns that favour (pro factors) or oppose (con factors) a conclusion. Factors are thus in an intermediate position between the specific facts of a case and the legal predicates to which such facts may be relevant. For example, in CATO, which like HYPO argues about misuse of trade secrets, some factors pro misuse are that a non-disclosure agreement was signed, that the plaintiff had made efforts to maintain secrecy and that the copied product was unique; and some factors con misuse are that disclosures were made by the plaintiff in negotiations and that the information was reverse-engineerable. Thus models of factor-based reasoning only capture part of legal interpretation, namely, the step from middle-level concepts expressed by factors to the high-level legal concepts (such as misuse of trade secrets) occurring in the conditions of legal rules. Logical accounts of factor-based reasoning study how precedents give rise to rules linking factors to legal predicates and how these rules can be used to decide new cases. One key idea here is that the rules involved in factor-based reasoning are defeasible in that new factors can motivate deviations from earlier decisions. Another important insight has been that cases are not just sources of rules but also of rule preferences.
+       </paragraph>
+       <paragraph>
+        Loui et al. [100] still saw cases as sources of rules only. In the context of the argument-based logic of [163], they joined the pro and con factors of a precedent into the antecedent of a single defeasible rule
+       </paragraph>
+       <list>
+        <list-item>
+         Pro-factors ∧ Con-factors ⇒Decision
+        </list-item>
+       </list>
+       <paragraph>
+        and then implicitly extended the case description with all rules containing a superset of the con factors and/or a subset of the con factors in this rule. The idea was that these additional rules could be used for analogical reasoning when a new case does not exactly match a precedent. Then a specificity mechanism was used to deal with conflicting rules. A limitation of this approach is that a specificity mechanism cannot fully capture how the competition between pro and con factors is resolved.
+       </paragraph>
+       <paragraph>
+        In [135] we also translated HYPO's cases into a defeasible-logical theory (our [134]), but we separated the pro and con factors into two conflicting rules
+       </paragraph>
+       <list>
+        <list-item>
+         {a mathematical formula}r1: Pro-factors ⇒Decision
+        </list-item>
+        <list-item>
+         {a mathematical formula}r2: Con-factors{a mathematical formula}⇒¬Decision
+        </list-item>
+       </list>
+       <paragraph>
+        and captured the case decision with a priority rule, giving precedence to the rule collecting the pro-factors:
+       </paragraph>
+       <list>
+        <list-item>
+         p: {a mathematical formula}…⇒r1&gt;r2
+        </list-item>
+       </list>
+       <paragraph>
+        The priority expresses the court's decision that the pro factors in the body of rule {a mathematical formula}r1 together outweigh the con factors in the body of rule {a mathematical formula}r2. This representation method allows for ‘a fortiori’ reasoning in that adding factors to a pro-decision rule or removing factors from a con-decision rule does not affect the rule priority. That is, if we have {a mathematical formula}r1&gt;r2, then for any pro rule {a mathematical formula}r1+ that includes all pro factors of {a mathematical formula}r1 and for any con rule {a mathematical formula}r2− of which all con factors are included in those of {a mathematical formula}r2 we have {a mathematical formula}r1+&gt;r2−. Accordingly, we can infer from a precedent that cases having only additional pro-decision factors, or missing only some con-decision factors should be decided the same way as the precedent.
+       </paragraph>
+       <paragraph>
+        Like [100], we also allowed for analogical uses of pro-decision rules by deleting factors from their antecedent. The priorities needed to make a thus broadened rule ‘win’ a conflict with other rules cannot be based on the priorities of the precedent rule from which the broadened rule is obtained. For example, if rule {a mathematical formula}r1 in our schematic example is broadened to rule {a mathematical formula}r1− by deleting one of the pro-factors in rule {a mathematical formula}r1, then one cannot conclude from the priority {a mathematical formula}r1&gt;r2 in precedent that {a mathematical formula}r1−&gt;r2, since the deleted factor might have been essential in preferring {a mathematical formula}r1 over {a mathematical formula}r2. So a decision argued for with a broadened rule is not (defeasibly) implied by a body of precedents.
+       </paragraph>
+       <paragraph>
+        An interesting question is under what conditions such a decision is still allowed by the body of precedents. This question is the main focus of Horty's recent work on modelling precedential constraint [84], [85], building on [135]'s case representation method. Consider a ‘case base’ with just one case, with pro-decision factors {a mathematical formula}f1 and {a mathematical formula}f2 and con-decision factors {a mathematical formula}d1 and {a mathematical formula}d2. In the approach of [135] we then have:
+       </paragraph>
+       <list>
+        <section-title>
+         Precedent 1
+        </section-title>
+        <list-item>
+         {a mathematical formula}r1: {a mathematical formula}f1,f2⇒Decision
+        </list-item>
+        <list-item>
+         {a mathematical formula}r2: {a mathematical formula}d1,d2⇒¬Decision
+        </list-item>
+        <list-item>
+         {a mathematical formula}p1: {a mathematical formula}⇒r1&gt;r2
+        </list-item>
+       </list>
+       <paragraph>
+        Consider now a new case with just {a mathematical formula}f1 as pro-factor and {a mathematical formula}d2 and {a mathematical formula}d3 as con-factors. So we have
+       </paragraph>
+       <list>
+        <section-title>
+         New case 1
+        </section-title>
+        <list-item>
+         {a mathematical formula}r3: {a mathematical formula}f1⇒Decision
+        </list-item>
+        <list-item>
+         {a mathematical formula}r4: {a mathematical formula}d2,d3⇒¬Decision
+        </list-item>
+       </list>
+       <paragraph>
+        The priority {a mathematical formula}r3&gt;r4 that is needed to argue for the same outcome as in the precedent cannot be based on the precedent, since {a mathematical formula}r3 lacks one antecedent of {a mathematical formula}r1, and also since {a mathematical formula}r4 adds a con factor to {a mathematical formula}r2. However, deciding the new case as the precedent is still allowed by the case base, since the new decision leaves the decision in the precedent unaffected. Horty calls this following the precedent.
+       </paragraph>
+       <paragraph>
+        This is different if the case base also contains a second precedent
+       </paragraph>
+       <list>
+        <section-title>
+         Precedent 2
+        </section-title>
+        <list-item>
+         {a mathematical formula}r1: {a mathematical formula}f1,f2⇒Decision
+        </list-item>
+        <list-item>
+         {a mathematical formula}r5: {a mathematical formula}d3⇒¬Decision
+        </list-item>
+        <list-item>
+         {a mathematical formula}p2: {a mathematical formula}⇒r5&gt;r1
+        </list-item>
+       </list>
+       <paragraph>
+        The priority {a mathematical formula}r5&gt;r1 then implies {a mathematical formula}r4&gt;r3, since {a mathematical formula}r4 has more con-decision factors than {a mathematical formula}r5 while {a mathematical formula}r3 has fewer pro-decision factors than {a mathematical formula}r1. But {a mathematical formula}r4&gt;r3 is inconsistent with {a mathematical formula}r3&gt;r4, so deciding the new case as the first precedent is not allowed by the case base, since it would amount to rejecting, i.e., overruling the second precedent. This reflects the fact that in common-law legal systems judges are generally bound to precedents and are authorised to overrule them only under special conditions.
+       </paragraph>
+       <paragraph>
+        In Horty's approach not all deviations from a precedent are overrulings. Suppose that precedent 2 is not in the case base but is a new case, so we do not yet know its decision. Then {a mathematical formula}r5&gt;r1 is consistent with {a mathematical formula}r1&gt;r2, so deciding the new case differently than in the precedent is allowed by the case base, since it leaves all decisions in precedents unaffected. Horty here says that deciding con the original decision in the new case distinguishes the precedent. Horty has thus given precise logical formalisations of the important common-law notions of following, distinguishing and overruling a precedent. The core of Horty's work consists in formalising the notion of consistency of a case base. A new decision is allowed by a case base if adding it to the case base leaves the case base consistent.
+       </paragraph>
+       <paragraph>
+        An example in which a common-law court faced the problem whether to follow or distinguish a precedent was the case Olga Monge v. Beebe Rubber Company (Supreme Court of New Hampshire 1974). Olga Monge, a “virtuous” woman employed at will (that is, for an indefinite period of time) at Beebe Rubber Company, was fired by her foreman. The rule established by several precedents was that an employee who is employed at will can be fired for any reason or no reason all. However, the court found that Monge was fired because she had refused to go out with the foreman, and decided to distinguish the rule by changing it to ‘an employee who is employed at will can be fired for any reason or no reason all, unless the employee was fired in bad faith, malice or retaliation’. This distinction would not have been consistent with precedent if an earlier court had also been faced with the same circumstance and had decided to follow the old rule.
+       </paragraph>
+       <paragraph>
+        Interestingly, Horty can account for the fact that following a precedent sometimes changes the law. Consider again the new case and the single precedent 1. Both following and distinguishing the precedent is allowed but once the precedent is followed, the new case becomes a precedent for subsequent cases and deciding a new case with the same factors {a mathematical formula}f1,d2,d3 con the decision becomes an overruling, since its preference {a mathematical formula}r4&gt;r3 is now inconsistent with {a mathematical formula}r3&gt;r4.
+       </paragraph>
+       <paragraph>
+        It should be noted that Horty makes a number of simplifying assumptions, such as that a case base is initially consistent and that there are no chains of reasoning from factors to decisions. The second assumption is dropped in a line of research to be discussed next.
+       </paragraph>
+      </section>
+      <section label="3.3.2">
+       <section-title>
+        Reasoning about factors: chains of reasoning and dialectical structures
+       </section-title>
+       <paragraph>
+        The above work models reasoning with factors. Other work also models reasoning about factors, that is about what makes something a factor pro or con a conclusion. A first answer to this question was in terms of chains of reasoning and dialectical structures. In Aleven's [7], [8] CATO, a system for teaching US law students how to argue with cases, this took the form of a “factor hierarchy”. Such a hierarchy has low-level factors as its base and the issue that is in dispute at the top. In between are increasingly abstract factors, connected to each other and to the base and top by pro or con links. Thus a factor is pro a decision if it supports a more abstract factor pro the decision or if it is against a more abstract factor con the decision. Likewise for con factors. CATO assumed a single factor hierarchy and still represented cases as sets of pro and con factors plus a single decision. Fig. 2 displays a snapshot of CATO's factor hierarchy, with one path compressed (indicated by the dotted link). Plus signs indicate pro links and minus signs indicate con links, ‘p’ stands for ‘pro plaintiff’ and ‘d’ stands for ‘pro defendant’.
+       </paragraph>
+       <paragraph>
+        Since CATO is an intelligent tutoring system, the focus is not on what is implied or allowed by a case base but on which argument moves can be made with cases, that good lawyers would also make. Two such moves modelled in CATO are emphasising and downplaying a distinction of a precedent (in CATO citations of precedents can be distinguished by pointing at pro-decision factors that are in the precedent but not in the new case or by pointing at con-decision factors that are in the new case but not in the precedent). Consider a precedent with {a mathematical formula}f4,d1,d16 and decision p, that is, that there was a misuse of trade secret. Consider now a new case with {a mathematical formula}f6,d1,d16. This case can be distinguished by observing that factor {a mathematical formula}f4 of the precedent is missing in the new case. The distinction can be emphasised by saying that therefore, unlike in the precedent, in the new case there were no efforts to maintain secrecy ({a mathematical formula}f102), so the information was not a trade secret {a mathematical formula}(f101). Now this distinction can be downplayed by observing that the new factor {a mathematical formula}f6 like {a mathematical formula}f4 also supports {a mathematical formula}f102, so that at a more abstract level the cases are still similar in that in both cases efforts to maintain secrecy were taken.
+       </paragraph>
+       <paragraph>
+        Inspired by [99] and [7], we generalised CATO's case representation method in [135] to collections of multi-steps arguments for and against conclusions, where rule priorities are expressed for each pair of conflicting rules, and we allowed that any rule or priority of a precedent is used in a new case. Unlike in CATO, in [135] each case can have its own dialectical structure. For instance, the precedent from the above example can be represented as follows (listing only the rules from which arguments can be built and naming the rules with the factors in their antecedents):{a mathematical formula} The arguments are visualised in Fig. 3. In this figure, vertical dashed arrows indicate defeasible-rule application and the horizontal arrows stand for defeat relations. The relevant rule priorities are written on the defeat relations that they induce. The new case, with {a mathematical formula}f6 instead of {a mathematical formula}f4, can be represented in the same way except that the occurrences of {a mathematical formula}f4 in the rule antecedents are replaced with {a mathematical formula}f6 and that the priority {a mathematical formula}f6&gt;d1 needed to obtain the same decision as in the precedent cannot be based on the precedent. Thus the logical analysis shows that the decision favoured by downplaying is not implied by the case base, since the necessary rule priority cannot be cited from a precedent.
+       </paragraph>
+       <paragraph>
+        Roth [148], [149] further pursued the idea to represent cases as dialectical structures. He was interested in which ‘a fortiori’ arguments can be made from a case base, i.e., in terms of [84], in which precedents have to be followed. To this end, he developed a method for comparing whether a new case offers at least as much dialectical support for a decision as a precedent. Essentially, this method recursively applies the single-steps a fortiori tests of [135] and [85] to each conflict in the dialectical structure. In the above example, this method would say that in the new case there is less support for the decision than in the precedent. If the new case is modified by deleting {a mathematical formula}d1, then it instead offers at least as much support as the precedent, even though the cases differ in their base level factors {a mathematical formula}f4 and {a mathematical formula}f6, since {a mathematical formula}f102 is now supported but not attacked. An additional feature of Roth's case representation method, inspired by [171]'s DefLog system, is that support and attack relations between statements can themselves be supported or attacked, and so on, recursively. For example, the link between Info reverse engineerable and Info legitimally obtained elsewhere in Fig. 2 could be supported by the statement that reverse engineering of computer code is legal.
+       </paragraph>
+       <paragraph>
+        We finally discuss Loui &amp; Norman's work in [99]. They did not explicitly address factor-based reasoning but their work still inspired some of the above-discussed work. To our knowledge, [99] were the first who proposed to represent cases as dialectical structures, which they called “disputation rationales”. They in fact addressed rhetorical aspects of legal argument, since (on top of [163]'s argumentation logic) they defined an argumentation protocol in which previously stated arguments can be modified by the other side as a prelude to attack. They studied five ways to modify precedent-based arguments by reinterpreting a precedent's ‘rationale’, that is, how a precedent relates the facts or factors to its decision. For example, compression rationales express that some rules compress a line of reasoning in a single if–then rule. For instance, the rule ‘vehicles are not allowed in the park’ could be argued to compress ‘vehicles used for private transportation are not allowed in the park’ and ‘vehicles are normally used for private transportation’. Unpacking the compressed rule enables an attack on the latter rule, for instance, with ‘ambulances are not used for private transport’. Semiformally: unpack your opponent's use of {a mathematical formula}A⇒B as {a mathematical formula}A⇒C, {a mathematical formula}C⇒B and state an argument for ¬C.
+       </paragraph>
+       <paragraph>
+        [99]'s disputation rationales capture the idea that sometimes a case decision is the result of a choice between conflicting arguments. In such cases the rule If factors then decision can be replaced by these conflicting arguments, and by showing that in the new fact situation the decision would have been different.
+       </paragraph>
+       <paragraph>
+        Assume by way of illustration a case rule {a mathematical formula}B∧C⇒A, which compresses the adjudication between the following three arguments (for notational convenience we use specificity to express the comparison of the arguments).
+       </paragraph>
+       <list>
+        <list-item>
+         {a mathematical formula}Arg1: B, {a mathematical formula}B⇒A, so A
+        </list-item>
+        <list-item>
+         {a mathematical formula}Arg2: C, {a mathematical formula}C⇒D, {a mathematical formula}D⇒¬A, so ¬A
+        </list-item>
+        <list-item>
+         {a mathematical formula}Arg3: {a mathematical formula}B,C, {a mathematical formula}B⇒F, {a mathematical formula}F∧C⇒¬D, so ¬D
+        </list-item>
+       </list>
+       <paragraph>
+        And assume that a new case contains not just the facts B and C but also G. [99]'s protocol allows the following dispute between a proponent P and an opponent O of A:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         P: I have an argument for A:
+        </list-item>
+        <list-item label="•">
+         O: Your rule compresses the adjudication between three arguments, so:{a mathematical formula}Argument record={Arg1,Arg2,Arg3}
+        </list-item>
+        <list-item label="•">
+         O: And I attack {a mathematical formula}Arg3 with:
+        </list-item>
+       </list>
+       <paragraph>
+        Applying [163]'s system to the argument records before and after O's move, we see that A is acceptable on the basis of the former record but not on the basis of the latter. However, we cannot say that the latter outcome follows from the initial case base, since O's reinterpretation of the precedent can be disputed. Essentially, this reinterpretation is not a logical but a rhetorical move, but [99] could make its nature precise by making use of logical tools.
+       </paragraph>
+      </section>
+      <section label="3.3.3">
+       <section-title>
+        Reasoning about factors: purpose and value
+       </section-title>
+       <paragraph>
+        The work on chains of reasoning and dialectical structures does not explain why the most abstract factors are factors pro or con a decision. This question is addressed in a body of work initiated by Bench-Capon [29], who was inspired by Berman &amp; Hafner [38], who argued that often a factor can be said to favour a decision by virtue of the purposes served or values promoted by taking that decision because of the factor. A choice in case of conflicting factors is then explained in terms of a preference ordering on the purposes, or values, promoted or demoted by the decisions suggested by the factors. Cases can then be compared in terms of the values at stake rather than on the factors they contain.
+       </paragraph>
+       <paragraph>
+        Some might say that these purposes or values can be seen as the most abstract factors of a factor hierarchy, so that the techniques discussed above would suffice. However, a crucial difference between the most abstract factors and purposes or values is that the latter are never fully present or absent in a case but only promoted or demoted, and that to varying degrees.
+       </paragraph>
+       <paragraph>
+        The role of purpose and value is often illustrated with some well-known cases from Anglo-American property law on ownership of wild animals that are being chased. One such case is Keeble, in which a pond owner placed a duck decoy in his pond with the intention to sell the caught ducks for a living. Defendant used a gun to scare away the ducks, for no other reason than to damage plaintiff's business. Here the court held for plaintiff. Now plaintiff in Keeble could argue that people should be protected when pursuing their livelihood, since society benefits from their activities. He could also argue that he was hunting on his own land, so that the value of protection of property is another reason why he should win. Defendant in Keeble could argue that since plaintiff had not yet caught the ducks, he had no right to the ducks, since if such rights depended on who first saw the animals, there would be no clear criterion and the courts would be flooded with cases. Thus defendant argues that deciding for him promotes the value of legal certainty. Since plaintiff won in Keeble, we can on this interpretation of the case say that the court held that the combination of the values of protecting property and protecting the pursuit of livelihood outweighs the single value of legal certainty.
+       </paragraph>
+       <paragraph>
+        To represent such value-based interpretations of cases, [126] extended [135]'s case representation method with the means to derive the rule priorities needed for expressing a case decision from value considerations. This method exploits the rule-name mechanism of [134] to express in the object language that deciding a case in a certain way because of a factor promotes some value. More specifically, if a decision d because of factor f is expressed with a rule{a mathematical formula} then the opinion that taking decision d advances value V can be expressed as a further defeasible rule{a mathematical formula} The antecedent of this rule might have to be derived by further reasoning. Then [126] defined a way to talk in the object language about sets of values advanced by a rule r (expressed by the predicate {a mathematical formula}Values(r)), and about a preference ordering on these sets. This preference ordering then generates the rule priorities needed in [135] to represent cases and their outcomes, with the following rule scheme.{a mathematical formula} Consider the Keeble case again. The issue is whether plaintiff was the owner of the ducks: PlOwner. The relevant factors are
+       </paragraph>
+       <list>
+        <list-item label="–">
+         Plaintiff was pursuing his livelihood: PlLiving.
+        </list-item>
+        <list-item label="–">
+         Plaintiff was hunting on his own land: OwnLand.
+        </list-item>
+        <list-item label="–">
+         Plaintiff had not caught the animals: ¬Caught.
+        </list-item>
+       </list>
+       <paragraph>
+        The first two factors are pro-plaintiff while the third is pro-defendant. Then with the method of [135] this yields:
+       </paragraph>
+       <list>
+        <section-title>
+         Keeble:
+        </section-title>
+        <list-item>
+         {a mathematical formula}k1: {a mathematical formula}PlLiving,OwnLand⇒PlOwner
+        </list-item>
+        <list-item>
+         {a mathematical formula}k2: {a mathematical formula}¬Caught⇒¬PlOwner
+        </list-item>
+        <list-item>
+         {a mathematical formula}pr2: {a mathematical formula}⇒k1&gt;k2
+        </list-item>
+       </list>
+       <paragraph>
+        We next show how the rule priority {a mathematical formula}k1&gt;k2 can be derived from value considerations. The values at stake are:
+       </paragraph>
+       <list>
+        <list-item label="–">
+         Certainty and avoidance of litigation (Cval).
+        </list-item>
+        <list-item label="–">
+         Economic benefit for society (Eval).
+        </list-item>
+        <list-item label="–">
+         Respecting property (Pval).
+        </list-item>
+       </list>
+       <paragraph>
+        We have the following rules on how factors promote values:
+       </paragraph>
+       <list>
+        <list-item>
+         {a mathematical formula}⇒Advances(k1,Pval)
+        </list-item>
+        <list-item>
+         {a mathematical formula}⇒Advances(k1,Eval)
+        </list-item>
+        <list-item>
+         {a mathematical formula}⇒Advances(k2,Cval)
+        </list-item>
+       </list>
+       <paragraph>
+        Then {a mathematical formula}Values(k1)={Eval,Pval} while {a mathematical formula}Values(k2)={Cval}, so the decision in Keeble can be explained by preferring {a mathematical formula}{Eval,Pval} over {a mathematical formula}{Cval}. Now if a new case arises that is different from Keeble in terms of factors but in which the same values are considered, then the new cases can be decided as Keeble by citing its value preference. New types of a fortiori arguments are also possible. For example, any superset of {a mathematical formula}{Eval,Pval} is also preferred to {a mathematical formula}{Cval}. And if it can be argued that some other value {a mathematical formula}Vi is at least as preferred as Eval, then {a mathematical formula}{Vi,Pval} is also preferred to {a mathematical formula}{Cval}.
+       </paragraph>
+       <paragraph>
+        We note that this body of work thus in fact formalises Perelman's [116] view that outside mathematics the validity of arguments depends on their potential to persuade an audience. This potential is at least in part determined by the audience's value preferences.
+       </paragraph>
+       <paragraph>
+        Bench-Capon &amp; Sartor [36] employ a similar way to express that factor-decision rules promote values, and a similar way to derive rule preferences from the preference ordering on the sets of values they promote. But then they embed this in a method for constructing theories that explain a given set of cases. Theory construction is modelled as an adversarial process, where both sides take turns to modify the theory so that it explains the current case in the way they want. The process starts with a set of factor-value pairs and a set of cases represented in terms of factors and an outcome. Then the theory is constructed by creating rules plus rule priorities derived from value preferences.
+       </paragraph>
+      </section>
+      <section label="3.3.4">
+       <section-title>
+        Legal interpretation as practical reasoning
+       </section-title>
+       <paragraph>
+        The attention for the role of value and purpose led to accounts of legal interpretation as a decision problem, namely, as a choice between alternative interpretations on the basis of the likely consequences of these interpretations in terms of promoting and demoting values. Thus current AI models of argumentation for decision making can be applied. This approach in fact regards legal reasoning as a form of what philosophers call practical reasoning. Models of legal practical reasoning are not just relevant for legal interpretation but also for legislative debates. In AI the proper modelling of argumentation for decision making is an important current issue [141], and given the importance of purpose and value in the law, the law provides an excellent testing ground for the various approaches.
+       </paragraph>
+       <paragraph>
+        Bench-Capon and Atkinson have studied legal practical reasoning in the context of [30]'s value-based abstract argumentation frameworks. Such VAFs extend [51]'s abstract argumentation frameworks (consisting just of a set of arguments with a binary attack relation) by giving each argument a value that it promotes and by defining a total ordering on these values. Attacks are then resolved by comparing the relative preference of the values promoted by the conflicting arguments. In e.g. [24], [23] the instantiation is studied of the arguments in VAFs with the following so-called argument scheme for practical reasoning:
+       </paragraph>
+       <list>
+        <list-item>
+         In the current circumstances R
+        </list-item>
+        <list-item>
+         Action A should be performed
+        </list-item>
+        <list-item>
+         To bring about new circumstances S
+        </list-item>
+        <list-item>
+         Which will realise goal G
+        </list-item>
+        <list-item>
+         And promote value V
+        </list-item>
+       </list>
+       <paragraph>
+        The scheme comes with a list of critical questions that can be used to critique each element of this scheme and to generate counterarguments to uses of the scheme. For example:
+       </paragraph>
+       <list>
+        <list-item label="CQ1:">
+         Are the believed circumstances true?
+        </list-item>
+        <list-item label="CQ2:">
+         Assuming the circumstances, does the action have the stated consequences?
+        </list-item>
+        <list-item label="CQ7:">
+         Are there alternative ways of promoting the same value?
+        </list-item>
+        <list-item label="CQ9:">
+         Does doing the action have a side effect which demotes some other value?
+        </list-item>
+        <list-item label="CQ16:">
+         Is the value indeed a legitimate value?
+        </list-item>
+       </list>
+       <paragraph>
+        This generates a VAF as follows. Instantiations of this scheme are arguments, while arguments for incompatible actions and ‘bad’ answers to critical questions are counterarguments to such arguments. Then each argument is assigned a value.
+       </paragraph>
+       <paragraph>
+        Atkinson &amp; Bench-Capon have applied this approach both to legal interpretation and to legislative and policy debates. In [24] they applied it to reasoning with precedents, representing the Keeble case as follows (note that they equate circumstances S and goal G):{a mathematical formula}{a mathematical formula}{a mathematical formula} Here both Arg1 and Arg3 and Arg2 and Arg3 attack each other. To explain the decision in Keeble, the values of protection of property and the economy should both individually be preferred to the value of legal certainty, so that Arg3 is defeated by both Arg1 and Arg2. The resulting abstract argumentation framework is displayed in Fig. 4.
+       </paragraph>
+       <paragraph>
+        While this approach has its merits, it also has some limitations. First, it does not deal naturally with aggregation of values promoted by the same decision. Second, uses of the practical-reasoning scheme cannot be combined with arguments that provide a premise of the scheme. Finally, different parts of the scheme in fact model different kinds of inference steps. That action A will result in consequences S is (causal) epistemic reasoning, while the step to the value is evaluative and the conclusion that A should be performed is practical reasoning. Now a conflict on whether the action has a certain result is different from a conflict on whether the action should be performed. The latter indeed requires value comparisons but the former is a conflict of epistemic reasoning, to which value considerations do not apply.
+       </paragraph>
+       <paragraph>
+        An alternative approach is to formulate the scheme as a combination of various elementary argument schemes and to embed their use in a framework for argumentation that allows for the stepwise construction of arguments. We next turn to this approach.
+       </paragraph>
+      </section>
+      <section label="3.3.5">
+       <section-title>
+        Approaches with argument schemes
+       </section-title>
+       <paragraph>
+        The argument-scheme approach of [24], [23] is an example of a recent trend in AI &amp; law. The notion of argument schemes originates from informal argumentation theory [177] and is nowadays also important in AI models of argumentation [141]. Argument schemes are stereotypical, often presumptive, forms of argumentation and come with a list of critical questions for testing whether a particular use of the scheme is justified. A recent semi-formal use of argument schemes (but without critical questions) is Brewer's use of propositional logic plus schemes for inductive, abductive and analogical arguments for analysing legal and evidential arguments in court decisions (e.g. [45]). This among other things involves identifying and critically examining the implicit premises needed to complete a deductive, inductive, analogical or abductive argument scheme.
+       </paragraph>
+       <paragraph>
+        Several AI &amp; law researchers [172], [40], [63] have argued that argument schemes can be seen as defeasible inference rules and critical questions as pointers to attacks on defeasible inferences. This view relates to Pollock's defeasible reasons with associated undercutters [118], [119]. Pollock's defeasible reasons can be seen as argument schemes for various forms of epistemic reasoning while his undercutters are unfavourable answers to critical questions. Accordingly, some recent work on legal argument has employed general AI models of defeasible argumentation to formalise argument schemes for legal reasoning. For example, [140] have used the ASPIC{sup:+} framework of [131], [112] to formalise argument schemes for factor-based reasoning. The ASPIC{sup:+} framework is like John Pollock's work based on the idea that arguments are built with two kinds of inference rules: strict, or deductive rules, whose premises guarantee their conclusion, and defeasible rules, whose premises only create a presumption in favour of their conclusion. Accordingly, arguments can in ASPIC{sup:+} be attacked in three ways: on their premises, on their defeasible inferences, or on the conclusions of their defeasible inferences. ASPIC{sup:+} then allows the use of preferences to resolve attacks, that is, to see which attacks result in defeat. Then it applies [51]'s theory of abstract argumentation to the set of arguments plus defeat relation to determine the dialectical status of arguments and conclusions.
+       </paragraph>
+       <paragraph>
+        The aim of [140] was to model CATO-style reasoning with factors as argument schemes and then to formalise these schemes as defeasible inference rules in ASPIC{sup:+}. One benefit of this approach is that thus the consistency and closure properties of the ASPIC{sup:+} framework are inherited. We now give a semi-formal version of the main argument schemes as instantiated in [140] for an example and refer the reader to [140] for the formal details.
+       </paragraph>
+       <paragraph>
+        In Mason v Jack Daniel Distillery (indicated with Mason), the bartender Tony Mason claimed that the use of a cocktail by Jack Daniel Distillery in a promotion was misuse of a trade secret since the cocktail was very similar to his invention and Mason had talked about it to a sales representative for Jack Daniel Distillery. In M. Bryce and Associates v Gladstone (indicated with Bryce), Bryce was a software company with a complete methodology for the design, development and implementation of an information system. Bryce had made a presentation of it to Gladstone, after which the defendants designed and implemented a very similar manual. Both cases thus involve disclosure in negotiations and since Bryce was found for the plaintiff, it can serve as a possible precedent.
+       </paragraph>
+       <paragraph>
+        In [7]'s analysis, the cases have the following factors.{a mathematical formula} We now list the various arguments that can be constructed. From these arguments the argument schemes of [140] can be retrieved by substituting Mason with Current and Bryce with Precedent and replacing the set terms with variables. The first argument scheme is for arguing that the new case should be decided for plaintiff, because the pro-plaintiff factors are preferred over the pro-defendant factors.{a mathematical formula} The second scheme derives the preference of the pro-plaintiff factors over the pro-defendant factors from a precedent with these factors where plaintiff won:{a mathematical formula} The following undercutter of CS1 formalises how a precedent can be distinguished on missing a pro-plaintiff factor (there is a similar scheme for an additional pro-defendant factor).{a mathematical formula} Finally, the next scheme formalises downplaying such a distinction as an undercutter of this undercutter.{a mathematical formula} That F6 substitutes F4 is shown by Fig. 2 above. The resulting abstract argumentation framework is displayed in Fig. 5. In this figure CS12 stands for the combined application of CS1 and CS2. Note that U1-CS1 defeats CS12 by directly defeating its subargument CS1.
+       </paragraph>
+       <paragraph>
+        The approach of formalising argument schemes in ASPIC{sup:+} has also been applied to legal practical reasoning, for example, by [34], [132]. Essentially, the various elements of Atkinson's argument scheme are modelled as separate premises, which can each be derived from other arguments. The various good and bad effects of alternative action proposals are then aggregated in the object language as is done in [126] for values, from which then preference relations between the various conflicting arguments are derived by combining ASPIC{sup:+} with [110]'s extended argumentation frameworks. This approach essentially amounts to an argumentation-based version of qualitative multi-attribute decision theory [168].
+       </paragraph>
+       <paragraph>
+        A practical-reasoning account of legal interpretation can be applied to model the problem of a court whether to follow or distinguish a rule when a new factor arises (assuming that distinguishing is consistent with the body of precedents). For example, in the Olga Monge v. Beebe Rubber Company case discussed above in Section 3.3.1, the court decided to distinguish the old rule as follows: (…) the employer's interest in running his business as he sees fit must be balanced against the interest of the employee in maintaining his employment, and the public's interest in maintaining a proper balance between the two.(…)We hold that a termination by the employer of a contract of employment at will which is motivated by bad faith or malice or based on retaliation is not in the best interest of the economic system or the public good and constitutes a breach of the employment contract. This decision can be reconstructed as two practical-reasoning arguments for following, respectively, distinguish the old rule, and then preferring the argument for distinguishing the rule by preferring the joint values of safe employment and the public good over the value of freedom of enterprise. Fig. 6 informally displays the arguments about rule adoption. A full analysis of the case in ASPIC{sup:+} can be found in [124].
+       </paragraph>
+      </section>
+     </section>
+     <section label="3.4">
+      <section-title>
+       Concluding remarks on legal interpretation
+      </section-title>
+      <paragraph>
+       The work reviewed above by no means amounts to a full theory of interpretative legal argument. The jurisprudential literature contains discussions of many other forms of argument and some of them have been addressed in AI &amp; law, such as reasoning with dimensions (essentially multi-valued factors), theory construction, hypothetical reasoning and more refined forms of policy arguments, with also demotion of values and with degrees of promotion or demotion. Taking such degrees into account could explain why in legal practice almost no generally valid hierarchies of values are accepted: the point is that different degrees of promotion or demotion give rise to different value preferences in different cases [155]. Our review is just meant to give an idea of how modern logical tools can be applied to some interesting forms of legal argumentation, with special attention to factor-based models of legal reasoning. One thing hardly addressed in these models is the step from facts to factors, although some of the above techniques seem suitable for this, especially those that allow for chains of reasoning. But further study is needed of how legal reasoning actually bridges the gap between facts and factors. For a further critique of factor-based models and a defence of theory-construction approaches see [108].
+      </paragraph>
+      <paragraph>
+       As for the logical tools used, we see a gradual shift from ‘early’ nonmonotonic logics to the use of general frameworks for argumentation, such as variants of [51]'s abstract argumentation frameworks and the ASPIC{sup:+} framework of [131], [112], often combined with an argument-scheme approach. However, [84], [85]'s recent model of precedential constraint uses a special-purpose formalism for defeasible rules while [64] have proposed the Carneades framework of [63] as an alternative framework for modelling legal reasoning with argument schemes.
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Reasoning about the facts
+     </section-title>
+     <paragraph>
+      While legal education and scholarship mostly focuses on reasoning with and about the law, in practice most cases are decided on the facts, so insight in how facts can be proven is crucial for legal practice. From a logical point of view two main issues arise: which model of rational proof can best be applied to the law, and what is the logical nature of important legal evidential constructs like burdens of proof and presumptions? We address these issues in turn.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Models of legal proof
+      </section-title>
+      <paragraph>
+       Theoretical models of rational legal proof are generally of three kinds: probabilistic, story-based, or argument-based. All three approaches acknowledge that evidence cannot provide watertight support for a factual claim as it always leaves room for doubt and uncertainty, but they account for this in different ways. Probabilistic approaches [158], [122], [54] express uncertainty in terms of numerical probabilities attached to hypotheses given the evidence. Often a Bayesian approach is taken, nowadays more and more with Bayesian networks. Probabilistic approaches are by no means uncontroversial (see e.g. [95]). One objection is that in legal cases the required numbers are usually not available, either because there are no reliable statistics, or because experts or judges are unable or reluctant to provide estimates of probabilities. Another objection is that probability theory imposes a standard of rationality that cannot be attained in practice, so that its application would lead to more instead of fewer errors. To overcome these and other claimed limitations of probabilistic models, argumentation-based and story-based models have been proposed.
+      </paragraph>
+      <section label="4.1.1">
+       <section-title>
+        Story-based approaches
+       </section-title>
+       <paragraph>
+        Story-based approaches go back to the work of psychologists [37], who observed that the way judges and prosecutors make factual judgements is not by probabilistic or logical reasoning but by constructing and comparing stories about what might have happened. [176] goes a step further, arguing that this is in fact the only way for fact finders to reason about the facts of the case, given the cognitive limitations of humans. Their research then takes a normative twist, advocating the story-based approach as a rational model of factual judgement. The story that best explains the evidence must, if it does so to a sufficient degree, be adopted as true. Room for doubt is accounted for since an as yet unknown story might be the true one or since new evidence might make another of the known stories the best one. Both [90] and [165] sketch how this approach can be computationally modelled as inference to the best explanation. Like in Bayesian approaches, the direction of reasoning is from the hypotheses to the evidence (and then from the evidence to the hypotheses), since various hypotheses, respectively, scenarios are compared on how well they explain the available evidence.
+       </paragraph>
+      </section>
+      <section label="4.1.2">
+       <section-title>
+        Argumentation-based approaches
+       </section-title>
+       <paragraph>
+        Unlike story-based approaches, argumentation-based approaches reason from the evidence to the hypothesis. These approaches go back to [179]'s charting method of legal evidence, with which alternative arguments from evidence to hypotheses can be graphically displayed and thus sources of doubt in these arguments can be revealed. This approach was modernised by the so-called ‘New Evidence scholars’, e.g. [157], [15], who among other things stressed that the empirical generalisations needed to justify the various steps in an evidential argument are an important source of doubt.
+       </paragraph>
+       <paragraph>
+        Until 2000 there was not much work in law &amp; logic and AI &amp; law on legal proof but then AI &amp; law researchers [172], [40], [127] began to model the neo-Wigmorean approach in terms of logical frameworks for argumentation. In this approach room for doubt is accounted for since additional evidence might give rise to new arguments that defeat the currently undefeated arguments. Evidential reasoning proceeds by applying argument schemes for evidential reasoning to the evidence, such as schemes for perception, memory, induction, applying generalisations, reasoning with testimonies, and temporal persistence. The critical questions of these schemes serve as pointers to counterarguments. The modelling of evidential reasoning is thus very similar to Pollock's [118], [119] account of epistemic reasoning in terms of defeasible reasons and their undercutters.
+       </paragraph>
+       <paragraph>
+        We illustrate this approach with an application of the ASPIC{sup:+} framework. Recall from Section 3.3.5 that ASPIC{sup:+} chains strict (→) and defeasible (⇒) inferences into argument trees and that defeasible inferences can be rebutted on their conclusion or undercut on the inference itself. ASPIC{sup:+} then generates Dung-Style abstract argumentation frameworks, that is, a set {a mathematical formula}A of arguments with a binary relation of defeat. In ASPIC{sup:+} defeat is defined in terms of a more basic attack relation plus a preference ordering on arguments. Essentially, an argument A defeats and argument B if either (1) A undercuts B on a subargument {a mathematical formula}B′; or (2) A rebuts or premise-attacks B on a subargument {a mathematical formula}B′ and {a mathematical formula}A≮B′. So two conflicting arguments can defeat each other, namely, if they are equally preferred or their relative preference is undefined. The ASPIC{sup:+} framework abstracts from how the argument ordering is defined.
+       </paragraph>
+       <paragraph>
+        Now the following example is taken from [113]. It assumes as object language a first-order language; ⊃ stands for the material implication. We first formalise Pollock's principles of perception and memory as defeasible rules in ASPIC{sup:+}:{a mathematical formula} Adopting a convention from nonmonotonic logic, these rules and their names are schemes for all their ground instances. The rule names are also formulas from the object language, to allow for undercutting defeaters. Note also that these schemes assume a naming convention for formulas in a first-order language, since φ is a term in the antecedent while it is a well-formed formula in the consequent.
+       </paragraph>
+       <paragraph>
+        Now undercutters for {a mathematical formula}dp state circumstances in which perceptions are unreliable, while undercutters for {a mathematical formula}dm state conditions under which memories may be flawed. For example, a well-known cause of false memories of events is that the memory is distorted by, for instance, seeing pictures in the newspaper or watching a TV programme about the remembered event. A general undercutter for distorted memories could be{a mathematical formula} combined with information such as{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        We next formalise a scheme for reasoning with witness testimonies and its undercutter as follows:{a mathematical formula} We apply these schemes to the imaginary case of John, a suspect in a robbery in Holland Park, London. Witness Bob testifies that he had seen John in Holland Park on the morning of the robbery but witness Jan testifies that he had seen John in Amsterdam on the same morning. It turns out that Jan is a friend of John while Bob had read newspaper reports about the robbery in which a picture of John was shown. We model these facts as follows.
+       </paragraph>
+       <paragraph>
+        The following facts are given:
+       </paragraph>
+       <list>
+        <list-item>
+         {a mathematical formula}Witness(Bob,Recalls(Bob,Sees(Bob,InHollandPark(John))))
+        </list-item>
+        <list-item>
+         {a mathematical formula}Says(Bob,Recalls(Bob,Sees(Bob,InHollandPark(John))))
+        </list-item>
+        <list-item>
+         {a mathematical formula}SeesPicturesAbout(Bob,Sees(Bob,InHollandPark(John)))
+        </list-item>
+        <list-item>
+         {a mathematical formula}∀x,φ.(SeesPicturesAbout(x,φ)⊃DistortedMemory(x,φ))
+        </list-item>
+        <list-item>
+         {a mathematical formula}∀x.InHollandPark(x)⊃InLondon(x)
+        </list-item>
+        <list-item>
+         {a mathematical formula}Witness(Jan,Recalls(Jan,Sees(Jan,InAmsterdam(John))))
+        </list-item>
+        <list-item>
+         {a mathematical formula}Says(Jan,Recalls(Jan,Sees(Jan,InAmsterdam(John))))
+        </list-item>
+        <list-item>
+         {a mathematical formula}Friends(Jan,John)
+        </list-item>
+        <list-item>
+         {a mathematical formula}SuspectedRobber(John)
+        </list-item>
+        <list-item>
+         {a mathematical formula}∀x,y,φ.Friends(x,y)∧SuspectedRobber(y)∧InvolvedIn(y,φ)⊃¬Credible(x)
+        </list-item>
+        <list-item>
+         {a mathematical formula}InvolvedIn(John,Recalls(Jan,Sees(Jan,InAmsterdam(John))))
+        </list-item>
+        <list-item>
+         {a mathematical formula}∀x¬(InAmsterdam(x)∧InLondon(x))
+        </list-item>
+       </list>
+       <paragraph>
+        Combining this with the schemes from perception, memory and witness testimony, we obtain the following arguments. (See Fig. 7.)
+       </paragraph>
+       <list>
+        <list-item>
+         {a mathematical formula}f1,f2⇒dwRecalls(Bob,Sees(Bob,InHollandPark(John)))
+        </list-item>
+        <list-item>
+         {a mathematical formula}A3⇒dmSees(Bob,InHollandPark(John))
+        </list-item>
+        <list-item>
+         {a mathematical formula}A4⇒dpInHollandPark(John)
+        </list-item>
+        <list-item>
+         {a mathematical formula}A5,f5→InLondon(John)
+        </list-item>
+       </list>
+       <paragraph>
+        This argument is undercut (on {a mathematical formula}A4) by the following argument applying the undercutter for the memory scheme:
+       </paragraph>
+       <list>
+        <list-item>
+         {a mathematical formula}f3,f4→DistortedMemory(Bob,Sees(Bob,InHollandPark(John)))
+        </list-item>
+        <list-item>
+         {a mathematical formula}B3⇒um¬dm(Bob,Sees(Bob,InHollandPark(John)))
+        </list-item>
+       </list>
+       <paragraph>
+        Moreover, {a mathematical formula}A7 is rebutted (on {a mathematical formula}A5) by the following argument:
+       </paragraph>
+       <list>
+        <list-item>
+         {a mathematical formula}f6,f7⇒dwRecalls(Jan,Sees(Jan,InAmsterdam(John)))
+        </list-item>
+        <list-item>
+         {a mathematical formula}C3⇒dmSees(Jan,InAmsterdam(John))
+        </list-item>
+        <list-item>
+         {a mathematical formula}C4⇒dpInAmsterdam(John)
+        </list-item>
+        <list-item>
+         {a mathematical formula}C5,f5,f12→¬InHollandPark(John)
+        </list-item>
+       </list>
+       <paragraph>
+        This argument is also undercut, namely, on {a mathematical formula}C3 based on the undercutter of the position to know scheme:
+       </paragraph>
+       <list>
+        <list-item>
+         {a mathematical formula}f8,f9,f10,f11→¬Credible(Jan)
+        </list-item>
+        <list-item>
+         {a mathematical formula}D4⇒uw¬dw(Jan,Recalls(Jan,Sees(Jan,InAmsterdam(John))))
+        </list-item>
+       </list>
+       <paragraph>
+        Finally, {a mathematical formula}C8 is rebutted on {a mathematical formula}C5 by the following continuation of argument {a mathematical formula}A7:
+       </paragraph>
+       <list>
+        <list-item>
+         {a mathematical formula}A5,f5,f12⇒¬InAmsterdam(John)
+        </list-item>
+       </list>
+       <paragraph>
+        {a mathematical formula}A8 is in turn undercut by {a mathematical formula}B4 (on {a mathematical formula}A4) and rebutted by {a mathematical formula}C8 (on {a mathematical formula}A5).
+       </paragraph>
+       <paragraph>
+        Because of the two undercutting arguments, neither of the testimony arguments are credulously or sceptically acceptable in any of [51]'s semantics.
+       </paragraph>
+      </section>
+      <section label="4.1.3">
+       <section-title>
+        A hybrid approach with stories and arguments
+       </section-title>
+       <paragraph>
+        Argumentation approaches are good for modelling how evidence can be related to hypotheses and for revealing sources of doubt in evidential arguments, but less good for providing a clear overview of masses of evidence. This is better done in the story-based approach, which formulates scenarios with a central action made plausible by the context. To combine the strengths of both approaches, [39], [41] proposed a hybrid theory of legal evidential reasoning. The idea is that stories or scenarios are connected events while evidence for these events and support for their connections is provided by argumentation with argument schemes. Then various criteria are formulated for the internal plausibility and coherence of a story and for how well it is supported by the evidence. The story part of the hybrid model is formalised in terms of logical models of abductive model-based diagnosis [49].
+       </paragraph>
+       <paragraph>
+        In the hybrid approach the event that John was in Holland park would be part of the scenario, linked to Bob's testimony by the above argument {a mathematical formula}A7, and to be explained by the rest of the scenario. By contrast, in purely story-based or Bayesian approaches Bob's testimony would be an event in the scenario and would have to be explained by it. Bex's hybrid model was developed on the assumption that lawyers would find the need to explain testimonies (and other sources of evidence) less natural than regarding them as information sources from which defeasible inferences can be drawn.
+       </paragraph>
+       <paragraph>
+        We illustrate Bex's approach with the following example, an adapted fragment from a case study of [39], on what caused the death of Lou, a supposed victim of a murder crime. There are two scenario's, the second of which contradicts the evidence that no angular object with Lou's DNA on it was found: S1: Lou's death can be explained by his fractured skull and his brain damage, which were both observed. Moreover, Lou's brain damage can be explained by the hypothesis that he fell.S2: Lou's death, brain damage and fractured skull can also be explained by the hypothesis that he was hit on the head by an angular object.
+       </paragraph>
+       <paragraph>
+        Fig. 8 displays the two scenarios and how their events and connections are supported or contradicted by the evidence. Boxes with a dot display the events to be explained. The various arrows are causal connections between events in the scenario, while the vertical lines indicate evidential support for events or connections. Note that not just events but also connections in the scenario can be supported by evidential argumentation. For example, here the connection between ‘Lou was hit with an angular object’ and ‘Lou had brain damage’ is supported by expert testimony.
+       </paragraph>
+      </section>
+      <section label="4.1.4">
+       <section-title>
+        Relation with Bayesian approaches
+       </section-title>
+       <paragraph>
+        Forensic scientists increasingly propose the use of Bayesian methods in legal proof [53], [54]. Proponents of Bayesian methods might argue that the above-sketched qualitative methods cannot deal with gradual probabilistic influences. For example, they might argue that the two undercutters of arguments {a mathematical formula}A4 and {a mathematical formula}C3 in the Holland Park example do not nullify but only weaken the force of the inferences from the testimonies (see more generally [115] for mismatches between nonmonotonic logic and Bayesian reasoning). This is indeed a serious concern and some work has been done on refining argumentation-based approaches with degrees of justification, e.g. [120], although the formalisms resulting from these refinements are not always very transparent. On the other hand, current experiences with Bayesian presentations of evidence in the court room have been disappointing, since it has turned out that lawyers simply do not understand Bayesian modellings [54]. Three responses to this are possible: better education of lawyers in Bayesian thinking (but will it have effect?); more trust of lawyers in the modellings of forensic experts (but is such trust always justified?); or formulate standards of rationality attainable by human fact finders, while perhaps sacrificing theoretical perfection. The latter is what the argumentation- and story-based approaches aim to do. In other areas of AI approaches with similar aims (e.g. nonmonotonic logics or logical models of diagnosis) have largely given way to Bayesian methods, but the law has its own characteristics, with often sparse statistical data, and practical constraints on legal proceedings. We therefore think that there is no unique right or best approach, but that the choice of method depends on the nature of the case and the available evidence, given theoretical insights but also the practical and cognitive constraints faced by lawyers.
+       </paragraph>
+      </section>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Burdens of proof and presumptions
+      </section-title>
+      <paragraph>
+       Legal proof is not just a scientific problem but takes place under legal and practical constraints. The parties involved in a proceeding have limited technical and financial resources, while a decision has to be reached within reasonable time and in a fair way. Legal systems have developed ways to deal with these constraints, such as presumptions and burdens of proof. These notions can be found in their most refined and articulated way in common-law jurisdictions, but in one way or another they are part of any legal system.
+      </paragraph>
+      <paragraph>
+       In this section we illustrate that presumptions and burdens of proof can be modelled with techniques from nonmonotonic logic and argumentation but that such modelling is not straightforward and that these legal notions pose some interesting challenges for AI models of evidential reasoning. Aspects referring to the adversarial setting of a proceeding (such as shifts of proof burdens and counterevidence to presumptions) seem to fit best with argumentation-based approaches, while other aspects (such as standards of proof) seem to fit better with probabilistic notions.
+      </paragraph>
+      <section label="4.2.1">
+       <section-title>
+        Modelling burdens of proof
+       </section-title>
+       <paragraph>
+        Generally a distinction is made between a burden to provide evidence on an issue during a proceeding (in common-law systems often called the burden of production) and a burden to prove that a claim is true or justified beyond a given standard of proof (in common-law systems often called the burden of persuasion). If the burden of production on an issue is not met, the issue is decided as a matter of law against the burdened party, while if it is met, the issue is decided in the final stage of the proceeding according to the burden of persuasion. In the law the burdens of production and persuasion are usually determined by the ‘operative facts’ for a legal claim, i.e., the facts that legally are ordinarily sufficient reasons for the claim. The law often designates the operative facts with rule-exception structures. For instance, for manslaughter the operative facts are that there was a killing and that it was done with intent, while an exception is that it was done in self-defence. Therefore, at the start of a criminal proceeding, the prosecution has the burden to produce evidence on ‘killing’ and ‘intent’; if this burden is fulfilled, the defence's burden to produce evidence for ‘self-defence’ is activated. For operative facts the burdens of production and persuasion usually go together so in our example the prosecution also has the burden of persuasion for ‘killing’ and ‘intent’. However, for exceptions things are more complicated. In criminal proceedings usually the defence only has a burden of production for an exception while if fulfilled, the prosecution then has an active burden of persuasion against the exception. For instance, once the defence has produced evidence for ‘self-defence’, the prosecution has the burden of persuasion that there was no self-defence. By contrast, in civil cases often the burden of persuasion holds for an exception also: for instance, in Dutch and Italian law insanity at the time of accepting an offer is an exception to the rule that offer and acceptance create a binding contract, but if the evidence on insanity is balanced, the party claiming insanity will lose on that issue.
+       </paragraph>
+       <paragraph>
+        This account fits rather well with argumentation-based logics for defeasible reasoning (see, for example, the rule-exception structures discussed above in Section 2.6). The idea is that a burden of persuasion for a claim is fulfilled if at the end of a proceeding the claim is sceptically acceptable according to the argumentation logic applied to the then available evidence [137]. However, there is a complication, namely, the possibility that the burden of persuasion is distributed over the adversaries. The complication can best be explained in terms of [51]'s abstract argumentation frameworks. Consider again the above contract example, and consider the following arguments: {a mathematical formula}P1: A binding contract was concluded because there was an offer and acceptance (assuming there is no exception){a mathematical formula}O1: There is an exception since the offeree was insane when accepting the offer (evidence provided){a mathematical formula}P2: The offeree was not insane when accepting the offer, since (evidence provided) It seems reasonable to say that argument {a mathematical formula}O1 strictly defeats {a mathematical formula}P1, since it refutes {a mathematical formula}P1's assumption that there is no exception. Assume, furthermore, that {a mathematical formula}O1 and {a mathematical formula}P2 are regarded as equally strong (according to any suitable notion of strength). Then it seems reasonable to say that both arguments defeat each other. The resulting Dung graph is displayed in Fig. 9.
+       </paragraph>
+       <paragraph>
+        According to [51] the grounded extension is empty, while two stable-and-preferred extensions exist: one with {a mathematical formula}P1 and {a mathematical formula}P3 and one with {a mathematical formula}O1. So the plaintiff has no sceptically acceptable argument for his main claim. Yet according to the law the plaintiff wins, since the defendant has not fulfilled her burden of persuasion as regards her insanity: {a mathematical formula}O1 is also just defensible.
+       </paragraph>
+       <paragraph>
+        This is one challenge for a Dung-style approach. Another challenge is to account for the fact that different kinds of legal issues can have different standards of proof. For example, in common-law jurisdictions claims must in criminal cases be proven ‘beyond reasonable doubt’ while in civil cases usually proof ‘on the balance of probabilities’ suffices. Consider now again the killing-in-selfdefence example, and assume that the prosecutor has an argument {a mathematical formula}P1 that the accused killed, the accused has an argument {a mathematical formula}O1 that he killed in selfdefence, and the prosecutor has an argument {a mathematical formula}P2 against this argument, which is considerably stronger than its target but not strong enough to satisfy the ‘beyond reasonable doubt’ proof standard. In a Dungean account defeat is an all-or-nothing matter, so to obtain the legally correct outcome that the accused must be acquitted, in this case {a mathematical formula}O1 and {a mathematical formula}P2 must be said to defeat each other (resulting in Fig. 9). Proponents of Bayesian approaches might say that this fails to respect that defeat between evidential arguments is a matter of degree.
+       </paragraph>
+       <paragraph>
+        We have in [138] tried to meet both challenges in the context of the ASPIC{sup:+} framework. First, we made it possible to assign burdens of persuasion to claims. Then if a burden is on an exception, as in the contract example, an argument for the exception defeats its target only if it is stronger than its target: if they are equally strong, then the argument against the exception will strictly, that is, asymmetrically defeat the argument for the exception. In Fig. 9 this results in deleting the defeat arrow from {a mathematical formula}O1 to {a mathematical formula}P2 if they are equally strong, so that both {a mathematical formula}P2 and {a mathematical formula}P1 are sceptically acceptable. Second, we accepted that defeat is an all-or-nothing matter, since in the end the decision faced by a trier of fact is whether the proof standard has been met or not, which is a binary decision. Yet we accounted for differences in proof standards by allowing for different bandwidths for strict defeat. If a claim has the burden of persuasion, then an argument for the opposite can still defeat an argument for the claim if it is weaker, but how much weaker it can be is determined by the applicable standard of proof. So in our selfdefence example, if the difference in strength between {a mathematical formula}P2 and {a mathematical formula}O1 is not high enough according to the standard of proof, then they will defeat each other, resulting in Fig. 9.
+       </paragraph>
+       <paragraph>
+        An alternative approach is to give up the aim to generate Dung frameworks, as in the Carneades system of [63], [65]. In Carneades each statement can be assigned its own standard of proof. The system takes not proof burdens but proof standards as the primary concept, and encodes proof burdens with particular assignments of proof standards. A Carneades argument has a set of premises P, a set of exceptions E and a conclusion c, which is either pro or con a statement. Carneades does not assume that premises and conclusions are connected by inference rules but it does allow that arguments instantiate argument schemes. Also, all arguments are elementary, that is, they contain a single inference step; they are combined in recursive definitions of applicability of an argument and acceptability of its conclusion. In essence, an argument is applicable if (1) all its premises are given as a fact or are else an acceptable conclusion of another argument and (2), none of its exceptions is given as a fact or is an acceptable conclusion of another argument. A statement is acceptable if it satisfies its proof standard. Facts are stated by an audience, which also provides numerical weights of each argument plus thresholds for argument weights and differences in argument weights. Three of Carneades' proof standards are then defined as follows: Statement p satisfies:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         preponderance of the evidence iff there exists at least one applicable argument pro p for which the weight is greater than the weight of any applicable argument con p.
+        </list-item>
+        <list-item label="•">
+         clear-and-convincing evidence iff there is an applicable argument A pro p for which:
+        </list-item>
+        <list-item label="•">
+         beyond-reasonable-doubt iff p satisfies clear-and-convincing evidence and the maximum weight of the applicable con arguments is less than the threshold γ.
+        </list-item>
+       </list>
+       <paragraph>
+        These standards are in [138] instead encoded as different bandwidths for strict defeat for arguments that aim to fulfil a burden of persuasion. See that paper more generally for a detailed comparison of the ASPIC{sup:+} and Carneades approaches to modelling burdens and standards of proof. A question that naturally arises here but that is not addressed in this work is how numerical strengths or weights of arguments are related to probabilities.
+       </paragraph>
+      </section>
+      <section label="4.2.2">
+       <section-title>
+        Modelling presumptions
+       </section-title>
+       <paragraph>
+        Legal presumptions obligate a fact finder to draw a particular inference from a proved fact. Typical examples are a presumption that the one who possesses an object in good faith is the owner of the object, or a presumption that when a pedestrian or cyclist is injured in a collision with a car, the accident was the driver's fault. Some presumptions are rebuttable while others are irrebuttable.
+       </paragraph>
+       <paragraph>
+        The logical interpretation of (rebuttable) presumptions is less complicated than for burdens of proof but not completely trivial. In [136] we argued that presumptions are default rules or default conditionals. Many presumptions are probabilistically motivated, such as the presumption of ownership in case of possession, or the presumption that a document that looks like an affidavit is an affidavit. However, other presumptions have economic or other policy reasons. For example, the presumption that drivers are guilty of car accidents with pedestrians or cyclists is meant to make car drivers drive more responsibly. Again other presumptions are based on grounds of fairness, such as presumptions that favour parties with worse access to the evidence, for example, employees in labour disputes. This makes purely probabilistic semantics for default conditionals or even Bayesian-probabilistic approaches less obviously applicable than it would seem at first sight.
+       </paragraph>
+       <paragraph>
+        Another issue is whether a presumption always puts the burden of persuasion on the side that wants to rebut it, or just a burden of production. In [136] and [137] we argued that this is not a logical but a legal issue, since in legal practice, both types of presumptions can be found. These articles also discuss some other logical issues concerning presumptions.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Interaction
+     </section-title>
+     <paragraph>
+      Legal reasoning usually takes place in the context of a dispute between adversaries, within a prescribed legal procedure. This makes the setting inherently dynamic and multi-agent. The facts and theories are not given at the start of a case, but the adversaries advance their points of view and provide their evidence at various stages, and they accept, reject or challenge their opponent's claims when these are made. The adjudicator can during a proceeding allocate burdens of proof and rule about admissibility of evidence or arguments, before s/he decides the dispute in the end. All these things make that the quality of a legal decision not only depends on its grounds but also on how it was reached.
+     </paragraph>
+     <paragraph>
+      This idea of procedural justice has its counterpart in the idea of procedural rationality, defended by e.g. Toulmin [166] and Rescher [143]. Interestingly, these scholars were in turn inspired by the analogy with legal procedures. For example, Toulmin claimed that outside mathematics the validity of an argument does not depend on its syntactic form but on whether it can be defended in a rational dispute. According to him, the task for logicians is to find procedural rules for rational dispute and they can find such rules by drawing analogies to legal procedures [166, p. 7]. Toulmin may have overstated his case, since his plea was partly based on the defeasibility of many non-mathematical arguments, and we now know that this can be modelled with logical tools. Yet these tools are still limited in that they assume a single given knowledge base from which the defeasible inferences are drawn and do not address dynamic and multi-agent aspects of legal argument. Therefore, research has been done on embedding these logical tools in accounts of multi-agent legal interaction. Two main questions arise here: (1) How can legal procedures be designed such that fair and effective dispute resolution is promoted? (2) How can the participants in a legal procedure best choose their procedural actions?
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Models of legal procedure
+      </section-title>
+      <paragraph>
+       One of the first formal models of a legal procedure was Gordon's Pleadings Game [62], which formalised a set of procedural norms for civil pleading by a combination of a nonmonotonic logic [60] and a formal dialogue game for argumentation. The Pleadings Game was not meant to formalise an existing legal procedure but to give a “normative model of pleading, founded on first principles”, derived from Alexy's [9] discourse theory of legal argumentation. It was followed by similar work of e.g. [98], [32], [128], [130]. All this work is formally inspired by a branch of argumentation theory and philosophical logic called ‘formal dialectics’ [101], [178], which sees dialogues as games and dialogue utterances as moves in a game. A dialogue game defines the well-formed types of utterances, the conditions under which they are allowed, their effects on the ‘game board’ (usually the participants' commitments), and termination and outcome of a game. Typical utterances in such games are making, conceding, challenging or denying a claim, supporting claims with arguments, and attacking these arguments with counterarguments. Games with a third-party adjudicator (e.g. [130]) also allow for such things as allocating burdens of proof, ruling evidence inadmissible and deciding issues, plus debates about such procedural issues.
+      </paragraph>
+      <paragraph>
+       A dialogue game for a legal procedure can have various outcomes. The Pleadings Game was meant to identify the issues to be decided at trial, given what the parties had claimed, conceded, challenged and denied in the pleadings phase and what (defeasibly) follows from it. Other games (usually two-party) define the outcome in terms of whether the adversaries in the end agree on the main issue, while in [130] a three-party game is defined where in the end an adjudicator decides the dispute. An important feature of dialogue games is that their outcome depends not only on the (defeasible-) logical consequences of what has been stated by the parties, but also on other things, such as what has been conceded, challenged or denied by the opponents, and how the adjudicator has allocated the burdens of proof and ruled about admissibility of evidence or arguments.
+      </paragraph>
+      <paragraph>
+       For logically inclined AI researchers such dialogue games (which can also be found in such areas as multi-agent systems), are interesting research objects for various reasons. The above AI &amp; law work specifies its games in an informal mathematical metalanguage and is not as much concerned with investigating the properties of such games as with applying them to legal argument. An interesting approach is to formalise dialogue games in some suitable logical calculus, such as in the situation calculus in [46], the event calculus in [42] and the C+ calculus in [20]. Such a formalisation can then be used to automatically execute the protocol, for example, to inform the participants about their allowed moves or the ‘current’ state of the game, or it could be used to enable logical or automatic verification of properties, such as reachability of certain outcomes given the participants' internal knowledge bases.
+      </paragraph>
+      <paragraph>
+       Moreover, the dynamic and multi-party setting raises issues of strategy and choice, to which we now turn.
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Models of strategic choice
+      </section-title>
+      <paragraph>
+       In a dynamic multi-party setting issues of strategy and choice naturally arise but in a legal context they have so far not been much investigated. One approach is to apply game theory but this makes simplifying assumptions that often do not hold in the law. In [145] nevertheless game theory is applied to the problem of determining optimal strategies in adjudication debates (see also [156]). In such debates, a neutral third party (for example, a judge or a jury) decides at the end of the debate whether to accept the statements that the opposing parties have made during the debate, so the opposing parties must make estimates about how likely it is that the premises of their arguments will be accepted by the adjudicator. Moreover, they may have preferences over the outcome of a debate, so that optimal strategies are determined by two factors: the probability of acceptance of their arguments' premises by the adjudicator and the costs/benefits of such arguments. As the logical basis, a dynamic version of the argument game of [134] is used, in which the only allowed utterances are arguments, counterarguments and priority arguments.
+      </paragraph>
+      <paragraph>
+       In the general AI study of argumentation there is increasing attention for dynamic applications of Dung's abstract argumentation frameworks. For example, resolution-based semantics [26] allows that symmetric attack relations between arguments are turned into asymmetric ones. Such “resolutions” of attacks are similar to the adjudications between conflicting arguments by judges or juries in legal disputes. Other work [27] allows the addition or deletion of arguments with the aim to enforce a certain dialectical status of a given argument in the resulting framework. This is similar to the problem of an adversary in a legal dispute, on which arguments to move or attack in order to win. Hence at first sight this abstract work would seem to be very relevant for legal applications. However, it makes several simplifying assumptions (sometimes implicitly), which considerably reduce its legal relevance. For example, resolution-based semantics assumes that all resolutions are independent from each other but in reality resolutions may depend on each other for various reasons. For example, if resolutions are expressed by stating preference relations, then explicitly stated preferences may imply other preferences enforcing particular resolutions. Or attacks may be indirect, so that attacks that are in fact the same are duplicated in the Dung framework. Consider again the example of Section 4.1.2: any argument that successfully rebuts argument {a mathematical formula}C3 also indirectly defeats its continuations {a mathematical formula}C4, {a mathematical formula}C5 and {a mathematical formula}C8. These four defeat relations are in fact the same but in a Dung framework they appear as four different and independent defeat relations. Such dependencies are in [26], [27] not recognised, so these approaches have very limited relevance for realistic application domains such as the law. In our opinion, this kind of work would be much more significant if it were based on formalisms for structured argumentation, such as in [111] for resolution-based semantics in ASPIC{sup:+}.
+      </paragraph>
+     </section>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

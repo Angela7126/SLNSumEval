@@ -1,0 +1,349 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Smooth sparse coding via marginal regression for learning sparse representations.
+   </title>
+   <abstract>
+    We propose and analyze a novel framework for learning sparse representations based on two statistical techniques: kernel smoothing and marginal regression. The proposed approach provides a flexible framework for incorporating feature similarity or temporal information present in data sets via non-parametric kernel smoothing. We provide generalization bounds for dictionary learning using smooth sparse coding and show how the sample complexity depends on the L1 norm of kernel function used. Furthermore, we propose using marginal regression for obtaining sparse codes which significantly improves the speed and allows one to scale to large dictionary sizes easily. We demonstrate the advantages of the proposed approach, both in terms of accuracy and speed by extensive experimentation on several real data sets. In addition, we demonstrate how the proposed approach can be used for improving semi-supervised sparse coding.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Sparse coding is a popular unsupervised paradigm for learning sparse representations of data samples that are subsequently used in classification tasks. In standard sparse coding, each data sample is coded independently with respect to the dictionary. We propose a smooth alternative to traditional sparse coding that incorporates feature similarity, temporal similarity or similar user-specified similarity measures between the samples into the coding process.
+     </paragraph>
+     <paragraph>
+      The idea of smooth sparse coding is motivated by the relevance weighted likelihood principle. Our approach constructs a code that is efficient in a smooth sense and as a result leads to improved statistical accuracy over traditional sparse coding. The smoothing operation, which can be expressed as non-parametric kernel smoothing, provides a flexible framework for incorporating several types of domain information that might be available for the user. For example, in image classification, one could use: (1) kernels in feature space for encoding similarity information for images and videos and (2) kernels in time space in case of videos for incorporating temporal relationship. Apart from this, the kernel could also be used to encode similarity information in semi-supervised learning setting.
+     </paragraph>
+     <paragraph>
+      Most sparse coding training algorithms fall under the general category of alternating procedures with a convex lasso regression sub-problem. While efficient algorithms for such cases exist [17], their scalability for large dictionaries remains a challenge. We propose a novel training method for sparse coding based on marginal regression, rather than solving the traditional alternating method with lasso sub-problem. Marginal regression corresponds to performing univariate linear regression corresponding to each dimension, followed by a thresholding step to promote sparsity. For large dictionary sizes, this leads to a significant speedup compared to traditional sparse coding methods without sacrificing statistical accuracy.
+     </paragraph>
+     <paragraph>
+      Note that the notion of speedup we mention should be interpreted appropriately. There are two contributions we make: (i) the smoothing operation and (ii) the use of marginal regression updates in places of lasso updates. It should be noted that the smoothing operation requires additional computation. The source of speedup is replacing the lasso step with marginal regression step in the alternating minimization procedure. For a fair comparison, one needs to look at the performance of smooth sparse coding (or standard sparse coding) when it uses lasso updates and marginal regression updates. We report the overall timing comparison between the different methods in the experimental section for clarification.
+     </paragraph>
+     <paragraph>
+      We also develop theoretical analysis that extends the sample complexity result of [29] for dictionary learning using standard sparse coding to the smooth sparse coding case. This result specifically shows how the sample complexity depends on the {a mathematical formula}L1 norm of the kernel function used. Our contributions lead to improved classification accuracy in conjunction with significant computational speedup. Below we summarize our main contributions:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       we propose a framework based on kernel-smoothing for incorporating feature, time or other similarity information between the samples into sparse coding.
+      </list-item>
+      <list-item label="2.">
+       we provide sample complexity results for dictionary learning using smooth sparse coding.
+      </list-item>
+      <list-item label="3.">
+       we propose an efficient marginal regression training procedure for sparse coding.
+      </list-item>
+      <list-item label="4.">
+       We successfully apply the proposed method in various classification tasks and report improved performance in several situations.
+      </list-item>
+     </list>
+    </section>
+    <section label="2">
+     <section-title>
+      Related work
+     </section-title>
+     <paragraph>
+      Our approach is related to the local regression method [19], [11]. More recent related work is [21] that uses smoothing techniques in high-dimensional lasso regression in the context of temporal data. Another recent approach [34], achieves code locality by approximating data points using a linear combination of nearby basis points. The main difference is that traditional local regression techniques [19], [11], [21] do not involve basis learning. In this work, we propose to learn the basis or dictionary along with the regression coefficients locally. This could be viewed as a high dimensional generalization of low dimensional local smoothing problems with no basis learning. Here we argue that one could directly learn the basis simultaneously while using traditional local-smoothing techniques for improved performance. Furthermore, it provides a natural way to incorporate various similarity information constructed from the data samples themselves in to the sparse coding process.
+     </paragraph>
+     <paragraph>
+      In contrast to previous sparse coding papers we propose to use marginal regression for learning the regression coefficients, which results in a significant computational speedup with no loss of accuracy. Marginal regression is a relatively old technique that has recently reemerged as a computationally faster alternative to lasso regression [8]. See also [10] for a statistical comparison of lasso regression and marginal regression.
+     </paragraph>
+    </section>
+    <section label="3">
+     <section-title>
+      Smooth sparse coding
+     </section-title>
+     <paragraph>
+      Notation: We use lower case letters, for example x, to represent vectors and upper case letters, for example X, to represent matrices, in appropriately defined dimensions. We use {a mathematical formula}‖⋅‖p to represent the {a mathematical formula}Lp norm of a vector (we use mostly use {a mathematical formula}p=1,2 in this paper), {a mathematical formula}‖⋅‖F to represent the Frobenius norm of a matrix and {a mathematical formula}|f|p to represent {a mathematical formula}Lp norm of the function f defined as {a mathematical formula}(∫|f|pdμ)1/p. Data samples are denoted by subscripts, for example {a mathematical formula}{xi}i=1n corresponds to n data samples, where each sample {a mathematical formula}xi is a d-dimensional vector.
+     </paragraph>
+     <paragraph>
+      The standard sparse coding problem consists of solving the following optimization problem,{a mathematical formula} where {a mathematical formula}βi∈RK corresponds to the encoding of sample {a mathematical formula}xi with respected to the dictionary {a mathematical formula}D∈Rd×K and {a mathematical formula}dj∈Rd denotes the j-column of the dictionary matrix D. The dictionary is typically over-complete, implying that {a mathematical formula}K&gt;d.
+     </paragraph>
+     <paragraph>
+      Object recognition is a common sparse coding application where {a mathematical formula}xi corresponds to a set of features obtained from a collection of image patches, for example Scale-Invariant Feature Transform (SIFT) features [20]. The dictionary D corresponds to an alternative coding scheme that is higher dimensional than the original feature representation. The {a mathematical formula}L1 constraint promotes sparsity of the new encoding with respect to D. Thus, every sample is now encoded as a sparse vector that is of higher dimensionality than the original representation.
+     </paragraph>
+     <paragraph>
+      In some cases the data exhibits a structure that is not captured by the sparse coding setting. For example, SIFT features corresponding to samples from the same class are presumably closer to each other compared to SIFT features from other classes. Similarly in video, neighboring frames are presumably more related to each other than frames that are farther apart. In this paper we propose a mechanism to incorporate such feature similarity and temporal information into sparse coding, leading to a sparse representation with an improved statistical accuracy, for example as measured by classification accuracy.
+     </paragraph>
+     <paragraph>
+      We consider the following smooth version of the sparse coding problem:{a mathematical formula}{a mathematical formula}{a mathematical formula} where {a mathematical formula}∑j=1nw(xj,xi)=1 for all i. It is convenient to define the weight function through a smoothing kernel{a mathematical formula} where {a mathematical formula}ρ(⋅,⋅) is a distance function that captures the feature similarity, {a mathematical formula}h1 is the bandwidth, and {a mathematical formula}K1 is a smoothing kernel. Traditional sparse coding minimizes the reconstruction error of the encoded samples. Smooth sparse coding, on the other hand, minimizes the reconstruction of encoded samples with respect to their neighbors (weighted by the amount of similarity).
+     </paragraph>
+     <paragraph>
+      The smooth sparse coding setting leads to codes that represent a neighborhood rather than an individual sample and that have lower mean square reconstruction error (with respect to a given dictionary), due to lower estimation variance (see for example the standard theory of smoothed empirical process [7]). There are several possible ways to determine the weight function w. One common choice for the kernel function is the Gaussian kernel,{a mathematical formula} where bandwidth parameter {a mathematical formula}h1 is selected using cross-validation. The bandwidth may be fixed throughout the input space, or may vary in order to take advantage of non-uniform samples. Other common choices for the kernel are:{a mathematical formula} where {a mathematical formula}1{‖xj−xi‖2&lt;1} is the indicator function which evaluates to 1, when the condition inside the bracket is true. For more information about smoothing kernels, we refer the reader to [30].
+     </paragraph>
+     <paragraph>
+      The distance function {a mathematical formula}ρ(⋅,⋅) may be one of the standard distance functions, for example, based on the {a mathematical formula}Lp norm. Alternatively, {a mathematical formula}ρ(⋅,⋅) may be expressed by domain experts, learned from data before the sparse coding training, or learned jointly with the dictionary and codes during the sparse coding training.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Spatio-temporal smoothing
+      </section-title>
+      <paragraph>
+       In spatio-temporal applications, where the subscript i in the data sample {a mathematical formula}xi denotes time-stamps, we can extend the kernel to include also a term reflecting the distance between the corresponding time or space{a mathematical formula} Above, {a mathematical formula}K2 is a univariate symmetric kernel with bandwidth parameter {a mathematical formula}h2. One example is video sequences, where the kernel combines similarity of the frame features and the time-stamp.
+      </paragraph>
+      <paragraph>
+       Alternatively, the weight function can feature only the temporal component and omit the first term containing the distance function between the feature representation. A related approach for that situation, is based on the Fused lasso which penalizes the absolute difference between codes for neighboring points. The main drawback of that approach is that one needs to fit all the data points simultaneously whereas in smooth sparse coding, the coefficient learning step decomposes as n separate problems and this provides a computational advantage. Also, while fused Lasso penalty is suitable for time-series data to capture relatedness between neighboring frames, it may not be immediately suitable for other situations that the proposed smooth sparse coding method could handle.
+      </paragraph>
+      <paragraph>
+       Structured smooth sparse coding: Another straightforward extension of the proposed smooth sparse coding approach is by using structured regularizers [4], [13], [12]. For many applications, there naturally exists some known structure on the codes that could be exploited for better sparse modeling. For example, Wavelet-based decompositions lend themselves well to a tree organization because of their multi scale nature. The proposed smoothing approach to sparse coding could be extended to such scenarios as well.
+      </paragraph>
+      <paragraph>
+       Specifically, the {a mathematical formula}L1 regularizer in Eq. (3) could be replaced by any norm {a mathematical formula}R(βi) for {a mathematical formula}i=1,…,n. Some choices for the regularizer are the {a mathematical formula}(p,1)-mixed norms when the dictionary exhibits a natural grouping; tree-structured norms when the dictionary is assumed to be embedded in a tree-structure; hierarchical norms which are typically composition of several norms and graph based norms and random field norms [4], [13].
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Marginal regression for smooth sparse coding
+     </section-title>
+     <paragraph>
+      A standard algorithm for sparse coding is the alternating bi-convex minimization procedure, where one alternates between (i) optimizing for codes (with a fixed dictionary) and (ii) optimizing for dictionary (with fixed codes). Note that step (i) corresponds to regression with {a mathematical formula}L1 constraints and step (ii) corresponds to least squares with {a mathematical formula}L2 constraints. In this section we show how marginal regression could be used to obtain better codes faster (step (i)). In order to do so, we first give a brief description of the marginal regression procedure.
+     </paragraph>
+     <paragraph>
+      Marginal regression: Consider a regression model {a mathematical formula}y=Xβ+z where {a mathematical formula}y∈Rn, {a mathematical formula}β∈Rp, {a mathematical formula}X∈Rn×p with orthonormal columns (denoted by {a mathematical formula}xj), and z is the noise vector. Marginal regression proceeds as follows:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Calculate the least squares solution{a mathematical formula}
+      </list-item>
+      <list-item label="•">
+       Threshold the least-square coefficients{a mathematical formula}
+      </list-item>
+     </list>
+     <paragraph>
+      Marginal regression requires just {a mathematical formula}O(np) operations compared to {a mathematical formula}O(p3+np2), the typical complexity of lasso algorithms. When p is much larger than n, marginal regression provides two orders of speedup over Lasso based formulations. Note that in sparse coding, the speedup occurs for each iteration of the outer loop, thus enabling sparse coding for significantly larger dictionary sizes. Recent studies have suggested that marginal regression is a viable alternative for Lasso given its computational advantage over lasso. A comparison of the statistical properties of marginal regression and lasso is available in [8], [10].
+     </paragraph>
+     <paragraph>
+      Code update (step (i)): Applying marginal regression to smooth sparse coding, we obtain the following scheme. The marginal least squares coefficients are{a mathematical formula} We sort these coefficient in terms of their absolute values, and select the top s coefficients whose {a mathematical formula}L1 norm is bounded by λ:{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      We select the thresholding parameter using cross validation in each of the sparse coding iterations. Note that the same approach could be used with structured regularizers too, for example [4], [13].
+     </paragraph>
+     <paragraph>
+      Dictionary update (step (ii)): Marginal regression works well when there is minimal correlation between the different dictionary atoms. In the linear regression setting, marginal regression provides an exact solution with orthogonal data [10]. In the context of sparse coding, this corresponds to having uncorrelated or incoherent dictionaries [28]. One way to measure such incoherence is using the babel function, which bounds the maximum inner product between two different columns {a mathematical formula}di,dj:{a mathematical formula} Therefore, one can proceed by imposing conditions on the babel function, which is computationally challenging. An alternative, which leads to easier computation is by adding the term {a mathematical formula}‖DTD−IK×K‖F2 to the reconstruction objective, when optimizing over the dictionary matrix D. This leads to the following optimization problem for dictionary update step:{a mathematical formula} and {a mathematical formula}D={D∈Rd×K:‖dj‖2≤1}. The regularization term γ controls the level of incoherence enforced.
+     </paragraph>
+     <paragraph>
+      This optimization problem is of the form of minimizing a differentiable function over a closed convex set. We use the gradient projection method [3], [26] for solving the optimization problem. The gradient of the objective with respect to D at each iteration is given by{a mathematical formula} where {a mathematical formula}Bˆ=[βˆ1,…,βˆn] is the matrix of codes from the previous code update step, {a mathematical formula}X∈Rd×n is the data in matrix format. The gradient projection descent iterations are given by{a mathematical formula} where by {a mathematical formula}ΠD, we denote column-wise projection of the dictionary matrix on to the unit ball and t is the index for sub-iteration count for each dictionary update step. Specifically, for each dictionary update step, we run the gradient projected descent algorithm until convergence. Note that projection of a vector onto the {a mathematical formula}l2 ball is straightforward since we only need to rescale the vector towards the origin, i.e., normalize the vectors with length greater than 1.
+     </paragraph>
+     <paragraph>
+      Convergence to local point of gradient projection methods for minimizing a differentiable function over a convex set was analyzed in [26]. Similar guarantees could be provided for each of the dictionary update steps. A heuristic approach for dictionary update with incoherence constraint was proposed in [23] and more recently in [25], where the L-BFGS method was used for the unconstrained problem and the norm constraint was enforced at the final step. We found that the proposed gradient projected descent method performed empirically better than both these approaches. Furthermore both approaches are heuristic and do not guarantee local convergence for the dictionary update step.
+     </paragraph>
+     <paragraph>
+      Finally, a sequence of such updates corresponding to step (i) and step (ii) converges to a stationary point of the optimization problem (this can be shown using Zangwill's theorem [35]). But no provable algorithm that converges to the global minimum of the smooth sparse coding exists yet. Nevertheless, the main idea of this section is to speedup the existing alternating minimization procedure for obtaining sparse representations, by using marginal regression. We leave a detailed theoretical analysis of the individual dictionary update steps and the overall alternating procedure (for codes and dictionary) as future work.
+     </paragraph>
+    </section>
+    <section label="5">
+     <section-title>
+      Sample complexity of smooth sparse coding
+     </section-title>
+     <paragraph>
+      In this section, we analyze the sample complexity of the proposed smooth sparse coding framework. We provide uniform convergence bounds over the dictionary space and hence prove a sample complexity result for dictionary learning under smooth spare coding setting. We are mainly interested in studying how the sample complexity scales with respect to the problem parameters. We leverage the analysis for dictionary learning in the standard sparse coding setting [29] and extend it to the smooth sparse coding setting. The main difficulty for the smooth sparse coding setting is obtaining a covering number bound for an appropriately defined class of functions (see Theorem 5.1 for more details).
+     </paragraph>
+     <paragraph>
+      We begin by re-representing the smooth sparse coding problem in a convenient form for analysis. Let {a mathematical formula}x1,…,xn be independent random variables with a common probability measure {a mathematical formula}P with a density p. We denote by {a mathematical formula}Pn=n−1∑i=1nδxi the empirical measure over the n samples. Let {a mathematical formula}Kh1(⋅)=1h1K1(⋅h). With the above notations, the reconstruction error at the point x is given by{a mathematical formula} where{a mathematical formula} The empirical reconstruction error is{a mathematical formula} and its population version is{a mathematical formula}
+     </paragraph>
+     <paragraph label="Proof">
+      Our goal is to show that the sample reconstruction error is close to the true reconstruction error. Specifically, to show {a mathematical formula}EP(rλ)≤(1+κ)EPn(rλ)+ϵ where {a mathematical formula}ϵ,κ≥0, we bound the covering number of the class of functions corresponding to the reconstruction error. We assume a dictionary of bounded babel function, which holds as a result of the relaxed orthogonality constraint used in the Algorithm 1 (see also [23]). We define the set of r functions with respect to the dictionary D (assuming data lies in the unit d-dimensional ball {a mathematical formula}Sd−1) by{a mathematical formula} The following theorem bounds the covering number of the above function class. For every{a mathematical formula}ϵ&gt;0, the metric space{a mathematical formula}(Fλ,|⋅|∞)has a subset of cardinality at most{a mathematical formula}(4λ|Kh1(⋅)|1ϵ(1−γ))dK, such that every element from the class is at a distance of at most ϵ from the subset, where{a mathematical formula}|Kh1(⋅)|1=∫|Kh1(x)|dP.Let {a mathematical formula}F′λ={rλ′:Sd−1→R:D∈d×K,‖di‖2≤1}, where {a mathematical formula}rλ′(x)=minβ∈Sλ⁡‖Dβ−x‖. With this definition we note that {a mathematical formula}Fλ is just {a mathematical formula}F′λ convolved with the kernel {a mathematical formula}Kh1(⋅). By Young's inequality [7] we have,{a mathematical formula} for any {a mathematical formula}Lp integrable functions {a mathematical formula}s1 and {a mathematical formula}s2. Using this fact, we see that convolution mapping between metric spaces {a mathematical formula}F′ and {a mathematical formula}F converts {a mathematical formula}ϵ|Kh1(⋅)|1 covers into ϵ covers. From [29], we have that the class {a mathematical formula}F′λ has ϵ covers of size at most {a mathematical formula}(4λϵ(1−γ))dK. This proves the statement of the theorem.  □
+     </paragraph>
+     <paragraph>
+      The above theorem can be used in conjunction with standard statements in the literature for bounding the generalization error of empirical risk minimization algorithms based on covering numbers. We have provided the general statements in the appendix for completeness of this paper. Below, we provide generalization bounds for smooth sparse coding problem, corresponding to slow rates and fast rates.
+     </paragraph>
+     <paragraph>
+      Slow rates: When the theorem on covering numbers for the function class {a mathematical formula}Fλ (Theorem 5.1) is used along with Lemma 1 stated in the appendix (corresponding to slow rate generalization bounds) it is straightforward to obtain the following generalization bounds with slow rates for the smooth sparse coding problem.
+     </paragraph>
+     <paragraph label="Theorem 5.2">
+      Let{a mathematical formula}γ&lt;1,{a mathematical formula}λ&gt;e/4with distribution{a mathematical formula}Pon{a mathematical formula}Sd−1. Then with probability at least{a mathematical formula}1−e−tover the n samples drawn according to{a mathematical formula}P, for all the D with unit length columns and{a mathematical formula}μs(D)≤γ, we have:{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      The above theorem, establishes that the generalization error scales as {a mathematical formula}O(n−1/2) (assuming the other problem parameters are fixed). Note that the term κ is exactly zero. In the literature, this is called as slow-rate bound as one could get a much improved result, albeit only for the case when κ is strictly greater than zero, though it could taken arbitrarily close to zero.
+     </paragraph>
+     <paragraph>
+      – Fast rates: Under further assumptions ({a mathematical formula}κ&gt;0), it is possible to obtain faster rates of {a mathematical formula}O(n−1) for smooth sparse coding, similar to the ones obtained for general learning problems in [1]. It should be noted that even though the rates obtained are better, the constant in front of the empirical reconstruction error is strictly greater than one and can never be exactly one. The following theorem gives the precise statement.
+     </paragraph>
+     <paragraph label="Theorem 5.3">
+      Let{a mathematical formula}γ&lt;1,{a mathematical formula}λ&gt;e/4,{a mathematical formula}dK&gt;20and{a mathematical formula}n≥5000. Then with probability at least{a mathematical formula}1−e−t, we have for all D with unit length and{a mathematical formula}μs(D)≤γ,{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      The above theorem follows from the theorem on covering number bound (Theorem 5.1) above and Lemma 2 from the appendix. In both statements the definition of {a mathematical formula}rλ(x) differs from (1) by a square term. Note that it could be incorporated easily into the above bounds resulting in an additive factor of 2 inside the logarithm term. We are mainly interested in studying the scaling of generalization error with respect to problem parameters and the above step has no effect on that. We refer the interested reader to [29] for more details.
+     </paragraph>
+    </section>
+    <section label="6">
+     <section-title>
+      Experiments
+     </section-title>
+     <paragraph>
+      We demonstrate the advantage of the proposed approach both in terms of speedup and accuracy over standard sparse coding. A detailed description of all real-world data sets used in the experiments are given in the appendix. As discussed before, the overall optimization procedure is non-convex. The stopping criterion was chosen as follows: stop iterating when the value of the reconstruction error does not change by more than {a mathematical formula}0.001%. Though this does not guarantee convergence to a global optimum, according to the experimental results, we see that the points of convergence invariably resulted in a good local optimum as reflected by the good empirical performance. Furthermore, in all the experiments, we ran 10 iterations of the projected gradient descent algorithm for each dictionary update step. We fixed the learning rate for all iterations of gradient projection descent algorithm as {a mathematical formula}η=ηt=0.01 as it was found to perform well in the experiments. The parameters γ and λ are set for each experiment based on cross-validation (we first tuned for γ and then for λ) for classification results on training set as is done in the literature [32]. Furthermore, for each experiment, the time taken for training is also reported for comparison. In all our experiments we use the tricube kernel. We use classification accuracy (when linear SVM was used) as a measure of performance in all experiments, except for the following section on speed comparison, where we use reconstruction error. Furthermore, we use the LIBSVM [5] in our experiments and use cross-validation to set regularization parameter of SVM.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       Speed comparison
+      </section-title>
+      <paragraph>
+       We conducted synthetic experiments to examine the speedup provided by sparse coding with marginal regression. The data was generated from a 100-dimensional mixture of two Gaussian distribution that satisfies {a mathematical formula}‖μ1−μ2‖2=3 (with identity covariance matrices). The dictionary size was fixed at 1024. The number of data point was 1000.
+      </paragraph>
+      <paragraph>
+       We compare the proposed smooth sparse coding algorithm, standard sparse coding with lasso [17] and marginal regression updates respectively, with a relative reconstruction error {a mathematical formula}‖X−DˆBˆ‖F/‖X‖F convergence criterion. We experimented with 200 different values of the relative reconstruction error (all values less than 10%) and report the average time. From Table 1, we see that smooth sparse coding with marginal regression takes significantly less time to achieve a fixed reconstruction error. This is due to the fact that it takes advantage of the spatial structure and use marginal regression updates. It is worth mentioning that standard sparse coding with marginal regression, performs faster than the other two methods which uses Lasso as expected.
+      </paragraph>
+     </section>
+     <section label="6.2">
+      <section-title>
+       Experiments with kernel in feature space
+      </section-title>
+      <paragraph>
+       We conducted several experiments demonstrating the advantage of the proposed coding scheme in different settings. Concentrating on face and object recognition from static images, we evaluated the performance of the proposed approach along with standard sparse coding and LLC [34], another method for obtaining sparse features based on locality. Following [32], we used the following approach for generating sparse image representation: we densely sampled {a mathematical formula}16×16 patches from images at the pixel level on a grid with step size 8 pixels, computed SIFT features [20], and then computed the corresponding sparse codes over a 1024-size dictionary. We used max-pooling to get the final representation of the image based on the codes for the patches. Max-pooling involves taking max over each entry of the computed codes. It is motivated by the neural activation structure of the human brain and has been successfully applied in several image classification tasks [32]. The process was repeated with different randomly selected training and testing images and we report the average per-class recognition rates (together with its standard error estimate) based on one-vs-all SVM classification.
+      </paragraph>
+      <section label="6.2.1">
+       <section-title>
+        Smoothing at pixel level versus feature level
+       </section-title>
+       <paragraph>
+        In this section we investigate the performance of smooth sparse coding with pixels as features on the CMU Multi-PIE data set. We extract the patches directly on the images represented as pixels as opposed to using the SIFT features. From Table 2, Table 3, we note that the performance of smooth sparse coding directly on the pixels is not as good as smooth sparse coding with SIFT features, i.e., sparse coding performs better at pixel level than smooth sparse coding. One possible reason is that the pixels themselves might exhibit significant variations which are not captured by the smoothing operation. This observation is consistent with our intuition that smoothing only helps when there is some structure in points used for coding. Raw images might not have much discriminative information as such, but extracting SIFT features helps to get a set of points with rich structure. The proposed smooth sparse coding tries to exploit that structure by explicitly encoding the similarity.
+       </paragraph>
+      </section>
+      <section label="6.2.2">
+       <section-title>
+        Image classification
+       </section-title>
+       <paragraph>
+        We conducted image classification experiments on the CMU-Multi-PIE, 15 Scene and Caltech-101 data sets. The dictionary size was 1024. We also report the timing results for the training stage. As Table 3 indicates, our smooth sparse coding algorithm resulted in significantly higher classification accuracy than standard sparse coding and LLC. In fact, the reported performance is better than previous reported results using unsupervised sparse coding techniques [32].
+       </paragraph>
+       <paragraph>
+        Dictionary size: In order to demonstrate the use of scalability of the proposed method with respect to dictionary size, we report classification accuracy with increasing dictionary sizes using smooth sparse coding. The main advantage of the proposed marginal regression training method is that one could easily run experiments with larger dictionary sizes, which typically takes a significantly longer time for other algorithms. For both the Caltech-101 and 15-scene data set, classification accuracy increases significantly with increasing dictionary sizes as seen in Table 4.
+       </paragraph>
+      </section>
+      <section label="6.2.3">
+       <section-title>
+        Action recognition
+       </section-title>
+       <paragraph>
+        We further conducted an experiment on activity recognition from videos with the KTH action and YouTube datasets. Similar to the static image case, we follow the standard approach for generating sparse representations for videos as in [31]. We densely sample {a mathematical formula}16×16×10 blocks from the video and extract HoG-3d [15] features from the sampled blocks. We then use smooth sparse coding and max-pooling to generate the video representation (dictionary size was fixed at 1024 and cross-validation was used to select the regularization and bandwidth parameters). Previous approaches include sparse coding, vector quantization, and k-means on top of the HoG-3d feature set (see [31] for a comprehensive evaluation). As indicated by Table 5, smooth sparse coding results in higher classification accuracy than previously reported state-of-the-art and standard sparse coding on both datasets (see [31], [18] for a description of the alternative techniques).
+       </paragraph>
+      </section>
+      <section label="6.2.4">
+       <section-title>
+        Discriminatory power
+       </section-title>
+       <paragraph>
+        In this section, we describe another experiment that contrasts the codes obtained by sparse coding and smooth sparse coding in the context of a subsequent classification task. We set the dictionary size to be 1024. We first compute the codes based on patches and combine them with max-pooling to obtain the image level representation. Note that a smiler study was undertaken in [33]. We then compute the fisher discriminant score (ratio of within-class variance to between-class variance) for each dimension as a measure of discrimination power realized by the representations.
+       </paragraph>
+       <paragraph>
+        Fig. 1, graphs a histogram of the ratio of smooth sparse coding Fisher score over standard sparse coding Fisher score {a mathematical formula}R(d)=F1(d)/F2(d) for the 15-scene dataset (top) and the Youtube dataset (bottom). Note that the patches used are common for both the procedures and the features obtained are more discriminatory for smooth sparse coding. The histograms demonstrate the improved discriminatory power of smooth sparse coding over regular sparse coding.
+       </paragraph>
+      </section>
+     </section>
+     <section label="6.3">
+      <section-title>
+       Experiments using temporal smoothing
+      </section-title>
+      <paragraph>
+       In this section we describe an experiment conducted using the temporal smoothing kernel on the Youtube persons dataset. We extracted SIFT descriptors for all {a mathematical formula}16×16 patches sampled on a grid of step size 8 and used smooth sparse coding with time kernel to learn the codes and max pooling to get the final video representation. We avoided pre-processing steps such as face extraction or face tracking. The dictionary size was set at 1024. Note that in the previous action recognition video experiment, video blocks were densely sampled and used for extracting HoG-3d features. In this experiment, on the other hand, we extracted SIFT features from individual frames and used the time kernels to incorporate the temporal information into the sparse coding process.
+      </paragraph>
+      <paragraph>
+       For this case, we also compared to the more standard fused-lasso based approach [27]. Note that in fused Lasso based approach, in addition to the standard {a mathematical formula}L1 penalty, an additional {a mathematical formula}L1 penalty on the difference between the neighboring frames for each dimensions is used. This tries to enforce the assumption that in a video sequence, neighboring frames are more related to one another as compared to frames that are farther apart.
+      </paragraph>
+      <paragraph>
+       Table 6 shows that smooth sparse coding achieved higher accuracy than fused lasso and standard sparse coding. Smooth sparse coding has comparable accuracy on person recognition tasks to other methods that use face-tracking, for example [14]. Another advantage of smooth sparse coding is that it is significantly faster than sparse coding and the fused lasso.
+      </paragraph>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      Semi-supervised smooth sparse coding
+     </section-title>
+     <paragraph>
+      One of the primary difficulties in several image classification tasks is the lack of availability of labeled data. This motivated a semi-supervised learning approach for dictionary learning [22]. The motivation for such an approach is that unlabeled data from a related domain might have useful visual patterns that might be similar to the problem at hand. Hence, learning a high-level dictionary based on data from a different domain aids the classification task at hand.
+     </paragraph>
+     <paragraph>
+      We propose that the smooth sparse coding approach might be useful in this setting. The motivation is as follows: in semi-supervised learning, typically not all samples from a different data set might be useful for the task at hand. Using smooth sparse coding, one can provide more weight to the useful points more than the other points (the weights being calculated based on feature/time similarity kernel) to obtain better dictionaries and sparse representations. Other approach to handle a lower number of labeled samples include collaborative modeling or multi-task approaches which impose a shared structure on the codes for several tasks and use data from all the tasks simultaneously, for example group sparse coding [2]. The proposed approach provides an alternative when such collaborative modeling assumptions do not hold, by using relevant unlabeled data samples that might help the task at hand via appropriate weighting.
+     </paragraph>
+     <paragraph>
+      We now describe an experiment that examines the proposed smoothed sparse coding approach in the context of semi-supervised dictionary learning. We use data from both the CMU Multi-PIE dataset (session 1) and faces-on-tv dataset (treated as frames) to learn a dictionary using a feature similarity kernel. We follow the same procedure described in the previous experiments to construct the dictionary. The dictionary size was set at 1024. In the test stage we use the obtained dictionary for coding data from sessions 2, 3, 4 of the CMU-Multi-PIE data set, using smooth sparse coding. Note that semi-supervision was used only in the dictionary learning stage and the classification stage used supervised SVM.
+     </paragraph>
+     <paragraph>
+      Table 7 shows the test set error rate and compares it to standard sparse coding and LLC [34]. Smooth sparse coding achieves significantly lower test error rate than the two alternative techniques. Based on the experiments, we conclude that the smoothing approach described in this paper may be useful in cases where there is a small set of labeled data, such as semi-supervised learning.
+     </paragraph>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     <section-title>
+      Data set description
+     </section-title>
+     <section label="A.1">
+      <section-title>
+       CMU Multi-PIE face recognition
+      </section-title>
+      <paragraph>
+       The CMU Multi-PIE dataset is one of the standard data sets used for face recognition experiments. The data set contains 337 subjects across simultaneous variations in pose, expression, and illumination. We ignore the 88 subjects that were considered as outliers in [32] and used the rest of the images for our face recognition experiments. We follow [32] and use the 7 frontal extreme illuminations from session one as train set and use other 20 illuminations from Sessions 2–4 as test set.
+      </paragraph>
+     </section>
+     <section label="A.2">
+      <section-title>
+       15 scenes categorization
+      </section-title>
+      <paragraph>
+       The 15-Scenes data set [16] consists of 4485 images from 15 categories, with the number of images each category ranging from 200 to 400. The categories correspond to scenes from various settings like kitchen, living room etc.
+      </paragraph>
+     </section>
+     <section label="A.3">
+      <section-title>
+       Caltech-101 data set
+      </section-title>
+      <paragraph>
+       The Caltech-101 data set [9] consists of images from 101 classes like animals, vehicles, flowers, etc. The number of images per category varies from 30 to 800. Most images are of medium resolution ({a mathematical formula}300×300). All images are used gray-scale images. We use 30 images per category and test on the rest.
+      </paragraph>
+     </section>
+     <section label="A.4">
+      <section-title>
+       Activity recognition
+      </section-title>
+      <paragraph>
+       The KTH action dataset [24] consists of 6 human action classes. Each action is performed several times by 25 subjects and is recorded in four different scenarios. In total, the data consists of 2391 video samples. The YouTube actions data set has 11 action categories and is more complex and challenging [18]. It has 1168 video sequences of varied illumination, background, resolution etc.
+      </paragraph>
+     </section>
+     <section label="A.5">
+      <section-title>
+       Youtube person data set
+      </section-title>
+      <paragraph>
+       The YouTube person data set [14] contains 1910 sequences of 47 subjects, mostly actors/actresses and politicians, from YouTube. As most of the videos are low resolution and recorded at high compression rates, they are noisy and contain low-quality image frames.
+      </paragraph>
+     </section>
+     <section label="A.6">
+      <section-title>
+       Faces-on-TV data set
+      </section-title>
+      <paragraph>
+       The data was first used in [6]. Here we replicate the data set description from [6] for the sake of completeness. The dataset contains approximately 3,000 face images extracted from 8 episodes of the TV-show LOST, annotated with ground-truth names, along with approximately registered faces and frame information if one wants to re-extract the faces from the videos. It also contains automatically extracted names using a screenplay aligned with the video closed captions.
+      </paragraph>
+     </section>
+    </section>
+    <section label="Appendix B">
+     <section-title>
+      Generalization bounds for learning problems
+     </section-title>
+     <paragraph label="Lemma 1">
+      In this section, we reproduce the specific generalization bounds we used from the literature, for the sake of completeness. We first state the following general lemma regarding generalization error bounds with slow rates for a learning problem with given covering number bounds. see [29]Let{a mathematical formula}Qbe a function class of{a mathematical formula}[0,B]functions with covering number{a mathematical formula}(Cϵ)d&gt;eB2under{a mathematical formula}|⋅|∞norm. Then for every{a mathematical formula}t&gt;0with probability at least{a mathematical formula}1−e−t, for all{a mathematical formula}f∈Q, we have:{a mathematical formula}
+     </paragraph>
+     <paragraph label="Lemma 2">
+      Next, we state a general lemma regarding generalization error bounds with fast rates: see [29]Let{a mathematical formula}Qbe a function class of{a mathematical formula}[0,1]functions that can be covered for any{a mathematical formula}ϵ&gt;0by at most{a mathematical formula}(C/ϵ)dballs of radius ϵ in the{a mathematical formula}|⋅|∞metric, where{a mathematical formula}C≥eand{a mathematical formula}β&gt;0. Then with probability at least{a mathematical formula}1−exp⁡(−t)we have for all functions{a mathematical formula}f∈Q,{a mathematical formula}where{a mathematical formula}K(d,m,β)=2(9n+2)(d+33d)+1+(9n+2)+(d+33d)+1+12β.
+     </paragraph>
+     <paragraph>
+      Note that {a mathematical formula}K(d,m,β) is non-increasing in {a mathematical formula}d,m as a consequence of which we immediately have the following corollary, which we use in the statement of our main theorem for fast rates.
+     </paragraph>
+     <paragraph label="Corollary 1">
+      Let{a mathematical formula}Qbe as above. For{a mathematical formula}d≥20,{a mathematical formula}m≥5000and{a mathematical formula}β=0.1, we have with probability at least{a mathematical formula}1−exp⁡(−t)for all functions{a mathematical formula}f∈Q,{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      The proofs of Lemma 1 and Lemma 2 could be found in [29].
+     </paragraph>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

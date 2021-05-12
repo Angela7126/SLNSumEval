@@ -1,0 +1,1411 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>A Semiparametric Gaussian Copula Regression Modelfor Predicting Financial Risks from Earnings Calls</title>
+<!--Generated on Tue Jun 10 18:43:55 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">A Semiparametric Gaussian Copula Regression Model
+<br class="ltx_break"/>for Predicting Financial Risks from Earnings Calls</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">William Yang Wang
+<br class="ltx_break"/>School of Computer Science 
+<br class="ltx_break"/>Carnegie Mellon University 
+<br class="ltx_break"/>Pittsburgh, PA 15213 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">yww@cs.cmu.edu</span>
+&amp;Zhenhao Hua
+<br class="ltx_break"/>School of Computer Science 
+<br class="ltx_break"/>Carnegie Mellon University 
+<br class="ltx_break"/>Pittsburgh, PA 15213 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">zhua@cs.cmu.edu</span> 
+<br class="ltx_break"/>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Earnings call summarizes the financial performance of a company,
+and it is an important indicator of the future financial risks of the company.
+We quantitatively study how earnings calls are correlated with the financial risks,
+with a special focus on the financial crisis of 2009.
+In particular, we perform a text regression task: given the transcript of an earnings call,
+we predict the volatility of stock prices from the week after the call is made.
+We propose the use of <em class="ltx_emph">copula</em>: a powerful statistical framework that
+separately models the uniform marginals and their complex multivariate stochastic dependencies, while
+not requiring any prior assumptions on the distributions of the covariate and the dependent variable.
+By performing <em class="ltx_emph">probability integral transform</em>,
+our approach moves beyond the standard count-based bag-of-words models in NLP,
+and improves previous work on text regression by incorporating the correlation among local features in the form of semiparametric Gaussian copula.
+In experiments, we show that our model significantly outperforms strong linear and non-linear discriminative baselines on three datasets under various settings.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Predicting the risks of publicly listed companies is of great interests not only to the
+traders and analysts on the Wall Street, but also virtually
+anyone who has investments in the market <cite class="ltx_cite">[<a href="#bib.bib127" title="Predicting risk from financial reports with regression" class="ltx_ref">24</a>]</cite>.
+Traditionally, analysts focus on quantitative modeling
+of historical trading data.
+Today, even though earnings calls transcripts
+are abundantly available, their distinctive communicative practices <cite class="ltx_cite">[<a href="#bib.bib11" title="Earnings calls: exploring an emerging financial reporting genre" class="ltx_ref">4</a>]</cite>,
+and correlations with the financial risks,
+in particular, future stock performances <cite class="ltx_cite">[<a href="#bib.bib27" title="Earnings conference calls and stock returns: the incremental informativeness of textual tone" class="ltx_ref">35</a>]</cite>,
+are not well studied in the past.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Earnings calls are conference calls where a listed company
+discusses the financial performance. Typically, a earnings call contains two parts:
+the senior executives first
+report the operational outcomes, as well as the current financial performance,
+and then discuss their perspectives on the future of the company.
+The second part of the teleconference
+includes a question answering session where the floor will be open to investors, analysts,
+and other parties for inquiries. The question we ask is that, even though each earnings call
+has distinct styles, as well as different speakers and mixed formats, can we use earnings calls
+to predict the financial risks of the company in the limited future?</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">Given a piece of earnings call transcript,
+we investigate a semiparametric approach for automatic prediction of future financial
+risk<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>In this work, the risk is defined as the measured volatility of stock prices from the week following the earnings call teleconference. See details in Section <a href="#S5" title="5 Measuring Financial Risks ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.</span></span></span>.
+To do this, we formulate the problem as a text regression task, and
+use a Gaussian copula with probability integral transform
+to model the uniform marginals and their dependencies.
+Copula models <cite class="ltx_cite">[<a href="#bib.bib5" title="Probabilistic metric spaces" class="ltx_ref">37</a>, <a href="#bib.bib113" title="An introduction to copulas" class="ltx_ref">31</a>]</cite>
+are often used by statisticians <cite class="ltx_cite">[<a href="#bib.bib25" title="Everything you always wanted to know about copula modeling but were afraid to ask" class="ltx_ref">16</a>, <a href="#bib.bib19" title="High-dimensional semiparametric gaussian copula graphical models" class="ltx_ref">27</a>, <a href="#bib.bib110" title="Gaussian copula marginal regression" class="ltx_ref">30</a>]</cite> and economists <cite class="ltx_cite">[<a href="#bib.bib24" title="Estimation of copula-based semiparametric time series models" class="ltx_ref">7</a>]</cite> to study the bivariate and multivariate stochastic dependency
+among random variables,
+but they are very new to the machine learning <cite class="ltx_cite">[<a href="#bib.bib23" title="Copula-based kernel dependency measures" class="ltx_ref">17</a>, <a href="#bib.bib18" title="Coda: high dimensional copula discriminant analysis" class="ltx_ref">18</a>, <a href="#bib.bib22" title="Collective inference for network data with copula latent markov networks" class="ltx_ref">44</a>, <a href="#bib.bib21" title="Gaussian process vine copulas for multivariate dependence" class="ltx_ref">28</a>]</cite>
+and related communities <cite class="ltx_cite">[<a href="#bib.bib20" title="Copulas for information retrieval" class="ltx_ref">12</a>]</cite>.
+To the best of our knowledge, even though the term “copula”
+is named for the resemblance to grammatical copulas in linguistics,
+copula models have not been explored in the NLP community.
+To evaluate the performance of our approach,
+we compare with a standard squared loss linear regression baseline,
+as well as strong baselines such as linear and non-linear support vector machines (SVMs)
+that are widely used in text regression tasks.
+By varying different experimental settings on three datasets concerning different periods of the Great Recession from 2006-2013,
+we empirically show that our approach significantly outperforms the baselines by a wide margin.
+Our main contributions are:</p>
+<ul id="I1" class="ltx_itemize">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p">We are among the first to formally study transcripts of earnings calls to predict financial risks.</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p">We propose a novel semiparametric Gaussian copula model for text regression.</p>
+</div></li>
+<li id="I1.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i3.p1" class="ltx_para">
+<p class="ltx_p">Our results significantly outperform standard linear regression and strong SVM baselines.</p>
+</div></li>
+<li id="I1.i4" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i4.p1" class="ltx_para">
+<p class="ltx_p">By varying the number of dimensions of the covariates and the size of the training data, we show that the improvements over the baselines are robust across different parameter settings on three datasets.</p>
+</div></li>
+</ul>
+<p class="ltx_p">In the next section, we outline related work in modeling financial reports and text regression.
+In Section <a href="#S3" title="3 Copula Models for Text Regression ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>, the details of the semiparametric copula model are introduced.
+We then describe the dataset and dependent variable in this study, and the
+experiments are shown in Section <a href="#S6" title="6 Experiments ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>. We discuss the results and findings in Section <a href="#S7" title="7 Discussions ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>
+and then conclude in Section <a href="#S8" title="8 Conclusion ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related Work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">Fung et al. <cite class="ltx_cite">[<a href="#bib.bib12" title="Stock prediction: integrating text mining approach using real-time news" class="ltx_ref">14</a>]</cite> are among the first to study
+SVM and text mining methods in the market prediction domain,
+where they align financial news articles with multiple time series
+to simulate the 33 stocks in the Hong Kong Hang Seng Index.
+However, text regression in the financial domain have not been explored
+until recently.
+Kogan et al. <cite class="ltx_cite">[<a href="#bib.bib127" title="Predicting risk from financial reports with regression" class="ltx_ref">24</a>]</cite>
+model the SEC-mandated annual reports, and performs linear SVM regression
+with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m1" class="ltx_Math" alttext="\epsilon" display="inline"><mi>ϵ</mi></math>-insensitive loss function to predict the measured volatility.
+Another recent study <cite class="ltx_cite">[<a href="#bib.bib32" title="Financial sentiment analysis for risk prediction" class="ltx_ref">42</a>]</cite> uses exactly the same
+max-margin regression technique, but with a different focus on the financial sentiment.
+Using the same dataset, Tsai and Wang <cite class="ltx_cite">[<a href="#bib.bib16" title="Risk ranking from financial reports" class="ltx_ref">41</a>]</cite> reformulate the regression problem
+as a text ranking problem.
+Note that all these regression studies above investigate the SEC-mandated annual reports,
+which are very different from the earnings calls in many aspects such as length, format, vocabulary, and genre.
+Most recently, Xie et al. <cite class="ltx_cite">[<a href="#bib.bib28" title="Semantic frames to predict stock price movement" class="ltx_ref">45</a>]</cite> have proposed the use of
+frame-level semantic features to understand financial news, but they treat the stock movement
+prediction problem as a binary classification task.
+Broadly speaking, our work is also aligned to recent studies
+that make use of social media data to predict the stock market <cite class="ltx_cite">[<a href="#bib.bib13" title="Twitter mood predicts the stock market" class="ltx_ref">3</a>, <a href="#bib.bib14" title="Predicting stock market indicators through twitter “i hope it is not as bad as i fear”" class="ltx_ref">47</a>]</cite>.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">Despite our financial domain, our approach is more relevant
+to text regression. Traditional discriminative models, such as
+linear regression and linear SVM, have been very popular
+in various text regression tasks, such as predicting movie revenues from reviews <cite class="ltx_cite">[<a href="#bib.bib126" title="Movie reviews and revenues: an experiment in text regression" class="ltx_ref">22</a>]</cite>,
+understanding the geographic lexical variation <cite class="ltx_cite">[<a href="#bib.bib10" title="A latent variable model for geographic lexical variation" class="ltx_ref">13</a>]</cite>,
+and predicting food prices from menus <cite class="ltx_cite">[<a href="#bib.bib124" title="Word salad: relating food prices and descriptions" class="ltx_ref">5</a>]</cite>.
+The advantage of these models is that the estimation of the parameters is often simple,
+the results are easy to interpret, and the approach often yields strong performances.
+While these approaches have merits, they suffer from the problem
+of not explicitly modeling the correlations and interactions among random variables,
+which in some sense, corresponding to the impractical assumption of
+independent and identically distributed (i.i.d) of the data.
+For example, when bag-of-word-unigrams are present in the feature space,
+it is easier if one does not explicitly model the stochastic dependencies among the words,
+even though doing so might hurt the predictive power,
+while the variance from the correlations among the random variables is not explained.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Copula Models for Text Regression</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">In NLP, many statistical machine learning methods that capture the dependencies among random variables,
+including topic models <cite class="ltx_cite">[<a href="#bib.bib118" title="Latent dirichlet allocation" class="ltx_ref">2</a>, <a href="#bib.bib117" title="Correlated topic models" class="ltx_ref">25</a>, <a href="#bib.bib116" title="Historical analysis of legal opinions with a sparse mixed-effects latent variable model" class="ltx_ref">43</a>]</cite>, always have to make assumptions with the underlying
+distributions of the random variables, and make use of informative priors.
+This might be rather restricting the expressiveness of the model in some sense <cite class="ltx_cite">[<a href="#bib.bib8" title="Spherical topic models" class="ltx_ref">36</a>]</cite>.
+On the other hand, once such assumptions are removed,
+another problem arises — they might be prone to errors, and suffer from the overfitting issue.
+Therefore, coping with the tradeoff between expressiveness and overfitting, seems to be rather important in statistical
+approaches that capture stochastic dependency.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">Our proposed semiparametric copula regression model
+takes a different perspective.
+On one hand, copula models <cite class="ltx_cite">[<a href="#bib.bib113" title="An introduction to copulas" class="ltx_ref">31</a>]</cite>
+seek to explicitly model the dependency of random variables
+by separating the marginals and their correlations.
+On the other hand, it does not make use of any assumptions
+on the distributions of the random variables, yet,
+the copula model is still expressive.
+This nice property essentially allows us to fuse
+distinctive lexical, syntactic, and semantic feature sets naturally into a single compact model.</p>
+</div>
+<div id="S3.p3" class="ltx_para">
+<p class="ltx_p">From an information-theoretic point of view <cite class="ltx_cite">[<a href="#bib.bib1" title="A mathematical theory of communication" class="ltx_ref">38</a>]</cite>,
+various problems in text analytics can be formulated as
+estimating the probability mass/density functions of tokens in text.
+In NLP, many of the probabilistic text models
+work in the discrete space <cite class="ltx_cite">[<a href="#bib.bib2" title="Poisson mixtures." class="ltx_ref">9</a>, <a href="#bib.bib118" title="Latent dirichlet allocation" class="ltx_ref">2</a>]</cite>,
+but our model is different:
+since the text features are sparse, we first perform
+kernel density estimates to smooth out the zeroing items,
+and then calculate the empirical cumulative distribution function (CDF) of the random variables.
+By doing this, we are essentially performing <em class="ltx_emph">probability integral transform</em>—
+an important statistical technique that moves beyond the count-based bag-of-words feature space
+to marginal cumulative density functions space.
+Last but not least,
+by using a parametric copula, in our case, the Gaussian copula,
+we reduce the computational cost from fully nonparametric methods,
+and explicitly model the correlations among the covariate and the dependent
+variable.</p>
+</div>
+<div id="S3.p4" class="ltx_para">
+<p class="ltx_p">In this section, we first briefly look at the theoretical foundations of copulas,
+including the Sklar’s theorem.
+Then we describe the proposed semiparametric Gaussian copula text regression model.
+The algorithmic implementation of our approach is introduced
+at the end of this section.</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>The Theory of Copula</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">In the statistics literature, copula is widely known as a family of distribution function.
+The idea behind copula theory is that the cumulative distribution function (CDF)
+of a random vector can be represented in the form of uniform marginal
+cumulative distribution functions, and a copula that connects these marginal CDFs,
+which describes the correlations among the input random variables.
+However, in order to have a valid multivariate distribution function regardless of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-dimensional
+covariates, not every function can be used as a copula function.
+The central idea behind copula, therefore, can be summarize by the Sklar’s theorem
+and the corollary.</p>
+</div>
+<div id="Thmtheorem1" class="ltx_theorem ltx_theorem_theorem">
+<h6 class="ltx_title ltx_runin ltx_font_bold ltx_title_theorem"><span class="ltx_tag ltx_tag_theorem">Theorem 1</span> (Sklar’s Theorem <cite class="ltx_cite">[<a href="#bib.bib6" title="Fonctions de répartition à n dimensions et leurs marges" class="ltx_ref">39</a>]</cite>)</h6>
+<div id="Thmtheorem1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="Thmtheorem1.p1.m1" class="ltx_Math" alttext="F" display="inline"><mi>F</mi></math> be the joint cumulative distribution function of <math xmlns="http://www.w3.org/1998/Math/MathML" id="Thmtheorem1.p1.m2" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> random variables <math xmlns="http://www.w3.org/1998/Math/MathML" id="Thmtheorem1.p1.m3" class="ltx_Math" alttext="X_{1},X_{2},...,X_{n}" display="inline"><mrow><msub><mi>X</mi><mn mathvariant="normal">1</mn></msub><mo mathvariant="italic">,</mo><msub><mi>X</mi><mn mathvariant="normal">2</mn></msub><mo mathvariant="italic">,</mo><mi mathvariant="normal">…</mi><mo mathvariant="italic">,</mo><msub><mi>X</mi><mi>n</mi></msub></mrow></math>.
+Let the corresponding marginal cumulative distribution functions of the random variable be <math xmlns="http://www.w3.org/1998/Math/MathML" id="Thmtheorem1.p1.m4" class="ltx_Math" alttext="F_{1}(x_{1}),F_{2}(x_{2}),...,F_{n}(x_{n})" display="inline"><mrow><mrow><msub><mi>F</mi><mn mathvariant="normal">1</mn></msub><mo mathvariant="italic">⁢</mo><mrow><mo mathvariant="italic">(</mo><msub><mi>x</mi><mn mathvariant="normal">1</mn></msub><mo mathvariant="italic">)</mo></mrow></mrow><mo mathvariant="italic">,</mo><mrow><msub><mi>F</mi><mn mathvariant="normal">2</mn></msub><mo mathvariant="italic">⁢</mo><mrow><mo mathvariant="italic">(</mo><msub><mi>x</mi><mn mathvariant="normal">2</mn></msub><mo mathvariant="italic">)</mo></mrow></mrow><mo mathvariant="italic">,</mo><mi mathvariant="normal">…</mi><mo mathvariant="italic">,</mo><mrow><msub><mi>F</mi><mi>n</mi></msub><mo mathvariant="italic">⁢</mo><mrow><mo mathvariant="italic">(</mo><msub><mi>x</mi><mi>n</mi></msub><mo mathvariant="italic">)</mo></mrow></mrow></mrow></math>.
+Then, if the marginal functions are continuous, there exists a unique copula <math xmlns="http://www.w3.org/1998/Math/MathML" id="Thmtheorem1.p1.m5" class="ltx_Math" alttext="C" display="inline"><mi>C</mi></math>, such that</span></p>
+<table id="Sx1.EGx1" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S3.E1" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E1.m1" class="ltx_Math" alttext="\displaystyle F(x_{1},...,x_{n})=C[F_{1}(x_{1}),...,F_{n}(x_{n})]." display="inline"><mrow><mrow><mrow><mi>F</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>x</mi><mn>1</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>x</mi><mi>n</mi></msub></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mi>C</mi><mo>⁢</mo><mrow><mo>[</mo><mrow><mrow><msub><mi>F</mi><mn>1</mn></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>x</mi><mn>1</mn></msub><mo>)</mo></mrow></mrow><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mrow><msub><mi>F</mi><mi>n</mi></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>x</mi><mi>n</mi></msub><mo>)</mo></mrow></mrow></mrow><mo>]</mo></mrow></mrow></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+</div>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">Furthermore, if the distributions are continuous,
+the multivariate dependency structure and the marginals
+might be separated, and the copula can be considered
+independent of the marginals <cite class="ltx_cite">[<a href="#bib.bib125" title="Multivariate models and dependence concepts" class="ltx_ref">21</a>, <a href="#bib.bib119" title="Copula regression" class="ltx_ref">32</a>]</cite>.
+Therefore, the copula does not have requirements on the marginal distributions,
+and any arbitrary marginals can be combined and their dependency structure
+can be modeled using the copula. The inverse of Sklar’s Theorem is also true in the following:</p>
+</div>
+<div id="Thmcorollary1" class="ltx_theorem ltx_theorem_corollary">
+<h6 class="ltx_title ltx_runin ltx_font_bold ltx_title_theorem"><span class="ltx_tag ltx_tag_theorem">Corollary 1</span></h6>
+<div id="Thmcorollary1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">If there exists a copula <math xmlns="http://www.w3.org/1998/Math/MathML" id="Thmcorollary1.p1.m1" class="ltx_Math" alttext="C:(0,1)^{n}" display="inline"><mrow><mi>C</mi><mo mathvariant="normal">:</mo><msup><mrow><mo mathvariant="italic">(</mo><mrow><mn mathvariant="normal">0</mn><mo mathvariant="italic">,</mo><mn mathvariant="normal">1</mn></mrow><mo mathvariant="italic">)</mo></mrow><mi>n</mi></msup></mrow></math> and marginal cumulative distribution functions <math xmlns="http://www.w3.org/1998/Math/MathML" id="Thmcorollary1.p1.m2" class="ltx_Math" alttext="F_{1}(x_{1}),F_{2}(x_{2}),...,F_{n}(x_{n})" display="inline"><mrow><mrow><msub><mi>F</mi><mn mathvariant="normal">1</mn></msub><mo mathvariant="italic">⁢</mo><mrow><mo mathvariant="italic">(</mo><msub><mi>x</mi><mn mathvariant="normal">1</mn></msub><mo mathvariant="italic">)</mo></mrow></mrow><mo mathvariant="italic">,</mo><mrow><msub><mi>F</mi><mn mathvariant="normal">2</mn></msub><mo mathvariant="italic">⁢</mo><mrow><mo mathvariant="italic">(</mo><msub><mi>x</mi><mn mathvariant="normal">2</mn></msub><mo mathvariant="italic">)</mo></mrow></mrow><mo mathvariant="italic">,</mo><mi mathvariant="normal">…</mi><mo mathvariant="italic">,</mo><mrow><msub><mi>F</mi><mi>n</mi></msub><mo mathvariant="italic">⁢</mo><mrow><mo mathvariant="italic">(</mo><msub><mi>x</mi><mi>n</mi></msub><mo mathvariant="italic">)</mo></mrow></mrow></mrow></math>,
+then <math xmlns="http://www.w3.org/1998/Math/MathML" id="Thmcorollary1.p1.m3" class="ltx_Math" alttext="C[F_{1}(x_{1}),...,F_{n}(x_{n})]" display="inline"><mrow><mi>C</mi><mo mathvariant="italic">⁢</mo><mrow><mo mathvariant="italic">[</mo><mrow><mrow><msub><mi>F</mi><mn mathvariant="normal">1</mn></msub><mo mathvariant="italic">⁢</mo><mrow><mo mathvariant="italic">(</mo><msub><mi>x</mi><mn mathvariant="normal">1</mn></msub><mo mathvariant="italic">)</mo></mrow></mrow><mo mathvariant="italic">,</mo><mi mathvariant="normal">…</mi><mo mathvariant="italic">,</mo><mrow><msub><mi>F</mi><mi>n</mi></msub><mo mathvariant="italic">⁢</mo><mrow><mo mathvariant="italic">(</mo><msub><mi>x</mi><mi>n</mi></msub><mo mathvariant="italic">)</mo></mrow></mrow></mrow><mo mathvariant="italic">]</mo></mrow></mrow></math> defines a multivariate cumulative distribution function.</span></p>
+</div>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Semiparametric Gaussian Copula Models</h3>
+
+<div id="S3.SS2.SSSx1" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection">The Non-Parametric Estimation</h4>
+
+<div id="S3.SS2.SSSx1.p1" class="ltx_para">
+<p class="ltx_p">We formulate the copula regression model as follows. Assume we have <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx1.p1.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> random variables
+of text features <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx1.p1.m2" class="ltx_Math" alttext="X_{1},X_{2},...,X_{n}" display="inline"><mrow><msub><mi>X</mi><mn>1</mn></msub><mo>,</mo><msub><mi>X</mi><mn>2</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>X</mi><mi>n</mi></msub></mrow></math>. The problem is that text features are sparse,
+so we need to perform nonparametric kernel density estimation to smooth out the distribution of each variable.
+Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx1.p1.m3" class="ltx_Math" alttext="f_{1},f_{2},...,f_{n}" display="inline"><mrow><msub><mi>f</mi><mn>1</mn></msub><mo>,</mo><msub><mi>f</mi><mn>2</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>f</mi><mi>n</mi></msub></mrow></math> be the unknown density, we are interested in deriving the shape
+of these functions.
+Assume we have <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx1.p1.m4" class="ltx_Math" alttext="m" display="inline"><mi>m</mi></math> samples,
+the kernel density estimator can be defined as:</p>
+<table id="Sx1.EGx2" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S3.E2" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E2.m1" class="ltx_Math" alttext="\displaystyle\hat{f}_{h}(x)" display="inline"><mrow><msub><mover accent="true"><mi>f</mi><mo stretchy="false">^</mo></mover><mi>h</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E2.m2" class="ltx_Math" alttext="\displaystyle=\frac{1}{m}\sum_{i=1}^{m}K_{h}(x-x_{i})" display="inline"><mrow><mi/><mo>=</mo><mrow><mstyle displaystyle="true"><mfrac><mn>1</mn><mi>m</mi></mfrac></mstyle><mo>⁢</mo><mrow><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>m</mi></munderover></mstyle><mrow><msub><mi>K</mi><mi>h</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>-</mo><msub><mi>x</mi><mi>i</mi></msub></mrow><mo>)</mo></mrow></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+<tr id="S3.E3" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E3.m2" class="ltx_Math" alttext="\displaystyle=\frac{1}{mh}\sum_{i=1}^{m}K\Bigg(\frac{x-x_{i}}{h}\Bigg)" display="inline"><mrow><mi/><mo>=</mo><mrow><mstyle displaystyle="true"><mfrac><mn>1</mn><mrow><mi>m</mi><mo>⁢</mo><mi>h</mi></mrow></mfrac></mstyle><mo>⁢</mo><mrow><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>m</mi></munderover></mstyle><mrow><mi>K</mi><mo>⁢</mo><mrow><mo>(</mo><mstyle displaystyle="true"><mfrac><mrow><mi>x</mi><mo>-</mo><msub><mi>x</mi><mi>i</mi></msub></mrow><mi>h</mi></mfrac></mstyle><mo>)</mo></mrow></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+</table>
+<p class="ltx_p">Here, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx1.p1.m5" class="ltx_Math" alttext="K(\cdot)" display="inline"><mrow><mi>K</mi><mo>⁢</mo><mrow><mo>(</mo><mo>⋅</mo><mo>)</mo></mrow></mrow></math> is the kernel function, where in our case, we use the Box kernel<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>It is also known as the original Parzen windows <cite class="ltx_cite">[<a href="#bib.bib112" title="On estimation of a probability density function and mode" class="ltx_ref">33</a>]</cite>.</span></span></span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx1.p1.m6" class="ltx_Math" alttext="K(z)" display="inline"><mrow><mi>K</mi><mo>⁢</mo><mrow><mo>(</mo><mi>z</mi><mo>)</mo></mrow></mrow></math>:</p>
+<table id="Sx1.EGx3" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S3.E4" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E4.m1" class="ltx_Math" alttext="\displaystyle K(z)" display="inline"><mrow><mi>K</mi><mo>⁢</mo><mrow><mo>(</mo><mi>z</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E4.m2" class="ltx_Math" alttext="\displaystyle=\frac{1}{2},|z|\leq 1," display="inline"><mrow><mo>=</mo><mstyle displaystyle="true"><mfrac><mn>1</mn><mn>2</mn></mfrac></mstyle><mo>,</mo><mo>|</mo><mi>z</mi><mo>|</mo><mo>≤</mo><mn>1</mn><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(4)</span></td></tr>
+<tr id="S3.E5" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E5.m2" class="ltx_Math" alttext="\displaystyle=0,|z|&gt;1." display="inline"><mrow><mo>=</mo><mn>0</mn><mo>,</mo><mo>|</mo><mi>z</mi><mo>|</mo><mo>&gt;</mo><mn>1.</mn></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(5)</span></td></tr>
+</table>
+<p class="ltx_p">Comparing to the Gaussian kernel and other kernels,
+the Box kernel is simple, and computationally inexpensive.
+The parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx1.p1.m7" class="ltx_Math" alttext="h" display="inline"><mi>h</mi></math> is the bandwidth for smoothing<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>In our implementation,
+we use the default <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx1.p1.m8" class="ltx_Math" alttext="h" display="inline"><mi>h</mi></math> of the Box kernel in the <em class="ltx_emph">ksdensity</em> function in Matlab.</span></span></span>.</p>
+</div>
+<div id="S3.SS2.SSSx1.p2" class="ltx_para">
+<p class="ltx_p">Now, we can derive the empirical cumulative distribution functions
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx1.p2.m1" class="ltx_Math" alttext="\hat{F}_{X_{1}}(\hat{f}_{1}(X_{1})),\hat{F}_{X_{2}}(\hat{f}_{2}(X_{2})),...,%&#10;\hat{F}_{X_{n}}(\hat{f}_{n}(X_{n}))" display="inline"><mrow><mrow><msub><mover accent="true"><mi>F</mi><mo stretchy="false">^</mo></mover><msub><mi>X</mi><mn>1</mn></msub></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mover accent="true"><mi>f</mi><mo stretchy="false">^</mo></mover><mn>1</mn></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>X</mi><mn>1</mn></msub><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow><mo>,</mo><mrow><msub><mover accent="true"><mi>F</mi><mo stretchy="false">^</mo></mover><msub><mi>X</mi><mn>2</mn></msub></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mover accent="true"><mi>f</mi><mo stretchy="false">^</mo></mover><mn>2</mn></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>X</mi><mn>2</mn></msub><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mrow><msub><mover accent="true"><mi>F</mi><mo stretchy="false">^</mo></mover><msub><mi>X</mi><mi>n</mi></msub></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mover accent="true"><mi>f</mi><mo stretchy="false">^</mo></mover><mi>n</mi></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>X</mi><mi>n</mi></msub><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></mrow></math> of the smoothed covariates,
+as well as the dependent variable <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx1.p2.m2" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math> and its CDF <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx1.p2.m3" class="ltx_Math" alttext="\hat{F}_{y}(\hat{f}(y))" display="inline"><mrow><msub><mover accent="true"><mi>F</mi><mo stretchy="false">^</mo></mover><mi>y</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mover accent="true"><mi>f</mi><mo stretchy="false">^</mo></mover><mo>⁢</mo><mrow><mo>(</mo><mi>y</mi><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></math>. The
+empirical cumulative distribution functions are defined as:</p>
+<table id="Sx1.EGx4" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S3.E6" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E6.m1" class="ltx_Math" alttext="\displaystyle\hat{F}(\nu)=\frac{1}{m}\sum_{i=1}^{m}\mathbf{I}\{x_{i}\leq\nu\}" display="inline"><mrow><mover accent="true"><mi>F</mi><mo stretchy="false">^</mo></mover><mrow><mo>(</mo><mi>ν</mi><mo>)</mo></mrow><mo>=</mo><mstyle displaystyle="true"><mfrac><mn>1</mn><mi>m</mi></mfrac></mstyle><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>m</mi></munderover></mstyle><mi>𝐈</mi><mrow><mo>{</mo><msub><mi>x</mi><mi>i</mi></msub><mo>≤</mo><mi>ν</mi><mo>}</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(6)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx1.p2.m4" class="ltx_Math" alttext="\mathbf{I}\{\cdot\}" display="inline"><mrow><mi>𝐈</mi><mo>⁢</mo><mrow><mo>{</mo><mo>⋅</mo><mo>}</mo></mrow></mrow></math> is the indicator function, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx1.p2.m5" class="ltx_Math" alttext="\nu" display="inline"><mi>ν</mi></math>
+indicates the current value that we are evaluating.
+Note that the above step is also known as <em class="ltx_emph">probability integral transform</em> <cite class="ltx_cite">[<a href="#bib.bib111" title="Evaluating density forecasts" class="ltx_ref">11</a>]</cite>,
+which allows us to convert any given continuous distribution to random variables having a uniform distribution. This is of crucial importance to modeling text data:
+instead of using the classic bag-of-words representation that uses raw counts,
+we are now working with uniform marginal CDFs,
+which helps coping with the overfitting issue due to noise and data sparsity.</p>
+</div>
+</div>
+<div id="S3.SS2.SSSx2" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection">The Parametric Copula Estimation</h4>
+
+<div id="S3.SS2.SSSx2.p1" class="ltx_para">
+<p class="ltx_p">Now that we have obtained the marginals, and
+then the joint distribution can be constructed by applying the copula function that
+models the stochastic dependencies among marginal CDFs:</p>
+</div>
+<div id="S3.SS2.SSSx2.p2" class="ltx_para">
+<table id="Sx1.EGx5" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S3.E7" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E7.m2" class="ltx_Math" alttext="\displaystyle\hat{F}(\hat{f}_{1}(X_{1}),...,\hat{f}_{1}(X_{n}),\hat{f}(y))" display="inline"><mrow><mover accent="true"><mi>F</mi><mo stretchy="false">^</mo></mover><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><msub><mover accent="true"><mi>f</mi><mo stretchy="false">^</mo></mover><mn>1</mn></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>X</mi><mn>1</mn></msub><mo>)</mo></mrow></mrow><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mrow><msub><mover accent="true"><mi>f</mi><mo stretchy="false">^</mo></mover><mn>1</mn></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>X</mi><mi>n</mi></msub><mo>)</mo></mrow></mrow><mo>,</mo><mrow><mover accent="true"><mi>f</mi><mo stretchy="false">^</mo></mover><mo>⁢</mo><mrow><mo>(</mo><mi>y</mi><mo>)</mo></mrow></mrow></mrow><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(7)</span></td></tr>
+<tr id="S3.E8" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E8.m2" class="ltx_Math" alttext="\displaystyle=C[\hat{F}_{X_{1}}\big(\hat{f}_{1}(X_{1})\big),...,\hat{F}_{X_{n}%&#10;}\big(\hat{f}_{n}(X_{n})\big),\hat{F}_{y}\big(\hat{f}_{y}(y)\big)]" display="inline"><mrow><mi/><mo>=</mo><mrow><mi>C</mi><mo>⁢</mo><mrow><mo>[</mo><mrow><mrow><msub><mover accent="true"><mi>F</mi><mo stretchy="false">^</mo></mover><msub><mi>X</mi><mn>1</mn></msub></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mover accent="true"><mi>f</mi><mo stretchy="false">^</mo></mover><mn>1</mn></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>X</mi><mn>1</mn></msub><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mrow><msub><mover accent="true"><mi>F</mi><mo stretchy="false">^</mo></mover><msub><mi>X</mi><mi>n</mi></msub></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mover accent="true"><mi>f</mi><mo stretchy="false">^</mo></mover><mi>n</mi></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>X</mi><mi>n</mi></msub><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow><mo>,</mo><mrow><msub><mover accent="true"><mi>F</mi><mo stretchy="false">^</mo></mover><mi>y</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mover accent="true"><mi>f</mi><mo stretchy="false">^</mo></mover><mi>y</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>y</mi><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></mrow><mo>]</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(8)</span></td></tr>
+</table>
+<p class="ltx_p">In this work, we apply the parametric Gaussian copula to model the correlations among the text features and the label.
+Assume <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx2.p2.m1" class="ltx_Math" alttext="x_{i}" display="inline"><msub><mi>x</mi><mi>i</mi></msub></math> is the smoothed version of random variable <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx2.p2.m2" class="ltx_Math" alttext="X_{i}" display="inline"><msub><mi>X</mi><mi>i</mi></msub></math>,
+and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx2.p2.m3" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math> is the smoothed label, we have:</p>
+</div>
+<div id="S3.SS2.SSSx2.p3" class="ltx_para">
+<table id="Sx1.EGx6" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S3.E9" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E9.m2" class="ltx_Math" alttext="\displaystyle F(x_{1},...,x_{n},y)" display="inline"><mrow><mi>F</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>x</mi><mn>1</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>x</mi><mi>n</mi></msub><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(9)</span></td></tr>
+<tr id="S3.E10" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E10.m2" class="ltx_Math" alttext="\displaystyle=\Phi_{\Sigma}\Big(\Phi^{-1}[F_{x_{1}}(x_{1})],...,,\Phi^{-1}[F_{%&#10;x_{n}}(x_{n})],\Phi^{-1}[F_{y}(y)]\Big)" display="inline"><mrow><mo>=</mo><msub><mi mathvariant="normal">Φ</mi><mi mathvariant="normal">Σ</mi></msub><mrow><mo mathsize="1.5em" stretchy="false">(</mo><msup><mi mathvariant="normal">Φ</mi><mrow><mo>-</mo><mn>1</mn></mrow></msup><mrow><mo>[</mo><msub><mi>F</mi><msub><mi>x</mi><mn>1</mn></msub></msub><mrow><mo>(</mo><msub><mi>x</mi><mn>1</mn></msub><mo>)</mo></mrow><mo>]</mo></mrow><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mo>,</mo><msup><mi mathvariant="normal">Φ</mi><mrow><mo>-</mo><mn>1</mn></mrow></msup><mrow><mo>[</mo><msub><mi>F</mi><msub><mi>x</mi><mi>n</mi></msub></msub><mrow><mo>(</mo><msub><mi>x</mi><mi>n</mi></msub><mo>)</mo></mrow><mo>]</mo></mrow><mo>,</mo><msup><mi mathvariant="normal">Φ</mi><mrow><mo>-</mo><mn>1</mn></mrow></msup><mrow><mo>[</mo><msub><mi>F</mi><mi>y</mi></msub><mrow><mo>(</mo><mi>y</mi><mo>)</mo></mrow><mo>]</mo></mrow><mo mathsize="1.5em" stretchy="false">)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(10)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx2.p3.m1" class="ltx_Math" alttext="\Phi_{\Sigma}" display="inline"><msub><mi mathvariant="normal">Φ</mi><mi mathvariant="normal">Σ</mi></msub></math> is the joint cumulative distribution function of a multivariate Gaussian
+with zero mean and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx2.p3.m2" class="ltx_Math" alttext="\Sigma" display="inline"><mi mathvariant="normal">Σ</mi></math> variance.
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx2.p3.m3" class="ltx_Math" alttext="\Phi^{-1}" display="inline"><msup><mi mathvariant="normal">Φ</mi><mrow><mo>-</mo><mn>1</mn></mrow></msup></math> is the inverse CDF of a standard Gaussian.
+In this parametric part of the model, the parameter estimation boils down
+to the problem of learning the covariance matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx2.p3.m4" class="ltx_Math" alttext="\Sigma" display="inline"><mi mathvariant="normal">Σ</mi></math> of this Gaussian copula.
+In this work, we perform standard maximum likelihood estimation
+for the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx2.p3.m5" class="ltx_Math" alttext="\Sigma" display="inline"><mi mathvariant="normal">Σ</mi></math> matrix.</p>
+</div>
+<div id="S3.SS2.SSSx2.p4" class="ltx_para">
+<p class="ltx_p">To calibrate the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx2.p4.m1" class="ltx_Math" alttext="\Sigma" display="inline"><mi mathvariant="normal">Σ</mi></math> matrix, we make use of the power of randomness:
+using the initial <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx2.p4.m2" class="ltx_Math" alttext="\Sigma" display="inline"><mi mathvariant="normal">Σ</mi></math> from MLE, we generate random samples
+from the Gaussian copula, and then concatenate previously generated
+joint of Gaussian inverse marginal CDFs with the newly generated random copula numbers,
+and re-estimate using MLE to derive the final adjusted <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx2.p4.m3" class="ltx_Math" alttext="\Sigma" display="inline"><mi mathvariant="normal">Σ</mi></math>.
+Note that the final <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx2.p4.m4" class="ltx_Math" alttext="\Sigma" display="inline"><mi mathvariant="normal">Σ</mi></math> matrix has to be symmetric and positive definite.</p>
+</div>
+</div>
+<div id="S3.SS2.SSSx3" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection">Computational Complexity</h4>
+
+<div id="S3.SS2.SSSx3.p1" class="ltx_para">
+<p class="ltx_p">One important question regarding the proposed semiparametric Gaussian copula
+model is the corresponding computational complexity.
+This boils down to the estimation of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx3.p1.m1" class="ltx_Math" alttext="\hat{\Sigma}" display="inline"><mover accent="true"><mi mathvariant="normal">Σ</mi><mo stretchy="false">^</mo></mover></math> matrix <cite class="ltx_cite">[<a href="#bib.bib19" title="High-dimensional semiparametric gaussian copula graphical models" class="ltx_ref">27</a>]</cite>:
+one only needs to calculate the correlation coefficients of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx3.p1.m2" class="ltx_Math" alttext="n(n-1)/2" display="inline"><mrow><mrow><mi>n</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>n</mi><mo>-</mo><mn>1</mn></mrow><mo>)</mo></mrow></mrow><mo>/</mo><mn>2</mn></mrow></math>
+pairs of random variables. Christensen <cite class="ltx_cite">[<a href="#bib.bib3" title="Fast algorithms for the calculation of kendallâs τ" class="ltx_ref">8</a>]</cite>
+shows that sorting and balanced binary trees can be used to
+calculate the correlation coefficients with complexity of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx3.p1.m3" class="ltx_Math" alttext="O(n\log n)" display="inline"><mrow><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>n</mi><mo>⁢</mo><mrow><mi>log</mi><mo>⁡</mo><mi>n</mi></mrow></mrow><mo>)</mo></mrow></mrow></math>.
+Therefore, the computational complexity of MLE for the proposed model
+is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx3.p1.m4" class="ltx_Math" alttext="O(n\log n)" display="inline"><mrow><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>n</mi><mo>⁢</mo><mrow><mi>log</mi><mo>⁡</mo><mi>n</mi></mrow></mrow><mo>)</mo></mrow></mrow></math>.</p>
+</div>
+</div>
+<div id="S3.SS2.SSSx4" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection">Efficient Approximate Inference</h4>
+
+<div id="S3.SS2.SSSx4.p1" class="ltx_para">
+<p class="ltx_p">In this regression task, in order to perform exact inference of the conditional probability distribution <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx4.p1.m1" class="ltx_Math" alttext="p(F_{y}(y)|F_{x_{1}}(x_{1}),...,F_{x_{n}}(x_{n}))" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><msub><mi>F</mi><mi>y</mi></msub><mrow><mo>(</mo><mi>y</mi><mo>)</mo></mrow><mo>|</mo><msub><mi>F</mi><msub><mi>x</mi><mn>1</mn></msub></msub><mrow><mo>(</mo><msub><mi>x</mi><mn>1</mn></msub><mo>)</mo></mrow><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>F</mi><msub><mi>x</mi><mi>n</mi></msub></msub><mrow><mo>(</mo><msub><mi>x</mi><mi>n</mi></msub><mo>)</mo></mrow><mo>)</mo></mrow></mrow></math>, one needs to solve the mean response <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx4.p1.m2" class="ltx_Math" alttext="\hat{\mathbf{E}}(F_{y}(y)|F_{x_{1}}(x_{1}),...,F_{x_{1}}(x_{1}))" display="inline"><mrow><mover accent="true"><mi>𝐄</mi><mo stretchy="false">^</mo></mover><mrow><mo>(</mo><msub><mi>F</mi><mi>y</mi></msub><mrow><mo>(</mo><mi>y</mi><mo>)</mo></mrow><mo>|</mo><msub><mi>F</mi><msub><mi>x</mi><mn>1</mn></msub></msub><mrow><mo>(</mo><msub><mi>x</mi><mn>1</mn></msub><mo>)</mo></mrow><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>F</mi><msub><mi>x</mi><mn>1</mn></msub></msub><mrow><mo>(</mo><msub><mi>x</mi><mn>1</mn></msub><mo>)</mo></mrow><mo>)</mo></mrow></mrow></math>
+from a joint distribution of high-dimensional Gaussian copula.</p>
+</div>
+<div id="S3.SS2.SSSx4.p2" class="ltx_para">
+<p class="ltx_p">Assume in the simple bivariate case of Gaussian copula regression,
+the covariance matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx4.p2.m1" class="ltx_Math" alttext="\Sigma" display="inline"><mi mathvariant="normal">Σ</mi></math> is:</p>
+<table id="S3.Ex1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex1.m1" class="ltx_Math" alttext="\Sigma=\left[\begin{array}[]{cc}\Sigma_{11}&amp;\Sigma_{12}\\&#10;&amp;\Sigma_{22}\\&#10;\end{array}\right]" display="block"><mrow><mi mathvariant="normal">Σ</mi><mo>=</mo><mrow><mo>[</mo><mtable align="center" columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="center"><msub><mi mathvariant="normal">Σ</mi><mn>11</mn></msub></mtd><mtd columnalign="center"><msub><mi mathvariant="normal">Σ</mi><mn>12</mn></msub></mtd></mtr><mtr><mtd/><mtd columnalign="center"><msub><mi mathvariant="normal">Σ</mi><mn>22</mn></msub></mtd></mtr></mtable><mo>]</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">We can easily derive the conditional density that can be used to calculate
+the expected value of the CDF of the label:</p>
+<table id="Sx1.EGx7" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S3.E11" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E11.m1" class="ltx_Math" alttext="\displaystyle\begin{split}C(F_{y}(y)|F_{x_{1}}(x_{1});\Sigma)=\frac{1}{|\Sigma%&#10;_{22}-\Sigma_{12}^{T}\Sigma_{11}^{-1}\Sigma_{12}|^{\frac{1}{2}}}\\&#10;\exp\Bigg(-\frac{1}{2}\delta^{T}\bigg([\Sigma_{22}-\Sigma_{12}^{T}\Sigma_{11}^%&#10;{-1}\Sigma_{12}]^{-1}-\mathbf{I}\bigg)\delta\Bigg)\end{split}" display="inline"><mrow><mi>C</mi><mrow><mo>(</mo><msub><mi>F</mi><mi>y</mi></msub><mrow><mo>(</mo><mi>y</mi><mo>)</mo></mrow><mo>|</mo><msub><mi>F</mi><msub><mi>x</mi><mn>1</mn></msub></msub><mrow><mo>(</mo><msub><mi>x</mi><mn>1</mn></msub><mo>)</mo></mrow><mo>;</mo><mi mathvariant="normal">Σ</mi><mo>)</mo></mrow><mo>=</mo><mstyle displaystyle="true"><mfrac><mn>1</mn><msup><mrow><mo fence="true">|</mo><mrow><msub><mi mathvariant="normal">Σ</mi><mn>22</mn></msub><mo>-</mo><mrow><msubsup><mi mathvariant="normal">Σ</mi><mn>12</mn><mi>T</mi></msubsup><mo>⁢</mo><msubsup><mi mathvariant="normal">Σ</mi><mn>11</mn><mrow><mo>-</mo><mn>1</mn></mrow></msubsup><mo>⁢</mo><msub><mi mathvariant="normal">Σ</mi><mn>12</mn></msub></mrow></mrow><mo fence="true">|</mo></mrow><mfrac><mn>1</mn><mn>2</mn></mfrac></msup></mfrac></mstyle><mi>exp</mi><mrow><mo mathsize="2.5em" stretchy="false">(</mo><mo>-</mo><mstyle displaystyle="true"><mfrac><mn>1</mn><mn>2</mn></mfrac></mstyle><msup><mi>δ</mi><mi>T</mi></msup><mrow><mo mathsize="2.0em" stretchy="false">(</mo><msup><mrow><mo>[</mo><msub><mi mathvariant="normal">Σ</mi><mn>22</mn></msub><mo>-</mo><msubsup><mi mathvariant="normal">Σ</mi><mn>12</mn><mi>T</mi></msubsup><msubsup><mi mathvariant="normal">Σ</mi><mn>11</mn><mrow><mo>-</mo><mn>1</mn></mrow></msubsup><msub><mi mathvariant="normal">Σ</mi><mn>12</mn></msub><mo>]</mo></mrow><mrow><mo>-</mo><mn>1</mn></mrow></msup><mo>-</mo><mi>𝐈</mi><mo mathsize="2.0em" stretchy="false">)</mo></mrow><mi>δ</mi><mo mathsize="2.5em" stretchy="false">)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(11)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx4.p2.m2" class="ltx_Math" alttext="\delta=\Phi^{-1}[F_{y}(y)]-\Sigma_{12}^{T}\Sigma_{11}^{-1}\Phi^{-1}[F_{x_{1}}(%&#10;x_{1})]" display="inline"><mrow><mi>δ</mi><mo>=</mo><mrow><mrow><msup><mi mathvariant="normal">Φ</mi><mrow><mo>-</mo><mn>1</mn></mrow></msup><mo>⁢</mo><mrow><mo>[</mo><mrow><msub><mi>F</mi><mi>y</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>y</mi><mo>)</mo></mrow></mrow><mo>]</mo></mrow></mrow><mo>-</mo><mrow><msubsup><mi mathvariant="normal">Σ</mi><mn>12</mn><mi>T</mi></msubsup><mo>⁢</mo><msubsup><mi mathvariant="normal">Σ</mi><mn>11</mn><mrow><mo>-</mo><mn>1</mn></mrow></msubsup><mo>⁢</mo><msup><mi mathvariant="normal">Φ</mi><mrow><mo>-</mo><mn>1</mn></mrow></msup><mo>⁢</mo><mrow><mo>[</mo><mrow><msub><mi>F</mi><msub><mi>x</mi><mn>1</mn></msub></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>x</mi><mn>1</mn></msub><mo>)</mo></mrow></mrow><mo>]</mo></mrow></mrow></mrow></mrow></math>.</p>
+</div>
+<div id="S3.SS2.SSSx4.p3" class="ltx_para">
+<p class="ltx_p">Unfortunately, the exact inference can be intractable in the multivariate case, and
+approximate inference, such as Markov Chain Monte Carlo sampling <cite class="ltx_cite">[<a href="#bib.bib9" title="Sampling-based approaches to calculating marginal densities" class="ltx_ref">15</a>, <a href="#bib.bib109" title="Efficient bayesian inference for gaussian copula regression models" class="ltx_ref">34</a>]</cite> is often used for posterior inference.
+In this work, we propose an efficient sampling method to derive <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx4.p3.m1" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math> given the text features —
+we sample <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx4.p3.m2" class="ltx_Math" alttext="F_{y}(y)" display="inline"><mrow><msub><mi>F</mi><mi>y</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>y</mi><mo>)</mo></mrow></mrow></math> s.t. it maximizes the joint high-dimensional Gaussian copula density:</p>
+</div>
+<div id="S3.SS2.SSSx4.p4" class="ltx_para">
+<table id="Sx1.EGx8" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S3.E12" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E12.m1" class="ltx_Math" alttext="\displaystyle\begin{split}&amp;\hat{F_{y}(y)}\approx\operatorname*{arg\,max}_{F_{y%&#10;}(y)\in(0,1)}\frac{1}{\sqrt{\det{\Sigma}}}\exp\left(-\frac{1}{2}\Delta^{T}%&#10;\cdot\left(\Sigma^{-1}-\mathbf{I}\right)\cdot\Delta\right)\end{split}" display="inline"><mrow><mover accent="true"><mrow><msub><mi>F</mi><mi>y</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>y</mi><mo>)</mo></mrow></mrow><mo stretchy="false">^</mo></mover><mo>≈</mo><mrow><msub><mrow><mpadded width="+1.7pt"><mi>arg</mi></mpadded><mo>⁢</mo><mi>max</mi></mrow><mrow><mrow><msub><mi>F</mi><mi>y</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>y</mi><mo>)</mo></mrow></mrow><mo>∈</mo><mrow><mo>(</mo><mrow><mn>0</mn><mo>,</mo><mn>1</mn></mrow><mo>)</mo></mrow></mrow></msub><mo>⁡</mo><mrow><mstyle displaystyle="true"><mfrac><mn>1</mn><msqrt><mrow><mo>det</mo><mo>⁡</mo><mi mathvariant="normal">Σ</mi></mrow></msqrt></mfrac></mstyle><mo>⁢</mo><mrow><mi>exp</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><mo>-</mo><mrow><mrow><mstyle displaystyle="true"><mfrac><mn>1</mn><mn>2</mn></mfrac></mstyle><mo>⁢</mo><msup><mi mathvariant="normal">Δ</mi><mi>T</mi></msup></mrow><mo>⋅</mo><mrow><mo>(</mo><mrow><msup><mi mathvariant="normal">Σ</mi><mrow><mo>-</mo><mn>1</mn></mrow></msup><mo>-</mo><mi>𝐈</mi></mrow><mo>)</mo></mrow><mo>⋅</mo><mi mathvariant="normal">Δ</mi></mrow></mrow><mo>)</mo></mrow></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(12)</span></td></tr>
+</table>
+<p class="ltx_p">where</p>
+<table id="S3.Ex2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex2.m1" class="ltx_Math" alttext="\Delta=\begin{pmatrix}\Phi^{-1}(F_{x_{1}}(x_{1}))\\&#10;\vdots\\&#10;\Phi^{-1}(F_{x_{n}}(x_{n}))\\&#10;\Phi^{-1}(F_{y}(y))\end{pmatrix}" display="block"><mrow><mi mathvariant="normal">Δ</mi><mo>=</mo><mrow><mo>(</mo><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="center"><mrow><msup><mi mathvariant="normal">Φ</mi><mrow><mo>-</mo><mn>1</mn></mrow></msup><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>F</mi><msub><mi>x</mi><mn>1</mn></msub></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>x</mi><mn>1</mn></msub><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></mtd></mtr><mtr><mtd columnalign="center"><mi mathvariant="normal">⋮</mi></mtd></mtr><mtr><mtd columnalign="center"><mrow><msup><mi mathvariant="normal">Φ</mi><mrow><mo>-</mo><mn>1</mn></mrow></msup><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>F</mi><msub><mi>x</mi><mi>n</mi></msub></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>x</mi><mi>n</mi></msub><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></mtd></mtr><mtr><mtd columnalign="center"><mrow><msup><mi mathvariant="normal">Φ</mi><mrow><mo>-</mo><mn>1</mn></mrow></msup><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>F</mi><mi>y</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>y</mi><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></mtd></mtr></mtable><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S3.SS2.SSSx4.p5" class="ltx_para">
+<p class="ltx_p">Again, the reason why we perform approximated inference
+is that: exact inference in the high-dimensional Gaussian copula density is non-trivial,
+and might not have analytical solutions,
+but approximate inference using maximum density sampling from the Gaussian copula
+significantly relaxes the complexity of inference.
+Finally, to derive <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx4.p5.m1" class="ltx_Math" alttext="\hat{y}" display="inline"><mover accent="true"><mi>y</mi><mo stretchy="false">^</mo></mover></math>, the last step is to compute the inverse CDF of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx4.p5.m2" class="ltx_Math" alttext="\hat{F_{y}(y)}" display="inline"><mover accent="true"><mrow><msub><mi>F</mi><mi>y</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mi>y</mi><mo>)</mo></mrow></mrow><mo stretchy="false">^</mo></mover></math>.</p>
+</div>
+</div>
+</div>
+<div id="S3.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.3 </span>Algorithmic Implementation</h3>
+
+<div id="S3.SS3.p1" class="ltx_para">
+<p class="ltx_p">The algorithmic implementation of our semiparametric
+Gaussian copula text regression model is shown in Algorithm <a href="#S3.SS3" title="3.3 Algorithmic Implementation ‣ 3 Copula Models for Text Regression ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>.
+Basically, the algorithm can be decomposed into four parts:</p>
+<ul id="I2" class="ltx_itemize">
+<li id="I2.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i1.p1" class="ltx_para">
+<p class="ltx_p">Perform nonparametric Box kernel density estimates of the covariates and the dependent variable for smoothing.</p>
+</div></li>
+<li id="I2.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i2.p1" class="ltx_para">
+<p class="ltx_p">Calculate the empirical cumulative distribution functions of the smoothed random variables.</p>
+</div></li>
+<li id="I2.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i3.p1" class="ltx_para">
+<p class="ltx_p">Estimate the parameters (covariance <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i3.p1.m1" class="ltx_Math" alttext="\Sigma" display="inline"><mi mathvariant="normal">Σ</mi></math>) of the Gaussian copula.</p>
+</div></li>
+<li id="I2.i4" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i4.p1" class="ltx_para">
+<p class="ltx_p">Infer the predicted value of the dependent variable by sampling the Gaussian copula probability density function.</p>
+</div></li>
+</ul>
+</div><span class="ltx_ERROR undefined">{algorithm}</span>
+<div id="S3.SS3.p2" class="ltx_para">
+<p class="ltx_p">[t]
+<span class="ltx_text ltx_font_small">
+<span class="ltx_text ltx_caption">A Semi-parametric Gaussian Copula Model Based Text Regression Algorithm</span> 
+<span class="ltx_ERROR undefined">{algorithmic}</span>
+<span class="ltx_ERROR undefined">\STATE</span>Given:
+<span class="ltx_ERROR undefined">\STATE</span>(1) training data (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m1" class="ltx_Math" alttext="X^{(tr)}" display="inline"><msup><mi mathsize="normal" stretchy="false">X</mi><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">r</mi></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></msup></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m2" class="ltx_Math" alttext="\vec{y}^{(tr)}" display="inline"><msup><mover accent="true"><mi mathsize="normal" stretchy="false">y</mi><mo mathsize="normal" stretchy="false">→</mo></mover><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">r</mi></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></msup></math>);
+<span class="ltx_ERROR undefined">\STATE</span>(2) testing data (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m3" class="ltx_Math" alttext="X^{(te)}" display="inline"><msup><mi mathsize="normal" stretchy="false">X</mi><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">e</mi></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></msup></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m4" class="ltx_Math" alttext="\vec{y}^{(te)}" display="inline"><msup><mover accent="true"><mi mathsize="normal" stretchy="false">y</mi><mo mathsize="normal" stretchy="false">→</mo></mover><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">e</mi></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></msup></math>);
+<span class="ltx_ERROR undefined">\STATE</span><span class="ltx_ERROR undefined">\STATE</span>Learning:
+<span class="ltx_ERROR undefined">\FOR</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m5" class="ltx_Math" alttext="i=1\to n" display="inline"><mrow><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="normal" stretchy="false">=</mo><mn mathsize="normal" stretchy="false">1</mn><mo mathsize="normal" stretchy="false">→</mo><mi mathsize="normal" stretchy="false">n</mi></mrow></math> dimensions
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m6" class="ltx_Math" alttext="X_{i}^{(tr)^{\prime}}\leftarrow BoxKDE(X_{i}^{(tr)},X_{i}^{(tr)}" display="inline"><mrow><msubsup><mi mathsize="normal" stretchy="false">X</mi><mi mathsize="normal" stretchy="false">i</mi><msup><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">r</mi></mrow><mo mathsize="small" stretchy="false">)</mo></mrow><mo mathsize="normal" stretchy="false">′</mo></msup></msubsup><mo mathsize="normal" stretchy="false">←</mo><mi mathsize="normal" stretchy="false">B</mi><mi mathsize="normal" stretchy="false">o</mi><mi mathsize="normal" stretchy="false">x</mi><mi mathsize="normal" stretchy="false">K</mi><mi mathsize="normal" stretchy="false">D</mi><mi mathsize="normal" stretchy="false">E</mi><mrow><mo mathsize="normal" stretchy="false">(</mo><msubsup><mi mathsize="normal" stretchy="false">X</mi><mi mathsize="normal" stretchy="false">i</mi><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">r</mi></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></msubsup><mo mathsize="normal" stretchy="false">,</mo><msubsup><mi mathsize="normal" stretchy="false">X</mi><mi mathsize="normal" stretchy="false">i</mi><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">r</mi></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></msubsup></mrow></mrow></math>);
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m7" class="ltx_Math" alttext="U_{i}^{(tr)}\leftarrow EmpiricalCDF(X_{i}^{(tr)^{\prime}})" display="inline"><mrow><msubsup><mi mathsize="normal" stretchy="false">U</mi><mi mathsize="normal" stretchy="false">i</mi><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">r</mi></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></msubsup><mo mathsize="normal" stretchy="false">←</mo><mrow><mi mathsize="normal" stretchy="false">E</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">m</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">p</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">r</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">c</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">a</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">l</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">C</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">D</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">F</mi><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo mathsize="small" stretchy="false">(</mo><msubsup><mi mathsize="normal" stretchy="false">X</mi><mi mathsize="normal" stretchy="false">i</mi><msup><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">r</mi></mrow><mo mathsize="small" stretchy="false">)</mo></mrow><mo mathsize="normal" stretchy="false">′</mo></msup></msubsup><mo mathsize="small" stretchy="false">)</mo></mrow></mrow></mrow></math>;
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m8" class="ltx_Math" alttext="X_{i}^{(te)^{\prime}}\leftarrow BoxKDE(X_{i}^{(tr)},X_{i}^{(te)}" display="inline"><mrow><msubsup><mi mathsize="normal" stretchy="false">X</mi><mi mathsize="normal" stretchy="false">i</mi><msup><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">e</mi></mrow><mo mathsize="small" stretchy="false">)</mo></mrow><mo mathsize="normal" stretchy="false">′</mo></msup></msubsup><mo mathsize="normal" stretchy="false">←</mo><mi mathsize="normal" stretchy="false">B</mi><mi mathsize="normal" stretchy="false">o</mi><mi mathsize="normal" stretchy="false">x</mi><mi mathsize="normal" stretchy="false">K</mi><mi mathsize="normal" stretchy="false">D</mi><mi mathsize="normal" stretchy="false">E</mi><mrow><mo mathsize="normal" stretchy="false">(</mo><msubsup><mi mathsize="normal" stretchy="false">X</mi><mi mathsize="normal" stretchy="false">i</mi><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">r</mi></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></msubsup><mo mathsize="normal" stretchy="false">,</mo><msubsup><mi mathsize="normal" stretchy="false">X</mi><mi mathsize="normal" stretchy="false">i</mi><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">e</mi></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></msubsup></mrow></mrow></math>);
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m9" class="ltx_Math" alttext="U_{i}^{(te)}\leftarrow EmpiricalCDF(X_{i}^{(te)^{\prime}})" display="inline"><mrow><msubsup><mi mathsize="normal" stretchy="false">U</mi><mi mathsize="normal" stretchy="false">i</mi><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">e</mi></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></msubsup><mo mathsize="normal" stretchy="false">←</mo><mrow><mi mathsize="normal" stretchy="false">E</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">m</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">p</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">r</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">c</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">a</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">l</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">C</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">D</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">F</mi><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo mathsize="small" stretchy="false">(</mo><msubsup><mi mathsize="normal" stretchy="false">X</mi><mi mathsize="normal" stretchy="false">i</mi><msup><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">e</mi></mrow><mo mathsize="small" stretchy="false">)</mo></mrow><mo mathsize="normal" stretchy="false">′</mo></msup></msubsup><mo mathsize="small" stretchy="false">)</mo></mrow></mrow></mrow></math>;
+<span class="ltx_ERROR undefined">\ENDFOR</span><span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m10" class="ltx_Math" alttext="y^{(tr)^{\prime}}\leftarrow BoxKDE(y^{(tr)},y^{(tr)}" display="inline"><mrow><msup><mi mathsize="normal" stretchy="false">y</mi><msup><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">r</mi></mrow><mo mathsize="small" stretchy="false">)</mo></mrow><mo mathsize="normal" stretchy="false">′</mo></msup></msup><mo mathsize="normal" stretchy="false">←</mo><mi mathsize="normal" stretchy="false">B</mi><mi mathsize="normal" stretchy="false">o</mi><mi mathsize="normal" stretchy="false">x</mi><mi mathsize="normal" stretchy="false">K</mi><mi mathsize="normal" stretchy="false">D</mi><mi mathsize="normal" stretchy="false">E</mi><mrow><mo mathsize="normal" stretchy="false">(</mo><msup><mi mathsize="normal" stretchy="false">y</mi><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">r</mi></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></msup><mo mathsize="normal" stretchy="false">,</mo><msup><mi mathsize="normal" stretchy="false">y</mi><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">r</mi></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></msup></mrow></mrow></math>);
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m11" class="ltx_Math" alttext="v^{(tr)}\leftarrow EmpiricalCDF(y^{(tr)^{\prime}})" display="inline"><mrow><msup><mi mathsize="normal" stretchy="false">v</mi><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">r</mi></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></msup><mo mathsize="normal" stretchy="false">←</mo><mrow><mi mathsize="normal" stretchy="false">E</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">m</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">p</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">r</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">c</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">a</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">l</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">C</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">D</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">F</mi><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo mathsize="small" stretchy="false">(</mo><msup><mi mathsize="normal" stretchy="false">y</mi><msup><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">r</mi></mrow><mo mathsize="small" stretchy="false">)</mo></mrow><mo mathsize="normal" stretchy="false">′</mo></msup></msup><mo mathsize="small" stretchy="false">)</mo></mrow></mrow></mrow></math>;
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m12" class="ltx_Math" alttext="Z^{(tr)}\leftarrow GaussianInverseCDF([U^{(tr)}\,v^{(tr)}])" display="inline"><mrow><msup><mi mathsize="normal" stretchy="false">Z</mi><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">r</mi></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></msup><mo mathsize="normal" stretchy="false">←</mo><mrow><mi mathsize="normal" stretchy="false">G</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">a</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">u</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">s</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">s</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">a</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">n</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">I</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">n</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">v</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">e</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">r</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">s</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">e</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">C</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">D</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">F</mi><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo fence="true" mathsize="small" stretchy="false">([</mo><mrow><mpadded width="+1.7pt"><msup><mi mathsize="normal" stretchy="false">U</mi><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">r</mi></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></msup></mpadded><mo mathsize="small" stretchy="false">⁢</mo><msup><mi mathsize="normal" stretchy="false">v</mi><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">r</mi></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></msup></mrow><mo fence="true" mathsize="small" stretchy="false">])</mo></mrow></mrow></mrow></math>;
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m13" class="ltx_Math" alttext="\hat{\Sigma}\leftarrow CorrelationCoefficients(Z^{(tr)})" display="inline"><mrow><mover accent="true"><mi mathsize="normal" mathvariant="normal" stretchy="false">Σ</mi><mo mathsize="normal" stretchy="false">^</mo></mover><mo mathsize="normal" stretchy="false">←</mo><mrow><mi mathsize="normal" stretchy="false">C</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">o</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">r</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">r</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">e</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">l</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">a</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">o</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">n</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">C</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">o</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">e</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">f</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">f</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">c</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">e</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">n</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">s</mi><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo mathsize="small" stretchy="false">(</mo><msup><mi mathsize="normal" stretchy="false">Z</mi><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">r</mi></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></msup><mo mathsize="small" stretchy="false">)</mo></mrow></mrow></mrow></math>;
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m14" class="ltx_Math" alttext="r\leftarrow MultiVariateGaussianRandNum(0,\hat{\Sigma},n);" display="inline"><mrow><mrow><mi mathsize="normal" stretchy="false">r</mi><mo mathsize="normal" stretchy="false">←</mo><mrow><mi mathsize="normal" stretchy="false">M</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">u</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">l</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">V</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">a</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">r</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">a</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">e</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">G</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">a</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">u</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">s</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">s</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">a</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">n</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">R</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">a</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">n</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">d</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">N</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">u</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">m</mi><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><mn mathsize="normal" stretchy="false">0</mn><mo mathsize="small" stretchy="false">,</mo><mover accent="true"><mi mathsize="normal" mathvariant="normal" stretchy="false">Σ</mi><mo mathsize="normal" stretchy="false">^</mo></mover><mo mathsize="small" stretchy="false">,</mo><mi mathsize="normal" stretchy="false">n</mi></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></mrow></mrow><mo mathsize="small" stretchy="false">;</mo></mrow></math>
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m15" class="ltx_Math" alttext="Z^{(tr)^{\prime}}=GaussianCDF(r)" display="inline"><mrow><msup><mi mathsize="normal" stretchy="false">Z</mi><msup><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">r</mi></mrow><mo mathsize="small" stretchy="false">)</mo></mrow><mo mathsize="normal" stretchy="false">′</mo></msup></msup><mo mathsize="normal" stretchy="false">=</mo><mrow><mi mathsize="normal" stretchy="false">G</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">a</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">u</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">s</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">s</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">a</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">n</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">C</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">D</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">F</mi><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo mathsize="small" stretchy="false">(</mo><mi mathsize="normal" stretchy="false">r</mi><mo mathsize="small" stretchy="false">)</mo></mrow></mrow></mrow></math>;
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m16" class="ltx_Math" alttext="\hat{\Sigma}\leftarrow CorrelationCoefficients([Z^{(tr)}\,Z^{(tr)^{\prime}}])" display="inline"><mrow><mover accent="true"><mi mathsize="normal" mathvariant="normal" stretchy="false">Σ</mi><mo mathsize="normal" stretchy="false">^</mo></mover><mo mathsize="normal" stretchy="false">←</mo><mrow><mi mathsize="normal" stretchy="false">C</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">o</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">r</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">r</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">e</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">l</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">a</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">o</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">n</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">C</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">o</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">e</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">f</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">f</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">c</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">e</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">n</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">s</mi><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo fence="true" mathsize="small" stretchy="false">([</mo><mrow><mpadded width="+1.7pt"><msup><mi mathsize="normal" stretchy="false">Z</mi><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">r</mi></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></msup></mpadded><mo mathsize="small" stretchy="false">⁢</mo><msup><mi mathsize="normal" stretchy="false">Z</mi><msup><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">r</mi></mrow><mo mathsize="small" stretchy="false">)</mo></mrow><mo mathsize="normal" stretchy="false">′</mo></msup></msup></mrow><mo fence="true" mathsize="small" stretchy="false">])</mo></mrow></mrow></mrow></math>;
+<span class="ltx_ERROR undefined">\STATE</span><span class="ltx_ERROR undefined">\STATE</span>Inference:
+<span class="ltx_ERROR undefined">\FOR</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m17" class="ltx_Math" alttext="j=1\to m" display="inline"><mrow><mi mathsize="normal" stretchy="false">j</mi><mo mathsize="normal" stretchy="false">=</mo><mn mathsize="normal" stretchy="false">1</mn><mo mathsize="normal" stretchy="false">→</mo><mi mathsize="normal" stretchy="false">m</mi></mrow></math> instances
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m18" class="ltx_Math" alttext="\max_{j}\leftarrow 0" display="inline"><mrow><msub><mo mathsize="normal" stretchy="false">max</mo><mi mathsize="normal" stretchy="false">j</mi></msub><mo mathsize="normal" stretchy="false">←</mo><mn mathsize="normal" stretchy="false">0</mn></mrow></math>;
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m19" class="ltx_Math" alttext="\hat{Y}^{\prime}=0" display="inline"><mrow><msup><mover accent="true"><mi mathsize="normal" stretchy="false">Y</mi><mo mathsize="normal" stretchy="false">^</mo></mover><mo mathsize="normal" stretchy="false">′</mo></msup><mo mathsize="normal" stretchy="false">=</mo><mn mathsize="normal" stretchy="false">0</mn></mrow></math>;
+<span class="ltx_ERROR undefined">\FOR</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m20" class="ltx_Math" alttext="k=0.01\to 1" display="inline"><mrow><mi mathsize="normal" stretchy="false">k</mi><mo mathsize="normal" stretchy="false">=</mo><mn mathsize="normal" stretchy="false">0.01</mn><mo mathsize="normal" stretchy="false">→</mo><mn mathsize="normal" stretchy="false">1</mn></mrow></math>
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m21" class="ltx_Math" alttext="Z^{(te)}\leftarrow GaussianInverseCDF([U^{(te)}\,k])" display="inline"><mrow><msup><mi mathsize="normal" stretchy="false">Z</mi><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">e</mi></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></msup><mo mathsize="normal" stretchy="false">←</mo><mrow><mi mathsize="normal" stretchy="false">G</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">a</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">u</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">s</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">s</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">a</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">n</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">I</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">n</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">v</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">e</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">r</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">s</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">e</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">C</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">D</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">F</mi><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo fence="true" mathsize="small" stretchy="false">([</mo><mrow><mpadded width="+1.7pt"><msup><mi mathsize="normal" stretchy="false">U</mi><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">e</mi></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></msup></mpadded><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">k</mi></mrow><mo fence="true" mathsize="small" stretchy="false">])</mo></mrow></mrow></mrow></math>;
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m22" class="ltx_Math" alttext="p_{j}=\frac{MultiVariateGaussianPDF(Z^{(te)},\hat{\Sigma})}{\prod_{n}%&#10;GaussianPDF(Z^{(te)})}" display="inline"><mrow><msub><mi mathsize="normal" stretchy="false">p</mi><mi mathsize="normal" stretchy="false">j</mi></msub><mo mathsize="normal" stretchy="false">=</mo><mfrac><mrow><mi mathsize="normal" stretchy="false">M</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">u</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">l</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">V</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">a</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">r</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">a</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">e</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">G</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">a</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">u</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">s</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">s</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">a</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">n</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">P</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">D</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">F</mi><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><msup><mi mathsize="normal" stretchy="false">Z</mi><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">e</mi></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></msup><mo mathsize="small" stretchy="false">,</mo><mover accent="true"><mi mathsize="normal" mathvariant="normal" stretchy="false">Σ</mi><mo mathsize="normal" stretchy="false">^</mo></mover></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></mrow><mrow><msub><mo largeop="true" mathsize="normal" stretchy="false" symmetric="true">∏</mo><mi mathsize="normal" stretchy="false">n</mi></msub><mrow><mi mathsize="normal" stretchy="false">G</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">a</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">u</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">s</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">s</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">a</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">n</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">P</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">D</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">F</mi><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo mathsize="small" stretchy="false">(</mo><msup><mi mathsize="normal" stretchy="false">Z</mi><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">e</mi></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></msup><mo mathsize="small" stretchy="false">)</mo></mrow></mrow></mrow></mfrac></mrow></math>;
+<span class="ltx_ERROR undefined">\IF</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m23" class="ltx_Math" alttext="p_{j}\geq\max_{j}" display="inline"><mrow><msub><mi mathsize="normal" stretchy="false">p</mi><mi mathsize="normal" stretchy="false">j</mi></msub><mo mathsize="normal" stretchy="false">≥</mo><msub><mo mathsize="normal" stretchy="false">max</mo><mi mathsize="normal" stretchy="false">j</mi></msub></mrow></math>
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m24" class="ltx_Math" alttext="\max_{j}=p_{j}" display="inline"><mrow><msub><mo mathsize="normal" stretchy="false">max</mo><mi mathsize="normal" stretchy="false">j</mi></msub><mo mathsize="normal" stretchy="false">=</mo><msub><mi mathsize="normal" stretchy="false">p</mi><mi mathsize="normal" stretchy="false">j</mi></msub></mrow></math>;
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m25" class="ltx_Math" alttext="\hat{Y}^{\prime}=k" display="inline"><mrow><msup><mover accent="true"><mi mathsize="normal" stretchy="false">Y</mi><mo mathsize="normal" stretchy="false">^</mo></mover><mo mathsize="normal" stretchy="false">′</mo></msup><mo mathsize="normal" stretchy="false">=</mo><mi mathsize="normal" stretchy="false">k</mi></mrow></math>;
+<span class="ltx_ERROR undefined">\ENDIF</span><span class="ltx_ERROR undefined">\ENDFOR</span><span class="ltx_ERROR undefined">\ENDFOR</span><span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m26" class="ltx_Math" alttext="\hat{y}\leftarrow InverseCDF(\vec{y}^{(tr)},\hat{Y}^{\prime})" display="inline"><mrow><mover accent="true"><mi mathsize="normal" stretchy="false">y</mi><mo mathsize="normal" stretchy="false">^</mo></mover><mo mathsize="normal" stretchy="false">←</mo><mrow><mi mathsize="normal" stretchy="false">I</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">n</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">v</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">e</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">r</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">s</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">e</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">C</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">D</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">F</mi><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><msup><mover accent="true"><mi mathsize="normal" stretchy="false">y</mi><mo mathsize="normal" stretchy="false">→</mo></mover><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">r</mi></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></msup><mo mathsize="small" stretchy="false">,</mo><msup><mover accent="true"><mi mathsize="normal" stretchy="false">Y</mi><mo mathsize="normal" stretchy="false">^</mo></mover><mo mathsize="normal" stretchy="false">′</mo></msup></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></mrow></mrow></math>;
+
+</span></p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Datasets</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">We use three datasets<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>http://www.cs.cmu.edu/~yww/data/earningscalls.zip</span></span></span> of transcribed quarterly earnings calls from the U.S. stock market,
+focusing on the period of the Great Recession.</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">The <em class="ltx_emph">pre-2009</em> dataset consists of earnings calls from the period of 2006-2008,
+which includes calls from the beginning of economic downturn, the outbreak of the subprime mortgage crisis,
+and the epidemic of collapses of large financial institutions.
+The <em class="ltx_emph">2009</em> dataset contains earnings calls from the year of 2009,
+which is a period where the credit crisis spreads globally,
+and the Dow Jones Industrial Average hit the lowest since the beginning
+of the millennium. The <em class="ltx_emph">post-2009</em> dataset includes earnings calls from the period of
+2010 to 2013, which concerns the recovery of global economy.
+The detailed statistics is shown in Table <a href="#S4.T1" title="Table 1 ‣ 4 Datasets ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.</p>
+</div>
+<div id="S4.p3" class="ltx_para">
+<p class="ltx_p">Note that unlike the standard news corpora in NLP
+or the SEC-mandated financial report,
+Transcripts of earnings call is a very special genre of text.
+For example, the length of WSJ documents
+is typically one to three hundreds <cite class="ltx_cite">[<a href="#bib.bib15" title="Overview of the second text retrieval conference (trec-2)" class="ltx_ref">19</a>]</cite>,
+but the averaged document length of our three earnings calls datasets is 7677.
+Depending on the amount of interactions in the question answering session,
+the complexities of the calls vary.
+This mixed form of formal statement and informal speech brought difficulties to machine learning
+algorithms.</p>
+</div>
+<div id="S4.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Dataset</span></th>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">#Calls</span></th>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">#Companies</span></th>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">#Types</span></th>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">#Tokens</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">Pre-2009</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">3694</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">2746</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">371.5K</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">28.7M</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">2009</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">3474</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">2178</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">346.2K</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">26.4M</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Post-2009</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">3726</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">2107</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">377.4K</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">28.6M</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 1: </span>Statistics of three datasets.
+<em class="ltx_emph">Types: unique words. Tokens: word tokens.</em></div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Measuring Financial Risks</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">Volatility is an important measure of the financial risk,
+and in this work, we focus on predicting the future volatility following the
+earnings teleconference call.
+For each earning call, we have a week of stock prices of the company
+after the day on which the earnings call is made.
+The <em class="ltx_emph">Return</em> of Day <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m1" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math> is:</p>
+<table id="Sx1.EGx9" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S5.E13" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.E13.m1" class="ltx_Math" alttext="\displaystyle r_{t}=\frac{x_{t}}{x_{t-1}}-1" display="inline"><mrow><msub><mi>r</mi><mi>t</mi></msub><mo>=</mo><mrow><mstyle displaystyle="true"><mfrac><msub><mi>x</mi><mi>t</mi></msub><msub><mi>x</mi><mrow><mi>t</mi><mo>-</mo><mn>1</mn></mrow></msub></mfrac></mstyle><mo>-</mo><mn>1</mn></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(13)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m2" class="ltx_Math" alttext="x_{t}" display="inline"><msub><mi>x</mi><mi>t</mi></msub></math> represents the share price of Day <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m3" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math>, and the
+<em class="ltx_emph">Measured Stock Volatility</em> from Day <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m4" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math> to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m5" class="ltx_Math" alttext="t+\tau" display="inline"><mrow><mi>t</mi><mo>+</mo><mi>τ</mi></mrow></math>:</p>
+<table id="Sx1.EGx10" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S5.E14" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.E14.m1" class="ltx_Math" alttext="\displaystyle y_{(t,t+\tau)}=\sqrt{\frac{\sum_{i=0}^{\tau}(r_{t+i}-\bar{r})^{2%&#10;}}{\tau}}" display="inline"><mrow><msub><mi>y</mi><mrow><mo>(</mo><mrow><mi>t</mi><mo>,</mo><mrow><mi>t</mi><mo>+</mo><mi>τ</mi></mrow></mrow><mo>)</mo></mrow></msub><mo>=</mo><msqrt><mstyle displaystyle="true"><mfrac><mrow><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>0</mn></mrow><mi>τ</mi></msubsup><msup><mrow><mo>(</mo><mrow><msub><mi>r</mi><mrow><mi>t</mi><mo>+</mo><mi>i</mi></mrow></msub><mo>-</mo><mover accent="true"><mi>r</mi><mo stretchy="false">¯</mo></mover></mrow><mo>)</mo></mrow><mn>2</mn></msup></mrow><mi>τ</mi></mfrac></mstyle></msqrt></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(14)</span></td></tr>
+</table>
+<p class="ltx_p">Using the stock prices, we can use the equations above to calculate the measured stock volatility after the earnings call,
+which is the standard measure of risks in finance, and the dependent variable <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m6" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math> of our predictive task.</p>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Experiments</h2>
+
+<div id="S6.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">Method</th>
+<th class="ltx_td ltx_align_center" colspan="2">Pre-2009</th>
+<th class="ltx_td ltx_align_center" colspan="2">2009</th>
+<th class="ltx_td ltx_align_center" colspan="2">Post-2009</th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td"/>
+<th class="ltx_td ltx_align_center">Spearman</th>
+<th class="ltx_td ltx_align_center">Kendall</th>
+<th class="ltx_td ltx_align_center">Spearman</th>
+<th class="ltx_td ltx_align_center">Kendall</th>
+<th class="ltx_td ltx_align_center">Spearman</th>
+<th class="ltx_td ltx_align_center">Kendall</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t">linear regression:</th>
+<td class="ltx_td ltx_align_center ltx_border_t">0.377</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.259</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.367</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.252</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.314</td>
+<td class="ltx_td ltx_align_center ltx_border_t">0.216</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">linear SVM:</th>
+<td class="ltx_td ltx_align_center">0.364</td>
+<td class="ltx_td ltx_align_center">0.249</td>
+<td class="ltx_td ltx_align_center">0.242</td>
+<td class="ltx_td ltx_align_center">0.167</td>
+<td class="ltx_td ltx_align_center">0.132</td>
+<td class="ltx_td ltx_align_center">0.091</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">Gaussian SVM:</th>
+<td class="ltx_td ltx_align_center">0.305</td>
+<td class="ltx_td ltx_align_center">0.207</td>
+<td class="ltx_td ltx_align_center">0.280</td>
+<td class="ltx_td ltx_align_center">0.192</td>
+<td class="ltx_td ltx_align_center">0.152</td>
+<td class="ltx_td ltx_align_center">0.104</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">Gaussian copula:</th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">0.425*</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">0.315*</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">0.422*</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">0.310*</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">0.375*</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">0.282*</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 2: </span>Comparing the learning algorithms on three datasets with all features.
+The best result is highlighted in <span class="ltx_text ltx_font_bold">bold</span>. * indicates <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.T2.m2" class="ltx_Math" alttext="p&lt;.001" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>.001</mn></mrow></math> comparing to the second best result.</div>
+</div>
+<div id="S6.F1" class="ltx_figure">
+<p class="ltx_p ltx_align_center"><img src="P14-1109/image010.png" id="S6.F1.g1" class="ltx_graphics" width="208" height="176" alt=""/><img src="P14-1109/image002.png" id="S6.F1.g2" class="ltx_graphics" width="208" height="176" alt=""/><img src="P14-1109/image006.png" id="S6.F1.g3" class="ltx_graphics" width="201" height="174" alt=""/></p>
+<p class="ltx_p ltx_align_center"><img src="P14-1109/image009.png" id="S6.F1.g4" class="ltx_graphics" width="208" height="176" alt=""/><img src="P14-1109/image001.png" id="S6.F1.g5" class="ltx_graphics" width="208" height="176" alt=""/><img src="P14-1109/image005.png" id="S6.F1.g6" class="ltx_graphics" width="201" height="174" alt=""/></p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Varying the amount of training data.
+Left column: pre-2009 dataset. Middle column: 2009 dataset. Right column: post-2009 dataset.
+Top row: Spearman’s correlation. Bottom row: Kendall’s tau.</div>
+</div>
+<div id="S6.F2" class="ltx_figure">
+<p class="ltx_p ltx_align_center"><img src="P14-1109/image012.png" id="S6.F2.g1" class="ltx_graphics" width="208" height="176" alt=""/><img src="P14-1109/image004.png" id="S6.F2.g2" class="ltx_graphics" width="208" height="176" alt=""/><img src="P14-1109/image008.png" id="S6.F2.g3" class="ltx_graphics" width="201" height="174" alt=""/></p>
+<p class="ltx_p ltx_align_center"><img src="P14-1109/image011.png" id="S6.F2.g4" class="ltx_graphics" width="208" height="176" alt=""/><img src="P14-1109/image003.png" id="S6.F2.g5" class="ltx_graphics" width="208" height="176" alt=""/><img src="P14-1109/image007.png" id="S6.F2.g6" class="ltx_graphics" width="201" height="174" alt=""/></p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>Varying the amount of features.
+Left column: pre-2009 dataset. Middle column: 2009 dataset. Right column: post-2009 dataset.
+Top row: Spearman’s correlation. Bottom row: Kendall’s tau.</div>
+</div>
+<div id="S6.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.1 </span>Experimental Setup</h3>
+
+<div id="S6.SS1.p1" class="ltx_para">
+<p class="ltx_p">In all experiments throughout this section, we use 80-20 train/test splits on all three datasets.</p>
+</div>
+<div id="S6.SS1.SSSx1" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection">Feature sets:</h4>
+
+<div id="S6.SS1.SSSx1.p1" class="ltx_para">
+<p class="ltx_p">We have extracted lexical, named entity, syntactic, and frame-semantics
+features, most of which have been shown to perform well in previous work <cite class="ltx_cite">[<a href="#bib.bib28" title="Semantic frames to predict stock price movement" class="ltx_ref">45</a>]</cite>.
+We use the unigrams and bigrams to represent lexical features,
+and the Stanford part-of-speech tagger <cite class="ltx_cite">[<a href="#bib.bib30" title="Feature-rich part-of-speech tagging with a cyclic dependency network" class="ltx_ref">40</a>]</cite> to
+extract the lexicalized named entity and part-of-speech features.
+A probabilistic frame-semantics parser, SEMAFOR <cite class="ltx_cite">[<a href="#bib.bib29" title="Probabilistic frame-semantic parsing" class="ltx_ref">10</a>]</cite>,
+is used to provide the FrameNet-style frame-level semantic annotations.
+For each of the five sets, we collect the top-100 most frequent features,
+and end up with a total of 500 features.</p>
+</div>
+</div>
+<div id="S6.SS1.SSSx2" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection">Baselines:</h4>
+
+<div id="S6.SS1.SSSx2.p1" class="ltx_para">
+<p class="ltx_p">The baselines are standard squared-loss linear regression,
+linear kernel SVM, and non-linear (Gaussian) kernel SVM.
+They are all standard algorithms in regression problems,
+and have been shown to have outstanding performances
+in many recent text regression <cite class="ltx_cite">[<a href="#bib.bib127" title="Predicting risk from financial reports with regression" class="ltx_ref">24</a>, <a href="#bib.bib124" title="Word salad: relating food prices and descriptions" class="ltx_ref">5</a>, <a href="#bib.bib28" title="Semantic frames to predict stock price movement" class="ltx_ref">45</a>, <a href="#bib.bib32" title="Financial sentiment analysis for risk prediction" class="ltx_ref">42</a>, <a href="#bib.bib16" title="Risk ranking from financial reports" class="ltx_ref">41</a>]</cite>.
+We use the Statistical Toolbox’s linear regression implementation in Matlab,
+and LibSVM <cite class="ltx_cite">[<a href="#bib.bib35" title="LIBSVM: a library for support vector machines" class="ltx_ref">6</a>]</cite> for training and testing the SVM models.
+The hyperparameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.SSSx2.p1.m1" class="ltx_Math" alttext="C" display="inline"><mi>C</mi></math> in linear SVM, and the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.SSSx2.p1.m2" class="ltx_Math" alttext="\gamma" display="inline"><mi>γ</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.SSSx2.p1.m3" class="ltx_Math" alttext="C" display="inline"><mi>C</mi></math> hyperparameters
+in Gaussian SVM are tuned on the training set using 10-fold cross-validation.
+Note that since the kernel density estimation in the proposed copula model is nonparametric,
+and we only need to learn the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.SSSx2.p1.m4" class="ltx_Math" alttext="\Sigma" display="inline"><mi mathvariant="normal">Σ</mi></math> in the Gaussian copula,
+there is no hyperparameters that need to be tuned.</p>
+</div>
+</div>
+<div id="S6.SS1.SSSx3" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection">Evaluation Metrics:</h4>
+
+<div id="S6.SS1.SSSx3.p1" class="ltx_para">
+<p class="ltx_p">Spearman’s correlation <cite class="ltx_cite">[<a href="#bib.bib17" title="Introduction to mathematical statistics" class="ltx_ref">20</a>]</cite> and Kendall’s tau <cite class="ltx_cite">[<a href="#bib.bib26" title="A new measure of rank correlation" class="ltx_ref">23</a>]</cite> have been widely used in many regression problems in NLP
+<cite class="ltx_cite">[<a href="#bib.bib31" title="Regression for sentence-level mt evaluation with pseudo references" class="ltx_ref">1</a>, <a href="#bib.bib34" title="Predicting a scientific community’s response to an article" class="ltx_ref">46</a>, <a href="#bib.bib32" title="Financial sentiment analysis for risk prediction" class="ltx_ref">42</a>, <a href="#bib.bib16" title="Risk ranking from financial reports" class="ltx_ref">41</a>]</cite>,
+and here we use them to measure the quality of predicted values <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.SSSx3.p1.m1" class="ltx_Math" alttext="\hat{\mathbf{y}}" display="inline"><mover accent="true"><mi>𝐲</mi><mo stretchy="false">^</mo></mover></math> by comparing to the vector of ground truth <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS1.SSSx3.p1.m2" class="ltx_Math" alttext="\mathbf{y}" display="inline"><mi>𝐲</mi></math>. In contrast to Pearson’s correlation, Spearman’s correlation has no assumptions on the relationship
+of the two measured variables. Kendall’s tau is a nonparametric statistical metric that have shown
+to be inexpensive, robust, and representation independent <cite class="ltx_cite">[<a href="#bib.bib33" title="Automatic evaluation of information ordering: kendall’s tau" class="ltx_ref">26</a>]</cite>.
+We also use paired two-tailed t-test to measure the statistical significance between the best
+and the second best approaches.</p>
+</div>
+</div>
+</div>
+<div id="S6.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.2 </span>Comparing to Various Baselines</h3>
+
+<div id="S6.SS2.p1" class="ltx_para">
+<p class="ltx_p">In the first experiment, we compare the proposed semiparametric Gaussian copula regression model
+to three baselines on three datasets with all features. The detailed results are shown in Table <a href="#S6.T2" title="Table 2 ‣ 6 Experiments ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+On the <em class="ltx_emph">pre-2009</em> dataset, we see that the linear regression and linear SVM perform reasonably well,
+but the Gaussian kernel SVM performs less well, probably due to overfitting.
+The copula model outperformed all three baselines by a wide margin on this dataset with both metrics.
+Similar performances are also obtained in the <em class="ltx_emph">2009</em> dataset, where the result of linear SVM baseline falls behind.
+On the <em class="ltx_emph">post-2009</em> dataset, none of results from the linear and non-linear SVM models can match up with
+the linear regression model, but our proposed copula model still improves over all baselines by a large margin.
+Comparing to second-best approaches, all improvements obtained by the copula model are statistically significant.</p>
+</div>
+</div>
+<div id="S6.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.3 </span>Varying the Amount of Training Data</h3>
+
+<div id="S6.SS3.p1" class="ltx_para">
+<p class="ltx_p">To understand the learning curve of our proposed copula regression model,
+we use the 25%, 50%, 75% subsets from the training data, and evaluate all four models.
+Figure <a href="#S6.F1" title="Figure 1 ‣ 6 Experiments ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> shows the evaluation results.
+From the experiments on the <em class="ltx_emph">pre-2009</em> dataset, we see that
+when the amount of training data is small (25%), both SVM models have obtained
+very impressive results.
+This is not surprising at all, because as max-margin models, soft-margin SVM
+only needs a handful of examples that come with nonvanishing coefficients (support vectors)
+to find a reasonable margin. When increasing the amount of training data to 50%,
+we do see the proposed copula model catches up quickly,
+and lead all baseline methods undoubtably at 75% training data.
+On the <em class="ltx_emph">2009</em> dataset, we observe very similar patterns.
+Interestingly, the proposed copula regression
+model has dominated all methods for both metrics throughout all proportions of the “post-2009” earnings calls dataset,
+where instead of financial crisis, the economic recovery is the main theme.
+In contrast to the previous two datasets, both linear and non-linear SVMs fail
+to reach reasonable performances on this dataset.</p>
+</div>
+</div>
+<div id="S6.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.4 </span>Varying the Amount of Features</h3>
+
+<div id="S6.SS4.p1" class="ltx_para">
+<p class="ltx_p">Finally, we investigate the robustness of the proposed semiparametric Gaussian copula regression model by varying the amount of features in the covariate space. To do this, we sample equal amount of features from each feature set, and concatenate them into a feature vector. When increasing the amount of total features from 100 to 400, the results are shown in Figure <a href="#S6.F2" title="Figure 2 ‣ 6 Experiments ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+On the <em class="ltx_emph">pre-2009</em> dataset, we see that the gaps between the best-perform copula model and the second-best linear regression model are consistent throughout all feature sizes.
+On the <em class="ltx_emph">2009</em> dataset, we see that the performance of Gaussian copula is aligned with the linear regression model
+in terms of Spearman’s correlation, where the former seems to perform better in terms of Kendall’s tau.
+Both linear and non-linear SVM models do not have any advantages over the proposed approach.
+On the <em class="ltx_emph">post-2009</em> dataset that concerns economic growth and recovery,
+the boundaries among all methods are very clear. The Spearman’s correlation for both SVM baselines
+is less than 0.15 throughout all settings, but copula model is able to achieve 0.4 when using 400 features.
+The improvements of copula model over squared loss linear regression model are increasing,
+when working with larger feature spaces.</p>
+</div>
+</div>
+<div id="S6.SS5" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">6.5 </span>Qualitative Analysis</h3>
+
+<div id="S6.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">Pre-2009</span></th>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">2009</span></th>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">Post-2009</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">2008/CD</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">2008</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">first_quarter</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">2008</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">million/CD</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">revenue/NN</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">third_quarter</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">2008/CD</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">revenue</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">third</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">million</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">quarter_of</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">third/JJ</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">million_in</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">compared_to</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">the_third</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">the_fourth</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">million_in</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">million/CD</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">fourth_quarter</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">Peter/PERSON</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">capital</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">fourth</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">call</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">million</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">fourth/JJ</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">first/JJ</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">FE_Trajector_entity</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">$/$</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">million/CD</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 3: </span>Top-10 features that have positive correlations with stock volatility in three datasets.</div>
+</div>
+<div id="S6.SS5.p1" class="ltx_para">
+<p class="ltx_p">Like linear classifiers, by “opening the hood” to the Gaussian copula
+regression model, one can examine features that exhibit high correlations
+with the dependent variable.
+Table <a href="#S6.T3" title="Table 3 ‣ 6.5 Qualitative Analysis ‣ 6 Experiments ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> shows the top features that are positively correlated
+with the future stock volatility in the three datasets.
+On the top features from the “pre-2009” dataset, which primarily (82%) includes calls from 2008,
+we can clearly observe that the word “2008” has strong correlation with the financial risks.
+Interestingly, the phrase “third quarter” and its variations, not only play an important role in the model,
+but also highly correlated to the timeline of the financial crisis:
+the Q3 of 2008 is a critical period in the recession, where
+Lehman Brothers falls on the Sept. 15 of 2008, filing
+$613 billion of debt — the biggest bankruptcy in U.S. history <cite class="ltx_cite">[<a href="#bib.bib4" title="Lehman folds with record $613 billion debt" class="ltx_ref">29</a>]</cite>.
+This huge panic soon broke out in various financial institutions in the Wall Street.
+On the top features from “2009” dataset, again,
+we see the word “2008” is still prominent in predicting financial risks,
+indicating the hardship and extended impacts from the center of the economic crisis.
+After examining the transcripts, we found sentences like:
+“<em class="ltx_emph">…our specialty lighting business that we discontinued in the fourth quarter of 2008…</em>”,
+“<em class="ltx_emph">…the exception of fourth quarter revenue which was $100,000 below our guidance target…</em>”,
+and “<em class="ltx_emph">…to address changing economic conditions and their impact on our operations, in the fourth quarter we took the painful but prudent step of decreasing our headcount by about 5%…</em>”,
+showing the crucial role that Q4 of 2008 plays in 2009 earnings calls.
+Interestingly, after the 2008-2009 crisis, in the recovery period,
+we have observed new words like “revenue”, indicating the “back-to-normal” trend of financial environment,
+and new features that predict financial volatility.</p>
+</div>
+</div>
+</div>
+<div id="S7" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">7 </span>Discussions</h2>
+
+<div id="S7.p1" class="ltx_para">
+<p class="ltx_p">In the experimental section, we notice that the proposed semiparametric Gaussian copula model
+has obtained promising results in various setups on three datasets in this text regression task.
+The main questions we ask are: how is the proposed model different from standard text regression/classification models?
+What are the advantages of copula-based models, and what makes it perform so well?</p>
+</div>
+<div id="S7.p2" class="ltx_para">
+<p class="ltx_p">One advantage we see from the copula model is
+that it does not require any assumptions on the marginal distributions.
+For example, in latent Dirichlet allocation <cite class="ltx_cite">[<a href="#bib.bib118" title="Latent dirichlet allocation" class="ltx_ref">2</a>]</cite>,
+the topic proportion of a document is always drawn from a <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.p2.m1" class="ltx_Math" alttext="Dirichlet(\alpha)" display="inline"><mrow><mi>D</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>h</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mrow><mo>(</mo><mi>α</mi><mo>)</mo></mrow></mrow></math>
+distribution. This is rather restricted, because the possible
+shapes from a <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.p2.m2" class="ltx_Math" alttext="K-1" display="inline"><mrow><mi>K</mi><mo>-</mo><mn>1</mn></mrow></math> simplex of Dirichlet is always limited in some sense.
+In our copula model, instead of using some priors,
+we just calculate the empirical cumulative distribution function
+of the random variables, and model the correlation among them.
+This is extremely practical, because in many natural language processing tasks,
+we often have to deal with features that are extracted from many different domains and signals.
+By applying the <em class="ltx_emph">Probability Integral Transform</em> to raw features in the copula model,
+we essentially avoid comparing apples and oranges in the feature space,
+which is a common problem in bag-of-features models in NLP.</p>
+</div>
+<div id="S7.p3" class="ltx_para">
+<p class="ltx_p">The second hypothesis is about the semiparametirc parameterization,
+which contains the nonparametric kernel density estimation and the
+parametric Gaussian copula regression components. The benefit of
+a semiparametric model is that here we are not interested in
+performing completely nonparametric estimations, where the
+infinite dimensional parameters might bring intractability.
+In contrast, by considering the semiparametric case, we not only
+obtain some expressiveness from the nonparametric models,
+but also reduce the complexity of the task: we are
+only interested in the finite-dimensional components <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.p3.m1" class="ltx_Math" alttext="\Sigma" display="inline"><mi mathvariant="normal">Σ</mi></math> in the Gaussian copula with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.p3.m2" class="ltx_Math" alttext="O(n\log n)" display="inline"><mrow><mi>O</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>n</mi><mo>⁢</mo><mrow><mi>log</mi><mo>⁡</mo><mi>n</mi></mrow></mrow><mo>)</mo></mrow></mrow></math> complexity,
+which is not as computationally difficult as the completely nonparametric cases.
+Also, by modeling the marginals and their correlations seperately,
+our approach is cleaner, easy-to-understand, and
+allows us to have more flexibility to model the uncertainty of data.
+Our pilot experiment also aligns with our hypothesis:
+when not performing the kernel density estimation part
+for smoothing out the marginal distributions,
+the performances dropped significantly when sparser
+features are included.</p>
+</div>
+<div id="S7.p4" class="ltx_para">
+<p class="ltx_p">The third advantage we observe is the power of modeling the covariance
+of the random variables. Traditionally, in statistics,
+independent and identically distributed (i.i.d) assumptions among the instances
+and the random variables are often used in various models,
+such that the correlations among the instances or the variables are often ignored.
+However, this might not be practical at all:
+in image processing, the “cloud” pixel of a pixel showing the blue sky of a picture
+are more likelihood to co-occur in the same picture;
+in natural language processing, the word “mythical”
+is more likely to co-occur with the word “unicorn”, rather than the word “popcorn”.
+Therefore, by modeling the correlations among marginal CDFs,
+the copula model has gained the insights on the dependency structures of the random variables,
+and thus, the performance of the regression task is boosted.</p>
+</div>
+<div id="S7.p5" class="ltx_para">
+<p class="ltx_p">In the future, we plan to apply the proposed approach to large datasets
+where millions of features and millions of instances are involved.
+Currently we have not experienced the difficulty when estimating
+the Gaussian copula model, but parallel methods might be needed to speedup learning
+when significantly more marginal CDFs are involved.
+The second issue is about overfitting.
+We see that when features are rather noisy,
+we might need to investigate regularized copula models to avoid this.
+Finally, we plan to extend the proposed approach to text classification
+and structured prediction problems in NLP.</p>
+</div>
+</div>
+<div id="S8" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">8 </span>Conclusion</h2>
+
+<div id="S8.p1" class="ltx_para">
+<p class="ltx_p">In this work, we have demonstrated that
+the more complex quarterly earnings calls can also be used to predict the measured volatility
+of the stocks in the limited future.
+We propose a novel semiparametric Gausian copula regression approach
+that models the dependency structure of the language in the earnings calls.
+Unlike traditional bag-of-features models that work discrete features from various signals,
+we perform kernel density estimation to smooth out the distribution,
+and use probability integral transform to work with CDFs that are uniform.
+The copula model deals with marginal CDFs and the correlation among them separately,
+in a cleaner manner that is also flexible to parameterize.
+Focusing on the three financial crisis related datasets,
+the proposed model significantly outperform the standard linear regression
+method in statistics and strong discriminative support vector regression baselines.
+By varying the size of the training data and the dimensionality of
+the covariates, we have demonstrated that our proposed model
+is relatively robust across different parameter settings.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgement</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">We thank Alex Smola, Barnabás Póczos, Sam Thomson,
+Shoou-I Yu, Zi Yang, and anonymous reviewers for their useful comments.</p>
+</div>
+<div class="ltx_pagination ltx_role_newpage"/>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib31" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Albrecht and R. Hwa</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Regression for sentence-level mt evaluation with pseudo references</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.SSSx3.p1" title="Evaluation Metrics: ‣ 6.1 Experimental Setup ‣ 6 Experiments ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib118" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Blei, A. Ng and M. Jordan</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Latent dirichlet allocation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of machine Learning research</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p1" title="3 Copula Models for Text Regression ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S3.p3" title="3 Copula Models for Text Regression ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S7.p2" title="7 Discussions ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">7</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Bollen, H. Mao and X. Zeng</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Twitter mood predicts the stock market</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Computational Science</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Camiciottoli</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Earnings calls: exploring an emerging financial reporting genre</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Discourse &amp; Communication</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib124" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">V. Chahuneau, K. Gimpel, B. R. Routledge, L. Scherlis and N. A. Smith</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Word salad: relating food prices and descriptions</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S6.SS1.SSSx2.p1" title="Baselines: ‣ 6.1 Experimental Setup ‣ 6 Experiments ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib35" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Chang and C. Lin</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">LIBSVM: a library for support vector machines</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">ACM Transactions on Intelligent Systems and Technology</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.SSSx2.p1" title="Baselines: ‣ 6.1 Experimental Setup ‣ 6 Experiments ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">X. Chen and Y. Fan</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Estimation of copula-based semiparametric time series models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Econometrics</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Christensen</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Fast algorithms for the calculation of kendallâs <math xmlns="http://www.w3.org/1998/Math/MathML" id="bib.bib3.m1a" class="ltx_Math" alttext="\tau" display="inline"><mi>τ</mi></math></span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Statistics</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.SSSx3.p1" title="Computational Complexity ‣ 3.2 Semiparametric Gaussian Copula Models ‣ 3 Copula Models for Text Regression ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Church and W. Gale</span><span class="ltx_text ltx_bib_year">(1995)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Poisson mixtures.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Natural Language Engineering</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p3" title="3 Copula Models for Text Regression ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib29" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Das, N. Schneider, D. Chen and N. A. Smith</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Probabilistic frame-semantic parsing</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.SSSx1.p1" title="Feature sets: ‣ 6.1 Experimental Setup ‣ 6 Experiments ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib111" class="ltx_bibitem ltx_bib_misc"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. X. Diebold, T. A. Gunther and A. S. Tay</span><span class="ltx_text ltx_bib_year">(1997)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Evaluating density forecasts</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">National Bureau of Economic Research Cambridge, Mass., USA</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.SSSx1.p2" title="The Non-Parametric Estimation ‣ 3.2 Semiparametric Gaussian Copula Models ‣ 3 Copula Models for Text Regression ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Eickhoff, A. P. de Vries and K. Collins-Thompson</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Copulas for information retrieval</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Eisenstein, B. O’Connor, N. A. Smith and E. P. Xing</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A latent variable model for geographic lexical variation</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. C. Fung, X. Yu and W. Lam</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Stock prediction: integrating text mining approach using real-time news</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Gelfand and A. Smith</span><span class="ltx_text ltx_bib_year">(1990)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Sampling-based approaches to calculating marginal densities</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of the American statistical association</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.SSSx4.p3" title="Efficient Approximate Inference ‣ 3.2 Semiparametric Gaussian Copula Models ‣ 3 Copula Models for Text Regression ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib25" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Genest and A. Favre</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Everything you always wanted to know about copula modeling but were afraid to ask</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Hydrologic Engineering</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib23" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Z. Ghahramani, B. Póczos and J. Schneider</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Copula-based kernel dependency measures</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. Han, T. Zhao and H. Liu</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Coda: high dimensional copula discriminant analysis</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Machine Learning Research</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib15" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Harman</span><span class="ltx_text ltx_bib_year">(1995)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Overview of the second text retrieval conference (trec-2)</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Information Processing &amp; Management</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p3" title="4 Datasets ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib17" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. V. Hogg and A. Craig</span><span class="ltx_text ltx_bib_year">(1994)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Introduction to mathematical statistics</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.SSSx3.p1" title="Evaluation Metrics: ‣ 6.1 Experimental Setup ‣ 6 Experiments ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib125" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Joe</span><span class="ltx_text ltx_bib_year">(1997)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Multivariate models and dependence concepts</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p2" title="3.1 The Theory of Copula ‣ 3 Copula Models for Text Regression ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib126" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Joshi, D. Das, K. Gimpel and N. A. Smith</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Movie reviews and revenues: an experiment in text regression</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Related Work ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib26" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Kendall</span><span class="ltx_text ltx_bib_year">(1938)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A new measure of rank correlation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Biometrika</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.SSSx3.p1" title="Evaluation Metrics: ‣ 6.1 Experimental Setup ‣ 6 Experiments ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib127" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Kogan, D. Levin, B. Routledge, J. Sagi and N. Smith</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Predicting risk from financial reports with regression</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p1" title="2 Related Work ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S6.SS1.SSSx2.p1" title="Baselines: ‣ 6.1 Experimental Setup ‣ 6 Experiments ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib117" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Lafferty and D. Blei</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Correlated topic models</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p1" title="3 Copula Models for Text Regression ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib33" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Lapata</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatic evaluation of information ordering: kendall’s tau</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.SSSx3.p1" title="Evaluation Metrics: ‣ 6.1 Experimental Setup ‣ 6 Experiments ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib19" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Liu, F. Han, M. Yuan, J. Lafferty and L. Wasserman</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">High-dimensional semiparametric gaussian copula graphical models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">The Annals of Statistics</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.SS2.SSSx3.p1" title="Computational Complexity ‣ 3.2 Semiparametric Gaussian Copula Models ‣ 3 Copula Models for Text Regression ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib21" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[28]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Lopez-paz, J. M. Hernández-lobato and G. Zoubin</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Gaussian process vine copulas for multivariate dependence</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[29]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Mamudi</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Lehman folds with record $613 billion debt</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">MarketWatch.com</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS5.p1" title="6.5 Qualitative Analysis ‣ 6 Experiments ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.5</span></a>.
+</span></li>
+<li id="bib.bib110" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[30]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. Masarotto and C. Varin</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Gaussian copula marginal regression</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Electronic Journal of Statistics</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib113" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[31]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. B. Nelsen</span><span class="ltx_text ltx_bib_year">(1999.)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">An introduction to copulas</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_edition"> edition</span>, <span class="ltx_text ltx_bib_series"/>, Vol. <span class="ltx_text ltx_bib_volume"/>,  <span class="ltx_text ltx_bib_publisher">Springer Verlag</span>, <span class="ltx_text ltx_bib_place"/>.
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note"/>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.p2" title="3 Copula Models for Text Regression ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib119" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[32]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. A. Parsa and S. A. Klugman</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Copula regression</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Variance Advancing and Science of Risk</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p2" title="3.1 The Theory of Copula ‣ 3 Copula Models for Text Regression ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib112" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[33]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Parzen</span><span class="ltx_text ltx_bib_year">(1962)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">On estimation of a probability density function and mode</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">The annals of mathematical statistics</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.SSSx1.p1" title="The Non-Parametric Estimation ‣ 3.2 Semiparametric Gaussian Copula Models ‣ 3 Copula Models for Text Regression ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib109" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[34]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Pitt, D. Chan and R. Kohn</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Efficient bayesian inference for gaussian copula regression models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Biometrika</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.SSSx4.p3" title="Efficient Approximate Inference ‣ 3.2 Semiparametric Gaussian Copula Models ‣ 3 Copula Models for Text Regression ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib27" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[35]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Price, J. Doran, D. Peterson and B. Bliss</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Earnings conference calls and stock returns: the incremental informativeness of textual tone</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Banking &amp; Finance</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[36]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Reisinger, A. Waters, B. Silverthorn and R. J. Mooney</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Spherical topic models</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p1" title="3 Copula Models for Text Regression ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[37]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Schweizer and A. Sklar</span><span class="ltx_text ltx_bib_year">(1983)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Probabilistic metric spaces</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[38]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Shannon</span><span class="ltx_text ltx_bib_year">(1948)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A mathematical theory of communication</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p3" title="3 Copula Models for Text Regression ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[39]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Sklar</span><span class="ltx_text ltx_bib_year">(1959)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Fonctions de répartition à n dimensions et leurs marges</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Université Paris 8</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#Thmtheorem1" title="Theorem 1 (Sklar’s Theorem [39]) ‣ 3.1 The Theory of Copula ‣ 3 Copula Models for Text Regression ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib30" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[40]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Toutanova, D. Klein, C. D. Manning and Y. Singer</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Feature-rich part-of-speech tagging with a cyclic dependency network</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.SSSx1.p1" title="Feature sets: ‣ 6.1 Experimental Setup ‣ 6 Experiments ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib16" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[41]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Tsai and C. Wang</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Risk ranking from financial reports</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_inbook">Advances in Information Retrieval</span>,
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S6.SS1.SSSx2.p1" title="Baselines: ‣ 6.1 Experimental Setup ‣ 6 Experiments ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>,
+<a href="#S6.SS1.SSSx3.p1" title="Evaluation Metrics: ‣ 6.1 Experimental Setup ‣ 6 Experiments ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib32" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[42]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Wang, M. Tsai, T. Liu and C. Chang</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Financial sentiment analysis for risk prediction</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S6.SS1.SSSx2.p1" title="Baselines: ‣ 6.1 Experimental Setup ‣ 6 Experiments ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>,
+<a href="#S6.SS1.SSSx3.p1" title="Evaluation Metrics: ‣ 6.1 Experimental Setup ‣ 6 Experiments ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib116" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[43]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">W. Y. Wang, E. Mayfield, S. Naidu and J. Dittmar</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Historical analysis of legal opinions with a sparse mixed-effects latent variable model</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p1" title="3 Copula Models for Text Regression ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib22" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[44]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Xiang and J. Neville</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Collective inference for network data with copula latent markov networks</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib28" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[45]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Xie, R. J. Passonneau, L. Wu and G. G. Creamer</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Semantic frames to predict stock price movement</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S6.SS1.SSSx1.p1" title="Feature sets: ‣ 6.1 Experimental Setup ‣ 6 Experiments ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>,
+<a href="#S6.SS1.SSSx2.p1" title="Baselines: ‣ 6.1 Experimental Setup ‣ 6 Experiments ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib34" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[46]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Yogatama, M. Heilman, B. O’Connor, C. Dyer, B. R. Routledge and N. A. Smith</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Predicting a scientific community’s response to an article</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S6.SS1.SSSx3.p1" title="Evaluation Metrics: ‣ 6.1 Experimental Setup ‣ 6 Experiments ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6.1</span></a>.
+</span></li>
+<li id="bib.bib14" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[47]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">X. Zhang, H. Fuehres and P. A. Gloor</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Predicting stock market indicators through twitter “i hope it is not as bad as i fear”</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Procedia-Social and Behavioral Sciences</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Related Work ‣ A Semiparametric Gaussian Copula Regression Model for Predicting Financial Risks from Earnings Calls" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 18:43:55 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

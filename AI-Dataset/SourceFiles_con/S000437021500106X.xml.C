@@ -1,0 +1,835 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    From senses to texts: An all-in-one graph-based approach for measuring semantic similarity.
+   </title>
+   <abstract>
+    Quantifying semantic similarity between linguistic items lies at the core of many applications in Natural Language Processing and Artificial Intelligence. It has therefore received a considerable amount of research interest, which in its turn has led to a wide range of approaches for measuring semantic similarity. However, these measures are usually limited to handling specific types of linguistic item, e.g., single word senses or entire sentences. Hence, for a downstream application to handle various types of input, multiple measures of semantic similarity are needed, measures that often use different internal representations or have different output scales. In this article we present a unified graph-based approach for measuring semantic similarity which enables effective comparison of linguistic items at multiple levels, from word senses to full texts. Our method first leverages the structural properties of a semantic network in order to model arbitrary linguistic items through a unified probabilistic representation, and then compares the linguistic items in terms of their representations. We report state-of-the-art performance on multiple datasets pertaining to three different levels: senses, words, and texts.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      The measurement of semantic similarity is an essential component of many applications in Natural Language Processing (NLP) and Artificial Intelligence (AI). Measuring the semantic similarity of text pairs enables the evaluation of the output quality of machine translation systems [1] or the recognition of paraphrases [2], while laying the foundations for other fields, such as textual entailment [3], [4], information retrieval [5], [6], question answering [7], [8], and text summarization [9]. At the word level, semantic similarity can have direct benefits for areas such as lexical substitution [10] or simplification [11], and query expansion [12], whereas, at the sense level, the measurement of semantic similarity of concept pairs can be utilized as a core component in many other applications, such as reducing the granularity of lexicons [13], [14], Word Sense Disambiguation [15], knowledge enrichment [16], or alignment and integration of different lexical resources [17], [18], [19], [20].
+     </paragraph>
+     <paragraph>
+      As a direct consequence of their design, most of the current approaches to semantic similarity are limited to operating at specific linguistic levels. For instance, similarity approaches for large pieces of texts, such as documents, usually utilize the statistics obtained from the input items [21], [22], [23], [24] and, therefore, are inapplicable for pairs of linguistic items with small contextual information, such as words or phrases. A unified approach that can enable the efficient comparison of linguistic items at different linguistic levels would be able to free downstream NLP applications from needing to consider the type of items being compared. However, despite the potential advantages, very few approaches have attempted to cover different linguistic levels: most previous work has focused on tuning or extending existing approaches to other linguistic levels, rather than proposing a unified similarity measurement method. For instance, sense-level measures have been extended to the word level by assuming the similarity of word pairs as being that of the closest senses of the two words [25], whereas word-level approaches have been utilized for measuring the similarity of text pairs [26]. However, these approaches do not usually work on the extended levels as effectively as they do on the original ones. For instance, measures for concept semantic similarity often fall far behind the state of the art when extended for use in measuring the similarity of word pairs [27], [28], [29].
+     </paragraph>
+     <paragraph>
+      In this article, we propose a unified approach to semantic similarity that can handle items from multiple linguistic levels, from sense to text pairs. The approach brings together two main advantages: (1) it provides a unified representation for all linguistic items, enabling the meaningful comparison of arbitrary items, irrespective of their scales or the linguistic levels they belong to (e.g., the phrase take a walk to the verb stroll); (2) it disambiguates linguistic items to a set of intended concepts prior to modeling and, hence, it is able to identify the semantic similarities that exist at the deepest sense level, independently of the text's surface forms or any semantic ambiguity therein. For example, consider the following two pairs of sentences:
+     </paragraph>
+     <list>
+      <list-item>
+       Officers fired.
+      </list-item>
+      <list-item>
+       Several policemen terminated in corruption probe.
+      </list-item>
+     </list>
+     <list>
+      <list-item>
+       Officers fired.
+      </list-item>
+      <list-item>
+       Many injured during the police shooting incident.
+      </list-item>
+     </list>
+     <paragraph>
+      Surface-based approaches that are merely based on string similarity cannot capture the similarity between any of the above pairs of sentences as there exists no lexical overlap. In addition, a surface-based semantic similarity approach considers both a1 and b1 as being identical sentences, whereas we know that different meanings of the verb fire are triggered in the two contexts.
+     </paragraph>
+     <paragraph>
+      In our recent work [30] we presented Align, Disambiguate, and Walk (ADW), a graph-based approach for measuring semantic similarity that can overcome both these deficiencies: firstly, it transforms words to senses prior to modeling, hence providing a deeper measure of similarity comparison and, secondly, it performs disambiguation by taking into account the context of the paired linguistic item, enabling the same linguistic item to have different meanings when paired with different linguistic items. Our technique models arbitrary linguistic items through a unified representation, called semantic signature, which is a probability distribution over concepts, word senses, or words in a lexicon. Thanks to this unified representation, our approach can compute the similarity of linguistic items at and across arbitrary levels, from word senses to texts. We also proposed a novel approach for comparing semantic signatures which provided improvements over the conventional cosine measure. Our approach for measuring semantic similarity obtained state-of-the-art performance on several datasets pertaining to different linguistic levels. In this article, we extend that work as follows:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       we propose two novel approaches for injecting out-of-vocabulary (OOV) words into the semantic signatures, obtaining a considerable improvement on datasets involving many OOV entries while calculating text-level semantic similarity;
+      </list-item>
+      <list-item label="2.">
+       we provide an approach for creating a semantic network from Wiktionary and show that it can be used effectively for generating semantic signatures and for comparing pairs of items;
+      </list-item>
+      <list-item label="3.">
+       we re-design experiments in the sense and text levels in order to have a more meaningful comparison of different similarity measurement techniques and also perform evaluation on more datasets at the word level.
+      </list-item>
+     </list>
+     <paragraph>
+      The rest of this article is organized as follows. We first introduce in Section 2 the three main linguistic levels upon which we focus in this article. We then provide an overview of the related work in Section 3. Section 4 explains how we constructed different semantic networks to be used as underlying resources of our approach. A detailed description of our similarity measurement approach, i.e., ADW, is provided in Section 5, followed by our experiments for evaluating the proposed technique at different linguistic levels in Section 6. Finally, we provide the concluding remarks in Section 7.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Semantic similarity at different levels
+     </section-title>
+     <paragraph>
+      Measuring the semantic similarity of pairs of linguistic items can be performed at different linguistic levels. In this work, we focus on three main levels: senses, words, and sentences. Table 1 lists example semantic similarity judgments for pairs belonging to each of these three linguistic levels.{sup:1} In our example in Table 1(a), which is based on the WordNet 3.0 sense inventory [31], the precious stone sense of the noun jewel (jewel{sup:1}n) is paired with three senses of the noun gem: gem{sup:5}n, which is synonymous to jewel{sup:1}n being the stone used in jewelry, gem{sup:3}n, which refers to a brilliant and precious person, and gem{sup:4}n, which is synonymous to muffin that is a sweet baked bread. In the sense-level similarity, the task is to compute the degree of semantic similarity of a pair of concepts. This similarity is high for jewel{sup:1}n and gem{sup:5}n which are both referring to the same jewelry object. The third sense of gem, though still related to the jewelry sense, has a lower degree of similarity with jewel{sup:1}n and gem{sup:5}n as it is a metaphor referring to a person who possesses the qualities of a jewel. On the other hand, the bread sense of gem has no semantic similarity to jewel{sup:1}n (nor does it have to any of the two other above-mentioned senses of gem). Note that the sense-level similarity measurement can also involve the similarity of different senses of the same word, e.g., to perform sense clustering [13], [14].
+     </paragraph>
+     <paragraph>
+      At the word level, semantic similarity usually corresponds to the similarity of the closest senses of the paired words [25]. In our word-level example in Table 1(b), jewel is shown as having a high similarity to precious stone, owing to their overlapping meaning, i.e., “a precious or semiprecious stone incorporated into a piece of jewelry.” For the medium similarity example, we pair jewel with gold as both are common elements of jewelries. The terms jewel and paper do not have any senses in close connection with one another.
+     </paragraph>
+     <paragraph>
+      At the sentence level, similarity judgment should ideally indicate the amount of information shared between a pair of sentences. In the case of our sentence-level example in Table 1(c), the sentence with high similarity preserves important concepts and semantics of the source sentence, i.e., global warming and the influence of humans on it. Instead, the sentence with the medium similarity does not share the global warming information with the source sentence and mentions the slightly different concept of the negative impact of industrialization on our world today. The unrelated sentence in the low similarity example has almost no overlapping concept with the source sentence.
+     </paragraph>
+     <paragraph>
+      From the above examples we observe that the same task of semantic similarity involves an inherently different focus as we move from one linguistic level to another: the similarity for the case of senses and words is characterized by the direct similarity of the concepts they surrogate, while for larger textual items similarity denotes the amount of overlapping information between the two items. As a result of this inherent difference, similarity measurement approaches have usually focused on a single linguistic level only. In the following Section we provide the related work on each of the three aforementioned levels.
+     </paragraph>
+    </section>
+    <section label="3">
+     <section-title>
+      Related work
+     </section-title>
+     <paragraph>
+      We review the techniques for semantic similarity measurement according to the linguistic level they can be applied to: sense, word, and text level, and summarize the most important approaches at each level.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Sense-level similarity
+      </section-title>
+      <paragraph>
+       Sense-level measures for semantic similarity are mostly based on lexical resources. These measures have often viewed lexical resources as semantic networks and then used the structural properties of these networks in order to compute semantic similarity. As a de facto community standard lexicon, WordNet has played an important role for computing semantic similarity between concepts. A series of WordNet-based measures directly exploit the structural properties of WordNet, such as path length and depth in the hierarchy [32], [33], [34], [35], [36], whereas others utilize additional information from external corpora to overcome the associated problems, such as varying link distances in lexicons [37], [38], [39]. A comprehensive survey of WordNet-based measures is provided in [25]. Other WordNet-based measures rely less on the structure of this resource. Instead they take into account overlaps in sense definitions [40], [41], or leverage monosemous words in the definitions to create web search queries and hence by this means gather representative contextual information for a given concept. The topic signatures method presented in [42] is an instance of the latter category, which represents each sense as a vector over corpus-derived features. However, topic signatures rely heavily on the availability of representative monosemous words in the definitions, and this lowers their coverage [43]. In contrast, our approach provides a rich and high-coverage representation of WordNet senses, irrespective of their frequency, and it outperforms all other sense similarity approaches in different sense clustering experiments.
+      </paragraph>
+      <paragraph>
+       In addition to WordNet, other lexical resources have also been used for measuring concept-to-concept semantic similarity. Several approaches have exploited information from dictionaries such as the Longman Dictionary of Contemporary English, thesauri such as Roget's [44] and Macquarie [45], or integrated knowledge resources such as BabelNet [18] for their similarity computation [46], [47], [48], [49], [50]. Collaboratively-constructed resources such as Wikipedia [51], [52], [53] have also been used extensively as lexical resources for measuring semantic similarity.
+      </paragraph>
+      <paragraph>
+       There have also been efforts to use distributional techniques for modeling individual word senses or concepts. The main hypothesis in the distributional approaches is that similar words appear in similar contexts, where context can include windows of surrounding words or semantic relationships [54], [55]. The sense-specific distributional models usually carry out clustering on a word's context and obtain “multi-prototype” vectors that are sensitive to varying contexts, i.e., vectors that can represent individual senses of words [56], [57], [58]. However, the sense representations obtained are usually not linked to any sense inventory, a linking that thus has to be carried out either manually, or with the help of sense-annotated data. Chen et al. [59] addressed this issue by exploiting word sense definitions in WordNet and applied the obtained representations to the task of Word Sense Disambiguation. SensEmbed [60] is another recent approach that obtains sense-specific representations by employing neural network based learning on large amounts of sense-annotated texts. Similarly to the other above-mentioned corpus-based approaches, SensEmbed is prone to the coverage issue as it can only learn representations for those senses that are covered in the underlying corpus.
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Word-level similarity
+      </section-title>
+      <paragraph>
+       Among the different levels, the word level is the one that has attracted the greatest attention over the past decade, with several datasets dedicated to the evaluation of word similarity measurement [61], [62], [63]. The approaches at this level can be grouped into two categories: distributional and lexical resource-based. Distributional models [64] are the prevailing paradigm for modeling individual words [24], and they lie at the core of several similarity measurement techniques [65]. This paradigm aims at modeling a word on the basis of the context in which it usually appears. The conventional distributional techniques use cooccurrence statistics for the computation of vector-based representations of different words [21], [66]. The earlier models in this branch [21], [67] take as a word's context only its bag of surrounding words, while more sophisticated contexts such as grammatical dependencies [68], [69] or selectional preferences on the argument positions [70], have also been considered. The weights in cooccurrence-based vectors are usually computed by means of tf–idf [71] or Pointwise Mutual Information [72], [73], and the dimensionality of the resulting weights matrix is often reduced, for instance using Singular Value Decomposition [74], [75], [76]. Topic models [77], [78] are another suite of techniques that model a word as a probability distribution over a set of topics. The structured textual content of specific lexical resources such as the encyclopedic Wikipedia has also been used for distributional word similarity [27], [79].
+      </paragraph>
+      <paragraph>
+       A recent branch of distributional models uses neural networks to directly learn the expected context of a given word and model it as a continuous vector [80], [81], often referred to as word embedding. Representation of words as continuous vectors, however, has a long history [82], [83]. The resurgence of these models stemmed from the work of Bengio et al. [84], who introduced a Multilayer Perceptron (MLP) designed for statistical language modeling. Two prominent contributions in this path were later made through the works of Collobert and Weston [85], who extended and applied the model to several NLP applications, and Mikolov et al. [86], who simplified the original model, providing significant reduction in training time.
+      </paragraph>
+      <paragraph>
+       Lexical resource-based approaches usually make an assumption that the similarity of two words can be calculated in terms of the similarity of their closest senses, hence enabling any sense-level measure to be directly applicable for comparing word pairs. One can use this method, as we did, for evaluating several WordNet-based sense-level measures on standard word-level benchmarks [25], such as RG-65 [61] and MC-30 [87] datasets. Recently, larger collaborative resources such as Wikipedia and Wiktionary have also been leveraged for measuring word similarity [88], [89], [90], [91], [92]. Most similar to our approach are random walk-based methods that model words through the stationary distributions of the Personalized PageRank algorithm on the WordNet graph [93], [94], the Wikipedia graph [89], or other graphs obtained from dependency-parsed text [95]. However, unlike our approach, none of these techniques disambiguates the words being compared, and they hence consider a word as a conflation of all its meanings, which potentially reduces the quality of similarity measurement. We show the benefit arising from the disambiguation phase in our word-level experiments.
+      </paragraph>
+     </section>
+     <section label="3.3">
+      <section-title>
+       Text-level similarity
+      </section-title>
+      <paragraph>
+       Text-level methods can be grouped into two categories: (1) those that view a text as a combination of words and calculate the similarity of two texts by aggregating the similarities of word pairs across the two texts, and (2) those that model a text as a whole and calculate the similarity of two texts by comparing the two models obtained. Approaches in the first category search for pairs of words across the two texts that maximize similarity and compute the overall similarity by aggregating individual similarity values, either by exploiting large text corpora [96], [26], [97], [98], [99], or thesauri [100], sometimes also taking into account the word order in the text [101].
+      </paragraph>
+      <paragraph>
+       The second category usually involves transforming texts into vectors and computing the similarity of texts by comparing their corresponding vectors. Vector space models [21] are an early example of this category, an idea borrowed from Information Retrieval. The initial models mainly focused on the representation of larger pieces of text, such as documents, where a text is modeled on the basis of the frequency statistics of the words it contains. Such models, however, suffer from sparseness and cannot capture similarities between short text pairs that use different wordings. A more suitable vector representation for shorter textual items is one that is based on semantic composition, and that seeks to model a text by combining the representations of its individual words [102]. A thorough study and comparison of different compositionality strategies is provided in [103], [104], [105]. Recently, an approach mixing distributional information and explicit knowledge has been successfully applied to cross-lingual document retrieval and categorization [106].
+      </paragraph>
+      <paragraph>
+       Despite the fact that they totally ignore semantics, string-based similarity techniques which treat texts as sequences of characters have shown themselves to be strong baselines for measuring semantic similarity [29], [107], [108]. The Longest Common Subsequence [109] and Greedy String Tiling [110] are examples of such string-based measures. Among other measures, that fall into the second category and are closest to our approach, are random walk-based approaches [111], [89], which also function at the word level and were described above. These methods, however, do not involve a sense disambiguation step and therefore potentially suffer from ambiguity, particularly in the case of shorter textual items. In contrast, our approach has the advantage of providing explicit disambiguation for the compared linguistic items as a byproduct of the similarity measurement.
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Preliminaries: semantic networks
+     </section-title>
+     <paragraph>
+      The sole, and yet fundamental, resource upon which our semantic similarity measurement algorithm, ADW, relies is a semantic network. A semantic network is a graph structure for representing knowledge. Each node in this graph represents an entity, such as a word or a concept, and edges are semantic relations that link related entities to each other. Any network with such properties can be used in our algorithm. In this article, we consider four semantic networks with different properties: two semantic networks obtained from manually-crafted lexical resources and two automatically-induced ones. As for our manually-constructed lexical resources, we opted for WordNet [31], which is the de facto community standard sense inventory, and Wiktionary,{sup:2} which is a collaboratively-constructed online dictionary. The nodes in the WordNet semantic network represent individual concepts, while edges denote manually-crafted concept-to-concept relations. Wiktionary provides a larger word coverage in comparison to WordNet, thanks to its collaborative nature. However, the resource is not readily representable as a semantic network. In what follows, we first briefly describe how we build our two WordNet-based and Wiktionary-based networks (Sections 4.1 and 4.2, respectively), and then explain our procedure for the automatic construction of two semantic networks by leveraging distributional semantic models (Section 4.3).
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       WordNet 3.0
+      </section-title>
+      <paragraph>
+       Synsets are the basic building blocks of WordNet. Each synset represents a distinct concept that is lexicalized by a group of synonymous words (e.g., {airplane, aeroplane, plane} is the synset for the fixed-wing aircraft concept). Synsets in WordNet are connected to each other by means of semantic and lexical relations. Therefore, WordNet can be viewed as a semantic network of interconnected concepts, where each node in the network is a synset (i.e., concept) and edges are modeled after the relations encoded in WordNet.
+      </paragraph>
+      <paragraph>
+       In Fig. 1 we illustrate a small subgraph of WordNet, partly showing the neighborhood of the synset containing the fixed-wing aircraft sense of the noun airplane (the node at the center of the figure). As shown in the figure, edges in the WordNet graph are typed, with the main types being hypernymy{sup:3} and meronymy.{sup:4} However, we do not utilize these types in our semantic graph and consider an edge as a undirected relation between two synsets. The WordNet graph was further enriched in our experiments by connecting a sense with all the other senses that appear in its disambiguated gloss, as given by the Princeton Annotated Gloss Corpus.{sup:5} The corpus is an attempt at disambiguating the content words in WordNet's glosses, providing a suitable means of improving the connectivity among synsets in the WordNet network. For instance, consider the definition for the above-mentioned sense of airplane:
+      </paragraph>
+      <list>
+       <list-item>
+        airplane{sup:1}n – an aircraft that has a fixed wing and is powered by propellers or jets
+       </list-item>
+      </list>
+      <paragraph>
+       which is disambiguated in the Annotated Gloss Corpus as follows:
+      </paragraph>
+      <list>
+       <list-item>
+        airplane{sup:1}n – an aircraft{sup:1}n that has a fixed{sup:2}awing{sup:2}n and is powered by propellers{sup:1}n or jets.
+       </list-item>
+      </list>
+      <paragraph>
+       In our enriched WordNet graph the corresponding synset of the above-mentioned sense of airplane is directly linked to the synsets containing the disambiguated senses of the content words in its definition: aircraftn, fixeda, wingn and propellern. These nodes are highlighted in grey in Fig. 1. Note that not all the content words are provided with their intended senses in the disambiguated gloss (e.g., jetn in our example). The resulting WordNet graph contains about 118K nodes (synsets) covering around 155K unique terms. The average node degree is 8.9 in this undirected graph.
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Wiktionary
+      </section-title>
+      <paragraph>
+       Recent years have seen the surge of a wide range of AI applications that exploit the vast amount of semi-structured knowledge available in collaboratively-constructed resources [112]. High coverage is the main feature of these resources, thanks to their massive number of contributors. Since the coverage of ADW directly depends on the number of words covered by the underlying semantic network, a natural extension of our approach would be to utilize a high-coverage semantic network for the generation of semantic signatures. In order to verify the applicability of our approach to such resources, we picked a large collaboratively-constructed online dictionary, i.e., Wiktionary. Thanks to its collaborative nature, Wiktionary provides a larger and more up-to-date vocabulary than WordNet. For instance, this resource has a wider coverage of named entities (e.g., Ferrari), multi-word expressions (e.g., full_ throttle), alternative forms or spellings (e.g., Mejico), abbreviations and acronyms (e.g., adj. and MIME), slang terms (e.g., homewrecker), and domain-specific words (e.g., data_type). However, similarly to many other machine-readable dictionaries, Wiktionary is not readily representable as a semantic network. Therefore, the resource has first to be transformed into a semantic network before it can be utilized by ADW for the generation of semantic signatures. There are two main obstacles to the generation of a rich semantic network of Wiktionary, both of which are due to the difficult nature of connecting lexicographic senses by means of semantic relations:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Sparse set of relations: Unlike WordNet, Wiktionary does not have the benefit of a rich set of semantic relations. In fact, to our estimate, less than 20% of word entries in Wiktionary are provided with at least one lexical semantic relation (e.g., synonymy and hypernymy). As a result, attempts at exploiting these pre-defined relations for the transformation of Wiktionary into an ontology generally fail, as they can only produce sparse semantic networks with many of the nodes left in isolation [113].
+       </list-item>
+       <list-item label="•">
+        Lack of sense-disambiguated information: Wiktionary relations are not disambiguated on the target side. For instance, consider the first sense of the noun windmill in Wiktionary, which is defined as “A machine which translates linear motion of wind to rotational motion by means of adjustable vanes called sails.” Wiktionary lists the noun machine as the hypernym of this sense. However, there is no mechanism to make the intended sense of machine distinguishable from the others. Hence, a linkage between that sense of windmill and the intended sense of machine carries sense information on the source side only, as the intended sense is only known for windmill and not for machine. As a result, the relations provided by Wiktionary first need to be disambiguated according to its sense inventory, before they can be used to connect different word senses to each other.
+       </list-item>
+      </list>
+      <paragraph>
+       We presented in [43] an approach that addresses both issues and transforms an arbitrary machine-readable dictionary into a full-fledged semantic network. The gist of the approach lies in its collection of related words from the definition of a word sense. These words are subsequently disambiguated using a similarity-based disambiguation technique, resulting in a set of links between pairs of word senses.
+      </paragraph>
+      <paragraph>
+       Specifically, we first create an empty undirected graph {a mathematical formula}G=(S,E) such that S is the set of word senses in Wiktionary and {a mathematical formula}E=∅. For each source word sense {a mathematical formula}s∈S we gather a set of related words {a mathematical formula}W={w1,…,wn}, which comprises all the hyperlinked words in the definition of s and, if available, additional relations from Wiktionary (e.g., synonyms). If the word {a mathematical formula}wi is monosemous according to Wiktionary's sense inventory, the procedure is trivial and an edge is introduced in G between s and the only sense of {a mathematical formula}wi. However, if {a mathematical formula}wi is polysemous, we need to disambiguate the target side of the edge, i.e., the related word {a mathematical formula}wi. To this end, we measure the similarity between the definition of s and the definitions of all the senses of {a mathematical formula}wi. To measure this similarity, we opt for ADW when using the WordNet graph (more details in Section 5). The sense of {a mathematical formula}wi that produces the maximal similarity with s is taken as the intended sense {a mathematical formula}sˆwi of {a mathematical formula}wi, and the edge {a mathematical formula}(s,sˆwi) is accordingly added to E. In this procedure we make the assumption that the most important content words in the Wiktionary definitions are usually provided with hyperlinks.
+      </paragraph>
+      <paragraph>
+       We illustrate the graph construction procedure by way of an example. Consider the Wiktionary page for the noun windmill in Fig. 2 (left). The goal is to identify, for each sense of this noun, a set of related word senses. In the figure we have highlighted the hyperlinked words in the definitions by rectangles, and underlined the pre-defined Wiktionary relations. Consider the first sense:
+      </paragraph>
+      <list>
+       <list-item>
+        windmill{sup:1}n: A machine which translates linear motion of wind to rotational motion by means of adjustable vanes called sails,
+       </list-item>
+      </list>
+      <paragraph>
+       in which seven hyperlinked terms are shown in italics. Consider the noun machine in this definition. The word is disambiguated by computing the semantic similarity between the context in which it appears, i.e., the definition of windmill{sup:1}n, and all the definitions of machine in Wiktionary (right side in Fig. 2). The sense of machine which produces the maximal similarity is taken as the intended sense (shown by a star sign in the figure) and accordingly an edge is introduced into the graph between this sense and windmill{sup:1}n.
+      </paragraph>
+      <paragraph>
+       All the highlighted words, i.e., the hyperlinked words in the definitions and the pre-defined Wiktionary relations, are disambiguated using the same similarity-based disambiguation procedure. As a result of performing this procedure for our example word sense windmill{sup:1}n, new edges are added to the graph connecting this sense to the following related word senses: machine{sup:1}n, linear{sup:6}a, wind{sup:1}n, rotational{sup:1}a, adjustable{sup:1}a, vane{sup:2}n, and sail{sup:5}n.{sup:6} Based on the described procedure, we constructed a semantic network of Wiktionary containing around 372K nodes, each denoting a word sense with any of the four open-class parts of speech: noun, verb, adjective, and adverb.{sup:7} Our Wiktionary graph has more than three times the number of nodes in the WordNet 3.0 graph. The average node degree in this undirected graph is around 4.4.
+      </paragraph>
+      <paragraph>
+       We further enrich the Wiktionary graph by exploiting the multilingual knowledge available in this resource. Our approach utilizes translations of words in other languages as bridges between synonymous words in English, a technique that is usually used in paraphrasing [114]. Specifically, we first obtain all the translations for each sense s of word w in Wiktionary. Assume that the sense s of w translates to the word {a mathematical formula}tl in language l. We hypothesize that an English word sense {a mathematical formula}s′ of {a mathematical formula}w′ is synonymous or closely related to s, if it is also translated into {a mathematical formula}tl in language l. Hence, we introduce an edge between these two senses s and {a mathematical formula}s′ in the graph. In order to avoid ambiguity, as {a mathematical formula}tl we only consider words that are monosemous according to the Wiktionary sense inventory for language l. For instance, the Finnish noun ammatti, which is monosemous according to Wiktionary, links six English word senses: career{sup:1}n, business{sup:2}n, occupation{sup:1}n, trade{sup:6}n, calling{sup:2}n, and vocation{sup:2}n.{sup:8} This procedure results in about 500 additional nodes and more than 35K new edges, increasing the average node degree by 0.1. We refer to this Wiktionary graph as WKT in our experiments.
+      </paragraph>
+      <paragraph>
+       We also constructed a variant of the Wiktionary semantic network in which, in addition to the hyperlinked words that were used in the WKT graph, the set of related words W for a word sense also includes the non-hyperlinked content words in the definition. This graph, called WKTall, has 429K nodes with an average degree of 10. In Section 6.3.3 we report the results of the evaluations carried out on ADW when using this variant of the Wiktionary graph.
+      </paragraph>
+     </section>
+     <section label="4.3">
+      <section-title>
+       Automatically-induced semantic networks
+      </section-title>
+      <paragraph>
+       Directly connected entities in a semantic network are expected to share most of the semantics, i.e., to be the most semantically related ones. Therefore, having at hand a procedure for computing the most semantically related entities to a given entity, one can think of automatically constructing a semantic network. A popular technique for modeling the semantics of linguistic items is the distributional hypothesis, according to which semantically similar items are expected to appear in similar contexts. Baroni and Lenci [115] provide an overview of the distributional semantic models (DSM). In order to evaluate the suitability of automatically-induced semantic networks for the construction of semantic signatures, we used two different DSM techniques for the construction of semantic networks: a conventional frequency-based vector space model and a state-of-the-art continuous model based on deep neural networks.
+      </paragraph>
+      <paragraph>
+       However, in order to be able to utilize DSM techniques to automatically induce sense-based semantic networks, i.e., graphs whose nodes are word senses or concepts, large sense-annotated corpora are required (see [43] for a pseudoword-based solution). Due to the lack of such corpora, we are limited to the construction of word-based semantic networks, i.e., graphs with words as their nodes, unlike WordNet and Wiktionary networks whose nodes represent concepts and word senses, respectively. Most similar to our computation of semantic similarity on automatically-induced networks is the work of Iosif and Potamianos [116], which exploits cooccurrence statistics for the construction of semantic networks and then exploits the structural information of the networks obtained for the computation of semantic similarity. In Section 6.3.4 we present our experiments on utilizing the automatically-induced semantic networks in the task of word similarity measurement.
+      </paragraph>
+      <section label="4.3.1">
+       <section-title>
+        Distributional thesaurus (DM)
+       </section-title>
+       <paragraph>
+        Conventional DSMs take as context any word appearing in the vicinity of a target word, irrespective of the syntactic or semantic relation between the two [74], [24]. Structured models improve this by encoding the relationship between a word and its context, hence providing a richer and more sophisticated model of meaning. Baroni and Lenci [115] provide an overview of structured DSMs, models in which the context words are limited to only those that are linked by a syntactic relation or lexical pattern. TypeDM is a structured DSM in which third-order tensors, i.e., ternary geometrical objects that model distributional data in terms of word–link–word tuples, are calculated in such a way as to assign more importance to relations that tend to take more forms [115], [117]. Baroni and Lenci released a set of TypeDM vectors estimated by means of Local Mutual Information (LMI) on a 2.8 billion-token corpus obtained by concatenating the ukWaC corpus, English Wikipedia, and the British National Corpus [81].{sup:9} Based on this model, Partha Pratim Talukdar constructed a distributional thesaurus (see footnote 9). The thesaurus lists the top ten nearest neighbors of each word in a vocabulary of about 31K nouns, verbs, and adjectives, calculated using the cosine distance between TypeDM tensors. Table 2 shows the neighbors of three words smartphonen, papern, and terminatev in this thesaurus. We transform the TypeDM thesaurus into a semantic network and use the resulting network in our experiments for the generation of semantic signatures. The graph, called DM hereafter, comprises 30.7K nodes belonging to three parts of speech, nouns (20K), verbs (5K), and adjectives (5K), which are linked to each other by means of around 250K undirected edges.
+       </paragraph>
+      </section>
+      <section label="4.3.2">
+       <section-title>
+        Word embeddings (W2V)
+       </section-title>
+       <paragraph>
+        The past few years have seen a resurgence of interest in the usage of neural networks for processing massive amounts of texts. Continuous vector representations, also known as word embeddings, are a prominent example [84], [118], [86], [58]. In this representation, the vectors' weights are directly computed so as to maximize the probability of the context in which the word being modeled tends to appear. This permits efficient representation of models trained on massive amounts of data in relatively small-sized vectors. We used the 300-dimensional vectors trained on the 100 billion-word Google News dataset provided as a part of the Word2vec toolkit.{sup:10} The model covers more than 3 million words and phrases, which is a considerable vocabulary size. For each entry, we computed the ten most similar entries using the scripts provided in the toolkit. Table 3 shows the top ten closest words to our three example words smartphone, paper, and terminate. Accordingly, we construct the W2V semantic network by restricting the entries to those containing at least one alphanumeric character, including also apostrophe, period, hyphen and underscore. The resulting graph has around 2.9M nodes and an average node degree of 17.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      A unified semantic representation
+     </section-title>
+     <paragraph>
+      So far we have described how we construct our semantic networks. In this Section we proceed by explaining how these networks are used for the measurement of semantic similarity. Fig. 3 illustrates the process of measuring the semantic similarity of a pair of linguistic items using our similarity measurement technique. Our approach, ADW, consists of two main steps: an Alignment-based Disambiguation of the two linguistic items and a random Walk on a semantic network in order to obtain and compare their semantic representations. We term our representation for a given linguistic item as its semantic signature. Our approach for the generation of semantic signatures is a graph-based one that models a linguistic item as a probability distribution over all entities in a lexicon. The weights in this distribution denote the relevance of the corresponding entity to the modeled linguistic item.
+     </paragraph>
+     <paragraph>
+      We start this section by providing, in Section 5.1, a formal description of how we leverage random walks on semantic networks in order to model arbitrary linguistic items through semantic signatures. We then present, in Section 5.2, four methods (one of which is proposed by us) for comparing the semantic signatures obtained and calculating the similarity score for two linguistic items. Finally, in Section 5.3, we explain how the semantic signatures of concepts enable our alignment-based disambiguation of a pair of lexical items.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Semantic signature of a lexical item
+      </section-title>
+      <paragraph>
+       Generally speaking, a semantic signature can be viewed as a special form of vector space model (VSM) representation [24]. Similarly to the VSM representation of a linguistic item, the weight associated with a dimension in a semantic signature denotes the relevance or importance of that dimension for the linguistic item. The main difference, however, is in the way the weights are calculated. In a VSM representation, each dimension usually corresponds to a separate word whose weight is often computed on the basis of cooccurrence statistics, whereas in a semantic signature a linguistic item is represented as a probability distribution over all entities in a semantic network where the weights are estimated on the basis of structural properties of the network. For the generation of our semantic signatures, we use the Personalized PageRank (PPR) algorithm [119]. In what follows, we briefly describe the PageRank algorithm and its personalized version.
+      </paragraph>
+      <section label="5.1.1">
+       <section-title>
+        PageRank
+       </section-title>
+       <paragraph>
+        The PageRank algorithm [120] is a celebrated graph analysis technique which can be used to estimate the structural importance of nodes in a graph. PageRank is the best-known algorithm used by Google for ranking different web pages in its search engine results. PageRank represents the web as a graph and estimates the importance of a web page on the basis of the structural properties of the graph. The algorithm has been successfully used in various fields including NLP where it has found numerous applications: sentiment polarity detection [121], Word Sense Disambiguation [122], [123], [124], [125], semantic similarity [93], [94], [89], keyword extraction [126], and lexical resource alignment [127], [20].
+       </paragraph>
+       <paragraph>
+        A simple way to describe the PageRank algorithm is to consider a user who surfs the web by randomly clicking on hyperlinks. The probability that the surfer will click on a specific hyperlink is given by the PageRank value of the page to which the hyperlink points. According to the PageRank algorithm, this probability for a given page is calculated on the basis of the number of its incoming links and their importance. The basic idea is that the more links there are from more important pages, the higher the PageRank value is. This is based on the assumption that important websites are linked to by many other pages. The original PageRank also assumes that the surfer will get bored after a finite number of clicks and will jump to some other page at random. The probability that our surfer will continue surfing by clicking on the hyperlinks is given by a fixed-value parameter, usually referred to as the damping factor.
+       </paragraph>
+       <paragraph>
+        In the original PageRank algorithm the graph models the web with web pages as nodes and hyperlinks between web pages as directed edges. In our formulation, the underlying graph is a semantic network with nodes representing concepts and edges acting as the semantic relationships between concepts. Formally, the PageRank algorithm first represents a semantic network consisting of N concepts as a row-stochastic transition matrix {a mathematical formula}M∈RN×N. For instance, consider the graph in Fig. 4 that has 4 nodes and 6 directed edges. The graph can be represented as a Markov chain M where the cell {a mathematical formula}Mij is set to {a mathematical formula}outDegree(i)−1 if there exists a link from i to j, and to zero otherwise{sup:11}:{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        Each row in the matrix is a stochastic vector. Note that we calculated the probability of following any outlink as {a mathematical formula}outDegree(i)−1, which assumes that all the links are equally likely to be selected. This assumption can be replaced by any other weighting scheme that guarantees a row-stochastic matrix. For instance, one can assign a higher probability to a certain node based on a priori knowledge available. Irrespective of the procedure used for the construction of the matrix M, the PageRank values are given by the principal left eigenvector {a mathematical formula}S of the matrix:{a mathematical formula} where the eigenvalue λ is one, hence the principal eigenvector. The ith value of the vector {a mathematical formula}S denotes the PageRank value for the ith page. Different methods have been proposed for the computation of the PageRank values [128]. One popular approach is the power iteration method. According to this iterative method, the PageRank vector {a mathematical formula}S can be calculated as:{a mathematical formula} where {a mathematical formula}S0 is a column vector of size N in which the probability mass is distributed among all dimensions, i.e., each cell is assigned a value equal to {a mathematical formula}1N. The α parameter is the damping factor, which is usually set to 0.85 [120]. The procedure is repeated for a fixed number of iterations or until the following convergence criterion is fulfilled:{a mathematical formula} where ϵ is set to 0.0001 in our experiments. The power method finds only one maximal eigenvalue together with its corresponding eigenvector. The resulting eigenvector is a vector of size N with non-negative values. The PageRank algorithm takes the eigenvector as a stationary probability distribution that contains the PageRank values for all the nodes in the graph [128].
+       </paragraph>
+      </section>
+      <section label="5.1.2">
+       <section-title>
+        Personalized PageRank
+       </section-title>
+       <paragraph>
+        The Personalized PageRank (PPR) algorithm is a variation of the PageRank algorithm in which the computation is biased so as to obtain weights denoting the importance with respect to a particular set of nodes. When the graph is a semantic network in which edges denote semantic relationships, this importance can be viewed as the degree of semantic relatedness. Therefore, the PPR algorithm can essentially be used on a semantic network in order to calculate the semantic relatedness of all concepts to a specific concept or set of concepts.
+       </paragraph>
+       <paragraph>
+        According to the random surfer explanation, there is an additional assumption in the PPR formulation that when the random surfer gets bored, (s)he does not pick a page from the set of all pages in the web, but from a specific set of personalized pages. Therefore, in this variant of the PageRank algorithm random restarts are always initiated from a set of specific personalized web pages.
+       </paragraph>
+       <paragraph>
+        The essential difference in the calculation of the PPR values is in the initialization of the {a mathematical formula}S0 vector. Instead of distributing the probability mass among all dimensions, the personalization vector {a mathematical formula}S0 is constructed by concentrating the probability mass on a subset of dimensions only. Hence, the PPR algorithm can be used to obtain a semantic signature for a set of m concepts C. To this end, it is enough to uniformly distribute the probability mass in the personalization vector {a mathematical formula}S0 among all the corresponding dimensions of C, i.e., each dimension is assigned a probability equal to {a mathematical formula}1m. The resulting semantic signature denotes the semantic relevance of each node in the network with respect to the personalized concepts C. This signature can also be computed as the average of the signatures obtained for the individual entities in C (cf. Appendix A for the proposition proof). This makes it possible to calculate the signatures for all nodes in a graph in advance, and later use the pre-computed signatures for the calculation of the semantic signature of an arbitrary linguistic item without needing to re-run the PPR algorithm for that specific item. In our experiments, we used the UKB{sup:12} off-the-shelf implementation of the algorithm.
+       </paragraph>
+       <section>
+        <section-title>
+         Example
+        </section-title>
+        <paragraph>
+         Table 4 shows the top-8 dimensions in the semantic signatures generated on the WordNet semantic network for: (1) plant{sup:1}n: the first sense of the noun plant in WordNet 3.0 (industrial plant) and, (2) the phrase linux operating system. For each dimension (represented by some of the word senses in its corresponding synset) we show the associated weight in the initialization vector ({a mathematical formula}S0), the weight computed after the first iteration of the algorithm ({a mathematical formula}S1), and the final weight ({a mathematical formula}Sf). In the case of plant{sup:1}n, the semantic signature is obtained by putting all the probability mass in the personalization vector {a mathematical formula}S0 on the dimension corresponding to that specific sense (i.e., all values in the distribution are set to zero except the one corresponding to the synset containing plant{sup:1}n, which is set to one). Instead, for the phrase linux operating system, the probability mass in {a mathematical formula}S0 is distributed among all dimensions corresponding to all senses of all the content words, i.e., linux and operating system. Since both these are monosemous according to the WordNet sense inventory, the weight in the personalization vector {a mathematical formula}S0 for our phrase is concentrated on the dimensions corresponding to their only senses, i.e., linux{sup:1}n and operating system{sup:1}n, and the other dimensions are set to zero. As can be seen from the table, upon the first iteration of the PageRank algorithm (column {a mathematical formula}S1), none of the uninitialized dimensions are assigned a weight greater than or equal to 0.001, even those that are directly connected to the initialized nodes (e.g., factory{sup:1}n for plant{sup:1}n and trademark{sup:2}n for linux operating system). For the case of both examples the highest-ranking dimensions in the final vectors ({a mathematical formula}Sf) correspond to synsets (concepts) that are closely related to the modeled linguistic items. Also, note that the top-ranking synsets do not necessarily belong to the same part of speech. For instance, industrial{sup:1}a and open-source{sup:1}a are adjectival word senses that are strongly related to our nominal linguistic items plant{sup:1}n and linux operating system, respectively.
+        </paragraph>
+       </section>
+      </section>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Semantic signature similarity
+      </section-title>
+      <paragraph>
+       Once we have obtained the semantic signature representations for a pair of linguistic items, we can calculate the similarity of the two items by comparing their corresponding semantic signatures. We adopt four techniques for comparing our semantic signatures: two methods that have been used extensively in previous work on comparing vectors, i.e., Jensen–Shannon divergence and cosine, and two rank-based comparison metrics, i.e., Rank-Biased Overlap and Weighted Overlap.
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Jensen–Shannon divergence. This measure is based on the Kullback–Leibler divergence, which is commonly referred to as KL divergence, and is computed for a pair of semantic signatures (probability distributions in general) {a mathematical formula}S1 and {a mathematical formula}S2 as:{a mathematical formula} where {a mathematical formula}Sh is the weight assigned to the dimension h in the semantic signature {a mathematical formula}S and H is the set of overlapping dimensions across the two signatures. However, KL divergence is non-symmetric. Therefore, we use in our experiments Jensen–Shannon (JS) divergence, which is a symmetrized and smoothed version of KL divergence:{a mathematical formula}
+       </list-item>
+       <list-item label="•">
+        Cosine. The measure computes the similarity of two multinomial distributions {a mathematical formula}S1 and {a mathematical formula}S2 by treating each as a vector and then computing the normalized dot product of the two signatures' vectors:{a mathematical formula}
+       </list-item>
+      </list>
+      <paragraph>
+       The above-mentioned measures are all calculated by directly incorporating the actual weights in the vectors. There is another class of measures which rely rather on the relative rankings of the entities in the vectors. The most prominent example of this type of statistical measure is the Spearman rank correlation or Spearman's ρ, which computes the statistical dependence between two ranked variables. However, the Spearman correlation does not provide a suitable basis for comparing semantic signatures. The reason behind this drawback is that the measure places as much importance on differences in the ranks of the top elements in the signatures as it does on the ones at the bottom; however, we know that the top elements in the semantic signatures are the most representative ones. Therefore, a suitable measure has to penalize the differences among the top ranks more than it does for the bottom ones. Webber et al. [129] referred to this property as the top-weightedness of a measure. Kendell's τ[130] is another rank-based measure that does not satisfy this property. A thorough overview of different rank similarity methods is provided in [129]. Webber et al. [129] also proposed a top-weighted rank similarity measure, called Rank-Biased Overlap, and evaluated it on the task of comparing search engine results and assessing retrieval systems.
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Rank-Biased Overlap (RBO). Let {a mathematical formula}Hd be the set of overlapping dimensions between the top-d elements of the two signatures {a mathematical formula}S1 and {a mathematical formula}S2. The RBO measure is then calculated as:{a mathematical formula} where {a mathematical formula}|H| is the number of overlapping dimensions between the two signatures and {a mathematical formula}p∈[0,1] is a parameter that determines the relative importance of the top elements: smaller p values result in higher top-weightedness. In our experiments we set p to the high value of 0.995, as suggested in [129] for large vectors.
+       </list-item>
+      </list>
+      <list>
+       <list-item label="•">
+        Weighted Overlap. We also employ a fourth measure, Weighted Overlap (WO), that we introduced in [30]. The measure computes the similarity between a pair of ranked lists by comparing the relative rankings of the dimensions. Let H denote the intersection of all non-zero dimensions in the two signatures and {a mathematical formula}rh(S) be a function returning the rank of the dimension h in the sorted signature {a mathematical formula}S. Then WO calculates the similarity of two signatures {a mathematical formula}S1 and {a mathematical formula}S2 as:{a mathematical formula} where the denominator is a normalization factor that guarantees a maximum value of one. The measure first sorts the two signatures according to their values and then harmonically weights the overlaps between them. The minimum value is zero and occurs when there is no overlap between the two signatures, i.e., {a mathematical formula}|H|=0. The measure is symmetric and satisfies the top-weightedness property, i.e., it penalizes the differences in the higher rankings more than it does for the lower ones.{sup:13} Note that {a mathematical formula}rh(S) is the rank of the dimension h in the original vector {a mathematical formula}S and not that in the corresponding vector truncated to the overlapping dimensions H. In our setting, we experiment with the untruncated semantic signatures and all our signatures are equally-sized (the size being equal to the number of nodes in the network). Hence, in our experiments any pair of signatures has identical dimensions, i.e., their intersection has a size equal to that of either of the two signatures. One advantage of WO over RBO is that it does not need any parameter to be set prior to calculation.
+       </list-item>
+      </list>
+     </section>
+     <section label="5.3">
+      <section-title>
+       Alignment-based disambiguation
+      </section-title>
+      <paragraph>
+       Measures for computing text semantic similarity often operate at the word surface level. However, ideally, each word in a text has first to be analyzed and disambiguated into its intended sense, and then the whole text modeled once it contains only disambiguated words. Moreover, comparison at the surface level can be especially problematic in the case of shorter textual items, such as word or phrase pairs, as there is not enough contextual information to allow an implicit disambiguation of content words' meanings when a combined representation such as VSM is constructed. Our similarity measure, instead, provides a deeper modeling of linguistic items at the sense level. To this end, we propose an alignment-based Word Sense Disambiguation technique that leverages concepts' semantic signatures to disambiguate the content words in a linguistic item. The reason why we did not choose a conventional Word Sense Disambiguation approach was that they are generally ineffective for disambiguating short texts, due to lack of sufficient contextual information (consider, for instance, a single-word context). In addition, our alignment-based disambiguation was designed in accordance with psychological studies which suggest that, when making similarity judgments between linguistic items, humans actually perform a pairwise disambiguation of textual items, and that this process results in a biased comparison that favors the similarities between the two sides rather than the differences [131], [132]. For instance, consider the word pair cushion-pillow, which is assigned the close-to-identical similarity score of 3.84 (in the scale 0 to 4) in the RG-65 dataset [61]. The noun cushion is polysemous and has three senses according to the WordNet sense inventory: (1) “a mechanical damper; absorbs energy of sudden impulses”, (2) “the layer of air that supports a hovercraft or similar vehicle”, and (3) “a soft bag filled with air or a mass of padding such as feathers or foam rubber”. When cushion is paired with the noun pillow, its “soft bag” sense is triggered (pillow is a hyponym of the “soft bag” cushion in WordNet), resulting in a high similarity score, assigned by several human annotators.
+      </paragraph>
+      <paragraph>
+       We show the procedure for our alignment-based disambiguation in Algorithm 1. The algorithm takes as its input the sets {a mathematical formula}T1 and {a mathematical formula}T2 of word types on the two comparison sides. For a word {a mathematical formula}ti∈T1, the algorithm searches for a sense {a mathematical formula}best_sensei that produces the maximal similarity with a specific sense among all the senses of all the words in {a mathematical formula}T2. This procedure is repeated for all words in {a mathematical formula}T1 and finally, as output, the set P of disambiguated senses for word types in {a mathematical formula}T1 is returned. In line 6, Senses(t) returns all senses of the word t and {a mathematical formula}R(sense1,sense2), on the next line, measures the similarity of sense1 and sense2 by leveraging our semantic similarity technique at the sense level. At this level, the similarity of a pair of senses is computed by generating their semantic signatures and comparing the senses' signatures with the help of any of the comparison methods described in Section 5.2. Note that in our disambiguation procedure we assume one sense per discourse [133] and, in case multiple instances of a word exist in a linguistic item, all are assigned the same sense. We explain the disambiguation procedure using our two example sentences from Section 1:
+      </paragraph>
+      <list>
+       <list-item>
+        Officers fired.
+       </list-item>
+       <list-item>
+        Several policemen terminated in corruption probe.
+       </list-item>
+      </list>
+      <paragraph>
+       We are interested in disambiguating the content words in both sentences: officern and firev in a1 and policemann, terminatev, corruptionn, and proben in a2. As we show in Fig. 5, among all possible pairings of all the senses of firev to all the senses of all words in a2, the sense fire{sup:4}v (the employment termination sense) obtains the maximal similarity value (to terminate{sup:4}v with {a mathematical formula}R(firev4,terminatev4)=1), and hence it is selected as the sense for firev in sentence a1. Fig. 6 illustrates the final, maximally-similar sense alignment of the word types in a1 and a2. The source side in each alignment is taken as the intended sense of its corresponding word (shaded in grey in Fig. 6). Note that the procedure has to be repeated in the other direction in order to disambiguate word types in a2. For example, proben is disambiguated to its first sense (defined as “an inquiry into unfamiliar or questionable activities”) after being aligned to the second sense of officern (defined as “someone who is appointed or elected to an office and who holds a position of trust”). On the other hand, officern is disambiguated to its third sense (defined as “a member of a police force”) after being aligned to its synonym policeman{sup:1}n in the other sentence. The resulting alignment produces the following sets of disambiguated senses for the two pairs of sentences from Section 1:
+      </paragraph>
+      <list>
+       <list-item>
+        = {officer{sup:3}n, fire{sup:4}v}
+       </list-item>
+       <list-item>
+        = {policeman{sup:1}n, terminate{sup:4}v, corruption{sup:6}n, probe{sup:1}n}
+       </list-item>
+      </list>
+      <list>
+       <list-item>
+        = {officer{sup:3}n, fire{sup:2}v}
+       </list-item>
+       <list-item>
+        = {injure{sup:2}v, police{sup:1}n, shooting{sup:1}n, incident{sup:2}n}
+       </list-item>
+      </list>
+      <paragraph>
+       where {a mathematical formula}Px denotes the corresponding set of senses of sentence x. We note that since the textual items can have different lengths, the alignments are not necessarily one-to-one or symmetrical. Also, given that our automatically-constructed graphs, i.e., DM and W2V, do not provide sense distinctions (see Section 4.3), they cannot be used for the alignment-based disambiguation. Therefore, we apply the disambiguation phase only when experimenting with the WordNet and Wiktionary graphs.
+      </paragraph>
+      <paragraph>
+       We further demonstrate the advantage that our alignment-based disambiguation approach can provide in comparison with the conventional disambiguation techniques by means of examples from two existing standard datasets for two tasks: word similarity and phrase-to-word similarity. In the RG-65 dataset [61], which is a standard evaluation framework for word similarity, the noun crane is paired with three other nouns: rooster, bird, and implement with the respective similarity scores of 1.41, 2.68, and 2.37 (in the scale 0–4). A conventional disambiguation technique falls short of disambiguating either word in each pair as single words do not have any context. In contrast, our algorithm disambiguates the noun crane into its fifth sense in WordNet 3.0, defined as “large long-necked wading bird of marshes and plains in many parts of the world”, when the noun is paired with rooster or bird. In the context of implement, the fourth sense of the noun crane is triggered, i.e., crane{sup:4}n: “lifts and moves heavy objects; lifting tackle is suspended from a pivoted boom that rotates around a vertical axis.” As for the phrase-to-word similarity, consider the following example from the training set of the SemEval-2014 task on Cross-Level Semantic Similarity [134]:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        leak
+       </list-item>
+       <list-item label="•">
+        sifting through cracks in the ceiling
+       </list-item>
+      </list>
+      <paragraph>
+       Our alignment-based disambiguation identifies leak{sup:3}v, defined as “enter or escape as through a hole or crack or fissure”, as the intended sense of leak. The sense obtains maximal similarity with the first sense of the noun crack, defined as “a long narrow opening.” A conventional approach is ineffective for disambiguating such cases in which the context is either not conclusive or non-existing.
+      </paragraph>
+      <section>
+       <section>
+        <section-title>
+         Disambiguation of long textual items
+        </section-title>
+        <paragraph>
+         Our disambiguation step is specifically designed for short linguistic items, such as words or short phrases, which do not have enough contextual information. In the case of larger linguistic items such as sentences or paragraphs, the presence of a suitable number of content words guarantees an implicit disambiguation of the terms in the linguistic items. The hunch is that, similarly to VSM techniques such as ESA [27], when the representations of multiple content words are aggregated, a partial disambiguation takes place. As an example, consider the linguistic item “plant for manufacturing household appliances.” The noun plant has two main senses, i.e., the living organism and the industrial plant. The semantic signature generated for the sole noun plant gives importance to concepts that are relevant to both these senses. However, when plant is put together with a word such as manufacturing in some linguistic item, the overlapping industrial meanings of the two give rise to the weights of industry-related concepts in the resulting semantic signature. Therefore, in the semantic signature representation of the above linguistic item, concepts related to the industrial sense will have higher weights than those related to the living organism meaning, hence an implicit disambiguation of the noun plant already at the lexical level.
+        </paragraph>
+       </section>
+      </section>
+     </section>
+     <section label="5.4">
+      <section-title>
+       OOV handling
+      </section-title>
+      <paragraph>
+       Similarly to any other graph-based approach that maps words in a given textual item to their corresponding nodes in a semantic network, our approach for modeling linguistic items through semantic signatures can suffer from its limited coverage of words: it can handle only those words that are associated with some nodes in the underlying semantic network. As a result, the semantic signature generation phase ignores out-of-vocabulary (OOV) words in a textual item, as they are not defined in the corresponding lexical resource and hence do not have an associated node in the semantic graph for the random walk to be initialized from. This can be particularly problematic when measuring semantic similarity of text pairs that contain many OOV words, such as infrequent named entities, acronyms or jargon. In order to alleviate this issue, we propose two novel techniques for handling OOV terms while measuring the semantic similarity of textual items. These techniques will be described in the following two subsections.
+      </paragraph>
+      <section label="5.4.1">
+       <section-title>
+        Direct OOV injection
+       </section-title>
+       <paragraph>
+        A semantic signature is essentially a vector whose dimensionality is the number of connected nodes in the underlying semantic network. As mentioned earlier, in a linguistic item's semantic signature the weight assigned to each dimension denotes the relevance of the corresponding concept or word sense to the modeled linguistic item. In the PPR algorithm, random restarts are always initiated from nodes that are associated with a linguistic item. Consequently, the corresponding dimensions of these nodes in the resulting semantic signature possess high weights and are among the top elements in the sorted list of concepts or word senses in that signature. However, if a content word in the linguistic item does not have a corresponding node in the semantic network, it will be ignored in the semantic signature generation. For example, consider the following pair of sentences:
+       </paragraph>
+       <list>
+        <list-item>
+         Steve Ballmer has been vocal in the past warning that Linux is a threat to Microsoft.
+        </list-item>
+        <list-item>
+         In the memo, Microsoft's CEO reiterated the open-source threat to Windows.
+        </list-item>
+       </list>
+       <paragraph>
+        where the WordNet OOV words are highlighted in italics. In the semantic signature obtained on the WordNet semantic network for the first sentence, the top-10 dimensions belong to content words such as Linux, Windows, trademark, warning, threat, and vocal. On the other hand, synsets containing different meanings of reiterate, CEO, open-source, memo, and threat are among the highest weighted dimensions in the second signature, i.e., the signature obtained for h2. However, the two terms Steve Ballmer and Microsoft are absent from the two signatures since neither of the two words are defined in WordNet and hence they do not have a corresponding node in the WordNet graph.
+       </paragraph>
+       <paragraph>
+        Here, we propose a technique, namely direct OOV injection, for taking into consideration the words that are not covered during semantic signature generation. According to this procedure, we introduce new dimensions in the resulting semantic signature, one for each OOV term, while assigning a weight to the new dimension so as to place it among the top elements in the semantic signature. This OOV word handling technique can be seen as a back-off to the string-based similarity which, as also mentioned in Section 1, provides a strong baseline in many tasks such as sentence similarity.
+       </paragraph>
+       <paragraph>
+        For the case of our example, we introduce, in each of the two semantic signatures, new dimensions corresponding to their missing terms, i.e., Steve_Ballmern and Microsoftn for h1 and Microsoftn for h2. Fig. 7 illustrates our direct OOV handling for the sentence h2. We set the associated weights of the newly-introduced dimensions to 0.5 so as to guarantee their placement among the top dimensions in their corresponding signatures. We utilize this approach for handling OOV entries in our text-level experiments (Section 6.4) and show that it can provide considerable performance improvement on datasets containing many OOV entries. Note that, since we use only the Weighted Overlap measure for comparing pairs of signatures in our sentence-level experiments (see Section 6.4), we do not need to normalize the newly-created vectors because the measure considers the relative ranking of the dimensions and hence is insensitive to the modification of the weights as long as it does not alter the order of the other dimensions.
+       </paragraph>
+      </section>
+      <section label="5.4.2">
+       <section-title>
+        Wikipedia-assisted OOV mapping
+       </section-title>
+       <paragraph>
+        The described direct OOV injection technique is a post-processing step that modifies the semantic signatures subsequent to their generation, by including the missing terms as new dimensions in the signature. Here, we propose an alternative approach that directly replaces an OOV entry in the textual item with its most relevant WordNet concept, prior to the generation of the semantic signature. Given its wide coverage of named entities, Wikipedia provides a suitable means for handling OOV words in WordNet. We therefore leveraged a Wikipedia-derived taxonomy in order to enable the handling of WordNet OOV entries. Given a textual item, the Wikipedia-assisted technique replaces all its WordNet OOV terms with the synsets that best represent them. The replacement is performed in two steps:
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         For a given OOV word w, we first use a Wikipedia taxonomy to obtain the generalization (i.e., hypernym) of w in terms of a Wikipedia article.
+        </list-item>
+        <list-item label="2.">
+         We then map the obtained hypernym of w to the corresponding synset in WordNet with the help of a mapping of Wikipedia articles to WordNet synsets.
+        </list-item>
+       </list>
+       <paragraph>
+        Specifically, as our taxonomy, we considered the Wikipedia Bitaxonomy (WiBi) [135], a state-of-the-art taxonomy derived from Wikipedia. When we encounter an OOV content word w, we use WiBi to extract its hypernym. For instance, for the OOV words Microsoft and Steve Ballmer, the hypernyms listed are the Wikipedia articles for corporation and businessperson, respectively. The reason behind our upward move in the taxonomy hierarchy is that, if a word is not defined in WordNet it is probably because it is too domain-specific or not lexicographically relevant. Note that the hypernym of w in WiBi is itself the title of a Wikipedia article. Hence, as a final step, we have to map this article title to the corresponding WordNet synset. For this purpose we utilized BabelNet [18], which is a multilingual encyclopedic dictionary that provides a mapping of Wikipedia pages to WordNet synsets. As a result of this process, if such a mapping exists, the OOV word w is replaced with its WordNet synset in the textual item. In case the word w is ambiguous, i.e., it is associated to multiple word senses in WiBi, we repeat the procedure for all its senses and replace w with all its corresponding WordNet synsets.
+       </paragraph>
+       <paragraph>
+        For instance, consider our earlier example from Section 5.4.1. After applying this pre-processing stage, the two sentences are transformed into the following:
+       </paragraph>
+       <list>
+        <list-item>
+         {businessperson{sup:1}n, vocala, pasta, warningn, linuxn, threatn, corporation{sup:1}n}
+        </list-item>
+        <list-item>
+         {memon, corporation{sup:1}n, ceo{sup:1}n, reiteratev, open-sourcea, threatn, windows{sup:1}n}
+        </list-item>
+       </list>
+       <paragraph>
+        where the OOV words Microsoft and Steve Ballmer are, respectively, mapped onto the word senses corporation{sup:1}n, defined as “a business firm whose articles of incorporation have been approved in some state”, and businessperson{sup:1}n defined as: “a capitalist who engages in industrial commercial enterprise” in WordNet 3.0. We show in Fig. 8 our Wikipedia-assisted OOV handling process for the noun Microsoft in the sentence h2.
+       </paragraph>
+       <paragraph>
+        During the generation of the semantic signature, the corresponding nodes of the newly-introduced word senses will also be considered as starting points in the random restarts of the PPR algorithm. Therefore, the corresponding node and its neighboring synsets will be assigned higher weights in the resulting semantic signature. We note that, due to the limitations of WiBi and BabelNet, this OOV handling approach can only be applied to the case where the WordNet semantic network is used for the generation of semantic signatures.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Experiments
+     </section-title>
+     <paragraph>
+      We carried out three sets of experiments in order to evaluate our similarity measurement approach at three different levels: sense, word, and sentence levels. In this section, we first introduce the evaluation benchmarks used in our experiments for the three levels, and this is then followed by a detailed description of the experiments and their corresponding results.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       Benchmarks
+      </section-title>
+      <paragraph>
+       We compared the performance of our system with state-of-the-art measures on several benchmarks across three linguistic levels:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Sense level: we performed a binary merging of WordNet senses and evaluated the results on the basis of the sense groupings provided as part of the Senseval-2 English Lexical Sample WSD task, and also the OntoNotes project (Section 6.2).
+       </list-item>
+       <list-item label="•">
+        Word level: we evaluated our system in the judgment correlation task on three standard datasets: RG-65, WordSim-353 similarity, and YP-130 (Section 6.3).
+       </list-item>
+       <list-item label="•">
+        Sentence level: we took as our test bed the datasets of the SemEval-2012 task on Semantic Textual Similarity (Section 6.4).
+       </list-item>
+      </list>
+      <paragraph>
+       As also mentioned in Section 1, previous works have often focused on only one of the above levels and very few have considered multiple tasks or datasets. Hence, for each level and for each dataset, we compare the performance of our approach against the corresponding state-of-the-art results reported in the literature. We describe the comparison systems for each dataset in its corresponding section.
+      </paragraph>
+     </section>
+     <section label="6.2">
+      <section-title>
+       Experiment 1: sense-level similarity
+      </section-title>
+      <paragraph>
+       We start our experiments from the lowest linguistic level, i.e., the sense level. At this level, our approach does not involve the disambiguation phase and hence the procedure reduces to obtaining semantic signatures of each sense and then comparing the senses' semantic signatures by means of a signature comparison method (cf. Section 5.2).
+      </paragraph>
+      <paragraph>
+       An important application of a sense similarity measurement is that of clustering similar word senses in fine-grained sense inventories. As a case in point, WordNet is believed to have very fine-grained sense distinctions, a feature that is attested to by relatively low levels of annotator agreement in WordNet-based manual sense annotations [136], [137]. Reducing the fine granularity of sense inventories can have direct impact on their utility and accordingly on the performance of different NLP applications. For example, a coarsely-defined sense inventory can be more suitable for tasks such as Word Sense Disambiguation [14], information retrieval [138], and Machine Translation [139]. Several earlier works have pursued the task of grouping together similar senses of standard sense inventories such as WordNet [13], [14] or other resources such as Wikipedia [140]. We take the task of coarsening the WordNet sense inventory as benchmark for evaluating the performance of our method at the sense level.
+      </paragraph>
+      <section label="6.2.1">
+       <section-title>
+        Datasets
+       </section-title>
+       <paragraph>
+        As our sense clustering datasets, we considered two different resources which provide clustering of WordNet senses:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         The Senseval-2 English Lexical Sample WSD task [141], which includes sense clusterings for 411 nouns, 519 verbs and 256 adjectives.
+        </list-item>
+        <list-item label="•">
+         The OntoNotes project v4.0 [142], in which 1530 nouns and 1153 verbs have at least two of their senses grouped together.
+        </list-item>
+       </list>
+       <paragraph>
+        Following Snow et al. [13] we viewed sense clustering as a binary sense merging problem, which is straightforward to evaluate. To this end, we first converted the sense grouping datasets into sense pairing ones by considering all the possible pairings of senses of each word. Fig. 9 illustrates a sense merging example for eight different senses of the noun bank in the Senseval-2 dataset. Highlighted lines in the figure indicate the sense pairs that are grouped together in the same sense cluster in the dataset. Note that the original dataset provides a clustering of different senses of each word as opposed to the binary sense merging shown in the figure.
+       </paragraph>
+       <paragraph>
+        We show in Table 5, for the two sense pairing datasets, the total number of possible pairings, as well as the proportion of merged and not-merged pairs for each part of speech. As can be seen from the table, in the Senseval-2 dataset more than a quarter of all adjective sense pairings are set to merged, which demonstrates the high degree of fine granularity of adjectives in WordNet. The proportion of merged verb sense pairs in the two datasets is significantly different, 11.3% for Senseval-2 and 26.6% for OntoNotes. This difference is also observed at a lower degree for the noun sense pairs. This suggests that the two datasets provide different levels of granularity reduction for different parts of speech.
+       </paragraph>
+      </section>
+      <section label="6.2.2">
+       <section-title>
+        Signature comparison methods
+       </section-title>
+       <paragraph>
+        In all our sense merging experiments, we evaluate our approach with the four different comparison methods described in Section 5.2:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         Jensen–Shannon divergence (ADWJS),
+        </list-item>
+        <list-item label="•">
+         Cosine (ADWCos),
+        </list-item>
+        <list-item label="•">
+         RBO (ADWRBO),
+        </list-item>
+        <list-item label="•">
+         Weighted Overlap (ADWWO).
+        </list-item>
+       </list>
+      </section>
+      <section label="6.2.3">
+       <section-title>
+        Semantic graphs
+       </section-title>
+       <paragraph>
+        In Section 4, we described how we construct two semantic networks based on two different lexical resources, i.e., WordNet and Wiktionary. However, our two sense grouping datasets are based on the WordNet sense inventory only. This does not allow us to use the WKT graph for clustering these datasets. We therefore utilize only the WordNet network in our sense-level experiments.
+       </paragraph>
+      </section>
+      <section label="6.2.4">
+       <section-title>
+        Comparison systems
+       </section-title>
+       <paragraph>
+        We compare the accuracy of our approach in measuring the similarity of sense pairs against seven well-known WordNet-based sense similarity measurement techniques: Lin's universal similarity measure [39, LIN], Jiang and Conrath's combined approach [38, JCN], Wu and Palmer's conceptual similarity [34, WUP], Leacock and Chodorow's Normalized path length [36, LCH], Hirst and St-Onge [35, HSO], Resnik's information-based approach [37, RES], and the Lesk similarity algorithm [40, LESK] as extended by Banerjee and Pedersen [143].
+       </paragraph>
+       <paragraph>
+        RES, JCN, and LIN measure the similarity of two concepts in a taxonomy based on the notion of information content of the concepts, i.e., “the extent to which they share information in common” [37], whereas WUP, LCH, and HSO use the relative distance of two concepts in the WordNet graph while taking into account the depth of their least common subsumer (WUP), the depth of the hierarchy (LCH), or the number of changes in the direction in the path between two synsets (HSO). LESK takes a different approach and measures the similarity of two senses in terms of the similarity of their definitions in WordNet. A comprehensive survey of these measures is provided in [25].
+       </paragraph>
+      </section>
+      <section label="6.2.5">
+       <section-title>
+        Experimental setup
+       </section-title>
+       <paragraph>
+        We constructed, for each similarity measure, a simple threshold-based binary classifier that sets two senses as merged if their semantic similarity is equal to or greater than a certain threshold, and to not-merged otherwise. In our experiments we used the WS4J{sup:14} implementation of the above-mentioned WordNet-based measures. All the WordNet sense annotations in both datasets were mapped to senses in version 3.0 so as to allow WS4J to be directly applicable. Also, in order to ensure more reliable estimation of the performance, we performed experiments with 5-fold cross validation. Results are evaluated in terms of precision (P) and recall (R), defined as {a mathematical formula}P=tptp+fp and {a mathematical formula}R=tptp+fn where tp, fp, and fn denote true positives, false positives, and false negatives, respectively. We also report results for F1, which is the harmonic mean of P and R.
+       </paragraph>
+      </section>
+      <section label="6.2.6">
+       <section-title>
+        Sense merging results
+       </section-title>
+       <paragraph>
+        Table 6, Table 7 list the performance of different variants of our system, as well as the comparison sense similarity measures on the Senseval-2 and OntoNotes datasets, respectively. Results are averaged across five folds and shown separately for each part of speech: nouns, verbs, and adjectives for Senseval-2 and nouns and verbs for the OntoNotes dataset. Note that most of the comparison measures are unable to handle adjectives, and hence we do not report their corresponding performance on the adjectives of the Senseval-2 dataset. We also show in the tables (last row) the performance of a simple baseline system that merges all paired senses, hence attaining an optimal recall of 1.0 but a precision equal to the fraction of pairs to be merged in the corresponding dataset.
+       </paragraph>
+       <paragraph>
+        As can be seen from Table 6, on the Senseval-2 dataset almost all similarity measures outperform the baseline on nouns and verbs. On adjectives, however, only two of the comparison approaches provide outputs, neither of which can improve over the baseline. On this dataset, among the comparison measures, LCH and HSO provide the best F1 performance while grouping nouns and verbs, respectively. ADW, irrespective of its signature comparison method, yields F1 improvement over the best of the seven comparison techniques. The best overall F1 performance on this dataset is obtained by the Weighted Overlap comparison method, improving the results for the best comparison systems on nouns, verbs, and adjectives by 0.09, 0.21, and 0.09, respectively.
+       </paragraph>
+       <paragraph>
+        On the OntoNotes dataset, as can be seen from Table 7, most of the systems show improvements over the baseline in the noun sense merging task, whereas only one of the comparison approaches (i.e., LESK) can achieve this on verbs. Similarly to the Senseval-2 dataset, our system attains improvements over the best comparison technique on the OntoNotes dataset (i.e., LESK), irrespective of part of speech or the comparison method.
+       </paragraph>
+       <paragraph>
+        Among the four signature comparison techniques, Weighted Overlap proves to be the most reliable, providing the highest F1 performance across different parts of speech on both datasets. This demonstrates that our transformation of semantic signatures into ordered lists of concepts and our similarity calculation by rank comparison are helpful.
+       </paragraph>
+       <section>
+        <section-title>
+         Discussion
+        </section-title>
+        <paragraph>
+         As mentioned earlier, previous approaches for measuring similarity between concepts often rely on the path length between two synsets in the WordNet graph or their information content. This strategy, however, fails in many cases when the path between two concepts is either too long or non-existent, or when their lowest superordinate is too general, and therefore has very low information content. Our approach, in contrast, benefits from rich representations of arbitrary linguistic items, irrespective of their size, frequency, or part of speech. To further investigate the advantage of such a representation, we carried out an analysis of the outputs of different similarity measurement methods on the task of sense clustering.
+        </paragraph>
+        <paragraph>
+         We show in Table 8 the fraction of sense pairs that had to be merged but were judged as completely unrelated (zero similarity score) by different techniques. Statistics are presented for different parts of speech and for both datasets, i.e., Senseval-2 and OntoNotes. We can see from the table that most of the comparison sense similarity approaches cannot handle a large portion of sense pairs and hence judge them as having the minimal similarity value, i.e., zero. RES, LIN, and JCN exploit information content and are sensitive to general superordinates with low information content. HSO allows paths that are restricted to a specific length and to some pre-defined patterns only. Among the tested similarity measures, LCH and WUP are the only techniques which provide similarity judgments for all verb and noun sense pairs. These two measures rely only on the path length between two concepts and the depth of their lowest superordinate or the maximum depth of the hierarchy and do not make any assumptions on the lengths or patterns of the paths. This permits them to provide similarity scores for pairs of concept that are distant from each other in the network, or have their lowest superordinate very high in the hierarchy. However, neither of these two measures can be applied to similarity judgment for adjectives. In contrast, thanks to its rich representation of senses, ADW returns more graded similarity values, thereby enabling the effective comparison of any two concepts in the network, irrespective of their parts of speech.
+        </paragraph>
+       </section>
+      </section>
+     </section>
+     <section label="6.3">
+      <section-title>
+       Experiment 2: word-level similarity
+      </section-title>
+      <paragraph>
+       We now proceed from the sense level to the word level. Thanks to its wide range of applications, word similarity has received a considerable amount of research interest, making it one of the most popular tasks in lexical semantics, with numerous evaluation benchmarks and datasets.
+      </paragraph>
+      <section label="6.3.1">
+       <section-title>
+        Experimental setup
+       </section-title>
+       <paragraph>
+        We evaluate the performance of our approach in the similarity judgment correlation framework. Given a list of word pairs, the task is to automatically judge the semantic similarity between each pair. The judgments are ideally expected to be highly correlated with those given by humans. We opted for three different standard word similarity datasets:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         RG-65 [61],
+        </list-item>
+        <list-item label="•">
+         WordSim-353 Similarity subset (WS-Sim) [63], [93],
+        </list-item>
+        <list-item label="•">
+         YP-130 [62].
+        </list-item>
+       </list>
+       <paragraph>
+        The RG-65 dataset was created by Rubenstein and Goodenough [61] to study the relationship between the semantic and contextual similarities of pairs of nouns. The dataset contains 65 word pairs judged by 51 human subjects on a scale of 0 (unrelated) to 4 (synonymy) according to their semantic similarity. The YP-130 dataset was first presented by Yang and Powers [62] as a new benchmark for measuring the semantic similarity of verb pairs. The dataset comprises 130 verb pairs, all of which are single words, partly obtained from the TOEFL [74] and ESL [144] datasets. All the pairs in the dataset were judged by six annotators with a reported average inter-annotator Pearson correlation of 0.866. The WordSim-353 comprises 353 noun pairs created by Lev et al. [63]. However, the similarity scale of the original dataset conflates similarity and relatedness, leading to high similarity scores for pairs such as computer–keyboard despite the dissimilarity in their meanings. Agirre et al. [93] separated the pairs in the dataset into two subsets: relatedness and similarity. Given that ADW is targeted at semantic similarity, we opted for the similarity subset of WordSim-353 (WS-Sim) as our evaluation framework. The subset comprises 203 word pairs.
+       </paragraph>
+       <section>
+        <section-title>
+         Signature comparison methods
+        </section-title>
+        <paragraph>
+         We observed in the sense-level experiments that our semantic signature representation can be used effectively for measuring semantic similarity when coupled with any of the four tested measures: cosine, Weighted Overlap, Jensen–Shannon Divergence, and Rank-Biased Overlap. Among the four comparison methods, Weighted Overlap proved to be the most suitable for comparing semantic signatures, by consistently providing the best performance on both datasets and for all parts of speech. Given that the variation among the four measures was observed to be rather small, for brevity, from here on we report results based on the Weighted Overlap comparison method only.
+        </paragraph>
+       </section>
+       <section>
+        <section-title>
+         Semantic graphs
+        </section-title>
+        <paragraph>
+         We report results when our two semantic networks (i.e., WordNet and Wiktionary) were used for the generation of semantic signatures. We also provide a discussion in Section 6.3.3 on the experiments we carried out using the other variant of the Wiktionary graph (WKTall), the one which enriched the network with additional content words from the definitions, as well as the two automatically-induced networks from corpus-based semantic models (cf. Section 4).
+        </paragraph>
+       </section>
+       <section>
+        <section-title>
+         Comparison systems
+        </section-title>
+        <paragraph>
+         We compared the performance of our system against state-of-the-art approaches on the datasets. Our results are benchmarked against the word-level extensions of three sense-level measures: LCH [145], WUP [34], and HSO [35] that were described in our sense similarity experiments (cf. Section 6.2). We also report the results for the Wikipedia-based Explicit Semantic Analysis [27, ESA] and for the concept vector-based measure of Zesch and Gurevych [90], which utilizes the glosses in WordNet (ZG-07) or Wiktionary (ZMG-08) for constructing concept vectors (results for these measures were available on the RG-65 dataset only). As for ESA we used the implementation provided in [146]. In addition, on the RG-65 dataset, we report results for the random walk based techniques of Hughes and Ramage [94] and Agirre et al. [93] that are closest to our approach in respect of their usage of random walks on semantic networks, but which do not involve our alignment-based disambiguation. We also computed the performance of two distributional semantic models, Word2vec [86] and PMI-SVD, for each of which we performed experiments with the best corresponding model obtained by Baroni et al. [81].{sup:15} Word2vec is based on neural network context prediction models [86], whereas PMI-SVD is a traditional cooccurrence based vector wherein weights are calculated by means of Pointwise Mutual Information (PMI) and the vector's dimension is reduced to 500 by singular value decomposition (SVD). In these two systems we used the cosine measure to compute the similarity of a pair of vectors.
+        </paragraph>
+       </section>
+      </section>
+      <section label="6.3.2">
+       <section-title>
+        Word similarity results
+       </section-title>
+       <paragraph>
+        To be consistent with the literature [94], [93], we evaluated the performance of our similarity measure according to both Spearman's ρ and Pearson's r correlations. Pearson measures the linear correlation of two variables in terms of the differences in their values, whereas Spearman considers the relative rankings of the values of the two variables. The latter correlation is useful for evaluating systems in a similarity ranking setting where relative scores are important, as opposed to the Pearson correlation, which is more suitable for evaluating a setting in which absolute similarity values matter. We note that, due to the way word similarity datasets are constructed, the Pearson correlation is better able to reflect the reliability of a similarity measure. However, for the sake of completeness, we also report results according to the Spearman correlation.
+       </paragraph>
+       <section>
+        RG-65
+        <paragraph>
+         Table 9 shows Spearman's ρ and Pearson's r correlation coefficients with human judgments on the dataset. We present results for ADW when using WordNet (ADWWN) and Wiktionary (ADWWKT). As can be seen, our approach, irrespective of the underlying semantic network or the evaluation approach, achieves competitive results on the dataset. Of the two semantic networks, Wiktionary proves to be the better, achieving considerable Spearman and Pearson correlations of 0.92{sup:16} and 0.91,{sup:17} respectively. This confirms the advantage that our large automatically-constructed Wiktionary graph can provide for measuring word similarity. Among the comparison systems, the WordNet-based measures of LCH [145], WUP [34], and Hughes and Ramage [94] are among the best, indicating the suitability of this resource for the measurement of semantic similarity. The word embeddings approach of Word2vec also attains good performance on both datasets (but lower than ADWWKT). However, we note that the reported performance for Word2vec was obtained upon tuning 48 different configurations of this model on different datasets, including RG-65, by varying different system parameters such as windows size, learning strategy and vector size [81].
+        </paragraph>
+        <paragraph>
+         An analysis of the results revealed that the better performance of Wiktionary was mainly due to its richer semantic network. For instance, in the RG-65 dataset, the assigned gold similarities for noun pairs serf-slave and furnace-stove are 3.46 and 3.11, respectively (in the scale of 0 to 4). The two nouns serf and slave are connected through different Wiktionary senses such as bondman{sup:1}n, freeman{sup:1}n, and helot{sup:2}n.{sup:18} Similarly, furnace and stove are connected by multiple word senses, including fire_box{sup:3}n, damper{sup:1}n, and athanor{sup:1}n.{sup:19} However, the WordNet graph does not provide such a rich set of connections between the two words in each pair. The rich set of connections between these two word pairs in the Wiktionary graph leads to relatively higher calculated similarity scores in comparison to the corresponding mean calculated score μ on the dataset: respectively, {a mathematical formula}μ+0.09 and {a mathematical formula}μ+0.15 for Wiktionary compared to {a mathematical formula}μ+0.02 and {a mathematical formula}μ+0.03 for WordNet. However, the WordNet graph benefits from having synsets as individual nodes. Therefore, words that are defined as synonyms in the same synset are assigned the maximum score of 1.0 (for instance, midday-noon and gem–jewel are assigned the respective similarity values of 0.82 and 0.8 when the Wiktionary graph is used whereas both pairs are synonymous in WordNet and their similarities are computed as 1.0 when the WordNet graph is used).
+        </paragraph>
+       </section>
+       <section>
+        WS-Sim and YP-130
+        <paragraph>
+         Table 10 lists the results on the WS-Sim (left side) and YP-130 (right side) datasets. Similarly to the RG-65 dataset, ADW proves competitive on these two datasets, achieving the best performance on the verb similarity task on the YP-130 dataset. The best performance on the WS-Sim dataset is obtained by Word2vec ({a mathematical formula}ρ=0.78{sup:20} and {a mathematical formula}r=0.76{sup:21}). However, as also noted earlier, the reported performance for Word2vec was obtained upon tuning its models on different datasets, including WS-Sim. Of the two semantic networks, WKT proves the more suitable for noun similarity by attaining better results on the WS-Sim dataset, an outcome that was also observed on the RG-65 dataset. As for verb similarity, the higher Pearson correlation performance of the WordNet graph on the YP-130 shows that this network is more effective at providing accurate similarity judgments between verb pairs. This can be attributed to the manual construction of this resource, as opposed to our automatically constructed WKT network which is prone to noisy edges, particularly for the case of verbs that are characterized by fine-grained sense distinctions and are usually more difficult to disambiguate.
+        </paragraph>
+       </section>
+      </section>
+      <section label="6.3.3">
+       <section-title>
+        Analysis I: performance on other semantic networks
+       </section-title>
+       <paragraph>
+        In Section 4.3 we described our approach for the automatic construction of two semantic networks, namely W2V and DM, by leveraging two popular distributional semantic models. In addition, we mentioned in Section 4.2 that we also constructed a variant of the Wiktionary graph, called WKTall, in which all the content words in the definitions are exploited so as to make a denser semantic network. In order to verify the reliability of our automatically-induced networks for the generation of semantic signatures and also to test whether the richness of ADW's semantic network always results in its better performance, we carried out an evaluation on all these three graphs in the task of word similarity measurement.
+       </paragraph>
+       <paragraph>
+        Table 11 shows the performance of the variants of ADW using these graphs on our three word similarity datasets. As reference, we also list the results for ADW when using its default networks, i.e., WN and WKT (the last two rows in the table). As can be seen, ADW attains relatively low performance when semantic signatures are generated on the two automatically-induced semantic networks. The gap is particularly noticeable in the case of the YP-130 dataset, highlighting the weakness of the distributional models in capturing the semantics of verbs effectively. Overall, the results indicate that the manually-crafted relations in WKT and WN graphs are more suitable for the generation of semantic signatures. For instance, we show in Table 12 ten sampled direct neighbors for three word senses smartphone{sup:1}n, paper{sup:1}n, and terminate{sup:1}v in the WKT graph.{sup:22} A comparison between Table 12 and Table 2, Table 3, which list the ten most related terms to the same three words{sup:23} in the automatically-induced networks, reveals the reasons behind the better performance of our manually-crafted semantic networks: (1) the edges in the automatically-induced networks connect synonyms or highly-similar words only, whereas the manually-crafted networks benefit from a wider set of relations of various types (e.g., print{sup:2}v to paper{sup:1}n, debrick{sup:2}v to smartphone{sup:1}n, and abortion_pill{sup:1}n to terminate{sup:1}v); (2) sense-level distinctions provided by the WordNet and Wiktionary graphs result in more accurate representations of meaning in the semantic signatures.
+       </paragraph>
+       <paragraph>
+        Moreover, ADW performs significantly better when only hyperlinked words in the definitions of word senses are utilized for the construction of the semantic network (i.e., WKT graph), rather than all its content words (i.e., WKTall graph). This shows that enriching a semantic network would not always be beneficial, as adding edges that carry less specific information (which is more likely to occur for non-hyperlinked words in the definitions) to the network can result in lower-quality semantic signatures, leading to lower performance in the similarity measurement task.
+       </paragraph>
+      </section>
+      <section label="6.3.4">
+       <section-title>
+        Analysis II: the role of disambiguation
+       </section-title>
+       <paragraph>
+        In order to get more insight into the effect of ADW's disambiguation step on the final performance when measuring the similarity of word pairs, we carried out a series of experiments where no disambiguation was performed on the two linguistic items. In the absence of the disambiguation step, a semantic signature for a linguistic item is generated by initializing the PPR algorithm from all the nodes (i.e., synsets) associated with that linguistic item, rather than the specific disambiguated synsets obtained as a result of the alignment-based disambiguation (see Section 5.1). In other words, the personalization vector {a mathematical formula}S0 in Equation (2) is constructed by uniformly distributing the probability mass among all the corresponding dimensions of all senses of all the content words in the item. Note that in this case the semantic signature of a linguistic item is generated independently of its paired linguistic item.
+       </paragraph>
+       <paragraph>
+        We show in Table 13 the performance of our system with and without the disambiguation step and, for the sake of comparison, the results that were also presented earlier for the standard setup of our system in Table 9, Table 10. In addition to our two default semantic networks, i.e., WN and WKT, we also show results for the WKTall variant of the Wiktionary graph. As can be seen from the table, the disambiguation phase results in a consistent improvement according to the Pearson correlation on all the three datasets and all the three semantic graphs. This confirms the role of the alignment-based disambiguation phase in accurately estimating the extent of semantic similarity. However, the Spearman correlation performance is not as consistent, as the disambiguation step proves beneficial on the RG-65 dataset, but harmful on the YP-130 and WS-Sim datasets. As also noted earlier in Section 6.3.2, we argue that the Spearman correlation is not as conclusive on the similarity measurement datasets. In fact, the Spearman correlation is more suitable for measuring the performance of a system in ranking a comparable set of pairs according to their similarity. And such ranking was not among the original intended purposes when constructing these datasets in which the annotation has been carried out for individual word pairs separately rather than in relation to each other. In contrast, Pearson correlation measures the performance of systems in respect of their ability to provide judgments that are close to those of humans.
+       </paragraph>
+       <paragraph>
+        We show in Table 14 sample pairs from the YP-130 and RG-65 datasets, along with the judgments ADW made for them with and without the disambiguation phase. As can be seen, disambiguation enables ADW to obtain more accurate judgments for word pairs, capturing synonymy for pairs such as consume and eat with high similarity scores. In contrast, when no disambiguation is applied, a word is taken as a conflation of all its senses, resulting in less accurate estimates of similarity.
+       </paragraph>
+       <paragraph>
+        It is also noteworthy that our system assigns scores in the range 0.3–0.4 even for unrelated word pairs with near-zero gold similarity scores. The reason behind this over-compensation is that two semantic signatures, even if unrelated, have overlapping dimensions. In fact, for the extreme case of two semantic signatures that have their dimensions in complete inverse order, the numerator in equation (8) is equal to one. The denominator is independent of the rankings in the two signatures and can be estimated as:{a mathematical formula} where {a mathematical formula}|H| is the intersection of all non-zero dimensions in the two signatures and γ is the Euler–Mascheroni constant which is approximately equal to 0.577. Since we experiment with untruncated vectors, {a mathematical formula}|H| is equal to the size of the semantic network. For a semantic network with the number of nodes in the order of hundreds of thousands (which is approximately the case for our two semantic networks), the denominator in equation (8) is estimated to be approximately 6.5. Therefore, in our setting, the minimum value of WO, which can happen for the case of two inversely ordered signatures, is around 0.15. This explains the over-compensation of similarity scores for unrelated word pairs in Table 14.
+       </paragraph>
+      </section>
+     </section>
+     <section label="6.4">
+      <section-title>
+       Experiment 3: sentence-level similarity
+      </section-title>
+      <paragraph>
+       So far, the experiments we have reported in this article were those carried out to assess the performance of our system when measuring the semantic similarity of sense and word pairs. In this section, we focus on the highest linguistic level, i.e., the text level. Measuring the semantic similarity of sentence pairs, a task usually referred to as Semantic Textual Similarity (STS), plays an important role in a wide variety of NLP applications such as machine translation, question answering, and summarization. Given a pair of sentences, the goal in this task is to automatically judge their semantic similarity. This judgment should ideally be close to the judgment made by human annotators. As our benchmark for this level we take the datasets from the STS task in SemEval-2012 [107, STS-12]. The STS-12 task defined a similarity scale ranging from 0 to 5, where 5 denotes that the pair of sentences are identical in meaning. The performance of a system in this task is measured by calculating the linear correlation between the output judgments and human-assigned similarity scores on the entire set of sentence pairs.
+      </paragraph>
+      <paragraph>
+       Most of the participating systems in the task are supervised systems that utilize the provided training data in order to learn regression models, with the goal of producing scores that are closest to those assigned by human annotators. The systems are generally a combination of the similarity judgments made by several lexico-semantic similarity measures. However, in such a setting, the role of individual features in the overall system performance is not explicitly distinguishable, since the regression model and the complementary nature of different similarity measures can play an important role in the final similarity judgment. In addition, in a supervised setting, the performance of the system, when measured in terms of linear correlation, depends strongly on the domain and characteristics of the training data [29], [149], [150], [151]. Therefore, we carry out our experiments in an unsupervised setting and on a single-measure basis so as to be able to draw a direct conclusion on the performance of each similarity measure independently of the regression model or other implicit factors. To this end, we compare our approach against state-of-the-art similarity measures that are used independently for judging similarities of sentence pairs.
+      </paragraph>
+      <section label="6.4.1">
+       <section-title>
+        Comparison systems
+       </section-title>
+       <paragraph>
+        For our experiments we picked as benchmark five of the best-performing similarity measures utilized in the UKP system, the top-ranking system in STS-12. These measures are implemented in the DKProSimilarity package [29], [146]. As a representative of measures that are based on vector space models, we selected Explicit Semantic Analysis [27, ESA]. ESA represents a term as a high-dimensional vector wherein the dimensions are articles in Wikipedia and the weights are the tf–idf values of that term in the corresponding article. The approach was later extended to other lexical-semantic resources such as WordNet and Wiktionary [90]. In the experiments, we obtain results for ESA when the three above-mentioned resources were used for the construction of the vector space [29], [28].
+       </paragraph>
+       <paragraph>
+        We also compared ADW against five lexical resource-based measures, WUP [34], JCN [38], LIN [39], LCH [36], and RES [37], which were also used in our sense- and word-level experiments. In order to compute the similarity of text pairs using these five concept similarity measures, we used the aggregation method proposed by Corley and Mihalcea [26]. This approach computes the similarity between a pair of sentences {a mathematical formula}T1 and {a mathematical formula}T2 by finding, for each word w in {a mathematical formula}T1, the most similar word in {a mathematical formula}T2:{a mathematical formula} where {a mathematical formula}maxSim(w,T2) returns the similarity value between w and its most similar word in {a mathematical formula}T2 and {a mathematical formula}idf(w) is the inverse document frequency of the term w. The final similarity score is computed as the average similarity in the two directions, i.e., the average of {a mathematical formula}sim(T1,T2) and {a mathematical formula}sim(T2,T1).
+       </paragraph>
+      </section>
+      <section label="6.4.2">
+       <section-title>
+        Datasets
+       </section-title>
+       <paragraph>
+        The STS-12 task provided five test sets, namely MSRpar, SMTeuroparl, SMTnews, MSRvid, and OnWN. The first three datasets belong to the newswire genre, whereas the other two are generic. For each of these datasets, we show in Table 15 the number of sentence pairs in the training and test datasets. OnWN and SMTnews were not provided with any accompanying training data [107]. The gold standard similarity judgments for each sentence pair is an average of scores assigned by five human annotators. The annotation task was carried out through crowdsourcing, while certain post-hoc validations were deployed to ensure quality. In the last row in Table 15, we also report the inter-annotator agreements (ITA) for each dataset: the scores range from 0.53 (SMTeuroparl) to 0.87 (MSRvid) denoting the varying difficulties of similarity judgments for each dataset.
+       </paragraph>
+      </section>
+      <section label="6.4.3">
+       <section-title>
+        Experimental setup
+       </section-title>
+       <paragraph>
+        As explained earlier, we performed sentence-level experiments in an unsupervised setting, and hence there was no need to train regression models for similarity judgments. For this reason, we combined the training and test datasets (when a training set was available, see Table 15) and performed an evaluation on the whole dataset.
+       </paragraph>
+      </section>
+      <section label="6.4.4">
+       <section-title>
+        System variants
+       </section-title>
+       <paragraph>
+        We proposed two different approaches for handling out-of-vocabulary words in Section 5.4, i.e., direct OOV injection and Wikipedia-assisted OOV mapping. Regarding our sentence-level experiments, we provide results when utilizing these approaches. We show in Table 16 different variants of our system in the sentence-level experiment. Note that the Wikipedia-assisted OOV mapping approach cannot be applied when semantic signatures are generated on the Wiktionary semantic network (cf. Section 5.4.2).
+       </paragraph>
+      </section>
+      <section label="6.4.5">
+       <section-title>
+        Evaluation
+       </section-title>
+       <paragraph>
+        We followed the STS-12 task and evaluated the performance of sentence similarity measures in terms of correlation with the gold standard scores. However, in addition to the Pearson correlation, which was used in STS-12, we also provide results in terms of the Spearman rank correlation.
+       </paragraph>
+      </section>
+      <section label="6.4.6">
+       <section-title>
+        STS results
+       </section-title>
+       <paragraph>
+        We show in Table 17 the performance of our measure, ADW, together with the six other similarity measures on the five datasets of STS-12. The rightmost columns in the table show the average performance on the five datasets (Avgmacro) and the average performance weighted by the number of pairs in each dataset (Avgmicro). ESAWP, ESAWT, ESAWN correspond to ESA when, respectively, Wikipedia, Wiktionary, and WordNet were used for building up the vector space. As can be seen from the table, our measure provides competitive results on all the datasets, while achieving the best overall performance when semantic signatures were generated using the WordNet graph and injected directly with OOV words (i.e., ADWWN:I) according to both Spearman (Avgmicro 0.61{sup:24} and Avgmacro 0.56{sup:25}) and Pearson (Avgmicro 0.63{sup:26} and Avgmacro 0.59{sup:27}) correlations.
+       </paragraph>
+       <paragraph>
+        The OOV handling proves to be beneficial on most datasets and for both semantic networks. On the WordNet graph, among the two OOV handling approaches, direct OOV injection attains higher performance. Specifically, the approach leads to the statistically significant{sup:28} Pearson correlation improvements of 0.03 and 0.05 (Avgmicro) over the system with no OOV handling on the WordNet and Wiktionary networks, respectively. Among the five datasets, the largest gain by OOV injection is obtained on the MSRpar dataset, indicating the high number of WordNet OOV words in the dataset. Specifically, 14% of the nouns in the dataset are not defined in WordNet's vocabulary, words that are mostly proper nouns in this newswire domain dataset. The second dataset with the highest OOV noun proportion is the SMTnews dataset with 8%, followed by OnWN with 5%. SMTeuroparl (3%) and MSRvid (1%) are among the easiest datasets with respect to OOV proportion.
+       </paragraph>
+       <paragraph>
+        ESA provides generally good results on the five datasets, with ESAWP (i.e., ESA based on Wikipedia) proving to be the best among the three versions. ESAWT obtains the best performance on OnWN, a dataset containing sense glosses from OntoNotes 4.0 [153] and WordNet 3.1 [31]. The ESAWT system is trained on a similar dataset, i.e., word sense definitions extracted from Wiktionary. This makes the system particularly effective on the OnWN dataset. However, ESAWT does not provide a reliable performance across other datasets, especially in the newswire domain, i.e., SMTeuroparl, SMTnews, and MSRpar. ESAWN performs best among different versions of ESA on the MSRvid dataset, while lagging behind on the other four datasets. This performance variation can be attributed to the different nature of the MSRvid dataset, which comprises short sentences that do not contain many WordNet OOV words or proper nouns. Lexical resource-based measures, i.e., WUP, JCN, LIN, LCH, and RES, despite proving reliable at word similarity, generally fall behind ESAWP on all datasets. Among them, RES proves to be the most reliable approach for sentence similarity measurement, providing the second best overall performance.
+       </paragraph>
+       <section>
+        <section-title>
+         Discussion I: analysis of lower performance on MSRpar and SMTnews
+        </section-title>
+        <paragraph>
+         Apart from on the two datasets with the highest OOV proportions, i.e., MSRpar and SMTnews, ADW's performance comes close to the reported inter-annotator agreement (see ITA in Table 15), indicating the reliability of ADW for accurate similarity measurement. We attribute the relatively low performance on MSRpar and SMTnews mainly to the high number of OOV words in these two datasets. To provide a better analysis of this attribution, and demonstrate some of the other reasons behind this lower performance, we show in Table 18 six sentence pairs from the two datasets for which ADWWN:I's judgments are highly divergent from the gold judgments. In examples (a) and (b), the neglect of the OOV words (highlighted in italics) is mainly responsible for the less accurate similarity estimations made by ADW. Note that almost all the OOV words in the two sentence pairs are not defined in Wiktionary and also do not match across the two sentences. Hence, our OOV handling techniques would also fall short in assisting ADW to provide a more accurate similarity computation for these pairs. The sentence pairs (c) and (d) represent cases in which non-content words and the syntactic structure of the sentences have significantly affected their semantic similarity. The syntax of a sentence is an important factor, which is often not taken into account during similarity measurement, as is also the case for ADW. The last two examples (e) and (f) demonstrate an important characteristic of the MSRpar dataset: a significant presence of numbers. Apart from the OOV words and the grammatical structure of these two sentence pairs, numerical items played an important role in the semantics of the sentences and accordingly in their similarity scores. Lack of means for modeling numerical items and special characters (e.g., see the sentence pair (a) for phone numbers and email addresses) is one more shortcoming of ADW and most other similarity measures.
+        </paragraph>
+       </section>
+       <section>
+        <section-title>
+         Discussion II: disambiguating longer textual items
+        </section-title>
+        <paragraph>
+         As we mentioned in Section 5.3 the disambiguation step is particularly suitable for short textual items, such as words or phrases, as an implicit disambiguation takes place when modeling longer textual items such as sentences. We argued that the disambiguation step might not be as effective for long textual items. In order to verify this, we carried out our sentence-level experiments with a variant of our system that did not involve the disambiguation step. As we also described in our analysis in the word level, in the absence of the disambiguation step, a semantic signature is constructed by initializing the PPR algorithm from all nodes associated with all the senses of the content words in the linguistic item. Experiments were carried out on the five sentence-level datasets and for the three variants of our WordNet-based system, i.e., ADWWN, ADWWN:I, and ADWWN:M and the two variants of the Wiktionary-based system, i.e., ADWWT, ADWWT:I. We observed that in all the variants and according to both evaluation measures, the differences in the performance values with and without the disambiguation step were not statistically significant. This confirms our hypothesis that, when there is enough context in a linguistic item, which is the case in sentence similarity, an implicit disambiguation takes place during the generation of semantic signatures. However, note that when the disambiguation step is involved, our system provides the advantage of having, as a byproduct of similarity measurement, the two linguistic items explicitly disambiguated with respect to each other according to the adopted semantic network.
+        </paragraph>
+       </section>
+      </section>
+     </section>
+     <section label="6.5">
+      <section-title>
+       Summary of the results
+      </section-title>
+      <paragraph>
+       We performed a series of experiments in order to evaluate our similarity measure at three different linguistic levels, i.e., senses, words, and sentences. Here, we summarize the results and findings of our experiments:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        ADW proved to be highly flexible and reliable by providing competitive results on several evaluation benchmarks in three linguistic levels, outperforming state-of-the-art approaches (that usually focus on a specific level) on most gold-standard datasets.
+       </list-item>
+       <list-item label="•">
+        Our method for comparing semantic signatures, Weighted Overlap, provides an effective technique for comparing semantic signatures, consistently outperforming cosine similarity, Jensen–Shannon divergence, and Rank-Biased Overlap on different datasets.
+       </list-item>
+       <list-item label="•">
+        We demonstrated that the alignment-based disambiguation phase of our approach provides a consistent system improvement in terms of Pearson correlation when measuring the semantic similarity of short textual items on all the three experimented word-level datasets.
+       </list-item>
+       <list-item label="•">
+        We found that the automatically-constructed Wiktionary graph can act as a reliable replacement for the manually-crafted WordNet graph when measuring semantic similarity of textual items, proving both the flexibility of our similarity measure and the potential of collaborative resources [112] for the construction of semantic networks and semantic similarity measurement.
+       </list-item>
+       <list-item label="•">
+        Direct OOV injection proved to be an effective technique for handling out-of-vocabulary words by providing statistically significant improvements for both WordNet and Wiktionary graphs in our sentence-level experiment. Additionally, the simple OOV injection procedure usually leads to better performance in comparison to the Wikipedia-assisted OOV mapping. However, we note that as far as OOV handling is concerned there is still room for improvement, something that we plan to investigate in future work.
+       </list-item>
+      </list>
+     </section>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     <section-title>
+      Proposition 1
+     </section-title>
+     <paragraph>
+      Consider the vector sequence given by the following recursive rule:{a mathematical formula} where {a mathematical formula}c1,c2∈R and {a mathematical formula}A=(ai,j) is an {a mathematical formula}l×l matrix. Let {a mathematical formula}v01,…,v0m and {a mathematical formula}w0=∑i=1mv0im be the respective initial vectors of the sequences {a mathematical formula}{vn1},…,{vnm} and {a mathematical formula}{wn}, defined by the above recursive rule. Then,{a mathematical formula}
+     </paragraph>
+     <paragraph label="Proof">
+      We prove the proposition by induction on t:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Base case:{a mathematical formula}w0=∑i=1mv0im by the definition of {a mathematical formula}w0.
+      </list-item>
+      <list-item label="•">
+       Assuming the statement holds true for {a mathematical formula}t−1, i.e., {a mathematical formula}wt−1=∑i=1mvt−1im (induction hypothesis), we will prove it for t.Based on the recursive rule of the sequence (equation (A.1)), the kth element of the vector {a mathematical formula}vti, i.e., {a mathematical formula}vti(k), can be obtained as follows:{a mathematical formula}Hence,{a mathematical formula}Likewise,{a mathematical formula} By applying the commutative and associative properties of summation, the definition of {a mathematical formula}w0 and the induction hypothesis:{a mathematical formula}From equation (A.4), we have:{a mathematical formula}Therefore {a mathematical formula}wt=∑i=1mvtim; hence, the induction holds and we have proven the proposition.
+      </list-item>
+     </list>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

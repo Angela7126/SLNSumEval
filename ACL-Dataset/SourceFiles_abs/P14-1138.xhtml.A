@@ -1,0 +1,1464 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Recurrent Neural Networks for Word Alignment Model.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Automatic word alignment is an important task for statistical machine translation.
+The most classical approaches are the probabilistic IBM models 1-5
+        [4]
+        and the HMM model
+        [39]
+        .
+Various studies have extended those models.
+Yang et al.
+        [40]
+        adapted the Context-Dependent Deep Neural Network for HMM (CD-DNN-HMM)
+        [7]
+        , a type of feed-forward neural network (FFNN)-based model, to the HMM alignment model and achieved state-of-the-art performance.
+However, the FFNN-based model assumes a first-order Markov dependence for alignments.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        Recurrent neural network (RNN)-based models have recently demonstrated state-of-the-art performance that outperformed FFNN-based models for various tasks
+        [24, 25, 1, 16, 34]
+        .
+An RNN has a hidden layer with recurrent connections that propagates its own previous signals.
+Through the recurrent architecture, RNN-based models have the inherent property of modeling long-span dependencies, e.g., long contexts, in input data.
+We assume that this property would fit with a word alignment task, and
+we propose an RNN-based word alignment model.
+Our model can maintain and arbitrarily integrate an alignment history, e.g., bilingual context, which is longer than the FFNN-based model.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        The NN-based alignment models are supervised models.
+Unfortunately, it is usually difficult to prepare word-by-word aligned bilingual data.
+Yang et al.
+        [40]
+        trained their model from word alignments produced by traditional unsupervised probabilistic models.
+However, with this approach, errors induced by probabilistic models are learned as correct alignments; thus, generalization capabilities are limited.
+To solve this problem, we apply noise-contrastive estimation (NCE)
+        [15, 26]
+        for unsupervised training of our RNN-based model without gold standard alignments or pseudo-oracle alignments.
+NCE artificially generates bilingual sentences through samplings as pseudo-negative samples, and then trains the model such that the scores of the original bilingual sentences are higher than those of the sampled bilingual sentences.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        Our RNN-based alignment model has a direction, such as other alignment models, i.e., from
+        f
+        (source language) to
+        e
+        (target language) and from
+        e
+        to
+        f
+        .
+It has been proven that the limitation may be overcome by encouraging two directional models to agree by training them concurrently
+        [22, 21, 14, 11]
+        .
+The motivation for this stems from the fact that model and generalization errors by the two models differ, and the models must complement each other.
+Based on this motivation, our directional models are also simultaneously trained.
+Specifically, our training encourages word embeddings to be consistent across alignment directions by introducing a penalty term that expresses the difference between embedding of words into an objective function.
+This constraint prevents each model from overfitting to a particular direction and leads to global optimization across alignment directions.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p5">
+       <p class="ltx_p">
+        This paper presents evaluations of Japanese-English and French-English word alignment tasks and Japanese-to-English and Chinese-to-English translation tasks.
+The results illustrate that our RNN-based model outperforms the FFNN-based model (up to +0.0792 F1-measure) and the IBM Model 4 (up to +0.0703 F1-measure) for the word alignment tasks.
+For the translation tasks, our model achieves up to 0.74% gain in BLEU as compared to the FFNN-based model, which matches the translation qualities of the IBM Model 4.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Related Work
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        Various word alignment models have been proposed.
+These models are roughly clustered into two groups: generative models, such as those proposed by Brown et al.
+        [4]
+        , Vogel et al.
+        [39]
+        , and Och and Ney
+        [28]
+        , and discriminative models, such as those proposed by Taskar et al.
+        [36]
+        , Moore
+        [27]
+        , and Blunsom and Cohn
+        [3]
+        .
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S2.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.1
+        </span>
+        Generative Alignment Model
+       </h3>
+       <div class="ltx_para" id="S2.SS1.p1">
+        <p class="ltx_p">
+         Given a source language sentence
+         f1J=f1,…,fJ
+         and a target language sentence
+         e1I=e1,…,eI
+         ,
+         f1J
+         is generated by
+         e1I
+         via the alignment
+         a1J=a1,…,aJ
+         .
+Each
+         aj
+         is a hidden variable indicating that the source word
+         fj
+         is aligned to the target word
+         eaj
+         .
+Usually, a “null” word
+         e0
+         is added to the target language sentence and
+         a1J
+         may contain
+         aj=0
+         , which indicates that
+         fj
+         is not aligned to any target word.
+The probability of generating the sentence
+         f1J
+         from
+         e1I
+         is defined as
+        </p>
+        p(f1J|e1I)=∑a1Jp(f1J,a1J|e1I).
+
+(1)
+        <p class="ltx_p">
+         The IBM Models 1 and 2 and the HMM model decompose it into an alignment probability
+         pa
+         and a lexical translation probability
+         pt
+         as
+        </p>
+        p(f1J,a1J|e1I)=∏j=1Jpa(aj|aj-1,j)pt(fj|eaj).
+
+
+(2)
+        <p class="ltx_p">
+         The three models differ in their definition of alignment probability.
+For example, the HMM model uses an alignment probability with a first-order Markov property:
+         pa(aj|aj-aj-1)
+         .
+In addition, the IBM models 3-5 are extensions of these, which consider the fertility and distortion of each translated word.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS1.p2">
+        <p class="ltx_p">
+         These models are trained using the expectation-maximization algorithm
+         [8]
+         from bilingual sentences without word-level alignments (unlabeled training data).
+Given a specific model, the best alignment (Viterbi alignment) of the sentence pair (
+         f1J
+         ,
+         e1I
+         ) can be found as
+        </p>
+        a^1J=\argmaxa1Jp(f1J,a1J|e1I).
+
+(3)
+        <p class="ltx_p">
+         For example, the HMM model identifies the Viterbi alignment using the Viterbi algorithm.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S2.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.2
+        </span>
+        FFNN-based Alignment Model
+       </h3>
+       <div class="ltx_para" id="S2.SS2.p1">
+        <p class="ltx_p">
+         As an instance of discriminative models, we describe an FFNN-based word alignment model
+         [40]
+         , which is our baseline.
+An FFNN learns a hierarchy of nonlinear features that can automatically capture complex statistical patterns in input data.
+Recently, FFNNs have been applied successfully to several tasks, such as speech recognition
+         [7]
+         , statistical machine translation
+         [20, 38]
+         , and other popular natural language processing tasks
+         [6, 5]
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p2">
+        <p class="ltx_p">
+         Yang et al.
+         [40]
+         have adapted a type of FFNN, i.e., CD-DNN-HMM
+         [7]
+         , to the HMM alignment model.
+Specifically, the lexical translation and alignment probability in Eq.
+         2
+         are computed using FFNNs as
+        </p>
+        sN⁢N(a1J|f1J,e1I)=∏j=1Jta(aj-aj-1|c(eaj-1))⁢⋅tl⁢e⁢x(fj,eaj|c(fj),c(eaj)),
+
+(4)
+        <p class="ltx_p">
+         where
+         ta
+         and
+         tl⁢e⁢x
+         are an alignment score and a lexical translation score, respectively,
+         sN⁢N
+         is a score of alignments
+         a1J
+         , and “
+         c⁢(a word ⁢w)
+         ” denotes a context of word
+         w
+         .
+Note that the model uses nonprobabilistic scores rather than probabilities because normalization over all words is computationally expensive.
+The model finds the Viterbi alignment using the Viterbi algorithm, similar to the classic HMM model.
+Note that alignments in the FFNN-based model are also governed by first-order Markov dynamics because an alignment score depends on the previous alignment
+         aj-1
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p3">
+        <p class="ltx_p">
+         Figure
+         1
+         shows the network structure with one hidden layer for computing a lexical translation probability
+         tl⁢e⁢x(fj,eaj|c(fj),c(eaj))
+         .
+The model consists of a lookup layer, a hidden layer, and an output layer, which have weight matrices.
+The model receives a source and target word with their contexts as inputs, which are words in a predefined window (the window size is three in Figure
+         1
+         ).
+First, the lookup layer converts each input word into its word embedding by looking up its corresponding column in the embedding matrix (
+         L
+         ), and then concatenates them.
+Let
+         Vf
+         (or
+         Ve
+         ) be a set of source words (or target words) and
+         M
+         be a predetermined embedding length.
+         L
+         is a
+         M×(|Vf|+|Ve|)
+         matrix
+         .
+Word embeddings are dense, low dimensional, and real-valued vectors that can capture syntactic and semantic properties of the words
+         [2]
+         .
+The concatenation (
+         z0
+         ) is then fed to the hidden layer to capture nonlinear relations.
+Finally, the output layer receives the output of the hidden layer (
+         z1
+         ) and computes a lexical translation score.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p4">
+        <p class="ltx_p">
+         The computations in the hidden and output layer are as follows
+         :
+        </p>
+        <table class="ltx_equationgroup ltx_eqn_eqnarray" id="Sx1.EGx1">
+         <tr class="ltx_equation ltx_align_baseline" id="S2.E5">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_left">
+           z1=f⁢(H×z0+BH),
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (5)
+           </span>
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S2.E6">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_left">
+           tl⁢e⁢x=O×z1+BO,
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (6)
+           </span>
+          </td>
+         </tr>
+        </table>
+        <p class="ltx_p">
+         where
+         H
+         ,
+         BH
+         ,
+         O
+         , and
+         BO
+         are
+         |z1|×|z0|
+         ,
+         |z1|×1
+         ,
+         1×|z1|
+         , and
+         1×1
+         matrices, respectively, and
+         f⁢(x)
+         is an activation function.
+Following Yang et al.
+         [40]
+         , a “hard” version of the hyperbolic tangent, htanh
+         (x)
+         , is used as
+         f⁢(x)
+         in this study.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p5">
+        <p class="ltx_p">
+         The alignment model based on an FFNN is formed in the same manner as the lexical translation model.
+Each model is optimized by minimizing the following ranking loss with a margin using stochastic gradient descent (SGD)
+         , where gradients are computed by the back-propagation algorithm
+         [31]
+         :
+        </p>
+        loss(θ)=∑(𝒇,𝒆)∈Tmax{0,1-sθ(𝒂+|𝒇,𝒆)⁢+sθ(𝒂-|𝒇,𝒆)},
+
+(7)
+        <p class="ltx_p">
+         where
+         θ
+         denotes the weights of layers in the model,
+         T
+         is a set of training data,
+         𝒂+
+         is the gold standard alignment,
+         𝒂-
+         is the incorrect alignment with the highest score under
+         θ
+         , and
+         sθ
+         denotes the score defined by Eq.
+         4
+         as computed by the model under
+         θ
+         .
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       RNN-based Alignment Model
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        This section proposes an RNN-based alignment model, which computes a score for alignments
+        a1J
+        using an RNN:
+       </p>
+       sN⁢N(a1J|f1J,e1I)=∏j=1JtR⁢N⁢N(aj|a1j-1,fj,eaj),
+
+
+(8)
+       <p class="ltx_p">
+        where
+        tR⁢N⁢N
+        is the score of an alignment
+        aj
+        .
+The prediction of the
+        j
+        -th alignment
+        aj
+        depends on all preceding alignments
+        a1j-1
+        .
+Note that the proposed model also uses nonprobabilistic scores, similar to the FFNN-based model.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p2">
+       <p class="ltx_p">
+        The RNN-based model is illustrated in Figure
+        2
+        .
+The model consists of a lookup layer, a hidden layer, and an output layer, which have weight matrices
+        L
+        ,
+        {Hd,Rd,BHd}
+        , and
+        {O,BO}
+        , respectively.
+Each matrix in the hidden layer (
+        Hd
+        ,
+        Rd
+        , and
+        BHd
+        ) depends on alignment, where
+        d
+        denotes the jump distance from
+        aj-1
+        to
+        aj
+        :
+        d=aj-aj-1
+        .
+In our experiments, we merge distances that are greater than 8 and less than -8 into the special “
+        ≥
+        8” and “
+        ≤
+        -8” distances, respectively.
+Specifically, the hidden layer has weight matrices {
+        H≤-8
+        ,
+        H-7
+        ,
+        ⋯
+        ,
+        H7
+        ,
+        H≥8
+        ,
+        R≤-8
+        ,
+        R-7
+        ,
+        ⋯
+        ,
+        R7
+        ,
+        R≥8
+        ,
+        BH≤-8
+        ,
+        BH-7
+        ,
+        ⋯
+        ,
+        BH7
+        ,
+        BH≥8
+        } and computes
+        yj
+        using the corresponding matrices of the jump distance
+        d
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p3">
+       <p class="ltx_p">
+        The Viterbi alignment is determined using the Viterbi algorithm, similar to the FFNN-based model, where the model is sequentially applied from
+        f1
+        to
+        fJ
+        .
+When computing the score of the alignment between
+        fj
+        and
+        eaj
+        , the two words are input to the lookup layer.
+In the lookup layer, each of these words is converted to its word embedding, and then the concatenation of the two embeddings (
+        xj
+        ) is fed to the hidden layer in the same manner as the FFNN-based model.
+Next, the hidden layer receives the output of the lookup layer (
+        xj
+        ) and that of the previous hidden layer (
+        yj-1
+        ).
+The hidden layer then computes and outputs the nonlinear relations between them.
+Note that the weight matrices used in this computation are embodied by the specific jump distance
+        d
+        .
+The output of the hidden layer (
+        yj
+        ) is copied and fed to the output layer and the next hidden layer.
+Finally, the output layer computes the score of
+        aj
+        (
+        tR⁢N⁢N(aj|a1j-1,fj,eaj)
+        ) from the output of the hidden layer (
+        yj
+        ).
+Note that the FFNN-based model consists of two components: one is for lexical translation and the other is for alignment.
+The proposed RNN produces a single score that is constructed in the hidden layer by employing the distance-dependent weight matrices.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p4">
+       <p class="ltx_p">
+        Specifically, the computations in the hidden and output layer are as follows:
+       </p>
+       <table class="ltx_equationgroup ltx_eqn_eqnarray" id="Sx1.EGx2">
+        <tr class="ltx_equation ltx_align_baseline" id="S3.E9">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_left">
+          yj=f⁢(Hd×xj+Rd×yj-1+BHd),
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="1">
+          <span class="ltx_tag ltx_tag_equation">
+           (9)
+          </span>
+         </td>
+        </tr>
+        <tr class="ltx_equation ltx_align_baseline" id="S3.E10">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_left">
+          tR⁢N⁢N=O×yj+BO,
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+         <td class="ltx_align_middle ltx_align_right" rowspan="1">
+          <span class="ltx_tag ltx_tag_equation">
+           (10)
+          </span>
+         </td>
+        </tr>
+       </table>
+       <p class="ltx_p">
+        where
+        Hd
+        ,
+        Rd
+        ,
+        BHd
+        ,
+        O
+        , and
+        BO
+        are
+        |yj|×|xj|
+        ,
+        |yj|×|yj-1|
+        ,
+        |yj|×1
+        ,
+        1×|yj|
+        , and
+        1×1
+        matrices, respectively.
+Note that
+        |yj-1|=|yj|
+        .
+        f⁢(x)
+        is an activation function, which is a hard hyperbolic tangent, i.e., htanh
+        (x)
+        , in this study.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p5">
+       <p class="ltx_p">
+        As described above, the RNN-based model has a hidden layer with recurrent connections.
+Under the recurrence, the proposed model compactly encodes the entire history of previous alignments in the hidden layer configuration
+        yi
+        .
+Therefore, the proposed model can find alignments by taking advantage of the long alignment history, while the FFNN-based model considers only the last alignment.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Training
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        During training, we optimize the weight matrices of each layer (i.e.,
+        L
+        ,
+        Hd
+        ,
+        Rd
+        ,
+        BHd
+        ,
+        O
+        , and
+        BO
+        ) following a given objective using a mini-batch SGD with batch size
+        D
+        , which converges faster than a plain SGD (
+        D
+        = 1).
+Gradients are computed by the back-propagation through time algorithm
+        [31]
+        , which unfolds the network in time (
+        j
+        ) and computes gradients over time steps.
+In addition, an
+        l⁢2
+        regularization term is added to the objective to prevent the model from overfitting the training data.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p2">
+       <p class="ltx_p">
+        The RNN-based model can be trained by a supervised approach, similar to the FFNN-based model, where training proceeds based on the ranking loss defined by Eq.
+        7
+        (Section
+        2.2
+        ).
+However, this approach requires gold standard alignments.
+To overcome this drawback, we propose an unsupervised method using NCE, which learns from unlabeled training data.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S4.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.1
+        </span>
+        Unsupervised Learning
+       </h3>
+       <div class="ltx_para" id="S4.SS1.p1">
+        <p class="ltx_p">
+         Dyer et al.
+         [9]
+         presented an unsupervised alignment model based on contrastive estimation (CE)
+         [32]
+         .
+CE seeks to discriminate observed data from its neighborhood, which can be viewed as pseudo-negative samples.
+Dyer et al.
+         [9]
+         regarded all possible alignments of the bilingual sentences, which are given as training data (
+         T
+         ), and those of the full translation search space (
+         Ω
+         ) as the observed data and its neighborhood, respectively.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p2">
+        <p class="ltx_p">
+         We introduce this idea to a ranking loss with margin as
+        </p>
+        loss(θ)=max{0,1-∑(𝒇+,𝒆+)∈TEΦ[sθ(𝒂|𝒇+,𝒆+)]⁢+∑(𝒇+,𝒆-)∈ΩEΦ[sθ(𝒂|𝒇+,𝒆-)]},
+
+(11)
+        <p class="ltx_p">
+         where
+         Φ
+         is a set of all possible alignments given
+         (𝒇,𝒆)
+         , E
+         [sθ]Φ
+         is the expected value of the scores
+         sθ
+         on
+         Φ
+         ,
+         𝒆+
+         denotes a target language sentence in the training data, and
+         𝒆-
+         denotes a pseudo-target language sentence.
+The first expectation term is for the observed data, and the second is for the neighborhood.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p3">
+        <p class="ltx_p">
+         However, the computation for
+         Ω
+         is prohibitively expensive.
+To reduce computation, we employ NCE, which uses randomly sampled sentences from all target language sentences in
+         Ω
+         as
+         𝒆-
+         , and calculate the expected values by a beam search with beam width
+         W
+         to truncate alignments with low scores.
+In our experiments, we set
+         W
+         to 100.
+In addition, the above criterion is converted to an online fashion as
+        </p>
+        loss(θ)=∑𝒇+∈Tmax{0,1-EGEN[sθ(𝒂|𝒇+,𝒆+)]⁢+1N∑𝒆-EGEN[sθ(𝒂|𝒇+,𝒆-)]},
+
+(12)
+        <p class="ltx_p">
+         where
+         𝒆+
+         is a target language sentence aligned to
+         𝒇+
+         in the training data, i.e.,
+         (𝒇+,𝒆+)∈T
+         ,
+         𝒆-
+         is a randomly sampled pseudo-target language sentence with length
+         |𝒆+|
+         , and
+         N
+         denotes the number of pseudo-target language sentences per source sentence
+         𝒇+
+         .
+Note that
+         |𝒆+|=|𝒆-|
+         .
+GEN is a subset of all possible word alignments
+         Φ
+         , which is generated by beam search.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p4">
+        <p class="ltx_p">
+         In a simple implementation, each
+         𝒆-
+         is generated by repeating a random sampling from a set of target words (
+         Ve
+         )
+         |𝒆+|
+         times and lining them up sequentially.
+To employ more discriminative negative samples, our implementation samples each word of
+         𝒆-
+         from a set of the target words that co-occur with
+         fi∈𝒇+
+         whose probability is above a threshold
+         C
+         under the IBM Model 1 incorporating
+         l0
+         prior
+         [37]
+         .
+The IBM Model 1 with
+         l0
+         prior is convenient for reducing translation candidates because it generates more sparse alignments than the standard IBM Model 1.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.2
+        </span>
+        Agreement Constraints
+       </h3>
+       <div class="ltx_para" id="S4.SS2.p1">
+        <p class="ltx_p">
+         Both of the FFNN-based and RNN-based models are based on the HMM alignment model, and they are therefore asymmetric, i.e., they can represent one-to-many relations from the target side.
+Asymmetric models are usually trained in each alignment direction.
+The model proposed by Yang et al.
+         [40]
+         is no exception.
+However, it has been demonstrated that encouraging directional models to agree improves alignment performance
+         [22, 21, 14, 11]
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p2">
+        <p class="ltx_p">
+         Inspired by their work, we introduce an agreement constraint to our learning.
+The constraint concretely enforces agreement in word embeddings of both directions.
+The proposed method trains two directional models concurrently based on the following objective by incorporating a penalty term that expresses the difference between word embeddings:
+        </p>
+        <table class="ltx_equationgroup ltx_eqn_eqnarray" id="Sx1.EGx3">
+         <tr class="ltx_equation ltx_align_baseline" id="S4.E13">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           \argminθF⁢E⁢{l⁢o⁢s⁢s⁢(θF⁢E)+α⁢∥θLE⁢F-θLF⁢E∥},
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (13)
+           </span>
+          </td>
+         </tr>
+         <tr class="ltx_equation ltx_align_baseline" id="S4.E14">
+          <td class="ltx_eqn_center_padleft">
+          </td>
+          <td class="ltx_td ltx_align_right">
+           \argminθE⁢F⁢{l⁢o⁢s⁢s⁢(θE⁢F)+α⁢∥θLF⁢E-θLE⁢F∥},
+          </td>
+          <td class="ltx_eqn_center_padright">
+          </td>
+          <td class="ltx_align_middle ltx_align_right" rowspan="1">
+           <span class="ltx_tag ltx_tag_equation">
+            (14)
+           </span>
+          </td>
+         </tr>
+        </table>
+        <p class="ltx_p">
+         where
+         θF⁢E
+         (or
+         θE⁢F
+         ) denotes the weights of layers in a source-to-target (or target-to-source) alignment model,
+         θL
+         denotes weights of a lookup layer, i.e., word embeddings, and
+         α
+         is a parameter that controls the strength of the agreement constraint.
+         ∥θ∥
+         indicates the norm of
+         θ
+         . 2-norm is used in our experiments.
+Equations
+         13
+         and
+         14
+         can be applied to both supervised and unsupervised approaches.
+Equations
+         7
+         and
+         12
+         are substituted into
+         l⁢o⁢s⁢s⁢(θ)
+         in supervised and unsupervised learning, respectively.
+The proposed constraint penalizes overfitting to a particular direction and enables two directional models to optimize across alignment directions globally.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS2.p3">
+        <p class="ltx_p">
+         Our unsupervised learning procedure is summarized in Algorithm 1.
+In Algorithm 1, line 2 randomly samples
+         D
+         bilingual sentences
+         (𝐟+,𝐞+)D
+         from training data
+         T
+         .
+Lines 3-1 and 3-2 generate
+         N
+         pseudo-negative samples for each
+         𝐟+
+         and
+         𝐞+
+         based on the translation candidates of
+         𝐟+
+         and
+         𝐞+
+         found by the IBM Model 1 with
+         l0
+         prior,
+         I⁢B⁢M⁢1
+         (Section
+         4.1
+         ).
+Lines 4-1 and 4-2 update the weights in each layer following a given objective (Sections
+         4.1
+         and
+         4.2
+         ).
+Note that
+         θF⁢Et
+         and
+         θE⁢Ft
+         are concurrently updated in each iteration, and
+         θE⁢Ft
+         (or
+         θF⁢Et
+         ) is employed to enforce agreement between word embeddings when updating
+         θF⁢Et
+         (or
+         θE⁢Ft
+         ).
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Experiment
+      </h2>
+      <div class="ltx_subsection" id="S5.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.1
+        </span>
+        Experimental Data
+       </h3>
+       <div class="ltx_para" id="S5.SS1.p1">
+        <p class="ltx_p">
+         We evaluated the alignment performance of the proposed models with two tasks: Japanese-English word alignment with the Basic Travel Expression Corpus (
+         B⁢T⁢E⁢C
+         )
+         [35]
+         and French-English word alignment with the Hansard dataset (
+         H⁢a⁢n⁢s⁢a⁢r⁢d⁢s
+         ) from the 2003 NAACL shared task
+         [23]
+         .
+In addition, we evaluated the end-to-end translation performance of three tasks: a Chinese-to-English translation task with the FBIS corpus (
+         F⁢B⁢I⁢S
+         ), the IWSLT 2007 Japanese-to-English translation task (
+         I⁢W⁢S⁢L⁢T
+         )
+         [10]
+         , and the NTCIR-9 Japanese-to-English patent translation task (
+         N⁢T⁢C⁢I⁢R
+         )
+         [13]
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p2">
+        <p class="ltx_p">
+         Table
+         1
+         shows the sizes of our experimental datasets.
+Note that the development data was not used in the alignment tasks, i.e.,
+         B⁢T⁢E⁢C
+         and
+         H⁢a⁢n⁢s⁢a⁢r⁢d⁢s
+         , because the hyperparameters of the alignment models were set by preliminary small-scale experiments.
+The
+         B⁢T⁢E⁢C
+         data is the first 9,960 sentence pairs in the training data for
+         I⁢W⁢S⁢L⁢T
+         , which were annotated with word alignment
+         [12]
+         .
+We split these pairs into the first 9,000 for training data and the remaining 960 as test data.
+All the data in
+         B⁢T⁢E⁢C
+         is word-aligned, and the training data in
+         H⁢a⁢n⁢s⁢a⁢r⁢d⁢s
+         is unlabeled data.
+In
+         F⁢B⁢I⁢S
+         , we used the NIST02 evaluation data as the development data, and the NIST03 and 04 evaluation data as test data (
+         N⁢I⁢S⁢T⁢03
+         and
+         N⁢I⁢S⁢T⁢04
+         ).
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.2
+        </span>
+        Comparing Methods
+       </h3>
+       <div class="ltx_para" id="S5.SS2.p1">
+        <p class="ltx_p">
+         We evaluated the proposed RNN-based alignment models against two baselines: the IBM Model 4 and the FFNN-based model with one hidden layer.
+The IBM Model 4 was trained by previously presented model sequence schemes
+         [28]
+         :
+         15⁢H5⁢35⁢45
+         , i.e., five iterations of the IBM Model 1 followed by five iterations of the HMM Model, etc., which is the default setting for GIZA++ (
+         I⁢B⁢M⁢4
+         ).
+For the FFNN-based model, we set the word embedding length
+         M
+         to 30, the number of units of a hidden layer
+         |z1|
+         to 100, and the window size of contexts to 5.
+Hence,
+         |z0|
+         is 300 (
+         30×5×2
+         ).
+Following Yang et al.
+         [40]
+         , the FFNN-based model was trained by the supervised approach described in Section
+         2.2
+         (
+         F⁢F⁢N⁢Ns
+         ).
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p2">
+        <p class="ltx_p">
+         For the RNN-based models, we set
+         M
+         to 30 and the number of units of each recurrent hidden layer
+         |yj|
+         to 100.
+Thus,
+         |xj|
+         is 60 (
+         30×2
+         ).
+The number of units of each layer of the FFNN-based and RNN-based models and
+         M
+         were set through preliminary experiments.
+To demonstrate the effectiveness of the proposed learning methods, we evaluated four types of RNN-based models:
+         R⁢N⁢Ns
+         ,
+         R⁢N⁢Ns+c
+         ,
+         R⁢N⁢Nu
+         , and
+         R⁢N⁢Nu+c
+         , where “
+         s
+         /
+         u
+         ” denotes a supervised/unsupervised model and “
+         +c
+         ” indicates that the agreement constraint was used.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p3">
+        <p class="ltx_p">
+         In training all the models except
+         I⁢B⁢M⁢4
+         , the weights of each layer were initialized first.
+For the weights of a lookup layer
+         L
+         , we preliminarily trained word embeddings for the source and target language from each side of the training data.
+We then set the word embeddings to
+         L
+         to avoid falling into local minima.
+Other weights were randomly initialized to
+         [-0.1,0.1]
+         .
+For the pretraining, we used the RNNLM Toolkit
+         [24]
+         with the default options.
+We mapped all words that occurred less than five times to the special token
+         ⟨u⁢n⁢k⟩
+         .
+Next, each weight was optimized using the mini-batch SGD, where batch size
+         D
+         was 100, learning rate was 0.01, and an
+         l2
+         regularization parameter was 0.1.
+The training stopped after 50 epochs.
+The other parameters were set as follows:
+         W
+         ,
+         N
+         and
+         C
+         in the unsupervised learning were 100, 50, and 0.001, respectively, and
+         α
+         for the agreement constraint was 0.1.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.p4">
+        <p class="ltx_p">
+         In the translation tasks, we used the Moses phrase-based SMT systems
+         [17]
+         .
+All Japanese and Chinese sentences were segmented by ChaSen
+         and the Stanford Chinese segmenter
+         , respectively.
+In the training, long sentences with over 40 words were filtered out.
+Using the SRILM Toolkits
+         [33]
+         with modified Kneser-Ney smoothing, we trained a 5-gram language model on the English side of each training data for
+         I⁢W⁢S⁢L⁢T
+         and
+         N⁢T⁢C⁢I⁢R
+         , and a 5-gram language model on the Xinhua portion of the English Gigaword corpus for
+         F⁢B⁢I⁢S
+         .
+The SMT weighting parameters were tuned by MERT
+         [29]
+         in the development data.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.3
+        </span>
+        Word Alignment Results
+       </h3>
+       <div class="ltx_para" id="S5.SS3.p1">
+        <p class="ltx_p">
+         Table
+         2
+         shows the alignment performance by the F1-measure.
+Hereafter,
+         M⁢O⁢D⁢E⁢L⁢(R)
+         and
+         M⁢O⁢D⁢E⁢L⁢(I)
+         denote the
+         M⁢O⁢D⁢E⁢L
+         trained from gold standard alignments and word alignments found by the IBM Model 4, respectively.
+In
+         H⁢a⁢n⁢s⁢a⁢r⁢d⁢s
+         , all models were trained from randomly sampled 100 K data
+         .
+We evaluated the word alignments produced by first applying each model in both directions and then combining the alignments using the “grow-diag-final-and” heuristic
+         [18]
+         .
+The significance test on word alignment performance was performed by the sign test with a 5% significance level.
+“+” in Table
+         2
+         indicates that the comparisons are significant over corresponding baselines,
+         I⁢B⁢M⁢4
+         and
+         F⁢F⁢N⁢Ns⁢(R/I)
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS3.p2">
+        <p class="ltx_p">
+         In Table
+         2
+         ,
+         R⁢N⁢Nu+c
+         , which includes all our proposals, i.e., the RNN-based model, the unsupervised learning, and the agreement constraint, achieves the best performance for both
+         B⁢T⁢E⁢C
+         and
+         H⁢a⁢n⁢s⁢a⁢r⁢d⁢s
+         .
+The differences from the baselines are statistically significant.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS3.p3">
+        <p class="ltx_p">
+         Table
+         2
+         shows that
+         R⁢N⁢Ns⁢(R/I)
+         outperforms
+         F⁢F⁢N⁢Ns⁢(R/I)
+         , which is statistically significant in
+         B⁢T⁢E⁢C
+         .
+These results demonstrate that capturing the long alignment history in the RNN-based model improves the alignment performance.
+We discuss the difference of the RNN-based model’s effectiveness between language pairs in Section
+         6.1
+         .
+Table
+         2
+         also shows that
+         R⁢N⁢Ns+c⁢(R/I)
+         and
+         R⁢N⁢Nu+c
+         achieve significantly better performance than
+         R⁢N⁢Ns⁢(R/I)
+         and
+         R⁢N⁢Nu
+         in both tasks, respectively.
+This indicates that the proposed agreement constraint is effective in training better models in both the supervised and unsupervised approaches.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS3.p4">
+        <p class="ltx_p">
+         In
+         B⁢T⁢E⁢C
+         ,
+         R⁢N⁢Nu
+         and
+         R⁢N⁢Nu+c
+         significantly outperform
+         R⁢N⁢Ns⁢(I)
+         and
+         R⁢N⁢Ns+c⁢(I)
+         , respectively.
+The performance of these models is comparable with
+         H⁢a⁢n⁢s⁢a⁢r⁢d⁢s
+         .
+This indicates that our unsupervised learning benefits our models because the supervised models are adversely affected by errors in the automatically generated training data.
+This is especially true when the quality of training data, i.e., the performance of
+         I⁢B⁢M⁢4
+         , is low.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS4">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.4
+        </span>
+        Machine Translation Results
+       </h3>
+       <div class="ltx_para" id="S5.SS4.p1">
+        <p class="ltx_p">
+         Table
+         3
+         shows the translation performance by the case sensitive BLEU4 metric
+         [30]
+         .
+Table
+         3
+         presents the average BLEU of three different MERT runs.
+In
+         N⁢T⁢C⁢I⁢R
+         and
+         F⁢B⁢I⁢S
+         , each alignment model was trained from the randomly sampled 100 K data, and then a translation model was trained from all the training data that was word-aligned by the alignment model.
+In addition, for a detailed comparison, we evaluated the SMT system where the IBM Model 4 was trained from all the training data (
+         I⁢B⁢M⁢4a⁢l⁢l
+         ).
+The significance test on translation performance was performed by the bootstrap method
+         [19]
+         with a 5% significance level.
+“*” in Table
+         3
+         indicates that the comparisons are significant over both baselines, i.e.,
+         I⁢B⁢M⁢4
+         and
+         F⁢F⁢N⁢Ns⁢(I)
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS4.p2">
+        <p class="ltx_p">
+         Table
+         3
+         also shows that better word alignment does not always result in better translation, which has been discussed previously
+         [40]
+         .
+However,
+         R⁢N⁢Nu
+         and
+         R⁢N⁢Nu+c
+         outperform
+         F⁢F⁢N⁢Ns⁢(I)
+         and
+         I⁢B⁢M⁢4
+         in all tasks.
+These results indicate that our proposals contribute to improving translation performance
+         .
+In addition, Table
+         3
+         shows that these proposed models are comparable to
+         I⁢B⁢M⁢4a⁢l⁢l
+         in
+         N⁢T⁢C⁢I⁢R
+         and
+         F⁢B⁢I⁢S
+         even though the proposed models are trained from only a small part of the training data.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S6">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        6
+       </span>
+       Discussion
+      </h2>
+      <div class="ltx_subsection" id="S6.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         6.1
+        </span>
+        Effectiveness of RNN-based Alignment Model
+       </h3>
+       <div class="ltx_para" id="S6.SS1.p1">
+        <p class="ltx_p">
+         Figure
+         3
+         shows word alignment examples from
+         F⁢F⁢N⁢Ns
+         and
+         R⁢N⁢Ns
+         , where solid squares indicate the gold standard alignments.
+Figure
+         3
+         (a) shows that
+         R⁢R⁢Ns
+         adequately identifies complicated alignments with long distances compared to
+         F⁢F⁢N⁢Ns
+         (e.g., jaggy alignments of “have you been learning” in Fig
+         3
+         (a)) because
+         R⁢N⁢Ns
+         captures alignment paths based on long alignment history, which can be viewed as phrase-level alignments, while
+         F⁢F⁢N⁢Ns
+         employs only the last alignment.
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS1.p2">
+        <p class="ltx_p">
+         In French-English word alignment, the most valuable clues are located locally because English and French have similar word orders and their alignment has more one-to-one mappings than Japanese-English word alignment (Figure
+         3
+         ).
+Figure
+         3
+         (b) shows that both
+         R⁢R⁢Ns
+         and
+         F⁢F⁢N⁢Ns
+         work for such simpler alignments.
+Therefore, the RNN-based model has less effect on French-English word alignment than Japanese-English word alignment, as indicated in Table
+         2
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S6.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         6.2
+        </span>
+        Impact of Training Data Size
+       </h3>
+       <div class="ltx_para" id="S6.SS2.p1">
+        <p class="ltx_p">
+         Table
+         4
+         shows the alignment performance on
+         B⁢T⁢E⁢C
+         with various training data sizes, i.e., training data for
+         I⁢W⁢S⁢L⁢T
+         (40 K), training data for
+         B⁢T⁢E⁢C
+         (9 K), and the randomly sampled 1 K data from the
+         B⁢T⁢E⁢C
+         training data.
+Note that
+         R⁢N⁢Ns+c⁢(R)
+         cannot be trained from the 40 K data because the 40 K data does not have gold standard word alignments.
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS2.p2">
+        <p class="ltx_p">
+         Table
+         4
+         demonstrates that the proposed RNN-based model outperforms
+         I⁢B⁢M⁢4
+         trained from the unlabeled 40 K data by employing either the 1 K labeled data or the 9 K unlabeled data, which is less than 25% of the training data for
+         I⁢B⁢M⁢4
+         .
+Consequently, the SMT system using
+         R⁢N⁢Nu+c
+         trained from a small part of training data can achieve comparable performance to that using
+         I⁢B⁢M⁢4
+         trained from all training data, which is shown in Table
+         3
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S6.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         6.3
+        </span>
+        Effectiveness of Unsupervised Learning/Agreement Constraints
+       </h3>
+       <div class="ltx_para" id="S6.SS3.p1">
+        <p class="ltx_p">
+         The proposed unsupervised learning and agreement constraints can be applied to any NN-based alignment model.
+Table
+         5
+         shows the alignment performance of the FFNN-based models trained by our supervised/unsupervised approaches (s/u) with and without our agreement constraints.
+In Table
+         5
+         , “+c” denotes that the agreement constraint was used, and “+” indicates that the comparison with its corresponding baseline, i.e.,
+         F⁢F⁢N⁢Ns
+         (I/R), is significant in the sign test with a 5% significance level.
+        </p>
+       </div>
+       <div class="ltx_para" id="S6.SS3.p2">
+        <p class="ltx_p">
+         Table
+         5
+         shows that
+         F⁢F⁢N⁢Ns+c
+         (R/I) and
+         F⁢F⁢N⁢Nu+c
+         achieve significantly better performance than
+         F⁢F⁢N⁢Ns
+         (R/I) and
+         F⁢F⁢N⁢Nu
+         , respectively, in both
+         B⁢T⁢E⁢C
+         and
+         H⁢a⁢n⁢s⁢a⁢r⁢d⁢s
+         .
+In addition,
+         F⁢F⁢N⁢Nu
+         and
+         F⁢F⁢N⁢Nu+c
+         significantly outperform
+         F⁢F⁢N⁢Ns
+         (I) and
+         F⁢F⁢N⁢Ns+c
+         (I), respectively, in
+         B⁢T⁢E⁢C
+         .
+The performance of these models is comparable in
+         H⁢a⁢n⁢s⁢a⁢r⁢d⁢s
+         .
+These results indicate that the proposed unsupervised learning and agreement constraint benefit the FFNN-based model, similar to the RNN-based model.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S7">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        7
+       </span>
+       Conclusion
+      </h2>
+      <div class="ltx_para" id="S7.p1">
+       <p class="ltx_p">
+        We have proposed a word alignment model based on an RNN, which captures long alignment history through recurrent architectures.
+Furthermore, we proposed an unsupervised method for training our model using NCE and introduced an agreement constraint that encourages word embeddings to be consistent across alignment directions.
+Our experiments have shown that the proposed model outperforms the FFNN-based model
+        [40]
+        for word alignment and machine translation, and that the agreement constraint improves alignment performance.
+       </p>
+      </div>
+      <div class="ltx_para" id="S7.p2">
+       <p class="ltx_p">
+        In future, we plan to employ contexts composed of surrounding words (e.g.,
+        c⁢(fj)
+        or
+        c⁢(eaj)
+        in the FFNN-based model) in our model, even though our model implicitly encodes such contexts in the alignment history.
+We also plan to enrich each hidden layer in our model with multiple layers following the success of Yang et al.
+        [40]
+        , in which multiple hidden layers improved the performance of the FFNN-based model.
+In addition, we would like to prove the effectiveness of the proposed method for other datasets.
+       </p>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

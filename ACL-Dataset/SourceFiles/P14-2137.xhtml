@@ -1,0 +1,859 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Understanding Relation Temporality of Entities
+</title>
+<!--Generated on Wed Jun 11 18:39:10 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-ulem.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Understanding Relation Temporality of Entities
+</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">
+Taesung Lee and Seung-won Hwang
+<br class="ltx_break"/>Department of Computer Science and Engineering
+<br class="ltx_break"/>Pohang University of Science and Technology (POSTECH)
+<br class="ltx_break"/>Pohang, Republic of Korea
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">elca4u, swhwang</span>}<span class="ltx_text ltx_font_typewriter">@postech.edu
+<br class="ltx_break"/></span>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">This paper demonstrates the importance of relation equivalence for entity translation pair discovery.
+Existing approach of understanding relation equivalence has focused on using
+explicit features of co-occurring entities.
+In this paper, we explore latent features of temporality
+for understanding relation equivalence,
+and empirically show that the explicit and latent features complement each other.
+Our proposed hybrid approach of using both explicit and latent features
+improves relation translation by 0.16 F1-score,
+and in turn improves entity translation by 0.02.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Understanding relations is important in entity tasks.
+In this paper,
+we illustrate such importance using named entity (NE) translation mining problem.
+Early research on NE translation used phonetic similarities,
+for example, to mine the translation ‘Mandelson’<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p1.m1" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math>‘<span class="ltx_ERROR undefined">{CJK*}</span>UTF8zhfsæ¼å¾·å°æ£®’[ManDeErSen] with similar
+sounds
+<cite class="ltx_cite">[<a href="#bib.bib5" title="Machine transliteration" class="ltx_ref">9</a>, <a href="#bib.bib3b" title="Automatic English-Chinese name transliteration for development of multilingual resources" class="ltx_ref">15</a>]</cite>.
+However, not all NE translations are based on transliterations, but they might be
+based on semantics (e.g., ‘WTO’<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p1.m2" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math>‘<span class="ltx_ERROR undefined">{CJK*}</span>UTF8zhfsä¸è´¸ç»ç»’[ShiMaoZuZhi]),
+or even arbitrary (e.g., ‘Jackie Chan’<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p1.m3" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math>‘<span class="ltx_ERROR undefined">{CJK*}</span>UTF8zhfsæé¾’[ChengLong]).</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">To address this challenge,
+current state-of-the-art approaches build an entity graph for each language corpus,
+and align the two graphs by propagating the seed translation similarities (Figure <a href="#S1.F1" title="Figure 1 ‣ 1 Introduction ‣ Understanding Relation Temporality of Entities" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>)
+<cite class="ltx_cite">[<a href="#bib.bib10" title="Mining entity translations from comparable corpora: a holistic graph mapping approach" class="ltx_ref">7</a>, <a href="#bib.bib15a" title="Efficient entity translation mining: a parallelized graph alignment approach" class="ltx_ref">17</a>]</cite>.
+For example, arbitrary translation pair such as (Jackie Chan, <span class="ltx_ERROR undefined">{CJK*}</span>UTF8zhfsæé¾) can be obtained,
+if he is connected to his film
+‘Drunken Master’ (<span class="ltx_ERROR undefined">{CJK*}</span>UTF8zhfséæ³) in both graphs.
+That is, we can propagate the seed translation similarity of (Drunken Master, <span class="ltx_ERROR undefined">{CJK*}</span>UTF8zhfséæ³)
+to neighbor entities ‘Jackie Chan’ and ‘<span class="ltx_ERROR undefined">{CJK*}</span>UTF8zhfsæé¾’ in each graph.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">When two graphs are obtained from parallel corpora,
+graphs are symmetric and “blind propagation” described above is effective.
+In contrast, <cite class="ltx_cite"><a href="#bib.bib4" title="Bootstrapping entity translation on weakly comparable corpora" class="ltx_ref">Lee and Hwang ()</a></cite> propose “selective propagation”
+for asymmetric graphs, of comparing the semantics of relations.
+A key contribution of this paper is using relation temporality for determining relation equivalence.
+Existing work <cite class="ltx_cite">[<a href="#bib.bib1" title="PATTY: A Taxonomy of Relational Patterns with Semantic Types" class="ltx_ref">14</a>, <a href="#bib.bib3a" title="Discovering relations between noun categories" class="ltx_ref">12</a>, <a href="#bib.bib4" title="Bootstrapping entity translation on weakly comparable corpora" class="ltx_ref">11</a>]</cite> uses only co-occurring
+entity pairs, or <span class="ltx_text" style="text-decoration:underline;">e</span>xplicit <span class="ltx_text" style="text-decoration:underline;">f</span>eatures (EF).
+For example, for a relation 
+<span class="ltx_inline-block ltx_transformed_outer" style="width:144.0pt;height:12.5px;vertical-align:-2.0pt;"><span class="ltx_transformed_inner" style="transform:translate(-18.0pt,0.0pt) scale(0.8,1.0) ;-webkit-transform:translate(-18.0pt,0.0pt) scale(0.8,1.0) ;-ms-transform:translate(-18.0pt,0.0pt) scale(0.8,1.0) ;">
+<p class="ltx_p">pay an official visit to</p>
+</span></span>,
+with a statement (Bush, 
+<span class="ltx_inline-block ltx_transformed_outer" style="width:144.0pt;height:12.5px;vertical-align:-2.0pt;"><span class="ltx_transformed_inner" style="transform:translate(-18.0pt,0.0pt) scale(0.8,1.0) ;-webkit-transform:translate(-18.0pt,0.0pt) scale(0.8,1.0) ;-ms-transform:translate(-18.0pt,0.0pt) scale(0.8,1.0) ;">
+<p class="ltx_p">pay an official visit to</p>
+</span></span>, China),
+an entity pair (Bush, China)
+is in the “support set”, which is a set of co-occurring entity pairs of 
+<span class="ltx_inline-block ltx_transformed_outer" style="width:144.0pt;height:12.5px;vertical-align:-2.0pt;"><span class="ltx_transformed_inner" style="transform:translate(-18.0pt,0.0pt) scale(0.8,1.0) ;-webkit-transform:translate(-18.0pt,0.0pt) scale(0.8,1.0) ;-ms-transform:translate(-18.0pt,0.0pt) scale(0.8,1.0) ;">
+<p class="ltx_p">pay an official visit to</p>
+</span></span>.
+When its support set is {(Bush, China), (Mandelson, Moscow), (Rice, Israel)},
+and that of visit is {(Bush, China), (Rice, Israel), (Medvedev, Cuba)},
+we can infer their semantic equivalence based on the set intersection:
+{(Bush, China), (Rice, Israel)}.</p>
+</div>
+<div id="S1.F1" class="ltx_figure"><img src="P14-2137/image001.png" id="S1.F1.g1" class="ltx_graphics ltx_centering" width="675" height="328" alt=""/>
+<br class="ltx_break ltx_centering"/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Entity translation by propagation.</div>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">In contrast, we propose to explore corpus <span class="ltx_text" style="text-decoration:underline;">l</span>atent <span class="ltx_text" style="text-decoration:underline;">f</span>eatures (LF), to complement the sparsity problem of
+EF: Out of 158 randomly chosen correct relation translation pairs we labeled,
+64% has only one co-occurring entity pair,
+which makes EF not very effective to identify these relation translations.
+Therefore, we leverage <em class="ltx_emph">relation temporality</em>, which is both orthogonal and complementary to
+existing efforts leveraging <em class="ltx_emph">entity temporality</em> <cite class="ltx_cite">[<a href="#bib.bib20" title="Named entity transliteration and discovery from multilingual comparable corpora" class="ltx_ref">8</a>, <a href="#bib.bib2" title="Entity translation mining from comparable corpora: combining graph mapping with corpus latent features" class="ltx_ref">6</a>, <a href="#bib.bib16a" title="Enriching entity translation discovery using selective temporality." class="ltx_ref">16</a>]</cite>.
+In particular, we discover three new challenges on using temporality for relation understanding in comparable corpora,
+which we discuss in detail in Section <a href="#S3.SS2" title="3.2 Latent Feature Approach (LF) ‣ 3 Relation Translation ‣ Understanding Relation Temporality of Entities" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+Based on these challenges, we identify three new features for LF.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">We observe the complementary nature of EF and LF,
+then propose a hybrid approach combining both features.
+Our new hybrid approach significantly improves the relation translation (0.16 higher F1-score than EF),
+and in turn improves the entity translation (0.02 higher F1-score).</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Preliminary: Entity Translation by Selective Propagation</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">Selective propagation,
+leveraging the statements extracted from bilingual comparable corpora, can be summarized by several steps.</p>
+<ul id="I1" class="ltx_itemize">[leftmargin=12mm,topsep=0.7ex]
+
+<li id="I1.ix1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize"><span class="ltx_text ltx_font_bold ltx_font_smallcaps ltx_font_small">Step 1</span></span> 
+<div id="I1.ix1.p1" class="ltx_para">
+<p class="ltx_p">Initialize entity translation function <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.ix1.p1.m1" class="ltx_Math" alttext="T_{N}^{(0)}" display="inline"><msubsup><mi>T</mi><mi>N</mi><mrow><mo>(</mo><mn>0</mn><mo>)</mo></mrow></msubsup></math>.</p>
+</div></li>
+<li id="I1.ix2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize"><span class="ltx_text ltx_font_bold ltx_font_smallcaps ltx_font_small">Step 2</span></span> 
+<div id="I1.ix2.p1" class="ltx_para">
+<p class="ltx_p">Build relation translation function <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.ix2.p1.m1" class="ltx_Math" alttext="T_{R}^{(t)}" display="inline"><msubsup><mi>T</mi><mi>R</mi><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></msubsup></math> using <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.ix2.p1.m2" class="ltx_Math" alttext="T_{N}^{(t)}" display="inline"><msubsup><mi>T</mi><mi>N</mi><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></msubsup></math>.</p>
+</div></li>
+<li id="I1.ix3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize"><span class="ltx_text ltx_font_bold ltx_font_smallcaps ltx_font_small">Step 3</span></span> 
+<div id="I1.ix3.p1" class="ltx_para">
+<p class="ltx_p">Update entity translation function to acquire <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.ix3.p1.m1" class="ltx_Math" alttext="T_{N}^{(t+1)}" display="inline"><msubsup><mi>T</mi><mi>N</mi><mrow><mo>(</mo><mrow><mi>t</mi><mo>+</mo><mn>1</mn></mrow><mo>)</mo></mrow></msubsup></math> using <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.ix3.p1.m2" class="ltx_Math" alttext="T_{R}^{(t)}" display="inline"><msubsup><mi>T</mi><mi>R</mi><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></msubsup></math>.</p>
+</div></li>
+<li id="I1.ix4" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize"><span class="ltx_text ltx_font_bold ltx_font_smallcaps ltx_font_small">Step 4</span></span> 
+<div id="I1.ix4.p1" class="ltx_para">
+<p class="ltx_p">Repeat <span class="ltx_text ltx_font_bold ltx_font_smallcaps ltx_font_small">Step 2</span> and <span class="ltx_text ltx_font_bold ltx_font_smallcaps ltx_font_small">Step 3</span>.</p>
+</div></li>
+</ul>
+<p class="ltx_p">For <span class="ltx_text ltx_font_bold ltx_font_smallcaps ltx_font_small">Step 1</span>, an existing method for entity translation is adopted.
+In our experiments, we use a non-selective (hence not requiring relation translations) propagation approach <cite class="ltx_cite">[<a href="#bib.bib15a" title="Efficient entity translation mining: a parallelized graph alignment approach" class="ltx_ref">17</a>]</cite> with <cite class="ltx_cite">[<a href="#bib.bib14a" title="Named entity translation matching and learning: with application for mining unseen translations" class="ltx_ref">10</a>]</cite> for a base translation matrix.
+The focus of this paper is
+<span class="ltx_text ltx_font_bold ltx_font_smallcaps ltx_font_small">Step 2</span>, building the translation score <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m1" class="ltx_Math" alttext="T_{R}^{(t)}(r_{E},r_{C})" display="inline"><mrow><msubsup><mi>T</mi><mi>R</mi><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></msubsup><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>r</mi><mi>E</mi></msub><mo>,</mo><msub><mi>r</mi><mi>C</mi></msub></mrow><mo>)</mo></mrow></mrow></math> of English relation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m2" class="ltx_Math" alttext="r_{E}" display="inline"><msub><mi>r</mi><mi>E</mi></msub></math> and Chinese relation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m3" class="ltx_Math" alttext="r_{C}" display="inline"><msub><mi>r</mi><mi>C</mi></msub></math>:
+We will discuss the detailed procedure of <span class="ltx_text ltx_font_bold ltx_font_smallcaps ltx_font_small">Step 2</span> and propose how to improve it in Section <a href="#S3" title="3 Relation Translation ‣ Understanding Relation Temporality of Entities" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+<span class="ltx_text ltx_font_bold ltx_font_smallcaps ltx_font_small">Step 3</span> is the stage that selective propagation takes place.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold ltx_font_smallcaps ltx_font_small">Step 2</span> and <span class="ltx_text ltx_font_bold ltx_font_smallcaps ltx_font_small">Step 3</span> reinforce each other to improve the final entity translation function.
+While <span class="ltx_text ltx_font_bold ltx_font_smallcaps ltx_font_small">Step 3</span> is well-defined in <cite class="ltx_cite">[<a href="#bib.bib4" title="Bootstrapping entity translation on weakly comparable corpora" class="ltx_ref">11</a>]</cite>,
+to propagate entity translation scores when the relation semantics of the edges are equivalent,
+<span class="ltx_text ltx_font_bold ltx_font_smallcaps ltx_font_small">Step 2</span> has been restricted to the explicit feature, i.e., co-occurring entities or shared context.
+In clear contrast, by discovering novel latent features based on temporal properties,
+we can increase the accuracy of both entity and relation translations.
+Note that we omit <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m1" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math> for readability in the following sections.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Relation Translation</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">In this section, we present our approaches to obtain relations
+of equivalent semantics across languages (e.g., <span class="ltx_text ltx_font_italic">visit<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m1" class="ltx_Math" alttext="\rightarrow" display="inline"><mo mathvariant="normal">→</mo></math><span class="ltx_ERROR undefined">{CJK*}</span>UTF8zhfsè®¿é®</span>).
+Formally, our goal is to build the relation translation score function <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m2" class="ltx_Math" alttext="T_{R}(r_{E},r_{C})" display="inline"><mrow><msub><mi>T</mi><mi>R</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>r</mi><mi>E</mi></msub><mo>,</mo><msub><mi>r</mi><mi>C</mi></msub></mrow><mo>)</mo></mrow></mrow></math> for
+English relation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m3" class="ltx_Math" alttext="r_{E}" display="inline"><msub><mi>r</mi><mi>E</mi></msub></math> and Chinese relation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m4" class="ltx_Math" alttext="r_{C}" display="inline"><msub><mi>r</mi><mi>C</mi></msub></math>.</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Baseline: Explicit Feature Approach (EF)</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">In this section, we briefly illustrate a baseline method EF <cite class="ltx_cite">[<a href="#bib.bib4" title="Bootstrapping entity translation on weakly comparable corpora" class="ltx_ref">11</a>]</cite>.
+As we mentioned in the introduction, traditional approaches leverage common co-occurring entity-pairs.
+This observation also holds in the bilingual environment by exploiting seed entity translations.
+For example, let us say that we have two extracted statements:
+(Bruce Willis, star in, The Sixth Sense)
+and (<span class="ltx_ERROR undefined">{CJK*}</span>UTF8zhfså¸é²æ¯<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m1" class="ltx_Math" alttext="\cdot" display="inline"><mo>⋅</mo></math><span class="ltx_ERROR undefined">{CJK*}</span>UTF8zhfså¨å©æ¯ (Bruce Willis), <span class="ltx_ERROR undefined">{CJK*}</span>UTF8zhfsä¸»æ¼ (star in), <span class="ltx_ERROR undefined">{CJK*}</span>UTF8zhfsç¬¬å­æ (The Sixth Sense)).
+Knowing a few seed entity translations using <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m2" class="ltx_Math" alttext="T_{N}" display="inline"><msub><mi>T</mi><mi>N</mi></msub></math>, ‘Bruce Willis’<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m3" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math>‘<span class="ltx_ERROR undefined">{CJK*}</span>UTF8zhfså¸é²æ¯<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m4" class="ltx_Math" alttext="\cdot" display="inline"><mo>⋅</mo></math><span class="ltx_ERROR undefined">{CJK*}</span>UTF8zhfså¨å©æ¯’ and
+‘The Sixth Sense’<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m5" class="ltx_Math" alttext="\rightarrow" display="inline"><mo>→</mo></math>‘<span class="ltx_ERROR undefined">{CJK*}</span>UTF8zhfsç¬¬å­æ’,
+we can find star in and <span class="ltx_ERROR undefined">{CJK*}</span>UTF8zhfsä¸»æ¼ are semantically similar.</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">Specifically, we quantify this similarity based on
+the number of such common entity pairs that we denote as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m1" class="ltx_Math" alttext="|H(r_{E},r_{C})|" display="inline"><mrow><mo fence="true">|</mo><mrow><mi>H</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>r</mi><mi>E</mi></msub><mo>,</mo><msub><mi>r</mi><mi>C</mi></msub></mrow><mo>)</mo></mrow></mrow><mo fence="true">|</mo></mrow></math>
+for an English relation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m2" class="ltx_Math" alttext="r_{E}" display="inline"><msub><mi>r</mi><mi>E</mi></msub></math> and a Chinese relation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m3" class="ltx_Math" alttext="r_{C}" display="inline"><msub><mi>r</mi><mi>C</mi></msub></math>.
+The existing approaches are variations of using <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m4" class="ltx_Math" alttext="|H(r_{E},r_{C})|" display="inline"><mrow><mo fence="true">|</mo><mrow><mi>H</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>r</mi><mi>E</mi></msub><mo>,</mo><msub><mi>r</mi><mi>C</mi></msub></mrow><mo>)</mo></mrow></mrow><mo fence="true">|</mo></mrow></math>.
+Our baseline implementation uses the one by <cite class="ltx_cite">[<a href="#bib.bib4" title="Bootstrapping entity translation on weakly comparable corpora" class="ltx_ref">11</a>]</cite>,
+and we refer the reader to the paper for
+formal definitions and processing steps we omitted due to the page limit.</p>
+</div>
+<div id="S3.SS1.p3" class="ltx_para">
+<p class="ltx_p">Unfortunately, this approach suffers from sparsity of the common entity pairs
+due to the incomparability of the corpora and those entities that cannot be translated by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m1" class="ltx_Math" alttext="T_{N}" display="inline"><msub><mi>T</mi><mi>N</mi></msub></math>.
+Therefore, we leverage corpus latent features as an additional signal to overcome this problem.</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Latent Feature Approach (LF)</h3>
+
+<div id="S3.SS2.SSSx1" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection">Temporal Feature Discovery</h4>
+
+<div id="S3.SS2.SSSx1.p1" class="ltx_para">
+<p class="ltx_p">We exploit the temporal distribution <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx1.p1.m1" class="ltx_Math" alttext="d[x](t)" display="inline"><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>[</mo><mi>x</mi><mo>]</mo></mrow><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></mrow></math> of textual element <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx1.p1.m2" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> during <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx1.p1.m3" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math>-th week in statements;
+we count the occurrences of the element <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx1.p1.m4" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> on a weekly basis, and normalize them to observe <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx1.p1.m5" class="ltx_Math" alttext="\sum_{t}d[x](t)=1" display="inline"><mrow><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mi>t</mi></msub><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>[</mo><mi>x</mi><mo>]</mo></mrow><mo>⁢</mo><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></mrow></mrow><mo>=</mo><mn>1</mn></mrow></math>.
+For example, Figure <a href="#S3.F5" title="Figure 5 ‣ Temporal Feature Discovery ‣ 3.2 Latent Feature Approach (LF) ‣ 3 Relation Translation ‣ Understanding Relation Temporality of Entities" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> shows
+the relation temporal distribution <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx1.p1.m6" class="ltx_Math" alttext="d[" display="inline"><mrow><mi>d</mi><mo>[</mo></mrow></math>visit<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx1.p1.m7" class="ltx_Math" alttext="](t)" display="inline"><mrow><mo>]</mo><mo>(</mo><mi>t</mi><mo>)</mo></mrow></math> against week <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx1.p1.m8" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math>.
+Unlike entities,
+we can easily observe the dissimilarity of the temporal distributions of semantically equivalent relations.
+We identify the three big challenges in exploiting the temporality in relation translations.</p>
+</div>
+<div id="S3.SS2.SSSx1.p2" class="ltx_para">
+<p class="ltx_p">[C1] Considering temporal distributions <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx1.p2.m1" class="ltx_Math" alttext="d[r]" display="inline"><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>[</mo><mi>r</mi><mo>]</mo></mrow></mrow></math> of relations alone is not sufficient.
+For relations, such as visit, that involves diverse entities,
+the temporal distributions are highly noisy (Figure <a href="#S3.F5" title="Figure 5 ‣ Temporal Feature Discovery ‣ 3.2 Latent Feature Approach (LF) ‣ 3 Relation Translation ‣ Understanding Relation Temporality of Entities" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>).</p>
+</div>
+<div id="S3.SS2.SSSx1.p3" class="ltx_para">
+<p class="ltx_p">To address the first challenge, we use a finer-granularity unit for observing the temporality.
+More specifically, we exploit a coupling of a relation and an entity: <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx1.p3.m1" class="ltx_Math" alttext="d[e,r,*]" display="inline"><mrow><mi>d</mi><mrow><mo>[</mo><mi>e</mi><mo>,</mo><mi>r</mi><mo>,</mo><mo>*</mo><mo>]</mo></mrow></mrow></math> where
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx1.p3.m2" class="ltx_Math" alttext="e" display="inline"><mi>e</mi></math> is an entity, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx1.p3.m3" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math> a relation, and * is a placeholder indicating
+that any noun phrase is accepted for the second argument of a statement.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>
+We use both <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx1.p3.m4" class="ltx_Math" alttext="d[e,r,*]" display="inline"><mrow><mi>d</mi><mrow><mo>[</mo><mi>e</mi><mo>,</mo><mi>r</mi><mo>,</mo><mo>*</mo><mo>]</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx1.p3.m5" class="ltx_Math" alttext="d[*,r,e]" display="inline"><mrow><mi>d</mi><mrow><mo>[</mo><mo>*</mo><mo>,</mo><mi>r</mi><mo>,</mo><mi>e</mi><mo>]</mo></mrow></mrow></math> to measure the relation translation scores
+and leverage the average score. But in this section, we only use <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx1.p3.m6" class="ltx_Math" alttext="d[e,r,*]" display="inline"><mrow><mi>d</mi><mrow><mo>[</mo><mi>e</mi><mo>,</mo><mi>r</mi><mo>,</mo><mo>*</mo><mo>]</mo></mrow></mrow></math> for readability.
+</span></span></span>
+As shown in Figure <a href="#S3.F5" title="Figure 5 ‣ Temporal Feature Discovery ‣ 3.2 Latent Feature Approach (LF) ‣ 3 Relation Translation ‣ Understanding Relation Temporality of Entities" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx1.p3.m7" class="ltx_Math" alttext="d[e,r,*]" display="inline"><mrow><mi>d</mi><mrow><mo>[</mo><mi>e</mi><mo>,</mo><mi>r</mi><mo>,</mo><mo>*</mo><mo>]</mo></mrow></mrow></math>
+is more distinctive and hence a key clue to find semantically equivalent relations.</p>
+</div>
+<div id="S3.F5" class="ltx_figure"><span class="ltx_ERROR undefined ltx_centering">{subfigure}</span>
+<p class="ltx_p ltx_align_center">[b]0.9
+<img src="P14-2137/image002.png" id="S3.F5.g1" class="ltx_graphics" width="677" height="267" alt=""/></p>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>Atemporality of equivalent relations: <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F5.m5" class="ltx_Math" alttext="d[" display="inline"><mrow><mi>d</mi><mo>[</mo></mrow></math>visit<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F5.m6" class="ltx_Math" alttext="]" display="inline"><mo>]</mo></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F5.m7" class="ltx_Math" alttext="d[" display="inline"><mrow><mi>d</mi><mo>[</mo></mrow></math><span class="ltx_ERROR undefined">{CJK*}</span>UTF8zhfsè®¿é®<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F5.m8" class="ltx_Math" alttext="]" display="inline"><mo>]</mo></math>.</div>
+<br class="ltx_break ltx_centering"/><span class="ltx_ERROR undefined ltx_centering">{subfigure}</span>
+<p class="ltx_p ltx_align_center">[b]0.9
+<img src="P14-2137/image003.png" id="S3.F5.g2" class="ltx_graphics" width="677" height="265" alt=""/></p>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 3: </span>Temporality of equivalent entity-relation couplings:
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F5.m13" class="ltx_Math" alttext="d[" display="inline"><mrow><mi>d</mi><mo>[</mo></mrow></math>Bush, visit, *<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F5.m14" class="ltx_Math" alttext="]" display="inline"><mo>]</mo></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F5.m15" class="ltx_Math" alttext="d[" display="inline"><mrow><mi>d</mi><mo>[</mo></mrow></math><span class="ltx_ERROR undefined">{CJK*}</span>UTF8zhfså¸ä», <span class="ltx_ERROR undefined">{CJK*}</span>UTF8zhfsè®¿é®, *<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F5.m16" class="ltx_Math" alttext="]" display="inline"><mo>]</mo></math>.</div><span class="ltx_ERROR undefined ltx_centering">{subfigure}</span>
+<p class="ltx_p ltx_align_center">[b]0.9
+<img src="P14-2137/image004.png" id="S3.F5.g3" class="ltx_graphics" width="677" height="264" alt=""/></p>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 4: </span>Temporality of <em class="ltx_emph">non</em>-equivalent relations:
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F5.m21" class="ltx_Math" alttext="d[" display="inline"><mrow><mi>d</mi><mo>[</mo></mrow></math>deploy<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F5.m22" class="ltx_Math" alttext="]" display="inline"><mo>]</mo></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F5.m23" class="ltx_Math" alttext="d[" display="inline"><mrow><mi>d</mi><mo>[</mo></mrow></math>
+<span class="ltx_inline-block ltx_transformed_outer" style="width:120.0pt;height:12.5px;vertical-align:-2.0pt;"><span class="ltx_transformed_inner" style="transform:translate(-15.0pt,0.0pt) scale(0.8,1.0) ;-webkit-transform:translate(-15.0pt,0.0pt) scale(0.8,1.0) ;-ms-transform:translate(-15.0pt,0.0pt) scale(0.8,1.0) ;"><span class="ltx_ERROR undefined">{CJK*}</span>
+<p class="ltx_p">UTF8zhfså¨…é¨ç½²</p>
+</span></span> (deploy at)<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F5.m24" class="ltx_Math" alttext="]" display="inline"><mo>]</mo></math></div>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 5: </span>Temporal distributions of a relation, and a coupling.</div>
+</div>
+<div id="S3.F8" class="ltx_figure"><span class="ltx_ERROR undefined ltx_centering">{subfigure}</span>
+<p class="ltx_p ltx_align_center">[t]0.47
+<img src="P14-2137/image005.png" id="S3.F8.g1" class="ltx_graphics" width="677" height="495" alt=""/></p>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 6: </span>Temporal distribution of an entity having a peak.</div><span class="ltx_ERROR undefined ltx_centering">{subfigure}</span>
+<p class="ltx_p ltx_align_center">[t]0.47
+<img src="P14-2137/image006.png" id="S3.F8.g2" class="ltx_graphics" width="677" height="495" alt=""/></p>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 7: </span>Temporal distribution of a coupling of a relation and the entity.
+</div>
+<br class="ltx_break ltx_centering"/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 8: </span>False positive peak of an entity-relation coupling.</div>
+</div>
+<div id="S3.SS2.SSSx1.p4" class="ltx_para">
+<p class="ltx_p">[C2] Considering entity-relation coupling distribution <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx1.p4.m1" class="ltx_Math" alttext="d[e,r,*]" display="inline"><mrow><mi>d</mi><mrow><mo>[</mo><mi>e</mi><mo>,</mo><mi>r</mi><mo>,</mo><mo>*</mo><mo>]</mo></mrow></mrow></math> alone is not sufficient due to the domination of individual temporality.
+For example, Figure <a href="#S3.F8" title="Figure 8 ‣ Temporal Feature Discovery ‣ 3.2 Latent Feature Approach (LF) ‣ 3 Relation Translation ‣ Understanding Relation Temporality of Entities" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a> shows <em class="ltx_emph">entity-dominating</em> entity-relation temporality.
+If an entity has a peak at some period (Figure <a href="#S3.F8" title="Figure 8 ‣ Temporal Feature Discovery ‣ 3.2 Latent Feature Approach (LF) ‣ 3 Relation Translation ‣ Understanding Relation Temporality of Entities" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>),
+most relations that are coupled with the entity would have a peak at the very same period (Figure <a href="#S3.F8" title="Figure 8 ‣ Temporal Feature Discovery ‣ 3.2 Latent Feature Approach (LF) ‣ 3 Relation Translation ‣ Understanding Relation Temporality of Entities" class="ltx_ref"><span class="ltx_text ltx_ref_tag">8</span></a>).
+This makes all relations that appear with this entity very similar to each other regardlessly of semantics.
+To address this challenge, we use features
+to measure whether <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx1.p4.m2" class="ltx_Math" alttext="d[e,r,*]" display="inline"><mrow><mi>d</mi><mrow><mo>[</mo><mi>e</mi><mo>,</mo><mi>r</mi><mo>,</mo><mo>*</mo><mo>]</mo></mrow></mrow></math> is too close to either of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx1.p4.m3" class="ltx_Math" alttext="d[e]" display="inline"><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>[</mo><mi>e</mi><mo>]</mo></mrow></mrow></math> or <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx1.p4.m4" class="ltx_Math" alttext="d[r]" display="inline"><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>[</mo><mi>r</mi><mo>]</mo></mrow></mrow></math>.</p>
+</div>
+<div id="S3.SS2.SSSx1.p5" class="ltx_para">
+<p class="ltx_p">[C3]
+Lastly, we have to eliminate false positives in relation temporality.
+To illustrate, two relations deploy and <span class="ltx_ERROR undefined">{CJK*}</span>UTF8zhfså¨…é¨ç½² (deploy at) have similar temporal behaviors (Figure <a href="#S3.F5" title="Figure 5 ‣ Temporal Feature Discovery ‣ 3.2 Latent Feature Approach (LF) ‣ 3 Relation Translation ‣ Understanding Relation Temporality of Entities" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>).
+However, the first relation takes [person], but the second relation [location] for the second argument.</p>
+</div>
+<div id="S3.SS2.SSSx1.p6" class="ltx_para">
+<p class="ltx_p">To address this, we check the common co-occurring entity pair of the relations.
+For example, we can obtain “Russia deployed an aircraft carrier”,
+but not “Russia deployed at (<span class="ltx_ERROR undefined">{CJK*}</span>UTF8zhfså¨…é¨ç½²) an aircraft carrier”.
+Thus, we cannot acquire any common entity pair like (Russia, aircraft carrier) for deploy and <span class="ltx_ERROR undefined">{CJK*}</span>UTF8zhfså¨…é¨ç½² (deploy at).</p>
+</div>
+</div>
+<div id="S3.SS2.SSSx2" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection">Relation Similarity Computation</h4>
+
+<div id="S3.SS2.SSSx2.p1" class="ltx_para">
+<p class="ltx_p">We compute the similarity of two relations <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx2.p1.m1" class="ltx_Math" alttext="r_{E}" display="inline"><msub><mi>r</mi><mi>E</mi></msub></math> in English and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx2.p1.m2" class="ltx_Math" alttext="r_{C}" display="inline"><msub><mi>r</mi><mi>C</mi></msub></math> in Chinese using the following 2-steps.</p>
+<ol id="I2" class="ltx_enumerate">[leftmargin=4mm,topsep=0.7ex]
+
+<li id="I2.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.m1" class="ltx_Math" alttext="\bullet" display="inline"><mo>∙</mo></math></span> 
+<div id="I2.i1.p1" class="ltx_para">
+<p class="ltx_p">Compute the similarity <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m1" class="ltx_Math" alttext="S_{CP}(r_{E},r_{C},e_{E},e_{C})" display="inline"><mrow><msub><mi>S</mi><mrow><mi>C</mi><mo>⁢</mo><mi>P</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>r</mi><mi>E</mi></msub><mo>,</mo><msub><mi>r</mi><mi>C</mi></msub><mo>,</mo><msub><mi>e</mi><mi>E</mi></msub><mo>,</mo><msub><mi>e</mi><mi>C</mi></msub></mrow><mo>)</mo></mrow></mrow></math> of temporal distributions of entity-relation couplings
+for each bilingual entity pair <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m2" class="ltx_Math" alttext="(e_{E},e_{C})" display="inline"><mrow><mo>(</mo><mrow><msub><mi>e</mi><mi>E</mi></msub><mo>,</mo><msub><mi>e</mi><mi>C</mi></msub></mrow><mo>)</mo></mrow></math>.</p>
+</div></li>
+<li id="I2.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i2.m1" class="ltx_Math" alttext="\bullet" display="inline"><mo>∙</mo></math></span> 
+<div id="I2.i2.p1" class="ltx_para">
+<p class="ltx_p">Compute the translation score <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i2.p1.m1" class="ltx_Math" alttext="T_{R}^{LF}(r_{E},r_{C})" display="inline"><mrow><msubsup><mi>T</mi><mi>R</mi><mrow><mi>L</mi><mo>⁢</mo><mi>F</mi></mrow></msubsup><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>r</mi><mi>E</mi></msub><mo>,</mo><msub><mi>r</mi><mi>C</mi></msub></mrow><mo>)</mo></mrow></mrow></math> by aggregating the coupling similarities.</p>
+</div></li>
+</ol>
+</div>
+<div id="S3.SS2.SSSx2.p2" class="ltx_para">
+<p class="ltx_p">Considering the three challenges,
+we produce a list of features <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx2.p2.m1" class="ltx_Math" alttext="\{f_{x}(r_{E},r_{C},e_{E},e_{C})\}" display="inline"><mrow><mo>{</mo><mrow><msub><mi>f</mi><mi>x</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>r</mi><mi>E</mi></msub><mo>,</mo><msub><mi>r</mi><mi>C</mi></msub><mo>,</mo><msub><mi>e</mi><mi>E</mi></msub><mo>,</mo><msub><mi>e</mi><mi>C</mi></msub></mrow><mo>)</mo></mrow></mrow><mo>}</mo></mrow></math> to measure the coupling similarity <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx2.p2.m2" class="ltx_Math" alttext="S_{CP}(r_{E},r_{C},e_{E},e_{C})" display="inline"><mrow><msub><mi>S</mi><mrow><mi>C</mi><mo>⁢</mo><mi>P</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>r</mi><mi>E</mi></msub><mo>,</mo><msub><mi>r</mi><mi>C</mi></msub><mo>,</mo><msub><mi>e</mi><mi>E</mi></msub><mo>,</mo><msub><mi>e</mi><mi>C</mi></msub></mrow><mo>)</mo></mrow></mrow></math> as follows.</p>
+<ol id="I3" class="ltx_enumerate">[leftmargin=4mm,topsep=0.7ex]
+
+<li id="I3.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i1.m1" class="ltx_Math" alttext="\bullet" display="inline"><mo>∙</mo></math></span> 
+<div id="I3.i1.p1" class="ltx_para">
+<p class="ltx_p">[Base feature] <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i1.p1.m1" class="ltx_Math" alttext="f_{ET}" display="inline"><msub><mi>f</mi><mrow><mi>E</mi><mo>⁢</mo><mi>T</mi></mrow></msub></math>: <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i1.p1.m2" class="ltx_Math" alttext="T_{N}(e_{E},e_{C})" display="inline"><mrow><msub><mi>T</mi><mi>N</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>e</mi><mi>E</mi></msub><mo>,</mo><msub><mi>e</mi><mi>C</mi></msub></mrow><mo>)</mo></mrow></mrow></math>.
+The entity translation score obtained in the previous iteration or the seed entity translation score.</p>
+</div></li>
+<li id="I3.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i2.m1" class="ltx_Math" alttext="\bullet" display="inline"><mo>∙</mo></math></span> 
+<div id="I3.i2.p1" class="ltx_para">
+<p class="ltx_p">[C1] <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i2.p1.m1" class="ltx_Math" alttext="f_{ER}" display="inline"><msub><mi>f</mi><mrow><mi>E</mi><mo>⁢</mo><mi>R</mi></mrow></msub></math>: <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i2.p1.m2" class="ltx_Math" alttext="1-JSD(d[e_{E},r_{E},*],d[e_{C},r_{C},*])" display="inline"><mrow><mn>1</mn><mo>-</mo><mi>J</mi><mi>S</mi><mi>D</mi><mrow><mo>(</mo><mi>d</mi><mrow><mo>[</mo><msub><mi>e</mi><mi>E</mi></msub><mo>,</mo><msub><mi>r</mi><mi>E</mi></msub><mo>,</mo><mo>*</mo><mo>]</mo></mrow><mo>,</mo><mi>d</mi><mrow><mo>[</mo><msub><mi>e</mi><mi>C</mi></msub><mo>,</mo><msub><mi>r</mi><mi>C</mi></msub><mo>,</mo><mo>*</mo><mo>]</mo></mrow><mo>)</mo></mrow></mrow></math>.
+The temporal similarity of the couplings, where
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i2.p1.m3" class="ltx_Math" alttext="JSD(P,Q)" display="inline"><mrow><mi>J</mi><mo>⁢</mo><mi>S</mi><mo>⁢</mo><mi>D</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>P</mi><mo>,</mo><mi>Q</mi></mrow><mo>)</mo></mrow></mrow></math> is the Jensen-Shannon divergence of two distributions <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i2.p1.m4" class="ltx_Math" alttext="P" display="inline"><mi>P</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i2.p1.m5" class="ltx_Math" alttext="Q" display="inline"><mi>Q</mi></math>, defined as <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i2.p1.m6" class="ltx_Math" alttext="JSD(P,Q)=\frac{1}{2}D(P||M)+\frac{1}{2}D(Q||M)" display="inline"><mrow><mi>J</mi><mi>S</mi><mi>D</mi><mrow><mo>(</mo><mi>P</mi><mo>,</mo><mi>Q</mi><mo>)</mo></mrow><mo>=</mo><mfrac><mn>1</mn><mn>2</mn></mfrac><mi>D</mi><mrow><mo>(</mo><mi>P</mi><mo>|</mo><mo>|</mo><mi>M</mi><mo>)</mo></mrow><mo>+</mo><mfrac><mn>1</mn><mn>2</mn></mfrac><mi>D</mi><mrow><mo>(</mo><mi>Q</mi><mo>|</mo><mo>|</mo><mi>M</mi><mo>)</mo></mrow></mrow></math>, with
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i2.p1.m7" class="ltx_Math" alttext="M=\frac{1}{2}(P+Q)" display="inline"><mrow><mi>M</mi><mo>=</mo><mrow><mfrac><mn>1</mn><mn>2</mn></mfrac><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>P</mi><mo>+</mo><mi>Q</mi></mrow><mo>)</mo></mrow></mrow></mrow></math> and
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i2.p1.m8" class="ltx_Math" alttext="D(P||M)=\sum_{i}P(i)\log\frac{P(i)}{M(i)}" display="inline"><mrow><mi>D</mi><mrow><mo>(</mo><mi>P</mi><mo>|</mo><mo>|</mo><mi>M</mi><mo>)</mo></mrow><mo>=</mo><msub><mo largeop="true" symmetric="true">∑</mo><mi>i</mi></msub><mi>P</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow><mi>log</mi><mfrac><mrow><mi>P</mi><mo>⁢</mo><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></mrow><mrow><mi>M</mi><mo>⁢</mo><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></mrow></mfrac></mrow></math>.</p>
+</div></li>
+<li id="I3.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i3.m1" class="ltx_Math" alttext="\bullet" display="inline"><mo>∙</mo></math></span> 
+<div id="I3.i3.p1" class="ltx_para">
+<p class="ltx_p">[C2] <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i3.p1.m1" class="ltx_Math" alttext="f_{D1,E}" display="inline"><msub><mi>f</mi><mrow><mrow><mi>D</mi><mo>⁢</mo><mn>1</mn></mrow><mo>,</mo><mi>E</mi></mrow></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i3.p1.m2" class="ltx_Math" alttext="f_{D2,E}" display="inline"><msub><mi>f</mi><mrow><mrow><mi>D</mi><mo>⁢</mo><mn>2</mn></mrow><mo>,</mo><mi>E</mi></mrow></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i3.p1.m3" class="ltx_Math" alttext="f_{D1,C}" display="inline"><msub><mi>f</mi><mrow><mrow><mi>D</mi><mo>⁢</mo><mn>1</mn></mrow><mo>,</mo><mi>C</mi></mrow></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i3.p1.m4" class="ltx_Math" alttext="f_{D2,C}" display="inline"><msub><mi>f</mi><mrow><mrow><mi>D</mi><mo>⁢</mo><mn>2</mn></mrow><mo>,</mo><mi>C</mi></mrow></msub></math>:</p>
+<table id="Sx1.EGx1" class="ltx_equationgroup ltx_eqn_eqnarray">
+
+<tr id="S3.Ex1" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex1.m1" class="ltx_Math" alttext="\displaystyle JSD(d[e_{E}],d[\scalebox{0.7}[1.0]{$e_{E},r_{E},*$}]),\,JSD(d[r_%&#10;{E}],d[\scalebox{0.7}[1.0]{$e_{E},r_{E},*$}])" display="inline"><mrow><mrow><mi>J</mi><mo>⁢</mo><mi>S</mi><mo>⁢</mo><mi>D</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>[</mo><msub><mi>e</mi><mi>E</mi></msub><mo>]</mo></mrow></mrow><mo>,</mo><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>[</mo><mrow><msub><mi>e</mi><mi>E</mi></msub><mo>,</mo><msub><mi>r</mi><mi>E</mi></msub><mo>,</mo><mo>*</mo></mrow><mo>]</mo></mrow></mrow></mrow><mo>)</mo></mrow></mrow><mo separator="true">, </mo><mrow><mi>J</mi><mo>⁢</mo><mi>S</mi><mo>⁢</mo><mi>D</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>[</mo><msub><mi>r</mi><mi>E</mi></msub><mo>]</mo></mrow></mrow><mo>,</mo><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>[</mo><mrow><msub><mi>e</mi><mi>E</mi></msub><mo>,</mo><msub><mi>r</mi><mi>E</mi></msub><mo>,</mo><mo>*</mo></mrow><mo>]</mo></mrow></mrow></mrow><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S3.Ex2" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex2.m1" class="ltx_Math" alttext="\displaystyle JSD(d[e_{C}],d[\scalebox{0.7}[1.0]{$e_{C},r_{C},*$}]),\,JSD(d[r_%&#10;{C}],d[\scalebox{0.7}[1.0]{$e_{C},r_{C},*$}])" display="inline"><mrow><mrow><mi>J</mi><mo>⁢</mo><mi>S</mi><mo>⁢</mo><mi>D</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>[</mo><msub><mi>e</mi><mi>C</mi></msub><mo>]</mo></mrow></mrow><mo>,</mo><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>[</mo><mrow><msub><mi>e</mi><mi>C</mi></msub><mo>,</mo><msub><mi>r</mi><mi>C</mi></msub><mo>,</mo><mo>*</mo></mrow><mo>]</mo></mrow></mrow></mrow><mo>)</mo></mrow></mrow><mo separator="true">, </mo><mrow><mi>J</mi><mo>⁢</mo><mi>S</mi><mo>⁢</mo><mi>D</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>[</mo><msub><mi>r</mi><mi>C</mi></msub><mo>]</mo></mrow></mrow><mo>,</mo><mrow><mi>d</mi><mo>⁢</mo><mrow><mo>[</mo><mrow><msub><mi>e</mi><mi>C</mi></msub><mo>,</mo><msub><mi>r</mi><mi>C</mi></msub><mo>,</mo><mo>*</mo></mrow><mo>]</mo></mrow></mrow></mrow><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">Entity to entity-relation distribution difference (D1) and relation to entity-relation distribution difference (D2),
+for English and Chinese respectively.</p>
+</div></li>
+<li id="I3.i4" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i4.m1" class="ltx_Math" alttext="\bullet" display="inline"><mo>∙</mo></math></span> 
+<div id="I3.i4.p1" class="ltx_para">
+<p class="ltx_p">[C3] <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i4.p1.m1" class="ltx_Math" alttext="f_{EX}" display="inline"><msub><mi>f</mi><mrow><mi>E</mi><mo>⁢</mo><mi>X</mi></mrow></msub></math>: The existence of a common entity pair using the seed entity translations (boolean).
+That is, <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i4.p1.m2" class="ltx_Math" alttext="f_{EX}=1" display="inline"><mrow><msub><mi>f</mi><mrow><mi>E</mi><mo>⁢</mo><mi>X</mi></mrow></msub><mo>=</mo><mn>1</mn></mrow></math> if <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i4.p1.m3" class="ltx_Math" alttext="|H(r_{E},r_{C})|\geq 1" display="inline"><mrow><mrow><mo fence="true">|</mo><mrow><mi>H</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>r</mi><mi>E</mi></msub><mo>,</mo><msub><mi>r</mi><mi>C</mi></msub></mrow><mo>)</mo></mrow></mrow><mo fence="true">|</mo></mrow><mo>≥</mo><mn>1</mn></mrow></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i4.p1.m4" class="ltx_Math" alttext="f_{EX}=0" display="inline"><mrow><msub><mi>f</mi><mrow><mi>E</mi><mo>⁢</mo><mi>X</mi></mrow></msub><mo>=</mo><mn>0</mn></mrow></math> otherwise.</p>
+</div></li>
+</ol>
+</div>
+<div id="S3.SS2.SSSx2.p3" class="ltx_para">
+<p class="ltx_p">Additionally, we use the following features to consider absolute frequencies <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx2.p3.m1" class="ltx_Math" alttext="freq(\cdot)" display="inline"><mrow><mi>f</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>q</mi><mo>⁢</mo><mrow><mo>(</mo><mo>⋅</mo><mo>)</mo></mrow></mrow></math> of textual elements as well
+because 1) we are more confident with more evidence
+and 2) in the comparable corpora, the equivalent elements are likely to show similar frequencies.</p>
+<ol id="I4" class="ltx_enumerate">[leftmargin=4mm,topsep=0.7ex]
+
+<li id="I4.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i1.m1" class="ltx_Math" alttext="\bullet" display="inline"><mo>∙</mo></math></span> 
+<div id="I4.i1.p1" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i1.p1.m1" class="ltx_Math" alttext="f_{FW,E}" display="inline"><msub><mi>f</mi><mrow><mrow><mi>F</mi><mo>⁢</mo><mi>W</mi></mrow><mo>,</mo><mi>E</mi></mrow></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i1.p1.m2" class="ltx_Math" alttext="f_{FW,C}" display="inline"><msub><mi>f</mi><mrow><mrow><mi>F</mi><mo>⁢</mo><mi>W</mi></mrow><mo>,</mo><mi>C</mi></mrow></msub></math>: <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i1.p1.m3" class="ltx_Math" alttext="\mathcal{S}(freq(e_{E},r_{E}))" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒮</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>f</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>q</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>e</mi><mi>E</mi></msub><mo>,</mo><msub><mi>r</mi><mi>E</mi></msub></mrow><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i1.p1.m4" class="ltx_Math" alttext="\mathcal{S}(freq(e_{C},r_{C}))" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒮</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>f</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>q</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>e</mi><mi>C</mi></msub><mo>,</mo><msub><mi>r</mi><mi>C</mi></msub></mrow><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></math>.
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i1.p1.m5" class="ltx_Math" alttext="\mathcal{S}(x)" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒮</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></math> is a normalization function,
+for which we use a sigmoid function over a linear transformation of <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i1.p1.m6" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math>.</p>
+</div></li>
+<li id="I4.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i2.m1" class="ltx_Math" alttext="\bullet" display="inline"><mo>∙</mo></math></span> 
+<div id="I4.i2.p1" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i2.p1.m1" class="ltx_Math" alttext="f_{FS1}" display="inline"><msub><mi>f</mi><mrow><mi>F</mi><mo>⁢</mo><mi>S</mi><mo>⁢</mo><mn>1</mn></mrow></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="I4.i2.p1.m2" class="ltx_Math" alttext="f_{FS2}" display="inline"><msub><mi>f</mi><mrow><mi>F</mi><mo>⁢</mo><mi>S</mi><mo>⁢</mo><mn>2</mn></mrow></msub></math>:</p>
+<table id="S3.Ex3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex3.m1" class="ltx_Math" alttext="\frac{\min(freq(e_{E},r_{E}),freq(e_{C},r_{C}))}{\max(freq(e_{E},r_{E}),freq(e%&#10;_{C},r_{C}))}," display="block"><mrow><mfrac><mrow><mo>min</mo><mo>⁡</mo><mrow><mo>(</mo><mrow><mrow><mi>f</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>q</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>e</mi><mi>E</mi></msub><mo>,</mo><msub><mi>r</mi><mi>E</mi></msub></mrow><mo>)</mo></mrow></mrow><mo>,</mo><mrow><mi>f</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>q</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>e</mi><mi>C</mi></msub><mo>,</mo><msub><mi>r</mi><mi>C</mi></msub></mrow><mo>)</mo></mrow></mrow></mrow><mo>)</mo></mrow></mrow><mrow><mo>max</mo><mo>⁡</mo><mrow><mo>(</mo><mrow><mrow><mi>f</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>q</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>e</mi><mi>E</mi></msub><mo>,</mo><msub><mi>r</mi><mi>E</mi></msub></mrow><mo>)</mo></mrow></mrow><mo>,</mo><mrow><mi>f</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>q</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>e</mi><mi>C</mi></msub><mo>,</mo><msub><mi>r</mi><mi>C</mi></msub></mrow><mo>)</mo></mrow></mrow></mrow><mo>)</mo></mrow></mrow></mfrac><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<table id="S3.Ex4" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex4.m1" class="ltx_Math" alttext="\frac{\min(freq(r_{E}),freq(r_{C}))}{\max(freq(r_{E}),freq(r_{C}))}" display="block"><mfrac><mrow><mo>min</mo><mo>⁡</mo><mrow><mo>(</mo><mrow><mrow><mi>f</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>q</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>r</mi><mi>E</mi></msub><mo>)</mo></mrow></mrow><mo>,</mo><mrow><mi>f</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>q</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>r</mi><mi>C</mi></msub><mo>)</mo></mrow></mrow></mrow><mo>)</mo></mrow></mrow><mrow><mo>max</mo><mo>⁡</mo><mrow><mo>(</mo><mrow><mrow><mi>f</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>q</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>r</mi><mi>E</mi></msub><mo>)</mo></mrow></mrow><mo>,</mo><mrow><mi>f</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>q</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>r</mi><mi>C</mi></msub><mo>)</mo></mrow></mrow></mrow><mo>)</mo></mrow></mrow></mfrac></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div></li>
+</ol>
+</div>
+<div id="S3.SS2.SSSx2.p4" class="ltx_para">
+<p class="ltx_p">With these features, we measure the similarity of a pair of couplings as follows.</p>
+<table id="S3.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E1.m1" class="ltx_Math" alttext="S_{CP}(r_{E},r_{C},e_{E},e_{C})=\prod_{x}f_{x}(r_{E},r_{C},e_{E},e_{C})" display="block"><mrow><mrow><msub><mi>S</mi><mrow><mi>C</mi><mo>⁢</mo><mi>P</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>r</mi><mi>E</mi></msub><mo>,</mo><msub><mi>r</mi><mi>C</mi></msub><mo>,</mo><msub><mi>e</mi><mi>E</mi></msub><mo>,</mo><msub><mi>e</mi><mi>C</mi></msub></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∏</mo><mi>x</mi></munder><mrow><msub><mi>f</mi><mi>x</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>r</mi><mi>E</mi></msub><mo>,</mo><msub><mi>r</mi><mi>C</mi></msub><mo>,</mo><msub><mi>e</mi><mi>E</mi></msub><mo>,</mo><msub><mi>e</mi><mi>C</mi></msub></mrow><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+</div>
+<div id="S3.SS2.SSSx2.p5" class="ltx_para">
+<p class="ltx_p">By aggregating coupling similarities,
+we measure the translation score of two relations:</p>
+<table id="S3.E2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E2.m1" class="ltx_Math" alttext="T_{R}^{\mathrm{LF}}(r_{E},r_{C})=\sum_{(e_{E},e_{C})\in T}S_{CP}(r_{E},r_{C},e%&#10;_{E},e_{C})" display="block"><mrow><mrow><msubsup><mi>T</mi><mi>R</mi><mi>LF</mi></msubsup><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>r</mi><mi>E</mi></msub><mo>,</mo><msub><mi>r</mi><mi>C</mi></msub></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mrow><mo>(</mo><mrow><msub><mi>e</mi><mi>E</mi></msub><mo>,</mo><msub><mi>e</mi><mi>C</mi></msub></mrow><mo>)</mo></mrow><mo>∈</mo><mi>T</mi></mrow></munder><mrow><msub><mi>S</mi><mrow><mi>C</mi><mo>⁢</mo><mi>P</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>r</mi><mi>E</mi></msub><mo>,</mo><msub><mi>r</mi><mi>C</mi></msub><mo>,</mo><msub><mi>e</mi><mi>E</mi></msub><mo>,</mo><msub><mi>e</mi><mi>C</mi></msub></mrow><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx2.p5.m1" class="ltx_Math" alttext="T=\{(e_{E},e_{C})|T_{N}(e_{E},e_{C})\geq\theta\}" display="inline"><mrow><mi>T</mi><mo>=</mo><mrow><mo>{</mo><mrow><mrow><mo>(</mo><mrow><msub><mi>e</mi><mi>E</mi></msub><mo>,</mo><msub><mi>e</mi><mi>C</mi></msub></mrow><mo>)</mo></mrow><mo separator="true">|</mo><mrow><mrow><msub><mi>T</mi><mi>N</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>e</mi><mi>E</mi></msub><mo>,</mo><msub><mi>e</mi><mi>C</mi></msub></mrow><mo>)</mo></mrow></mrow><mo>≥</mo><mi>θ</mi></mrow></mrow><mo>}</mo></mrow></mrow></math> with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx2.p5.m2" class="ltx_Math" alttext="\theta=0.6" display="inline"><mrow><mi>θ</mi><mo>=</mo><mn>0.6</mn></mrow></math>,
+a set of translation pairs obtained in the seeds or previous iteration such as (Bush, <span class="ltx_ERROR undefined">{CJK*}</span>UTF8zhfså¸ä»).</p>
+</div>
+<div id="S3.SS2.SSSx2.p6" class="ltx_para">
+<p class="ltx_p">We normalize the obtained function values for each English relations
+using the top-<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx2.p6.m1" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> Chinese translations.
+That is, for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx2.p6.m2" class="ltx_Math" alttext="(r_{E},r_{C})" display="inline"><mrow><mo>(</mo><mrow><msub><mi>r</mi><mi>E</mi></msub><mo>,</mo><msub><mi>r</mi><mi>C</mi></msub></mrow><mo>)</mo></mrow></math>, we redefine the score as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx2.p6.m3" class="ltx_Math" alttext="T_{R}^{LF}(r_{E},r_{C})/\sum_{i\in[1,k]}T_{R}^{LF}(r_{E},r_{C}^{rank_{i}})" display="inline"><mrow><mrow><msubsup><mi>T</mi><mi>R</mi><mrow><mi>L</mi><mo>⁢</mo><mi>F</mi></mrow></msubsup><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>r</mi><mi>E</mi></msub><mo>,</mo><msub><mi>r</mi><mi>C</mi></msub></mrow><mo>)</mo></mrow></mrow><mo>/</mo><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mrow><mi>i</mi><mo>∈</mo><mrow><mo>[</mo><mrow><mn>1</mn><mo>,</mo><mi>k</mi></mrow><mo>]</mo></mrow></mrow></msub><mrow><msubsup><mi>T</mi><mi>R</mi><mrow><mi>L</mi><mo>⁢</mo><mi>F</mi></mrow></msubsup><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>r</mi><mi>E</mi></msub><mo>,</mo><msubsup><mi>r</mi><mi>C</mi><mrow><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><msub><mi>k</mi><mi>i</mi></msub></mrow></msubsup></mrow><mo>)</mo></mrow></mrow></mrow></mrow></math>
+where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx2.p6.m4" class="ltx_Math" alttext="r_{C}^{rank_{i}}" display="inline"><msubsup><mi>r</mi><mi>C</mi><mrow><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><msub><mi>k</mi><mi>i</mi></msub></mrow></msubsup></math> is the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx2.p6.m5" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math>-th rank Chinese relation for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx2.p6.m6" class="ltx_Math" alttext="r_{E}" display="inline"><msub><mi>r</mi><mi>E</mi></msub></math> by Equation <a href="#S3.E2" title="(2) ‣ Relation Similarity Computation ‣ 3.2 Latent Feature Approach (LF) ‣ 3 Relation Translation ‣ Understanding Relation Temporality of Entities" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+We empirically set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSSx2.p6.m7" class="ltx_Math" alttext="k=4" display="inline"><mrow><mi>k</mi><mo>=</mo><mn>4</mn></mrow></math>.</p>
+</div>
+</div>
+</div>
+<div id="S3.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.3 </span>Hybrid Approach LF+EF</h3>
+
+<div id="S3.SS3.p1" class="ltx_para">
+<p class="ltx_p">We find that LF and EF are complementary.
+Table <a href="#S3.T1" title="Table 1 ‣ 3.3 Hybrid Approach LF+EF ‣ 3 Relation Translation ‣ Understanding Relation Temporality of Entities" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> shows the examples of relations and their translations. In general, LF can translate more relations (e.g., support and capture).
+However, in some cases like ratify, highly <em class="ltx_emph">related</em> relations may induce noise.
+That is, we always <span class="ltx_ERROR undefined">{CJK*}</span>UTF8zhfsè®¨è®º (discuss) before we <span class="ltx_ERROR undefined">{CJK*}</span>UTF8zhfsæ¹å (ratify) something
+and hence the temporal behavior of <span class="ltx_ERROR undefined">{CJK*}</span>UTF8zhfsè®¨è®º (discuss) is also very similar to that of ratify.
+On the other hand,
+it
+can be correctly translated using EF.</p>
+</div>
+<div id="S3.SS3.p2" class="ltx_para">
+<p class="ltx_p">Thus, we produce the hybrid relation translation, and we empirically set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m1" class="ltx_Math" alttext="\lambda=0.4" display="inline"><mrow><mi>λ</mi><mo>=</mo><mn>0.4</mn></mrow></math>:</p>
+<table id="S3.E3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E3.m1" class="ltx_Math" alttext="T_{R}^{\scalebox{0.6}[0.7]{LF+EF}}(r_{E},r_{C}){\,=\,}\lambda T_{R}^{\scalebox%&#10;{0.6}[0.7]{LF}}(r_{E},r_{C}){\scalebox{0.8}[1.0]{$+(1-\lambda)$}}T_{R}^{%&#10;\scalebox{0.6}[0.7]{EF}}(r_{E},r_{C})" display="block"><mrow><mrow><msubsup><mi>T</mi><mi>R</mi><mtext>
+<span xmlns="http://www.w3.org/1999/xhtml" class="ltx_inline-block ltx_transformed_outer" style="width:22.5pt;height:8.75px;vertical-align:-1.4pt;"><span class="ltx_transformed_inner" style="transform:translate(-7.5pt,-1.3pt) scale(0.6,0.7) ;-webkit-transform:translate(-7.5pt,-1.3pt) scale(0.6,0.7) ;-ms-transform:translate(-7.5pt,-1.3pt) scale(0.6,0.7) ;">
+<p class="ltx_p">LF+EF</p>
+</span></span></mtext></msubsup><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>r</mi><mi>E</mi></msub><mo>,</mo><msub><mi>r</mi><mi>C</mi></msub></mrow><mo>)</mo></mrow></mrow><mo rspace="4.2pt">=</mo><mrow><mi>λ</mi><mo>⁢</mo><msubsup><mi>T</mi><mi>R</mi><mtext>
+<span xmlns="http://www.w3.org/1999/xhtml" class="ltx_inline-block ltx_transformed_outer" style="width:9.0pt;height:8.75px;vertical-align:-1.4pt;"><span class="ltx_transformed_inner" style="transform:translate(-3.0pt,-1.3pt) scale(0.6,0.7) ;-webkit-transform:translate(-3.0pt,-1.3pt) scale(0.6,0.7) ;-ms-transform:translate(-3.0pt,-1.3pt) scale(0.6,0.7) ;">
+<p class="ltx_p">LF</p>
+</span></span></mtext></msubsup><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>r</mi><mi>E</mi></msub><mo>,</mo><msub><mi>r</mi><mi>C</mi></msub></mrow><mo>)</mo></mrow><mo>⁢</mo><mrow><mo>+</mo><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><mi>λ</mi></mrow><mo>)</mo></mrow></mrow><mo>⁢</mo><msubsup><mi>T</mi><mi>R</mi><mtext>
+<span xmlns="http://www.w3.org/1999/xhtml" class="ltx_inline-block ltx_transformed_outer" style="width:9.0pt;height:8.75px;vertical-align:-1.4pt;"><span class="ltx_transformed_inner" style="transform:translate(-3.0pt,-1.3pt) scale(0.6,0.7) ;-webkit-transform:translate(-3.0pt,-1.3pt) scale(0.6,0.7) ;-ms-transform:translate(-3.0pt,-1.3pt) scale(0.6,0.7) ;">
+<p class="ltx_p">EF</p>
+</span></span></mtext></msubsup><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>r</mi><mi>E</mi></msub><mo>,</mo><msub><mi>r</mi><mi>C</mi></msub></mrow><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+</table>
+</div><span class="ltx_note ltx_role_footnotetext"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup><span class="ltx_note_type">footnotetext: </span>The correct translation <span class="ltx_ERROR undefined">{CJK*}</span>UTF8zhfsæ¹å (ratify) is ranked second.</span></span></span>
+<div id="S3.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t">English</th>
+<th class="ltx_td ltx_align_left ltx_border_t">LF</th>
+<th class="ltx_td ltx_align_left ltx_border_t">EF</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">visit</span></th>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_ERROR undefined">{CJK*}</span><span class="ltx_text ltx_font_small">UTF8zhfsè®¿é® (visit)</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_ERROR undefined">{CJK*}</span><span class="ltx_text ltx_font_small">UTF8zhfsè®¿é® (visit)</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">support</span></th>
+<td class="ltx_td ltx_align_left"><span class="ltx_ERROR undefined">{CJK*}</span><span class="ltx_text ltx_font_small">UTF8zhfså…æä¾ (provide to …)</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">-</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b"><span class="ltx_text ltx_font_small">ratify</span></th>
+<td class="ltx_td ltx_align_left ltx_border_b"><span class="ltx_ERROR undefined">{CJK*}</span><span class="ltx_text ltx_font_small">UTF8zhfs<span class="ltx_text ltx_ulem_sout">è®¨è®º</span> (discuss)<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T1.m1" class="ltx_Math" alttext="{}^{\decimal{footnote}}" display="inline"><msup><mi/><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\decimal</mtext></merror><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">f</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">o</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">o</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">n</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">o</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">e</mi></mrow></msup></math></span></td>
+<td class="ltx_td ltx_align_left ltx_border_b"><span class="ltx_ERROR undefined">{CJK*}</span><span class="ltx_text ltx_font_small">UTF8zhfsæ¹å (ratify)</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 1: </span>Examples of relation translations.</div>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Evaluation</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">In this section, we evaluate the proposed approach
+on the entity translation task and the relation translation task.
+We extract English and Chinese statements
+from news articles in 2008 by Xinhua news who publishes news in both English and Chinese,
+which were also used by <cite class="ltx_cite"><a href="#bib.bib4" title="Bootstrapping entity translation on weakly comparable corpora" class="ltx_ref">Lee and Hwang ()</a></cite>.
+The number of English articles is 100,746, and that of Chinese articles is 88,031.
+As we can see from the difference in the numbers of the documents,
+the news corpora are not direct translations, but they have asymmetry of entities and relations.</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Entity Translation</h3>
+
+<div id="S4.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t" colspan="3">Person</th>
+<th class="ltx_td ltx_align_center ltx_border_t" colspan="3">Organization</th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">Method</th>
+<th class="ltx_td ltx_align_right">P.</th>
+<th class="ltx_td ltx_align_right">R.</th>
+<th class="ltx_td ltx_align_right ltx_border_r">F1</th>
+<th class="ltx_td ltx_align_right">P.</th>
+<th class="ltx_td ltx_align_right">R.</th>
+<th class="ltx_td ltx_align_right">F1</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">LF+EF</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">0.84</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">0.80</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">0.82</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">0.60</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">0.52</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">0.56</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">EF</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">0.81</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">0.79</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">0.80</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">0.56</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold ltx_font_small">0.52</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">0.54</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">Seed</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">0.80</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">0.77</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">0.78</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">0.49</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">0.44</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">0.46</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">PH+SM</span></th>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_small">0.59</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_small">0.59</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">0.59</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_small">0.29</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_small">0.29</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_small">0.29</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 2: </span>Entity translation comparison.</div>
+</div>
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">In this section, we present experimental settings
+and results on translating entities using our proposed approaches.
+To measure the effectiveness, we use a set of gold standard entity translation pairs which consist of
+221 person entities and 52 organization entities.
+We measure precision, recall, and F1-score based on the returned translation pairs for each English entity
+as it is done in <cite class="ltx_cite">[<a href="#bib.bib4" title="Bootstrapping entity translation on weakly comparable corpora" class="ltx_ref">11</a>]</cite>.</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">We compare our hybrid approach, which is denoted by LF+EF with EF <cite class="ltx_cite">[<a href="#bib.bib4" title="Bootstrapping entity translation on weakly comparable corpora" class="ltx_ref">11</a>]</cite>,
+a combined approach PH+SM of phonetic similarity and letter-wise semantic translation for better accuracy for organizations <cite class="ltx_cite">[<a href="#bib.bib14a" title="Named entity translation matching and learning: with application for mining unseen translations" class="ltx_ref">10</a>]</cite>,
+and the seed translations Seed that we adopt <cite class="ltx_cite">[<a href="#bib.bib15a" title="Efficient entity translation mining: a parallelized graph alignment approach" class="ltx_ref">17</a>]</cite> with
+PH+SM as a base translation matrix.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>Our results leveraging relational temporality outperforms the reported results using entity temporality on the same data set.
+The two approaches using temporality are orthogonal and can be aggregated, which we leave as our future directions.</span></span></span>
+We process one iteration of the entire framework (<span class="ltx_text ltx_font_bold ltx_font_smallcaps ltx_font_small">Step 1-3</span>)
+for both LF+EF and EF.</p>
+</div>
+<div id="S4.SS1.p3" class="ltx_para">
+<p class="ltx_p">Table <a href="#S4.T2" title="Table 2 ‣ 4.1 Entity Translation ‣ 4 Evaluation ‣ Understanding Relation Temporality of Entities" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> shows the comparison of the methods.
+Our proposed approach LF+EF
+shows higher F1-score than the baselines.
+In particular, our approach outperforms EF.
+For example, ‘Matthew Emmons’ is a lesser known entity,
+and we have only few statements mentioning him in the corpora.
+The corpus explicit feature
+EF alone cannot
+translate the relation win and, in turn, ‘Matthew Emmons’.
+However,
+LF+EF translates him correctly into <span class="ltx_ERROR undefined">{CJK*}</span>UTF8zhfsé©¬ä¿®Â·åèæ¯
+through the relation win.</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Relation Translation</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">This section considers
+the relation translation task.
+Each relation translation method translates an English relation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m1" class="ltx_Math" alttext="r_{E}" display="inline"><msub><mi>r</mi><mi>E</mi></msub></math>
+into a list of Chinese relations, and we check
+whether a Chinese relation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m2" class="ltx_Math" alttext="r_{C}" display="inline"><msub><mi>r</mi><mi>C</mi></msub></math> with the highest translation score is the correct translation.
+We consider the relation translation is correct
+when the semantics are equivalent. For example, <span class="ltx_ERROR undefined">{CJK*}</span>UTF8zhfså» (leave for/go to) is a correct
+translation of leave for,
+but <span class="ltx_ERROR undefined">{CJK*}</span>UTF8zhfsç¦»å¼ (leave) is <em class="ltx_emph">not</em>.
+Total 3342 English-Chinese relation translation pairs returned by our method and the baselines are randomly shown and labeled.
+Out of 3342 pairs, 399 are labeled as correct.</p>
+</div>
+<div id="S4.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t">Methods</th>
+<th class="ltx_td ltx_align_right ltx_border_t">Precision</th>
+<th class="ltx_td ltx_align_right ltx_border_t">Recall</th>
+<th class="ltx_td ltx_align_right ltx_border_t">F1</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">LF+EF</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">0.37</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">0.44</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">0.40</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">LF</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">0.26</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">0.25</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">0.26</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b"><span class="ltx_text ltx_font_small">EF</span></th>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_bold ltx_font_small">0.41</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_small">0.17</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_small">0.24</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 3: </span>Relation translation comparison.</div>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">Table <a href="#S4.T3" title="Table 3 ‣ 4.2 Relation Translation ‣ 4 Evaluation ‣ Understanding Relation Temporality of Entities" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>
+shows the comparisons of LF, EF and their hybrid LF+EF.
+We can clearly see that LF shows higher recall than EF
+while EF shows higher precision.
+As we emphasized in Section <a href="#S3.SS3" title="3.3 Hybrid Approach LF+EF ‣ 3 Relation Translation ‣ Understanding Relation Temporality of Entities" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>,
+we can see their complementary property.
+Their hybrid LF+EF
+has both high precision and recall,
+thus has the highest F1-score.</p>
+</div>
+<div id="S4.SS2.p3" class="ltx_para">
+<p class="ltx_p">Note that the absolute numbers (due to the harsh evaluation criteria) may look low.
+But the top translations are still relevant (e.g., fight is translated to <span class="ltx_ERROR undefined">{CJK*}</span>UTF8zhfsé©» (deploy troops)).
+In addition, the lower ranked but correct relation translations also affect entity translation.
+Therefore, even lower-performing EF boosted the entity translations, and
+in effect, our approach could achieve higher F1-score in the entity translation task.</p>
+</div>
+<div id="S4.T4" class="ltx_table">
+<table class="ltx_tabular ltx_parbox ltx_align_middle" style="width:433.6pt;">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t">Eng. Rel.</th>
+<th class="ltx_td ltx_align_right ltx_border_t">C1</th>
+<th class="ltx_td ltx_align_right ltx_border_t">C1+C2</th>
+<th class="ltx_td ltx_align_right ltx_border_r ltx_border_t">C1+C2+C3</th>
+<th class="ltx_td ltx_align_right ltx_border_t">EF</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">visit</span></th>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">15</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">4</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">1</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_small">1</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">drop</span></th>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">21</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">14</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">1</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_small">-</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">capture</span></th>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_small">6</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_small">4</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">1</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b"><span class="ltx_text ltx_font_small">-</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 4: </span>Rank of correct relation translation. The symbol ‘-’ indicates
+no correct translation.
+</div>
+</div>
+<div id="S4.SS2.p4" class="ltx_para">
+<p class="ltx_p">To illustrate the detailed effects of the corpus latent features,
+Table <a href="#S4.T4" title="Table 4 ‣ 4.2 Relation Translation ‣ 4 Evaluation ‣ Understanding Relation Temporality of Entities" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> shows the ranks of correct Chinese translations for
+English relations by methods using selected features for the challenges.
+For comparison, the ranks of the correct translations when using EF are shown.
+Our approach using the entity-relation coupling similarity feature for [C1] alone often
+cannot find the correct translations.
+But using all features removes such noise.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Conclusion</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">This paper studied temporality features for relation equivalence.
+With the proposed features, we devised a hybrid approach combining corpus latent and explicit features
+with complementary strength.
+We empirically showed the effectiveness of our hybrid approach on relation translation,
+and it, in turn, improved entity translation.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">This research was supported by the MSIP (The Ministry of Science, ICT and Future Planning), Korea and Microsoft Research, under IT/SW Creative research program supervised by the NIPA(National IT Industry Promotion Agency). (NIPA-2013-H0503-13-1009).</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_year">(1998)</span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#bib.bib3b" title="Automatic English-Chinese name transliteration for development of multilingual resources" class="ltx_ref">15</a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#bib.bib16a" title="Enriching entity translation discovery using selective temporality." class="ltx_ref">16</a>, <a href="#bib.bib4" title="Bootstrapping entity translation on weakly comparable corpora" class="ltx_ref">11</a>.
+</span></li>
+<li id="bib.bib16" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#bib.bib10" title="Mining entity translations from comparable corpora: a holistic graph mapping approach" class="ltx_ref">7</a>.
+</span></li>
+<li id="bib.bib14" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#bib.bib3a" title="Discovering relations between noun categories" class="ltx_ref">12</a>.
+</span></li>
+<li id="bib.bib15" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#bib.bib1" title="PATTY: A Taxonomy of Relational Patterns with Semantic Types" class="ltx_ref">14</a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Kim, S. Hwang, L. Jiang, Y. Song and M. Zhou</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Entity translation mining from comparable corpora: combining graph mapping with corpus latent features</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1787–1800</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Understanding Relation Temporality of Entities" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Kim, L. Jiang, S. Hwang, Y. Song and M. Zhou</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Mining entity translations from comparable corpora: a holistic graph mapping approach</span>.
+</span>
+<span class="ltx_bibblock">See <span class="ltx_text ltx_bib_crossref"><cite class="ltx_cite"><a href="#bib.bib16" title="" class="ltx_ref">3</a></cite></span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1295–1304</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Understanding Relation Temporality of Entities" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Klementiev and D. Roth</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Named entity transliteration and discovery from multilingual comparable corpora</span>.
+</span>
+<span class="ltx_bibblock">See <span class="ltx_text ltx_bib_crossref"><cite class="ltx_cite"><a href="#bib.bib19" title="" class="ltx_ref">13</a></cite></span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 82–88</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Understanding Relation Temporality of Entities" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Knight and J. Graehl</span><span class="ltx_text ltx_bib_year">(1998-12)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Machine transliteration</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">24</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 599–612</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text issn ltx_bib_external">ISSN 0891-2017</span></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Understanding Relation Temporality of Entities" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib14a" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">W. Lam, S. Chan and R. Huang</span><span class="ltx_text ltx_bib_year">(2007-02)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Named entity translation matching and learning: with application for mining unseen translations</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">ACM Transactions on Information Systems</span> <span class="ltx_text ltx_bib_volume">25</span> (<span class="ltx_text ltx_bib_number">1</span>).
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text issn ltx_bib_external">ISSN 1046-8188</span></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Preliminary: Entity Translation by Selective Propagation ‣ Understanding Relation Temporality of Entities" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.SS1.p2" title="4.1 Entity Translation ‣ 4 Evaluation ‣ Understanding Relation Temporality of Entities" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Lee and S. Hwang</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Bootstrapping entity translation on weakly comparable corpora</span>.
+</span>
+<span class="ltx_bibblock">See <span class="ltx_text ltx_bib_crossref"><cite class="ltx_cite"><a href="#bib.bib9" title="" class="ltx_ref">2</a></cite></span>,
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Understanding Relation Temporality of Entities" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p2" title="2 Preliminary: Entity Translation by Selective Propagation ‣ Understanding Relation Temporality of Entities" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS1.p1" title="3.1 Baseline: Explicit Feature Approach (EF) ‣ 3 Relation Translation ‣ Understanding Relation Temporality of Entities" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>,
+<a href="#S3.SS1.p2" title="3.1 Baseline: Explicit Feature Approach (EF) ‣ 3 Relation Translation ‣ Understanding Relation Temporality of Entities" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>,
+<a href="#S4.SS1.p1" title="4.1 Entity Translation ‣ 4 Evaluation ‣ Understanding Relation Temporality of Entities" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>,
+<a href="#S4.SS1.p2" title="4.1 Entity Translation ‣ 4 Evaluation ‣ Understanding Relation Temporality of Entities" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>,
+<a href="#S4.p1" title="4 Evaluation ‣ Understanding Relation Temporality of Entities" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib3a" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Mohamed, E. Hruschka and T. Mitchell</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Discovering relations between noun categories</span>.
+</span>
+<span class="ltx_bibblock">See <span class="ltx_text ltx_bib_crossref"><cite class="ltx_cite"><a href="#bib.bib14" title="" class="ltx_ref">4</a></cite></span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1447–1455</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Understanding Relation Temporality of Entities" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib19" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#bib.bib20" title="Named entity transliteration and discovery from multilingual comparable corpora" class="ltx_ref">8</a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Nakashole, G. Weikum and F. M. Suchanek</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">PATTY: A Taxonomy of Relational Patterns with Semantic Types</span>.
+</span>
+<span class="ltx_bibblock">See <span class="ltx_text ltx_bib_crossref"><cite class="ltx_cite"><a href="#bib.bib15" title="" class="ltx_ref">5</a></cite></span>,
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Understanding Relation Temporality of Entities" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib3b" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Wan and C. M. Verspoor</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatic English-Chinese name transliteration for development of multilingual resources</span>.
+</span>
+<span class="ltx_bibblock">See <span class="ltx_text ltx_bib_crossref"><cite class="ltx_cite"><a href="#bib.bib3" title="" class="ltx_ref">1</a></cite></span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1352–1356</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Understanding Relation Temporality of Entities" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib16a" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. You, Y. Cha, J. Kim and S. Hwang</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Enriching entity translation discovery using selective temporality.</span>.
+</span>
+<span class="ltx_bibblock">See <span class="ltx_text ltx_bib_crossref"><cite class="ltx_cite"><a href="#bib.bib9" title="" class="ltx_ref">2</a></cite></span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 201–205</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p4" title="1 Introduction ‣ Understanding Relation Temporality of Entities" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib15a" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. You, S. Hwang, Y. Song, L. Jiang and Z. Nie</span><span class="ltx_text ltx_bib_year">(2012-11)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Efficient entity translation mining: a parallelized graph alignment approach</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">ACM Transactions on Information Systems</span> <span class="ltx_text ltx_bib_volume">30</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 25:1–25:23</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Understanding Relation Temporality of Entities" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p1" title="2 Preliminary: Entity Translation by Selective Propagation ‣ Understanding Relation Temporality of Entities" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.SS1.p2" title="4.1 Entity Translation ‣ 4 Evaluation ‣ Understanding Relation Temporality of Entities" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 18:39:10 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

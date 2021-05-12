@@ -1,0 +1,765 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Vector space semantics with frequency-driven motifs</title>
+<!--Generated on Tue Jun 10 18:00:20 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Vector space semantics with frequency-driven motifs</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Shashank Srivastava 
+<br class="ltx_break"/>Carnegie Mellon University 
+<br class="ltx_break"/>Pittsburgh, PA 15217 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">ssrivastava@cmu.edu</span> 
+<br class="ltx_break"/>&amp;Eduard Hovy 
+<br class="ltx_break"/>Carnegie Mellon University 
+<br class="ltx_break"/>Pittsburgh, PA 15217 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">hovy@cmu.edu</span> 
+<br class="ltx_break"/>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Traditional models of distributional semantics suffer from computational issues such as data sparsity for individual lexemes and complexities of modeling semantic composition when dealing with structures larger than single lexical items. In this work, we present a frequency-driven paradigm for robust distributional semantics in terms of semantically cohesive lineal constituents, or <em class="ltx_emph">motifs</em>. The framework subsumes issues such as differential compositional as well as non-compositional behavior of phrasal consituents, and circumvents some problems of data sparsity by design. We design a segmentation model to optimally partition a sentence into lineal constituents, which can be used to define distributional contexts that are less noisy, semantically more interpretable, and linguistically disambiguated. Hellinger PCA embeddings learnt using the framework show competitive results on empirical tasks.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Meaning in language is a confluence of experientially acquired semantics of words or multi-word phrases, and their semantic composition to create new meanings. For instance, successfully interpreting a sentence such as</p>
+<p class="ltx_p ltx_align_center"><em class="ltx_emph">The old senator kicked the bucket.</em></p>
+<p class="ltx_p">requires the knowledge that the semantic connotations of ‘kicking the bucket’ as a unit are the same as those for ‘dying’. Short of explicit supervision, such semantic mappings must be inferred by a new language speaker through inductive mechanisms operating on observed linguistic usage. This perspective of acquired meaning aligns with the ‘meaning is usage’ adage, consonant with Wittgenstein’s view of semantics. At the same time, the ability to adaptively communicate elaborate meanings can only be conciled through Frege’s principle of compositionality, i.e., meanings of larger linguistic constructs can be derived from the meanings of individual components, modulated by their syntactic interrelations. Indeed, most linguistic usage appears compositional. This is supported by the fact even with very limited vocabulary, children and non-native speakers can often communicate surprisingly effectively.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">It can be argued that to be sustainable, inductive aspects of meaning must be recurrent enough to be learnable by new users. That is, a non-compositional phrase such as ‘kick the bucket’ is likely to persist in common parlance only if it is frequently used with its associated semantic mapping. If a usage-driven meaning of a motif is not recurrent enough, learning this mapping is inefficient in two ways. First, the sparseness of observations would severely limit accurate inductive acquisition by new observers. Second, the value of learning a very infrequent semantic mapping is likely marginal. This motivates the need for a frequency-driven view of lexical semantics. In particular, such a perspective can be especially advantageous for distributional semantics for reasons we outline below.</p>
+</div>
+<div id="S1.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center" colspan="2"><em class="ltx_emph">With the bad press in wake of the financial crisis, businesses are leaving our shores .</em></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_typewriter">crisis:</span></td>
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_typewriter">&lt;bad, businesses, financial, leaving, press, shores, wake&gt;</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_typewriter">financial_crisis:</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_typewriter">&lt;bad press, businesses, in wake of, leaving our shores&gt;</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 1: </span>Meaning representation by conventional DSMs vs notional ideal </div>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">Distributional semantic models (DSMs) that represent words as distributions over neighbouring contexts have been particularly effective in capturing fine-grained lexical semantics <cite class="ltx_cite">[<a href="#bib.bib9" title="From frequency to meaning: vector space models of semantics" class="ltx_ref">26</a>]</cite>. Such models have engendered improvements in diverse applications such as selectional preference modeling <cite class="ltx_cite">[<a href="#bib.bib28" title="A simple, similarity-based model for selectional preferences" class="ltx_ref">8</a>]</cite>, word-sense discrimination <cite class="ltx_cite">[<a href="#bib.bib10" title="Disambiguating nouns, verbs, and adjectives using automatically acquired selectional preferences" class="ltx_ref">15</a>]</cite>, automatic dictionary building <cite class="ltx_cite">[<a href="#bib.bib22" title="From Distributional to Semantic Similarity" class="ltx_ref">7</a>]</cite>, and information retrieval <cite class="ltx_cite">[<a href="#bib.bib29" title="Introduction to information retrieval" class="ltx_ref">14</a>]</cite>. However, while conventional DSMs consider collocation strengths (through counts and PMI scores) of word neighbourhoods, they disregard much of the regularity in human language. Most significantly, word tokens that act as latent dimensions are often derived from arbitrary tokenization. The example given in Table 1 succinctly describes this. The first row in the table shows a representation of the meaning of the token ‘crisis’ that a conventional DSM might extract from the given sentence after stopword removal. While helpful, the representation seems unsatisfying since words such as ‘press’, ‘wake’ and ‘shores’ seem to have little to do with a crisis. From a semantic perspective, a representation similar to the second is more valuable: not only does it represent a semantic mapping for a more specific meaning, but the latent dimensions of the representation have are less noisy (e.g., while ‘wake’ is semantically ambiguous, its surrounding context in ‘in wake of’ disambiguates it) and more intuitive in regards of semantic interepretability. This is the overarching theme of this work: we present a frequency driven paradigm for extending distributional semantics to phrasal and sentential levels in terms of such semantically cohesive, recurrent lexical units or <em class="ltx_emph">motifs</em>.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">We propose to identify such semantically cohesive motifs in terms of features inspired from frequency-characteristics, linguistic idiosyncrasies, and shallow syntactic analysis; and explore both supervised and semi-supervised models to optimally segment a sentence into such motifs. Through exploiting regularities in language usage, the framework can efficiently account for both compositional and non-compositional word usage, while avoiding the issue of data-sparsity by design. Our principal contributions in this paper are:</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<ul id="I1" class="ltx_itemize">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p">We present a framework for extending distributional semantics to learn semantic representations of both words and phrases in terms of recurrent motifs, rather than arbitrary word tokens</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p">We present a simple model to segment a sentence into such motifs using a feature-set drawing from frequency statistics, information theory, linguistic theories and shallow syntactic analysis</p>
+</div></li>
+<li id="I1.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i3.p1" class="ltx_para">
+<p class="ltx_p">Word and phrasal representations learnt through the approach outperform conventional DSM representations on empirical tasks</p>
+</div></li>
+</ul>
+</div>
+<div id="S1.p6" class="ltx_para">
+<p class="ltx_p">This paper is organized as follows: In Section 2, we briefly review related work in the domain of compositional distributional semantics, and motivate our formulation. Section 3 describes our methodology, which consists of a frequency-driven segmentation model to partition text into semantically meaningful recurring lineal-subunits, a representation learning framework for learning new semantic embeddings based on this segmentation, and an approach to use such embeddings in downstream applications. We present experiments and empirical evaluations for our method in Section 4. Finally, we conclude in Section 5 with a summary of our principal findings, and a discussion of possible directions for future work.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related Work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">While DSMs have been valuable in representing semantics of single words, approaches to extend them to represent the semantics of phrases and sentences has met with only marginal success. While there is considerable variety in approaches and formulations, existing approaches for phrasal level and sentential semantics can broadly be partitioned into two categories.</p>
+</div>
+<div id="S2.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.1 </span>Compositional approaches</h3>
+
+<div id="S2.SS1.p1" class="ltx_para">
+<p class="ltx_p">These have aimed at using semantic representations for individual words to learn semantic representations for larger linguistic structures. These methods implicitly make an assumption of compositionality, and often include explicit computational models of compositionality. Notable among such models are the additive and multiplicative models of composition by <cite class="ltx_cite">Mitchell and Lapata (<a href="#bib.bib1" title="Vector-based models of semantic composition." class="ltx_ref">2008</a>)</cite>, <cite class="ltx_cite">Grefenstette<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib5" title="Concrete sentence spaces for compositional distributional models of meaning" class="ltx_ref">2010</a>)</cite>, Baroni and Zamparelli’s <cite class="ltx_cite">[<a href="#bib.bib4" title="Nouns are vectors, adjectives are matrices: representing adjective-noun constructions in semantic space" class="ltx_ref">2</a>]</cite> model that differentially models content and function words for semantic composition, and Goyal et al.’s SDSM model <cite class="ltx_cite">[<a href="#bib.bib7" title="A structured distributional semantic model: integrating structure with semantics" class="ltx_ref">9</a>]</cite> that incorporates syntactic roles to model semantic composition. Notable among the most effective distributional representations are the recent deep-learning approaches by <cite class="ltx_cite">Socher<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib8" title="Semantic compositionality through recursive matrix-vector spaces" class="ltx_ref">2012</a>)</cite>, that model vector composition through non-linear transformations. While word embeddings and language models from such methods have been useful for tasks such as relation classification, polarity detection, event coreference and parsing; much of existing literature on composition is based on abstract linguistic theory and conjecture, and there is little evidence to support that learnt representations for larger linguistic units correspond to their semantic meanings. While works such as the SDSM model suffer from the <em class="ltx_emph">problem of sparsity</em> in composing structures beyond bigrams and trigrams, methods such as <cite class="ltx_cite">Mitchell and Lapata (<a href="#bib.bib1" title="Vector-based models of semantic composition." class="ltx_ref">2008</a>)</cite>and <cite class="ltx_cite">[<a href="#bib.bib8" title="Semantic compositionality through recursive matrix-vector spaces" class="ltx_ref">22</a>]</cite> and <cite class="ltx_cite">Grefenstette and Sadrzadeh (<a href="#bib.bib6" title="Experimental support for a categorical compositional distributional model of meaning" class="ltx_ref">2011</a>)</cite> are restricted by significant <em class="ltx_emph">model biases</em> in representing semantic composition by generic algebraic operations. Finally, the assumption that semantic meanings for sentences could have representations similar to those for smaller individual tokens is in some sense unintuitive, and not supported by linguistic or semantic theories.</p>
+</div>
+</div>
+<div id="S2.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.2 </span>Tree kernels</h3>
+
+<div id="S2.SS2.p1" class="ltx_para">
+<p class="ltx_p">Tree Kernel methods have gained popularity in the last decade for capturing syntactic information in the structure of parse trees <cite class="ltx_cite">[<a href="#bib.bib20" title="New ranking algorithms for parsing and tagging: kernels over discrete structures, and the voted perceptron" class="ltx_ref">3</a>, <a href="#bib.bib19" title="Efficient convolution kernels for dependency and constituent syntactic trees" class="ltx_ref">17</a>]</cite>. Instead of procuring explicit representations, the kernel paradigm directly focuses on the larger goal of quantifying semantic similarity of larger linguistic units. Structural kernels for NLP are based on matching substructures within two parse trees , consisting of word-nodes with similar labels. These methods have been useful for eclectic tasks such as parsing, NER, semantic role labeling, and sentiment analysis. Recent approaches such as by <cite class="ltx_cite">Croce<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib11" title="Structured lexical similarity via convolution kernels on dependency trees" class="ltx_ref">2011</a>)</cite> and <cite class="ltx_cite">Srivastava<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib12" title="A walk-based semantically enriched tree kernel over distributed word representations" class="ltx_ref">2013</a>)</cite> have attempted to provide formulations to incorporate semantics into tree kernels through the use of distributional word vectors at the individual word-nodes. While this framework is attractive in the lack of assumptions on representation that it makes, the use of distributional embeddings for individual tokens means that it suffers from the same shortcomings as described for the example in Table 1, and hence these methods model semantic relations between word-nodes very weakly. Figure 1 shows an example of the shortcomings of this general approach.</p>
+</div>
+<div id="S2.F1" class="ltx_figure"><img src="P14-1060/image001.png" id="S2.F1.g1" class="ltx_graphics ltx_centering" width="205" height="116" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Tokenwise syntactic and semantic similarities don’t imply sentential semantic similarity</div>
+</div>
+<div id="S2.SS2.p2" class="ltx_para">
+<p class="ltx_p">While the two sentences in consideration have near-identical syntax and could be argued to have semantically aligned words in similar positions, the semantics of the complete sentences are widely divergent. Specifically, the ‘bag of words’ assumption in tree kernels doesn’t suffice for these lexemes, and a stronger semantic model is needed to capture phrasal semantics as well as diverging inter-word relations such as in ‘coffee table’ and ‘water table’. Our hypothesis is that a model that can even weakly identify recurrent motifs such as ‘water table’ or ‘breaking a fall’ would be helpful in building more effective semantic representations. A significant advantage of a frequency driven view is that it makes the concern of compositionality of recurrent phrases immaterial. If a motif occurs frequently enough in common parlance, its semantics could be captured with distributional models irrespective of whether its associated semantics are compositional or acquired.</p>
+</div>
+</div>
+<div id="S2.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.3 </span>Identifying multi-word expressions</h3>
+
+<div id="S2.SS3.p1" class="ltx_para">
+<p class="ltx_p">Several approaches have focused on supervised identification of multi-word expressions (MWEs) through statistical <cite class="ltx_cite">[<a href="#bib.bib13" title="A machine learning approach to multiword expression extraction" class="ltx_ref">19</a>, <a href="#bib.bib15" title="Validation and evaluation of automatically acquired multiword expressions for grammar engineering." class="ltx_ref">27</a>]</cite> and linguistically motivated <cite class="ltx_cite">[<a href="#bib.bib14" title="Comparing and combining a semantic tagger and a statistical tool for mwe extraction" class="ltx_ref">20</a>]</cite> techniques. More recently, hybrid methods based on both statistical as well as linguistic features have been popular <cite class="ltx_cite">[<a href="#bib.bib18" title="Identification of multi-word expressions by combining multiple linguistic information sources" class="ltx_ref">25</a>]</cite>. Ramisch et al. <cite class="ltx_cite">[<a href="#bib.bib16" title="An evaluation of methods for the extraction of multiword expressions" class="ltx_ref">21</a>]</cite> demonstrate that adding part-of-speech tags to frequency counts substantially improves performance. Other methods have attempted to exploit morphological, syntactic and semantic characteristics of MWEs. In particular, approaches such as <cite class="ltx_cite">Bannard (<a href="#bib.bib17" title="A measure of syntactic flexibility for automatically identifying multiword expressions in corpora" class="ltx_ref">2007</a>)</cite> use syntactic rigidity to characterize MWEs. While existing work has focused on the classification task of categorizing a phrasal constituent as a MWE or a non-MWE, the general ideas of most of these works are in line with our current framework, and the feature-set for our motif segmentation model is designed to subsume most of these ideas. It is worthwhile to point out that the task of motif segmentation is slightly different from MWE identification. Specifically, the onus on recurrent occurrences means that non-decomposibility is not an essential consideration for a word to be considered a motif. In line with the proposed paradigm, typical MWEs such as ‘shoot the breeze’, ‘sour note’ and ‘hot dog’ would be considered valid lineal motifs. <span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>We note that since we take motifs as lineal units, the current method doesn’t subsume several common non-contiguous MWEs such as ‘let off’ in ‘let him off’.</span></span></span> In addition, even decomposable recurrent lineal phrases such as ‘love story’, ‘federal government’, and ‘millions of people’ are marked as meaningful recurrent motifs. Finally, and least interestingly, we include common named entities such as ‘United States’ and ‘Java Virtual Machine’ within the ambit of motifs.</p>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Method</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">In this section, we define our frequency-driven framework for distributional semantics in detail. As just described above, our definition for motifs is less specific than MWEs. With such a working definition, contiguous motifs are likely to make distributional representations less noisy and also assist in disambiguating context. Also, the lack of specificity ensures that such motifs are common enough to meaningfully influence distributional representation beyond single tokens. A method towards frequency-driven distributional semantics could involve the following principal components:</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Linear segmentation model</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">The segmentation model forms the core of the framework. Ideally, it fragments a given sentence into non-overlapping, semantically meaningful, empirically frequent contiguous sub-units or motifs. The model accounts for possible segmentations of a sentence into potential motifs, and prefers recurrent and cohesive motifs through features that capture frequency-based and statistical features, as well as linguistic idiosyncracies. This is accomplished using a very simple linear chain model and a rich feature set consisting of a combination of frequency-driven, information theoretic and linguistically motivated features.</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">Let an observed sentence be denoted by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m1" class="ltx_Math" alttext="{\bf x}" display="inline"><mi>𝐱</mi></math>, with the individual tokens <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m2" class="ltx_Math" alttext="x_{i}" display="inline"><msub><mi>x</mi><mi>i</mi></msub></math> denoting the i’th token in the sentence. The segmentation model is a chain LVM (latent variable model) that aims to maximize a linear objective defined by:</p>
+</div>
+<div id="S3.SS1.p3" class="ltx_para">
+<table id="S3.Ex1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex1.m1" class="ltx_Math" alttext="J=\sum_{i}w_{i}f_{i}(y_{k},y_{k-1},{\bf x})" display="block"><mrow><mi>J</mi><mo>=</mo><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>i</mi></munder><mrow><msub><mi>w</mi><mi>i</mi></msub><mo>⁢</mo><msub><mi>f</mi><mi>i</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>y</mi><mi>k</mi></msub><mo>,</mo><msub><mi>y</mi><mrow><mi>k</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>,</mo><mi>𝐱</mi></mrow><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S3.SS1.p4" class="ltx_para">
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m1" class="ltx_Math" alttext="f_{i}" display="inline"><msub><mi>f</mi><mi>i</mi></msub></math> are arbitrary Markov features that can depend on segments (potential motifs) of the observed sentence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m2" class="ltx_Math" alttext="{\bf x}" display="inline"><mi>𝐱</mi></math>, and contiguous latent states. The features are chosen so as to best represent frequency-based, statistical as well as linguistic considerations for treating a segment as an agglutinative unit, or a motif. In specific, these features could encode characteristics such as frequency statistics, collocation strengths and syntactic distinctness, or inflectional rigidity of the considered segments; described in detail in Section 3.2. The model is an instantiation of a simple featurized HMM, and the weighted sum of features corresponding to a segment is cognate with an affinity score for the ‘stickiness’ of the segment, i.e., the affinity for the segment to be treated as holistic unit or a single motif.</p>
+</div>
+<div id="S3.SS1.p5" class="ltx_para">
+<p class="ltx_p">We also associate a penalizing cost for each non unary-motif to avoid aggressive agglutination of tokens. In particular, for an ngram occurrence to be considered a motif, the marginal contribution due to the affinity of the prospective motif should at minimum exceed this penalty. The weights for the affinity functions as well as these penalties are learnt from data using full as well as partial annotations. The latent state-variables <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p5.m1" class="ltx_Math" alttext="y_{k}" display="inline"><msub><mi>y</mi><mi>k</mi></msub></math> denotes the membership of the token <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p5.m2" class="ltx_Math" alttext="{\bf x_{k}}" display="inline"><msub><mi>𝐱</mi><mi>𝐤</mi></msub></math> to a unary or a larger motif; and the state-sequence collectively gives the segmentation of the sentence. An individual state-variable <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p5.m3" class="ltx_Math" alttext="y_{k}" display="inline"><msub><mi>y</mi><mi>k</mi></msub></math> encodes a pairing of the size of the encompassing ngram motif, and the position of the word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p5.m4" class="ltx_Math" alttext="x_{k}" display="inline"><msub><mi>x</mi><mi>k</mi></msub></math> within it. For instance, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p5.m5" class="ltx_Math" alttext="y_{k}=T_{3}" display="inline"><mrow><msub><mi>y</mi><mi>k</mi></msub><mo>=</mo><msub><mi>T</mi><mn>3</mn></msub></mrow></math> denotes that the token <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p5.m6" class="ltx_Math" alttext="{\bf x_{k}}" display="inline"><msub><mi>𝐱</mi><mi>𝐤</mi></msub></math> is the final position in a trigram motif.</p>
+</div>
+<div id="S3.SS1.SSS1" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">3.1.1 </span>Inference of optimal segmentation</h4>
+
+<div id="S3.SS1.SSS1.p1" class="ltx_para">
+<p class="ltx_p">If the optimal weights <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.SSS1.p1.m1" class="ltx_Math" alttext="w_{i}" display="inline"><msub><mi>w</mi><mi>i</mi></msub></math> are known, inference for the best motif segmentation can be performed in linear time (in the number of tokens) following the generalized Viterbi algorithm. A slightly modified version of Viterbi could also be used to find segmentations that are constrained to agree with some given motif boundaries, but can segment other parts of the sentence optimally under these constraints. This is necessary for the scenario of semi-supervised learning of weights with partially annotated sentences, as described later.</p>
+</div>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Learning motif affinities and penalties</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">We briefly discuss data-driven learning of weights for features that define the motif affinity scores and penalties. We describe learning of the model parameters with fully annotated training data, as well as an approach for learning motif segmentation that requires only partial supervision.
+<br class="ltx_break"/></p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Supervised learning:</span> In the supervised case, optimal state sequences <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m1" class="ltx_Math" alttext="{\bf y^{(k)}}" display="inline"><msup><mi>𝐲</mi><mrow><mo>(</mo><mi>𝐤</mi><mo>)</mo></mrow></msup></math> are fully observed for the training set. For this purpose, we created a dataset of 1000 sentences from the Simple English Wikipedia and the Gigaword Corpus, and manually annotated it with motif boundaries using BRAT <cite class="ltx_cite">[<a href="#bib.bib30" title="BRAT: a web-based tool for nlp-assisted text annotation" class="ltx_ref">24</a>]</cite>. In this case, learning can follow the online structured perceptron learning procedure by <cite class="ltx_cite">Collins (<a href="#bib.bib31" title="Discriminative training methods for hidden markov models: theory and experiments with perceptron algorithms" class="ltx_ref">2002</a>)</cite>, where weights updates for the k’th training example <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m2" class="ltx_Math" alttext="({\bf x}^{(k)},{\bf y}^{(k)})" display="inline"><mrow><mo>(</mo><mrow><msup><mi>𝐱</mi><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></msup><mo>,</mo><msup><mi>𝐲</mi><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></msup></mrow><mo>)</mo></mrow></math> are given as:</p>
+<table id="S3.Ex2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex2.m1" class="ltx_Math" alttext="w_{i}\leftarrow w_{i}+\alpha(f_{i}({\bf x}^{(k)},{\bf y}^{(k)})-f_{i}({\bf x}^%&#10;{(k)},{\bf y^{\prime}}))" display="block"><mrow><msub><mi>w</mi><mi>i</mi></msub><mo>←</mo><mrow><msub><mi>w</mi><mi>i</mi></msub><mo>+</mo><mrow><mi>α</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><msub><mi>f</mi><mi>i</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi>𝐱</mi><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></msup><mo>,</mo><msup><mi>𝐲</mi><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></msup></mrow><mo>)</mo></mrow></mrow><mo>-</mo><mrow><msub><mi>f</mi><mi>i</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi>𝐱</mi><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></msup><mo>,</mo><msup><mi>𝐲</mi><mo>′</mo></msup></mrow><mo>)</mo></mrow></mrow></mrow><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S3.SS2.p3" class="ltx_para">
+<p class="ltx_p">Here <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m1" class="ltx_Math" alttext="{\bf y^{\prime}}=Decode({\bf x}^{(k)},{\bf w})" display="inline"><mrow><msup><mi>𝐲</mi><mo>′</mo></msup><mo>=</mo><mrow><mi>D</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi>𝐱</mi><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></msup><mo>,</mo><mi>𝐰</mi></mrow><mo>)</mo></mrow></mrow></mrow></math> is the optimal Viterbi decoding using the current estimates of the weights. Updates are run for a large number of iterations until the change in objective drops below a threshold, and the learning rate <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m2" class="ltx_Math" alttext="\alpha" display="inline"><mi>α</mi></math> is adaptively modified as described in Collins et al. Implicitly, the weight learning algorithm can be seen as a gradient descent procedure minimizing the difference between the scores of highest scoring (Viterbi) state sequences, and the label state sequences. 
+<br class="ltx_break"/></p>
+</div>
+<div id="S3.SS2.p4" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Semi-supervised learning:</span> In the semi-supervised case, the labels <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m1" class="ltx_Math" alttext="{y^{(k)}_{i}}" display="inline"><msubsup><mi>y</mi><mi>i</mi><mrow><mo>(</mo><mi>k</mi><mo>)</mo></mrow></msubsup></math> are known only for some of the tokens in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p4.m2" class="ltx_Math" alttext="{\bf x^{(k)}}" display="inline"><msup><mi>𝐱</mi><mrow><mo>(</mo><mi>𝐤</mi><mo>)</mo></mrow></msup></math>. This is a commonplace scenario, where a part of a sentence has clear motif-boundaries, whereas the rest of the sentence is not annotated. For accumulating such data, we looked for occurrences of 2500 expressions from the WikiMWE dataset in sentences from the combined Simple English Wikipedia and Gigaword corpora. The query expressions in the retrieved sentences were marked with motif boundaries, while the remaining tokens in the sentences were left unannotated.</p>
+</div>
+<div id="S3.SS2.p5" class="ltx_para">
+<p class="ltx_p">While the Viterbi algorithm can be used for tagging optimal state-sequences given the weights, the structured perceptron can learn optimal model weights given gold-standard sequence labels. Hence, in this case, we use a variation of the hard EM algorithm for learning. The algorithm proceeds as follows: in the E-step, we use the current values of weights to compute hard-expectations, i.e., the best scoring Viterbi sequences among those consistent with the observed state labels. In the M-step, we take the decoded state-sequences in the E-step as observed, and run perceptron learning to update feature weights <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p5.m1" class="ltx_Math" alttext="w_{i}" display="inline"><msub><mi>w</mi><mi>i</mi></msub></math>. Pseudocode of the learning algorithm for the partially labeled case is given in Algorithm 1.</p>
+</div><span class="ltx_ERROR undefined">{algorithm}</span>
+<div id="S3.SS2.p6" class="ltx_para">
+<p class="ltx_p">[h!]
+<span class="ltx_text ltx_caption"/>
+<span class="ltx_ERROR undefined">{algorithmic}</span>[1]
+<span class="ltx_ERROR undefined">\State</span><span class="ltx_text ltx_font_bold">Input:</span> Partially labeled data <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p6.m1" class="ltx_Math" alttext="D=\{(x,y)_{i}\}" display="inline"><mrow><mi>D</mi><mo>=</mo><mrow><mo>{</mo><msub><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow><mi>i</mi></msub><mo>}</mo></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\State</span><span class="ltx_text ltx_font_bold">Output:</span> Weights <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p6.m2" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math>
+<span class="ltx_ERROR undefined">\State</span><span class="ltx_text ltx_font_bold">Initialization:</span> Set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p6.m3" class="ltx_Math" alttext="w_{i}" display="inline"><msub><mi>w</mi><mi>i</mi></msub></math> randomly, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p6.m4" class="ltx_Math" alttext="\forall i" display="inline"><mrow><mo>∀</mo><mi>i</mi></mrow></math>
+<span class="ltx_ERROR undefined">\For</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p6.m5" class="ltx_Math" alttext="i:1" display="inline"><mrow><mi>i</mi><mo>:</mo><mn>1</mn></mrow></math> to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p6.m6" class="ltx_Math" alttext="maxIter" display="inline"><mrow><mi>m</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>x</mi><mo>⁢</mo><mi>I</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>r</mi></mrow></math>
+<br class="ltx_break"/></p>
+</div>
+<div id="S3.SS2.p7" class="ltx_para">
+<p class="ltx_p">Decode <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p7.m1" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math> with current <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p7.m2" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> to find optimal Viterbi paths that agree with (partial) ground truths.
+<br class="ltx_break"/>Run Structured Perceptron algorithm with decoded tag-sequences to update weights <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p7.m3" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math>
+<span class="ltx_ERROR undefined">\EndFor</span><span class="ltx_ERROR undefined">\State</span>return <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p7.m4" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math></p>
+</div>
+<div id="S3.SS2.p8" class="ltx_para">
+<p class="ltx_p">The semi-supervised approach enables incorporation of significantly more training data. In particular, this method could be used in conjunction with a supervised approach. This would involve initializing the weights prior to the semi-supervised procedure with the weights from the supervised learning model, so as to seed the semi-supervised approach with reasonable model, and use the partially annotated data to fine-tune the supervised model. The sequential approach, akin to annealing weights, can efficiently utilize both full and partial annotations.</p>
+</div>
+<div id="S3.SS2.SSS1" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">3.2.1 </span>Feature engineering</h4>
+
+<div id="S3.SS2.SSS1.p1" class="ltx_para">
+<p class="ltx_p">In this section, we describe the principal features used in the segmentation model</p>
+</div>
+<div id="S3.SS2.SSS1.p2" class="ltx_para">
+<p class="ltx_p"><em class="ltx_emph">Transitional features and penalties:</em></p>
+<ul id="I2" class="ltx_itemize">
+<li id="I2.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i1.p1" class="ltx_para">
+<p class="ltx_p">Transitional features <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m1" class="ltx_Math" alttext="f_{trans}(y_{i-1},y_{i})=I_{y_{i-1},y_{i}}" display="inline"><mrow><mrow><msub><mi>f</mi><mrow><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>s</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>y</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi>y</mi><mi>i</mi></msub></mrow><mo>)</mo></mrow></mrow><mo>=</mo><msub><mi>I</mi><mrow><msub><mi>y</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi>y</mi><mi>i</mi></msub></mrow></msub></mrow></math> <span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>Here, <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m2" class="ltx_Math" alttext="I" display="inline"><mi>I</mi></math> denotes the indicator function</span></span></span> describing the transitional affinities of state pairs. Since our state definitions preclude certain transitions (such as from state <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m3" class="ltx_Math" alttext="T_{2}" display="inline"><msub><mi>T</mi><mn>2</mn></msub></math> to <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m4" class="ltx_Math" alttext="T_{1}" display="inline"><msub><mi>T</mi><mn>1</mn></msub></math>), these weights are initialized to <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m5" class="ltx_Math" alttext="-\infty" display="inline"><mrow><mo>-</mo><mi mathvariant="normal">∞</mi></mrow></math> to expedite training.</p>
+</div></li>
+<li id="I2.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i2.p1" class="ltx_para">
+<p class="ltx_p">N-gram penalties: <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i2.p1.m1" class="ltx_Math" alttext="f_{ngram}" display="inline"><msub><mi>f</mi><mrow><mi>n</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>m</mi></mrow></msub></math> We define a penalty for tagging each non-unary motif as described before. For a motif to be tagged, the improvement in objective score should at least exceed the corresponding penalty. e.g., <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i2.p1.m2" class="ltx_Math" alttext="f_{qgram}(y_{i})=I_{y_{i}=Q_{4}}" display="inline"><mrow><mrow><msub><mi>f</mi><mrow><mi>q</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>m</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow><mo>=</mo><msub><mi>I</mi><mrow><msub><mi>y</mi><mi>i</mi></msub><mo>=</mo><msub><mi>Q</mi><mn>4</mn></msub></mrow></msub></mrow></math>  denotes the penalty for tagging a tetragram. <span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>It is straightforward to preclude partial n-gram annotations near sentence boundaries with prohibitive penalties. </span></span></span></p>
+</div></li>
+</ul>
+</div>
+<div id="S3.SS2.SSS1.p3" class="ltx_para">
+<p class="ltx_p"><em class="ltx_emph">Frequency-based, information theoretic, and POS features:</em></p>
+<ul id="I3" class="ltx_itemize">
+<li id="I3.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i1.p1" class="ltx_para">
+<p class="ltx_p">Absolute and log-normalized motif frequencies <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i1.p1.m1" class="ltx_Math" alttext="f_{ngram}(x_{i-n+1},...x_{i-1},x_{i},y_{i})" display="inline"><mrow><msub><mi>f</mi><mrow><mi>n</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>m</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>x</mi><mrow><mi>i</mi><mo>-</mo><mi>n</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>,</mo><mrow><mi mathvariant="normal">…</mi><mo>⁢</mo><msub><mi>x</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub></mrow><mo>,</mo><msub><mi>x</mi><mi>i</mi></msub><mo>,</mo><msub><mi>y</mi><mi>i</mi></msub></mrow><mo>)</mo></mrow></mrow></math>. This feature is associated with a particular token-sequence and ngram-tag, and takes the value of the motif-frequency if the motif token-sequence matches the feature token-sequence, and is marked as with a matching tag. e.g., <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i1.p1.m2" class="ltx_Math" alttext="f_{bgram}(x_{i-1}=love,x_{i}=\text{story},y_{i}=B_{2})" display="inline"><mrow><msub><mi>f</mi><mrow><mi>b</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>m</mi></mrow></msub><mrow><mo>(</mo><msub><mi>x</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>=</mo><mi>l</mi><mi>o</mi><mi>v</mi><mi>e</mi><mo>,</mo><msub><mi>x</mi><mi>i</mi></msub><mo>=</mo><mtext>story</mtext><mo>,</mo><msub><mi>y</mi><mi>i</mi></msub><mo>=</mo><msub><mi>B</mi><mn>2</mn></msub><mo>)</mo></mrow></mrow></math>.</p>
+</div></li>
+<li id="I3.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i2.p1" class="ltx_para">
+<p class="ltx_p">Absolute and log-normalized motif frequencies for a particular POS-sequence. This feature is associated with a particular POS-tag sequence and ngram-tag, and takes the value of the motif-frequency if the motif token-sequence gets a matching tag, and is marked as with a matching ngram tag. e.g., <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i2.p1.m1" class="ltx_Math" alttext="f_{bgram}(p_{i-1}=VB,p_{i}=NN,y_{i}=B_{2})" display="inline"><mrow><msub><mi>f</mi><mrow><mi>b</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>m</mi></mrow></msub><mrow><mo>(</mo><msub><mi>p</mi><mrow><mi>i</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>=</mo><mi>V</mi><mi>B</mi><mo>,</mo><msub><mi>p</mi><mi>i</mi></msub><mo>=</mo><mi>N</mi><mi>N</mi><mo>,</mo><msub><mi>y</mi><mi>i</mi></msub><mo>=</mo><msub><mi>B</mi><mn>2</mn></msub><mo>)</mo></mrow></mrow></math>.</p>
+</div></li>
+<li id="I3.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i3.p1" class="ltx_para">
+<p class="ltx_p">Medians and maxima of pairwise collocation statistics for tokens for a particular size of ngram motifs: we use the following statistics: pointwise mutual information, Chi-square statistic, and conditional probability. We also used POS sensitive versions of these, which performed much better than plain versions in our evaluations.</p>
+</div></li>
+<li id="I3.i4" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i4.p1" class="ltx_para">
+<p class="ltx_p">Histogram counts of inflectional forms of token sequence for the corresponding ngram motif and POS sequence: this features takes the value of the count of inflectional forms of an ngram that account for 90% of occurrences of all inflectional forms.</p>
+</div></li>
+<li id="I3.i5" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i5.p1" class="ltx_para">
+<p class="ltx_p">Entropies of histogram distributions of inflectional variants (described above).</p>
+</div></li>
+<li id="I3.i6" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i6.p1" class="ltx_para">
+<p class="ltx_p">Features encoding syntactic rigidity: ratios and log-ratios of frequencies of an ngram motif and variations by replacing a token using near synonyms from its synset.</p>
+</div></li>
+</ul>
+</div>
+<div id="S3.SS2.SSS1.p4" class="ltx_para">
+<p class="ltx_p">Additionally, a few feature for the segmentations model contained minor orthographic features based on word shape (length and capitalization patterns). Also, all numbers, URLs, and currency symbols were normalized to the special NUMERIC, URL, and CURRENCY tokens respectively. Finally, a gazetteer feature checked for occurrences of motifs in a gazetteer of named entities.</p>
+</div>
+</div>
+</div>
+<div id="S3.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.3 </span>Representation learning</h3>
+
+<div id="S3.SS3.p1" class="ltx_para">
+<p class="ltx_p">With the segmentation model described in the previous section, we process text from the English Gigaword corpus and the Simple English Wikipedia to partition sentences into motifs. Since the segmentation model accounts for the contexts of the entire sentence in determining motifs, different instances of the same token could evoke different meaning representations. Consider the following sentences tagged by the segmentation model, that would correspond to different representations of the token ‘remains’: once as a standalone motif, and once as part of an encompassing bigram motif (‘remains classified’).</p>
+</div>
+<div id="S3.SS3.p2" class="ltx_para">
+<p class="ltx_p"><em class="ltx_emph">Hog prices have <span class="ltx_text" style="text-decoration:underline;">declined sharply</span> , while the cost of corn remains relatively high. </em></p>
+</div>
+<div id="S3.SS3.p3" class="ltx_para">
+<p class="ltx_p"><em class="ltx_emph">Even <span class="ltx_text" style="text-decoration:underline;">with the release of</span> such documents, questions are not answered, since only the agency knows what <span class="ltx_text" style="text-decoration:underline;">remains classified</span> </em></p>
+</div>
+<div id="S3.SS3.p4" class="ltx_para">
+<p class="ltx_p">Given constituent motifs of each sentence in the data, we can now define neighbourhood distributions for unary or phrasal motifs in terms of other motifs (as envisioned in Table 1). In our experiments, we use a window-length of 5 adjoining motifs on either side to define the neighbourhood of a constituent. Naturally, in the presence of multi-word motifs, the neighbourhood boundary could be more extended than in a conventional DSM.</p>
+</div>
+<div id="S3.SS3.p5" class="ltx_para">
+<p class="ltx_p">With such neighbourhood contexts, the distributional paradigm posits that semantic similarity between a pair of motifs can be given by a sense of ‘distance’ between the two distributions. Most popularly, traditional measures of vector distance such as the cosine similarity, Euclidean distance and City-block distance have been used in several distributional approaches. Additionally, several distance measures between discrete distributions exist in statistical literature, most famously the Kullback Leibler divergence, Bhattacharyya distance and the Hellinger distance. Recent work <cite class="ltx_cite">[<a href="#bib.bib33" title="Word emdeddings through hellinger pca" class="ltx_ref">13</a>]</cite> has shown that the Hellinger distance is an especially effective measure in learning distributional embeddings, with Hellinger PCA being much more computationally inexpensive than neural language modeling approaches, while performing much better than standard PCA, and competitive with the state-of-the-art in downstream evaluations. Hence, we use the Hellinger measure between neighbourhood motif distributions in learning representations.</p>
+</div>
+<div id="S3.SS3.p6" class="ltx_para">
+<p class="ltx_p">The Hellinger distance between two categorical distributions <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p6.m1" class="ltx_Math" alttext="P=(p_{1}...p_{k})" display="inline"><mrow><mi>P</mi><mo>=</mo><mrow><mo>(</mo><mrow><msub><mi>p</mi><mn>1</mn></msub><mo>⁢</mo><mi mathvariant="normal">…</mi><mo>⁢</mo><msub><mi>p</mi><mi>k</mi></msub></mrow><mo>)</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p6.m2" class="ltx_Math" alttext="Q=(q_{1}...q_{k})" display="inline"><mrow><mi>Q</mi><mo>=</mo><mrow><mo>(</mo><mrow><msub><mi>q</mi><mn>1</mn></msub><mo>⁢</mo><mi mathvariant="normal">…</mi><mo>⁢</mo><msub><mi>q</mi><mi>k</mi></msub></mrow><mo>)</mo></mrow></mrow></math> is defined as:</p>
+</div>
+<div id="S3.SS3.p7" class="ltx_para">
+<table id="S5.EGx1" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S3.Ex3" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex3.m1" class="ltx_Math" alttext="\displaystyle H(P,Q)" display="inline"><mrow><mi>H</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>P</mi><mo>,</mo><mi>Q</mi></mrow><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex3.m2" class="ltx_Math" alttext="\displaystyle=\frac{1}{\sqrt{2}}\sqrt{\sum_{i=1}^{k}(\sqrt{p_{i}}-\sqrt{q_{i}}%&#10;)^{2}}" display="inline"><mrow><mi/><mo>=</mo><mrow><mstyle displaystyle="true"><mfrac><mn>1</mn><msqrt><mn>2</mn></msqrt></mfrac></mstyle><mo>⁢</mo><msqrt><mrow><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>k</mi></munderover></mstyle><msup><mrow><mo>(</mo><mrow><msqrt><msub><mi>p</mi><mi>i</mi></msub></msqrt><mo>-</mo><msqrt><msub><mi>q</mi><mi>i</mi></msub></msqrt></mrow><mo>)</mo></mrow><mn>2</mn></msup></mrow></msqrt></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S3.Ex4" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex4.m2" class="ltx_Math" alttext="\displaystyle=\frac{1}{\sqrt{2}}\left\|\sqrt{P}-\sqrt{Q}\right\|_{2}" display="inline"><mrow><mi/><mo>=</mo><mrow><mstyle displaystyle="true"><mfrac><mn>1</mn><msqrt><mn>2</mn></msqrt></mfrac></mstyle><mo>⁢</mo><msub><mrow><mo fence="true">∥</mo><mrow><msqrt><mi>P</mi></msqrt><mo>-</mo><msqrt><mi>Q</mi></msqrt></mrow><mo fence="true">∥</mo></mrow><mn>2</mn></msub></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S3.SS3.p8" class="ltx_para">
+<p class="ltx_p">The Hellinger measure has intuitively desirable properties: specifically, it can be seen as the Euclidean distance between the square-roots transformed distributions, where both vectors <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p8.m1" class="ltx_Math" alttext="\sqrt{P}" display="inline"><msqrt><mi>P</mi></msqrt></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p8.m2" class="ltx_Math" alttext="\sqrt{Q}" display="inline"><msqrt><mi>Q</mi></msqrt></math> are length-normalized under the same(Euclidean) norm. Finally, we perform SVD on the motif similarity matrix (with size of the order of the total vocabulary in the corpus), and retain the first <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p8.m3" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> principal eigenvectors to obtain low-dimensional vector representations that are more convenient to work with. In our preliminary experiments, we found that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p8.m4" class="ltx_Math" alttext="k=300" display="inline"><mrow><mi>k</mi><mo>=</mo><mn>300</mn></mrow></math> gave quantitatively good results, with marginal change with added dimensionality. We use this setting for all our experiments.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Experiments</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">In this section, we describe some experimental evaluations and findings for our approach. We first quantitatively and qualitatively analyze the performance of the segmentation model, and then evaluate the distributional motif representations learnt by the model through two downstream applications.</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Motif segmentation</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">In an evaluation of the motif segmentations model within the perspective of our framework, we believe that exact correspondence to human judgment is unrealistic, since guiding principles for defining motifs, such as semantic cohesion, are hard to define and only serve as working principles. However, for purposes of relative comparison, we quantitatively evaluate the performance of the motif segmentation models on the fully annotated dataset. For this experiment, the gold-annotated corpus was split into a training and test sets in a 9:1 proportion. A small fraction of the training split was set apart for development and validation. For this evaluation, we considered a motif boundary as correct only for an exact match, i.e., when both its boundaries (left and right) were correctly predicted. Also, since a majority of motifs are unary tokens, including them into consideration artificially boosts the accuracy, whereas we are more interested in the prediction of larger n-gram tokens. Hence we report results on the performance on only non-unary motifs.</p>
+</div>
+<div id="S4.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r"/>
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold">P</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold">R</span></th>
+<th class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">F</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_tt">Rule-based baseline</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">0.85</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">0.10</td>
+<td class="ltx_td ltx_align_center ltx_border_tt">0.18</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">Supervised</th>
+<td class="ltx_td ltx_align_center ltx_border_r">0.62</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.28</td>
+<td class="ltx_td ltx_align_center">0.39</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">Semi-supervised</th>
+<td class="ltx_td ltx_align_center ltx_border_r">0.30</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.17</td>
+<td class="ltx_td ltx_align_center">0.22</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_r">Supervised <span class="ltx_text ltx_font_script">+ annealing</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">0.69</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">0.38</td>
+<td class="ltx_td ltx_align_center ltx_border_b">0.49</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 2: </span>Results for motif segmentations </div>
+</div>
+<div id="S4.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle" style="width:433.62pt;">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t"><em class="ltx_emph">While men often (openly or privately) sympathized with <span class="ltx_text" style="text-decoration:underline;">Prince Charles</span> when the princess <span class="ltx_text" style="text-decoration:underline;">went public</span> about her <span class="ltx_text" style="text-decoration:underline;">rotten marriage</span> , women cheered her on.</em></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t"><em class="ltx_emph">The healthcare initiative <span class="ltx_text" style="text-decoration:underline;">has become</span> a <span class="ltx_text" style="text-decoration:underline;">White elephant</span> for <span class="ltx_text" style="text-decoration:underline;">the federal government</span>.</em></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_l ltx_border_r ltx_border_t"><em class="ltx_emph">Chirac and Juppe have made a <span class="ltx_text" style="text-decoration:underline;">bad situation worse</span> by seeking to meet Maastricht criteria not by <span class="ltx_text" style="text-decoration:underline;">cutting spending</span>, but by raising taxes still further.</em></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_l ltx_border_r ltx_border_t"><em class="ltx_emph">Now , say Vatican observers , <span class="ltx_text" style="text-decoration:underline;">Pope John Paul</span> II wants to <span class="ltx_text" style="text-decoration:underline;">show the world</span> that many church members did resist the Third Reich and <span class="ltx_text" style="text-decoration:underline;">paid the price.</span></em></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 3: </span>Examples of output from sentence segmentation model</div>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">Table <a href="#S4.T2" title="Table 2 ‣ 4.1 Motif segmentation ‣ 4 Experiments ‣ Vector space semantics with frequency-driven motifs" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> shows the performance of the segmentation model with the three proposed learning approaches described earlier. For a baseline, we consider a rule-based model that simply learns all ngram segmentations seen in the training data, and marks any occurrence of a matching token sequence as a motif; without taking neighbouring context into account. We observe that this model has a very high precision (since many token sequences marked as motifs would recur in similar contexts, and would thus have the same motif boundaries). However, the rule-based method has a very row recall due to lack of generalization capabilities. We see that while all three learning algorithms perform better than the baseline, the performance of the purely unsupervised system is inferior to supervised approaches. This is not unexpected: the supervision provided to the model is very weak due to a lack of negative examples (which leads to spurious motif taggings, leading to a low precision), as well as no examples of transitions between adjacent motifs (to learn transitional weights and penalties). The supervised model expectedly outperforms both the rule-based and the semi-supervised systems. However, the supervised learning model with subsequent annealing outperforms the supervised model in terms of both precision and recall; showing the utility of the semi-supervised method when seeded with a good initial model, and the additive value of partially labeled data.</p>
+</div>
+<div id="S4.SS1.p3" class="ltx_para">
+<p class="ltx_p">Qualitative analysis of motif-segmented sentences shows that our designed feature-set is effective and helpful in identifying semantically cohesive ngrams. Table 3 provides four examples. The first example correctly identifies ‘went public’, while missing out on the potential motif ‘cheered her on’. In general, these examples illustrate that the model can identify idiomatic and idiosyncratic themes as well as commonly recurrent ngrams (in the second example, the model picks out ‘has become’ which is highly recurrent, but doesn’t have the semantic cohesiveness of some of the other motifs). In particular, consider the second example, where the model picks ‘white elephant’ as a motif. In such cases, the disambiguating influence of context incorporated by the motif is apparent.</p>
+</div>
+<div id="S4.SS1.tab1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">Elephant</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">White elephant</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">tusks</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">expensive</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_footnote">trunk</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">spend</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_footnote">african</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">biggest</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_footnote">white</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">the project</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_footnote">indian</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">very high</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_footnote">baby</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_footnote">multibillion dollar</span></td></tr>
+</tbody>
+</table>
+</div>
+<div id="S4.SS1.p4" class="ltx_para">
+<p class="ltx_p">The above table shows some of the top results for the unary token ‘elephant’ by frequency, and frequent unary and non-unary motifs for the motif ‘white elephant’ retrieved by the segmentation model.</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Distributional representations</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">For evaluating distributional representations for motifs (in terms of other motifs) learnt by the framework, we test these representations in two downstream tasks: sentence polarity classification and metaphor detection. For sentence polarity, we consider the Cornell Sentence Polarity corpus by <cite class="ltx_cite">Pang and Lee (<a href="#bib.bib34" title="Seeing stars: exploiting class relationships for sentiment categorization with respect to rating scales" class="ltx_ref">2005</a>)</cite>, where the task is to classify the polarity of a sentence as positive or negative. The data consists of 10662 sentences from movie reviews that have been annotated as either positive or negative. For composing the motifs representations to get judgments on semantic similarity of sentences, we use our recent Vector Tree Kernel approach The VTK approach defines a convolutional kernel over graphs defined by the dependency parses of sentences, using a vector representation at each graph node that representing a single lexical token. For our purposes, we modify the approach to merge the nodes of all tokens that constitute a motif occurrence, and use the motif representation as the vector associated with the node. Table 4 shows results for the sentence polarity task.</p>
+</div>
+<div id="S4.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold">P</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold">R</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">F1</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_tt">DSM</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">0.56</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">0.50</td>
+<td class="ltx_td ltx_align_center ltx_border_tt">0.53</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">AVM</th>
+<td class="ltx_td ltx_align_center ltx_border_r">0.55</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.53</td>
+<td class="ltx_td ltx_align_center">0.54</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">MVM</th>
+<td class="ltx_td ltx_align_center ltx_border_r">0.55</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.49</td>
+<td class="ltx_td ltx_align_center">0.52</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">VTK</th>
+<td class="ltx_td ltx_align_center ltx_border_r">0.65</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.58</td>
+<td class="ltx_td ltx_align_center">0.62</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_tt">VTK + MotifDSM</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_bold">0.66</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_bold">0.60</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_bold">0.63</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 4: </span>Results for Sentence Polarity detection </div>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">For this task, the motif based distributional embeddings vastly outperform a conventional distributional model (DSM) based on token distributions, as well as additive (AVM) and multiplicative (MVM) models of vector compositionality, as proposed by Lapata et al. The model is competitive with the state-of-the-art VTK <cite class="ltx_cite">[<a href="#bib.bib12" title="A walk-based semantically enriched tree kernel over distributed word representations" class="ltx_ref">23</a>]</cite> that uses the SENNA neural embeddings by <cite class="ltx_cite">Collobert<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib32" title="Natural language processing (almost) from scratch" class="ltx_ref">2011</a>)</cite>.</p>
+</div>
+<div id="S4.T5" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold">P</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold">R</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">F1</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_tt">CRF</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_bold">0.74</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">0.50</td>
+<td class="ltx_td ltx_align_center ltx_border_tt">0.59</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">SVM+DSM</th>
+<td class="ltx_td ltx_align_center ltx_border_r">0.63</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.80</td>
+<td class="ltx_td ltx_align_center">0.71</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r">VTK+ SENNA</th>
+<td class="ltx_td ltx_align_center ltx_border_r">0.67</td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold">0.87</span></td>
+<td class="ltx_td ltx_align_center">0.76</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_tt">VTK+ MotifDSM</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">0.70</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_bold">0.87</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_bold">0.78</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/>
+<td class="ltx_td"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 5: </span>Results for Metaphor identification</div>
+</div>
+<div id="S4.SS2.p3" class="ltx_para">
+<p class="ltx_p">On the metaphor detection task, we use the Metaphor dataset <cite class="ltx_cite">[<a href="#bib.bib35" title="Identifying metaphorical word use with tree kernels" class="ltx_ref">12</a>]</cite>. The data consists of sentences with defined phrases, and the task consists of identifying the linguistic use in these phrases as metaphorical or literal. For this task, the motif based model is expected to perform well as common metaphorical usage is generally through idiosyncratic MWEs, which the motif based models is specially geared to capture through the features of the segmentation model. For this task, we again use the VTK formalism for combining vector representations of the individual motifs. Table 5 shows that the motif-based DSM does better than discriminative models such as CRFs and SVMs, and also slightly improves on the VTK kernel with distributional embeddings.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Conclusion</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">We have presented a new frequency-driven framework for distributional semantics of not only lexical items but also longer cohesive motifs. The theme of this work is a general paradigm of seeking motifs that are recurrent in common parlance, are semantically coherent, and are possibly non-compositional. Such a framework for distributional models avoids the issue of data sparsity in learning of representations for larger linguistic structures. The approach depends on drawing features from frequency statistics, statistical correlations, and linguistic theories; and this work provides a computational framework to jointly model recurrence and semantic cohesiveness of motifs through compositional penalties and affinity scores in a data driven way.</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">While being deliberately vague in our working definition of motifs, we have presented simple efficient formulations to extract such motifs that uses both annotated as well as partially unannotated data. The qualitative and quantitative analyis of results from our preliminary motif segmentation model indicate that such motifs can help to disambiguate contexts of single tokens, and provide cleaner, more interpretable representations. Finally, we obtain motif representations in form of low-dimensional vector-space embeddings, and our experimental findings indicate value of the learnt representations in downstream applications. We believe that the approach has considerable theoretical as well as practical merits, and provides a simple and clean formulation for modeling phrasal and sentential semantics.</p>
+</div>
+<div id="S5.p3" class="ltx_para">
+<p class="ltx_p">In particular, we believe that ours is the first method that can invoke different meaning representations for a token depending on textual context of the sentence. The flexibility of having separate representations to model different semantic senses has considerable valuable, as compared with extant approaches that assign a single representation to each token, and are hence constrained to conflate several semantic senses into a common representation. The approach also elegantly deals with the problematic issue of differential compositional and non-compositional usage of words. Future work can focus on a more thorough quantitative evaluation of the paradigm, as well as extension to model non-contiguous motifs.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib17" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Bannard</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A measure of syntactic flexibility for automatically identifying multiword expressions in corpora</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1–8</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS3.p1" title="2.3 Identifying multi-word expressions ‣ 2 Related Work ‣ Vector space semantics with frequency-driven motifs" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Baroni and R. Zamparelli</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Nouns are vectors, adjectives are matrices: representing adjective-noun constructions in semantic space</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1183–1193</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p1" title="2.1 Compositional approaches ‣ 2 Related Work ‣ Vector space semantics with frequency-driven motifs" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Collins and N. Duffy</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">New ranking algorithms for parsing and tagging: kernels over discrete structures, and the voted perceptron</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 263–270</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p1" title="2.2 Tree kernels ‣ 2 Related Work ‣ Vector space semantics with frequency-driven motifs" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib31" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Collins</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Discriminative training methods for hidden markov models: theory and experiments with perceptron algorithms</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1–8</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p2" title="3.2 Learning motif affinities and penalties ‣ 3 Method ‣ Vector space semantics with frequency-driven motifs" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib32" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Collobert, J. Weston, L. Bottou, M. Karlen, K. Kavukcuoglu and P. Kuksa</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Natural language processing (almost) from scratch</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">The Journal of Machine Learning Research</span> <span class="ltx_text ltx_bib_volume">12</span>, <span class="ltx_text ltx_bib_pages"> pp. 2493–2537</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p2" title="4.2 Distributional representations ‣ 4 Experiments ‣ Vector space semantics with frequency-driven motifs" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Croce, A. Moschitti and R. Basili</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Structured lexical similarity via convolution kernels on dependency trees</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1034–1046</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p1" title="2.2 Tree kernels ‣ 2 Related Work ‣ Vector space semantics with frequency-driven motifs" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib22" class="ltx_bibitem ltx_bib_thesis"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. R. Curran</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">From Distributional to Semantic Similarity</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_type">Ph.D. Thesis</span>, <span class="ltx_text ltx_bib_publisher">Institute for Communicating and Collaborative Systems School of Informatics University of Edinburgh</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.era.lib.ed.ac.uk/bitstream/1842/563/2/IP030023.pdf" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Vector space semantics with frequency-driven motifs" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib28" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Erk</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A simple, similarity-based model for selectional preferencesA simple, similarity-based model for selectional preferences</span>.
+</span>
+<span class="ltx_bibblock">See <span class="ltx_text ltx_bib_crossref"><cite class="ltx_cite"/></span>,
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Vector space semantics with frequency-driven motifs" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Goyal, S. K. Jauhar, H. Li, M. Sachan, S. Srivastava and E. Hovy</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A structured distributional semantic model: integrating structure with semantics</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">ACL 2013</span>, <span class="ltx_text ltx_bib_pages"> pp. 20</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p1" title="2.1 Compositional approaches ‣ 2 Related Work ‣ Vector space semantics with frequency-driven motifs" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Grefenstette, M. Sadrzadeh, S. Clark, B. Coecke and S. Pulman</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Concrete sentence spaces for compositional distributional models of meaning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">arXiv preprint arXiv:1101.0309</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p1" title="2.1 Compositional approaches ‣ 2 Related Work ‣ Vector space semantics with frequency-driven motifs" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Grefenstette and M. Sadrzadeh</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Experimental support for a categorical compositional distributional model of meaning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1394–1404</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p1" title="2.1 Compositional approaches ‣ 2 Related Work ‣ Vector space semantics with frequency-driven motifs" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib35" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Hovy, S. Srivastava, S. K. Jauhar, M. Sachan, K. Goyal, H. Li, W. Sanders and E. Hovy</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Identifying metaphorical word use with tree kernels</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Meta4NLP 2013</span>, <span class="ltx_text ltx_bib_pages"> pp. 52</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p3" title="4.2 Distributional representations ‣ 4 Experiments ‣ Vector space semantics with frequency-driven motifs" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib33" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Lebret and R. Lebret</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Word emdeddings through hellinger pca</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">arXiv preprint arXiv:1312.5542</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.p5" title="3.3 Representation learning ‣ 3 Method ‣ Vector space semantics with frequency-driven motifs" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>.
+</span></li>
+<li id="bib.bib29" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. D. Manning, P. Raghavan and H. Schütze</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Introduction to information retrieval</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">1</span>,  <span class="ltx_text ltx_bib_publisher">Cambridge University Press Cambridge</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Vector space semantics with frequency-driven motifs" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. McCarthy and J. Carroll</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Disambiguating nouns, verbs, and adjectives using automatically acquired selectional preferences</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">29</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 639–654</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Vector space semantics with frequency-driven motifs" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Mitchell and M. Lapata</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Vector-based models of semantic composition.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 236–244</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p1" title="2.1 Compositional approaches ‣ 2 Related Work ‣ Vector space semantics with frequency-driven motifs" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib19" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Moschitti</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Efficient convolution kernels for dependency and constituent syntactic trees</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_inbook">Machine Learning: ECML 2006</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 318–329</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p1" title="2.2 Tree kernels ‣ 2 Related Work ‣ Vector space semantics with frequency-driven motifs" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib34" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Pang and L. Lee</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Seeing stars: exploiting class relationships for sentiment categorization with respect to rating scales</span>.
+</span>
+<span class="ltx_bibblock">See <span class="ltx_text ltx_bib_crossref"><cite class="ltx_cite"/></span>,
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p1" title="4.2 Distributional representations ‣ 4 Experiments ‣ Vector space semantics with frequency-driven motifs" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Pecina</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A machine learning approach to multiword expression extraction</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 54–57</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS3.p1" title="2.3 Identifying multi-word expressions ‣ 2 Related Work ‣ Vector space semantics with frequency-driven motifs" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>.
+</span></li>
+<li id="bib.bib14" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. S. Piao, P. Rayson, D. Archer and T. McEnery</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Comparing and combining a semantic tagger and a statistical tool for mwe extraction</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computer Speech &amp; Language</span> <span class="ltx_text ltx_bib_volume">19</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 378–397</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS3.p1" title="2.3 Identifying multi-word expressions ‣ 2 Related Work ‣ Vector space semantics with frequency-driven motifs" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>.
+</span></li>
+<li id="bib.bib16" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Ramisch, P. Schreiner, M. Idiart and A. Villavicencio</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">An evaluation of methods for the extraction of multiword expressions</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 50–53</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS3.p1" title="2.3 Identifying multi-word expressions ‣ 2 Related Work ‣ Vector space semantics with frequency-driven motifs" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Socher, B. Huval, C. D. Manning and A. Y. Ng</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Semantic compositionality through recursive matrix-vector spaces</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1201–1211</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p1" title="2.1 Compositional approaches ‣ 2 Related Work ‣ Vector space semantics with frequency-driven motifs" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Srivastava, D. Hovy and E. H. Hovy</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A walk-based semantically enriched tree kernel over distributed word representations</span>.
+</span>
+<span class="ltx_bibblock">See <span class="ltx_text ltx_bib_crossref"><cite class="ltx_cite"/></span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1411–1416</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p1" title="2.2 Tree kernels ‣ 2 Related Work ‣ Vector space semantics with frequency-driven motifs" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>,
+<a href="#S4.SS2.p2" title="4.2 Distributional representations ‣ 4 Experiments ‣ Vector space semantics with frequency-driven motifs" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib30" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Stenetorp, S. Pyysalo, G. Topić, T. Ohta, S. Ananiadou and J. Tsujii</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">BRAT: a web-based tool for nlp-assisted text annotation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 102–107</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p2" title="3.2 Learning motif affinities and penalties ‣ 3 Method ‣ Vector space semantics with frequency-driven motifs" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Tsvetkov and S. Wintner</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Identification of multi-word expressions by combining multiple linguistic information sources</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 836–845</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS3.p1" title="2.3 Identifying multi-word expressions ‣ 2 Related Work ‣ Vector space semantics with frequency-driven motifs" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. D. Turney and P. Pantel</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">From frequency to meaning: vector space models of semantics</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of artificial intelligence research</span> <span class="ltx_text ltx_bib_volume">37</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 141–188</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Vector space semantics with frequency-driven motifs" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib15" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Villavicencio, V. Kordoni, Y. Zhang, M. Idiart and C. Ramisch</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Validation and evaluation of automatically acquired multiword expressions for grammar engineering.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1034–1043</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS3.p1" title="2.3 Identifying multi-word expressions ‣ 2 Related Work ‣ Vector space semantics with frequency-driven motifs" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 18:00:20 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

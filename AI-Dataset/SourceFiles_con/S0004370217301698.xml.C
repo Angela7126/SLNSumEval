@@ -1,0 +1,718 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Constants and finite unary relations in qualitative constraint reasoning.
+   </title>
+   <abstract>
+    Extending qualitative CSPs with the ability of restricting selected variables to finite sets of possible values has been proposed as an interesting research direction with important applications, cf. “Qualitative constraint satisfaction problems: an extended framework with landmarks” by Li, Liu, and Wang (2013) [48]. Previously presented complexity results for this kind of extended formalisms have typically focused on concrete examples and not on general principles. We propose three general methods. The first two methods are based on analysing the given CSP from a model-theoretical perspective, while the third method is based on directly analysing the growth of the representation of solutions. We exemplify the methods on temporal and spatial formalisms including Allen's algebra and RCC-5.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      This introductory section is divided into two parts where we first discuss the background of this article and thereafter describe our results.
+     </paragraph>
+     <section label="1.1">
+      <section-title>
+       Background
+      </section-title>
+      <paragraph>
+       Qualitative reasoning has a long history in artificial intelligence and the combination of qualitative reasoning and constraint reasoning has been a very productive field. A large number of constraint-based formalisms for qualitative reasoning have been invented, most notably within temporal and spatial reasoning, and they have been investigated from many different angles. It has been noted that a particular extension to qualitative CSPs is highly relevant: Cohn and Renz [25, p. 578] observe the following One problem with this [constraint-based] approach is that spatial entities are treated as variables which have to be instantiated using values of an infinite domain. How to integrate this with settings where some spatial entities are known or can only be from a small domain is still unknown and is one of the main future challenges of constraint-based spatial reasoning. and Li, Liu, and Wang [48, p. 33] write There is a growing consensus, however, that breakthroughs are necessary to bring spatial/temporal reasoning theory closer to practical applications. One reason might be that the current qualitative reasoning scheme uses a rather restricted constraint language: constraints in a qualitative CSP are always taken from the same calculus and only relate variables from the same infinite domain. This is highly undesirable, as constraints involving restricted variables and/or multiple aspects of information frequently appear in practical tasks such as urban planning and spatial query processing.
+      </paragraph>
+      <paragraph>
+       That is, they regard the question of how to extend constraint formalisms with constants and other unary relations{sup:1} as being very important; the same observation has been made in a wider context by Kreutzmann and Wolter [44]. An interesting recent example where such extensions of qualitative formalisms are necessary is the article on spatial query processing by Nikolaou and Koubarakis [56].
+      </paragraph>
+      <paragraph>
+       Given a (finite or infinite) set of values D, we let {a mathematical formula}Dc={{d}|d∈D} (i.e. the set of constant relations over D) and {a mathematical formula}Df={D′⊆D|D′ is finite} (i.e. the set of finite unary relations over D). Let us consider finite-domain CSPs for a moment. For every finite constraint language Γ over D, the computational complexity of CSP{a mathematical formula}(Γ∪Df) is known due to results by Bulatov [17]. This is an important complexity result in finite-domain constraint satisfaction and it has been reproven several times using different methods [2], [18]. Very recently, the complexity of CSP{a mathematical formula}(Γ∪Dc) and CSP(Γ) has also been determined [19], [63].
+      </paragraph>
+      <paragraph>
+       The situation is radically different when considering infinite-domain CSPs where similar powerful results are not known. This can, at least partly, be attributed to the fact that infinite-domain CSPs constitute a much richer class of problems than finite-domain CSPs: for every computational problem X, there is an infinite-domain constraint language {a mathematical formula}ΓX such that X and CSP{a mathematical formula}(ΓX) are polynomial-time Turing equivalent [9]. Finite domain CSPs are, on the other hand, always members of NP. Hence, the majority of computational problems cannot be captured by finite-domain CSPs.
+      </paragraph>
+      <paragraph>
+       Nevertheless, there exist concrete examples where interesting qualitative and/or infinite-domain CSPs have been extended with finite unary relations and/or constant relations. A very early example is the article by Jonsson and Bäckström [38] (see also Koubarakis [43]) where several temporal formalisms (including the point algebra and Allen's algebra) are extended by unary relations (and also other relations). A more recent example is the article by Li et al. [48] where the point algebra and Allen's algebra are once again considered. Li et al. also study several other formalisms including the cardinal relation algebra and RCC-5 and RCC-8 over two-dimensional regions and where constants are assumed to be polygonal regions. The results for the temporal formalisms by Jonsson and Bäckström are not completely comparable with the results by Li et al.: Jonsson and Bäckström's approach is based on linear programming while Li et al. use methods based on enforcing consistency and computational geometry. Consistency-enforcing methods have certain advantages such as lower time complexity and easier integration with existing constraint solving methods. At the same time, the linear programming method allows for more expressive extensions with retained tractability. Both consistency-based and LP-based methods have attracted attention lately, cf. Giannakopoulou et al. [30] and Kreutzmann and Wolter [44], respectively, and generalisations of the basic concepts have been proposed and analysed by de Leng and Heintz [26].
+      </paragraph>
+      <paragraph>
+       We see that this line of research has to a large extent been based on analysing concrete examples. The approach in this article will be different: instead of studying concrete examples, we study basic principles and aim at providing methods that are applicable to many different constraint formalisms.
+      </paragraph>
+     </section>
+     <section label="1.2">
+      <section-title>
+       Our results
+      </section-title>
+      <paragraph>
+       We present three different methods. The first two methods are based on analysing the given CSP from a model-theoretical perspective. The third method is more of a toolbox for proving that the size of solutions (i.e., the number of bits needed for representing a solution) grows in a controlled way, and that problems consequently are in NP. We will now describe these methods in slightly more detail.
+      </paragraph>
+      <paragraph>
+       Method I. The first method is based on exploiting ω-categoricity. This is a model-theoretical property of constraint languages and other mathematical structures that have gained a lot of attention in the literature. Briefly speaking, a constraint language Γ is ω-categorical if Γ is the unique countable model (up to isomorphism) of the set of all first-order sentences that are true in Γ. One of the interesting aspects of ω-categorical constraint languages is that they in some respects resemble constraint languages over finite domains: this is expressed by a famous result proved by Engeler, Ryll-Nardzewski, and Svenonius (see Theorem 11). From a model-theoretical point of view, ω-categoricity is a very strong assumption. Nevertheless, many interesting CSP problems can be formulated using ω-categorical constraint languages: examples include the point algebra, RCC-5, RCC-8, and Allen's algebra. Among the ω-categorical constraint languages, the model-complete cores are particularly interesting. Such constraint languages allow us to define gadgets that can be used for simulating constants. This method is applicable to a wide selection of CSP(Γ) problems when Γ is ω-categorical. The drawback with the method is that it may be difficult to compute the gadgets used for simulating constants. Given that Γ is an ω-categorical model-complete core and that the gadgets can be computed efficiently, we verify (based on results by Bodirsky [5]) that CSP(Γ) is polynomial-time equivalent to CSP{a mathematical formula}(Γ∪Dc). To demonstrate the strength of this method, we apply it to an extended version of Allen's algebra. This exercise shows, for example, that relations with higher arity than two does not pose any particular problem. This is an important observation since previous work (such as Li et al. [48]) has mostly focused on binary relations.
+      </paragraph>
+      <paragraph>
+       Method II. The second method is based on homogeneity. This is a property of relational structures that has been studied for a long time in mathematics and logic. Some machinery is needed for the formal definition so we refrain from giving it here. However, we note that homogeneous relational structures have many interesting properties: for instance, they allow quantifier elimination and they are ω-categorical whenever the structure contains a finite number of relation symbols and the domain is countably infinite. Even though homogeneity is a very strong property of relational structures, there are many well-known examples within AI and computer science. An early example was provided by Hirsch [33] who proved that Allen's algebra (with the standard interval-based representation) is homogeneous. Given that Γ is homogeneous and satisfies certain additional restrictions, we show that CSP(Γ) is polynomial-time equivalent to CSP{a mathematical formula}(Γ∪Dc). The additional restrictions are a bit technical; in brief, Γ needs to be based on a partition scheme in the sense of Ligozat and Renz [51]. This method has both advantages and disadvantages when compared to method I. The main advantage is that we do not have to compute the gadgets that are needed for applying method I while the main disadvantage is that we are restricted to a particular kind of constraint languages. Nevertheless, many interesting examples can be found within this restricted class of problems.
+      </paragraph>
+      <paragraph>
+       Method III. Even though many qualitative CSPs are ω-categorical and method I and/or II may be applicable, this is not always the case. One alternative approach is to analyse the growth of CSP{a mathematical formula}(Γ∪Dc) solutions, measured as a function of instance size. If the growth is polynomially bounded, then it follows immediately that CSP{a mathematical formula}(Γ∪Dc) is a member of NP. One disadvantage with this method is that we cannot obtain polynomial-time equivalences between CSP(Γ) and CSP{a mathematical formula}(Γ∪Dc). Another disadvantage is that it may be quite difficult to obtain such bounds. In certain cases, one can inductively compute bounds by a fairly straightforward analysis of problem instances. We demonstrate this by analysing a variant of RCC-5 that is based on finite sets of integers instead of closed sets in topological spaces.
+      </paragraph>
+      <paragraph>
+       We illustrate the methods on both temporal and spatial formalisms (including point-based temporal constraints, Allen's algebra, and RCC-5). We want to stress that the representation of domains and relations is very important. In fact, we will see that RCC-5 can be represented in two different ways (which we denote RCC-{a mathematical formula}5set and RCC-{a mathematical formula}5ω−cat) that give rise to exactly the same computational problem (by Proposition 13). However, we will also see (in Sections 5 and 6.2) that there exists an RCC-5 constraint language {a mathematical formula}R such that RCC-{a mathematical formula}5set(R∪{{c}}) is NP-complete while RCC-{a mathematical formula}5ω−cat(R∪X) is polynomial-time solvable, where {a mathematical formula}{c} is a particular constant relation and X is an arbitrary finite set of constants. Thus, adding constant relations to constraint languages that are computationally equivalent (but represented differently) may lead to problems with different computational complexity.
+      </paragraph>
+      <paragraph>
+       The reader may find it strange that we mostly consider extensions with constant relations. The explanation is the close connection between problems extended with constants and with finite unary relations: if one of them is in NP, then both are in NP (see Lemma 3). Most problems under consideration become NP-hard when adding unary relations containing at least three elements: for example, if the constraint language contains the disequality relation ≠, then NP-hardness follows from a straightforward reduction from 3-Colourability. However, NP-completeness is not inevitable if we only add constants to the language—a concrete example of this phenomenon was given earlier in the context of RCC-5. Thus, we can extract more information by considering constants instead of finite unary relations. The same viewpoint is taken by, for instance, Li et al. [48].
+      </paragraph>
+      <paragraph>
+       This article has the following structure. We introduce the basic concepts from CSPs and logic together with some information about homomorphisms in Section 2. Temporal constraints, Allen's algebra, and RCC-5 will be introduced in Section 3. The three different methods outlined above are presented in Sections 4, 5, and 6, respectively. We conclude the article with a brief discussion in Section 7. This article is a revised and extended version of a conference paper [37].
+      </paragraph>
+     </section>
+    </section>
+    <section label="2">
+     <section-title>
+      Preliminaries
+     </section-title>
+     <paragraph>
+      This section is divided into three parts where we provide basic information concerning constraint satisfaction, logic, and automorphisms of relational structures, respectively.
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       Constraint satisfaction problems
+      </section-title>
+      <paragraph>
+       We begin by presenting CSPs in terms of homomorphisms. This view is widely used in the literature on finite-domain CSP and it will provide us with certain advantages: some of the properties that we consider later on are inherently based on homomorphisms. One should note, however, that there is no fundamental difference with the more common AI viewpoint that constraint satisfaction is about assigning values to variables in a way that satisfy certain constraints. In fact, it will be convenient to use both viewpoints in the sequel.
+      </paragraph>
+      <paragraph>
+       A relational signatureτ consists of relation symbols{a mathematical formula}Ri with associated arities{a mathematical formula}ki∈N. A (relational) structure Γ over relational signatureτ (also called τ-structure) is a set {a mathematical formula}DΓ (the domain) and relation {a mathematical formula}RiΓ⊆DΓki for each relation symbol {a mathematical formula}Ri of arity {a mathematical formula}ki. If the reference to the structure Γ is clear, we may omit the superscript in {a mathematical formula}RiΓ. We sometimes use the shortened notation {a mathematical formula}x‾ for a vector {a mathematical formula}(x1,…,xn) of any length.
+      </paragraph>
+      <paragraph>
+       Let Γ and Δ be τ-structures. A homomorphism from Γ to Δ is a function f from {a mathematical formula}DΓ to {a mathematical formula}DΔ such that for each n-ary relation symbol R in τ and each n-tuple {a mathematical formula}a‾=(a1,…,an), if {a mathematical formula}a‾∈RΓ, then {a mathematical formula}(f(a1),…,f(an))∈RΔ.
+      </paragraph>
+      <paragraph>
+       Let Γ be a structure with a relational signature τ. Then, the constraint satisfaction problem (CSP) for Γ is the following computational problem.
+      </paragraph>
+      <paragraph>
+       Instance: A τ-structure Δ.Question: Is there a homomorphism from Δ to Γ?
+      </paragraph>
+      <paragraph label="Example 1">
+       For {a mathematical formula}k≥1, the k-Colourability problem is the computational problem of deciding for a given finite graph G whether the vertices can be coloured by k colours such that adjacent vertices get different colours. It is well-known that the k-colouring problem is NP-hard for {a mathematical formula}k≥3 and tractable when {a mathematical formula}k≤2. For {a mathematical formula}k≥1, let {a mathematical formula}Kk denote the complete loop-free graph on k vertices. We view undirected graphs as τ-structures where τ contains a single binary relation symbol E which denotes a symmetric and anti-reflexive relation. Then, the k-Colourability problem can be viewed as {a mathematical formula}CSP({Kk}).
+      </paragraph>
+      <paragraph label="Example 2">
+       Consider the problem CSP{a mathematical formula}((Q;&lt;)) where &lt; is the binary order relation of the set {a mathematical formula}Q of rational numbers. Let {a mathematical formula}G=(V,A) be a directed graph. It is easy to see that there is a homomorphism from G to {a mathematical formula}(Q;&lt;) if and only if G contains no directed cycle. Thus, CSP{a mathematical formula}((Q;&lt;)) is solvable in polynomial time since cycle detection in directed graphs can be carried out in polynomial time.
+      </paragraph>
+      <paragraph>
+       A homomorphism from a given τ-structure Δ to Γ is often called a solution of Δ for {a mathematical formula}CSP(Γ). In the homomorphism perspective on CSPs, the structure Γ is typically called the template of the constraint satisfaction problem {a mathematical formula}CSP(Γ). The reader should be aware that several different names are used in the literature; constraint language is probably the most common within AI. Clearly, we can equivalently define the instances of the CSP(Γ) problem as a tuple {a mathematical formula}(V,C) where V is a set of variables and C is a set of constraints of the form {a mathematical formula}R(xi1,…,xik) where R is a relation in Γ, k is the arity of R, and {a mathematical formula}{xi1,…,xik}⊆V. In this case, a solution is a function from V to the domain of Γ satisfying {a mathematical formula}(f(xi1),…,f(xik))∈R for every {a mathematical formula}R(xi1,…,xik)∈C.
+      </paragraph>
+      <paragraph>
+       To represent an input structure Δ of {a mathematical formula}CSP(Γ), we need to fix a suitable representation of the relation symbols in the signature τ. We will see in the forthcoming sections that the choice of representation is very important. Given a particular representation of relation symbols, we let {a mathematical formula}‖Δ‖ denote the size of an input structure Δ. It is in general not clear how to represent solutions for {a mathematical formula}CSP(Γ) in a compact way, i.e., by an object whose size is polynomially bounded in the input size. When domains are of fixed finite size, then this is indeed possible by simply writing down the variable assignment. When domains are of infinite size, this is not always possible. Note, however, that for the definition of the problem {a mathematical formula}CSP(Γ) we do not need to explicitly represent solutions since we only have to decide the existence of solutions.
+      </paragraph>
+      <paragraph>
+       Let D be a domain with a particular representation and let {a mathematical formula}‖d‖ denote the size of the representation of {a mathematical formula}d∈D. We let {a mathematical formula}Dc={{d}|d∈D} and {a mathematical formula}Df={D′⊆D|D′ is finite}. Given a representation of the elements in D, we always represent the members of {a mathematical formula}Df as sets of elements in D and we may assume that the size of {a mathematical formula}Df is linear in the sizes of its elements. Other ways of representing {a mathematical formula}Df are possible (such as solution sets of equations) but they are outside the scope of this article. If Γ is a constraint language with domain D, then CSP{a mathematical formula}(Γ∪Dc) is the problem CSP(Γ) extended with constants and CSP{a mathematical formula}(Γ∪Df) is the problem CSP(Γ) extended with finite unary relations. The next lemma strengthens Proposition 1(iii) in Li et al. [48] by extending it to arbitrary constraint languages.
+      </paragraph>
+      <paragraph label="Proof">
+       Let Γ denote a constraint language. CSP{a mathematical formula}(Γ∪Dc)is in NP if and only if CSP{a mathematical formula}(Γ∪Df)is in NP.Assume that CSP{a mathematical formula}(Γ∪Df) is in NP. Then, CSP{a mathematical formula}(Γ∪Dc) is in NP, too, since {a mathematical formula}Dc⊆Df. Assume instead that CSP{a mathematical formula}(Γ∪Dc) is in NP. Let us consider an arbitrary instance {a mathematical formula}I=(V,C) of CSP{a mathematical formula}(Γ∪Df). Assume I has a solution {a mathematical formula}s:V→D. We replace each constraint {a mathematical formula}U(x)∈C with {a mathematical formula}U∈Df by the constraint {a mathematical formula}{s(v)}(v). The resulting instance {a mathematical formula}I′ is an instance of CSP{a mathematical formula}(Γ∪Dc), it is satisfiable, and {a mathematical formula}‖I′‖≤‖I‖. The problem CSP{a mathematical formula}(Γ∪Dc) is in NP so the satisfiability of {a mathematical formula}I′ can be verified in polynomial time by a certificate X. A polynomial-time verifiable certificate for I is thus the tuple {a mathematical formula}(I′,X).  □
+      </paragraph>
+      <paragraph>
+       Lemma 3 allows us to, for example, concentrate on CSP{a mathematical formula}(Γ∪Dc) instead of CSP{a mathematical formula}(Γ∪Df) when proving membership in NP.
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Logic
+      </section-title>
+      <paragraph>
+       First-order formulas φ over the signature τ (or, in short, τ-formulas) are as usual inductively defined using the logical symbols of universal and existential quantification, disjunction, conjunction, negation, equality, bracketing, variable symbols and the symbols from τ. The semantics of a first-order formula over some τ-structure is defined in the ordinary Tarskian style. A τ-formula without free variables is called a τ-sentence. We write {a mathematical formula}Γ⊨φ if and only if the τ-structure Γ is a model for the τ-sentence φ, that is, satisfies φ. This notation is lifted to sets of sentences (viewed as conjunctions) in the usual way.
+      </paragraph>
+      <section label="2.2.1">
+       <section-title>
+        Logical definitions
+       </section-title>
+       <paragraph>
+        One can use first-order formulas over the signature τ to define relations over a given τ-structure Γ: for a formula {a mathematical formula}φ(x1,…,xk) where {a mathematical formula}x1,…,xk are the free variables of φ, the corresponding relation R is the set of all k-tuples {a mathematical formula}(t1,…,tk)∈DΓk such that {a mathematical formula}φ(t1,…,tk) is true in Γ. In this case, we say that R is first-order definable in Γ. We extend definability to structures in the natural way: a structure Θ is first-order definable in Γ if every relation in Θ is first-order definable in Γ. Note that our definitions are always parameter-free, i.e., we do not allow the use of domain elements in them. Quantifier-free formulas will be of a certain interest in the following. We say that the τ-structure Γ admits quantifier elimination if every relation with a first-order definition in Γ has a quantifier-free definition in Γ. We also say that a set of formulas T admits quantifier elimination if each {a mathematical formula}ϕ∈T has a logically equivalent quantifier-free formula.
+       </paragraph>
+       <paragraph>
+        We will often consider quantifier-free formulas in conjunctive normal form (CNF). Such a formula is a conjunction of clauses and a clause is a disjunction of literals, i.e., negated or unnegated atomic formulas. A first-order τ-formula {a mathematical formula}ϕ(x1,…,xn) is called positive if it does not contain the negation symbol ¬. We note that every quantifier-free positive formula can be rewritten into a logically equivalent positive formula in conjunctive normal form.
+       </paragraph>
+       <paragraph>
+        A first-order τ-formula {a mathematical formula}ϕ(x1,…,xn) is called existential if it is of the form{a mathematical formula} where ψ is a quantifier-free first-order formula. A subset of positive and existential formulas is of particular interest to us: a first-order τ-formula {a mathematical formula}ϕ(x1,…,xn) is called primitive positive if it is of the form{a mathematical formula} where {a mathematical formula}ψ1,…,ψl are atomic τ-formulas, i.e., formulas of the form
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         {a mathematical formula}R(y1,…,yk) with {a mathematical formula}R∈τ and {a mathematical formula}yi∈{x1,…,xm} or
+        </list-item>
+        <list-item label="2.">
+         {a mathematical formula}y=y′ for {a mathematical formula}y,y′∈{x1,…,xm}.
+        </list-item>
+       </list>
+       <paragraph>
+        Primitive positive formulas will be called pp-formulas for short. In a pp-formula, equality relations can always be removed by identifying variables. This is not true for general formulas since we may, for instance, have formulas such as {a mathematical formula}¬(x=y). If the relation R has a primitive positive definition in Γ, then we say that R is pp-definable in Γ, and we define {a mathematical formula}〈Γ〉 to be the set of relations that are pp-definable in Γ. Jeavons [36] has proved the following result.
+       </paragraph>
+       <paragraph label="Theorem 4">
+        If Γ is a structure and the relation R is pp-definable in Γ, then there is a polynomial-time reduction from CSP{a mathematical formula}(Γ∪{R})to CSP(Γ).
+       </paragraph>
+       <paragraph>
+        This explains why pp-definability is important when studying the complexity of CSP problems. To exemplify pp-definitions and Theorem 4, consider the structure {a mathematical formula}Γ={N;{1,2,3,4},≠}. We see that the binary relation {a mathematical formula}K4={(x,y)∈{1,2,3,4}2|x≠y} (from Example 1) is pp-definable in Γ since{a mathematical formula} and it follows that CSP(Γ) is NP-hard. It is worth mentioning that many of the operations that are encountered in relation algebra can be viewed as pp-definitions. Let R and S denote binary relations. Then, the converse {a mathematical formula}R⌣ has the pp-definition {a mathematical formula}R⌣(x,y)⇔R(y,x), the intersection {a mathematical formula}R∩S has the pp-definition {a mathematical formula}(R∩S)(x,y)⇔R(x,y)∧S(x,y), and the composition {a mathematical formula}R∘S has the pp-definition {a mathematical formula}(R∘S)(x,y)⇔∃z.R(x,z)∧S(z,y).
+       </paragraph>
+       <paragraph>
+        We finally discuss certain families of binary relations. Partition schemes were introduced by Ligozat and Renz [51] and they have been highly influential in CSP research. Let D be a non-empty domain. Given a finite family {a mathematical formula}B={B1,…,Bk} of binary relations over D, we say that {a mathematical formula}B is jointly exhaustive (JE) if {a mathematical formula}⋃B=D2 and that {a mathematical formula}B is pairwise disjoint (PD) if {a mathematical formula}Bi∩Bj=∅ whenever {a mathematical formula}1≤i≠j≤k. If {a mathematical formula}B is simultaneously JE and PD (which we denote JEPD), then {a mathematical formula}B forms a partition of the set {a mathematical formula}D2.
+       </paragraph>
+       <paragraph label="Definition 5">
+        Let D be a non-empty domain and let {a mathematical formula}B={B1,…,Bk} be a finite set of binary relations over D. We say that {a mathematical formula}B is a partition scheme if the following holds:
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         {a mathematical formula}B is JEPD,
+        </list-item>
+        <list-item label="2.">
+         the equality relation {a mathematical formula}EQD={(x,x)∈D2} is in {a mathematical formula}B, and
+        </list-item>
+        <list-item label="3.">
+         for every {a mathematical formula}Bi∈B, the converse relation {a mathematical formula}Bi⌣ is in {a mathematical formula}B.
+        </list-item>
+       </list>
+       <paragraph>
+        It is important to note that if {a mathematical formula}B is a partition scheme over a domain D, then for arbitrary {a mathematical formula}d,d′∈D there exists exactly one {a mathematical formula}B∈B such that {a mathematical formula}(d,d′)∈B. Given a finite set of binary relations {a mathematical formula}B={R1,…,Rk}, we follow notational conventions from [24], [40] and define {a mathematical formula}B∨= as the set of all unions of relations from {a mathematical formula}B. Equivalently, each relation in {a mathematical formula}B∨= can be viewed as a disjunction {a mathematical formula}B1(x,y)∨B2(x,y)∨…∨Bk(x,y) for some {a mathematical formula}{B1,…,Bk}⊆B. We sometimes abuse notation and write {a mathematical formula}(B1,…,Bk) to denote the relation {a mathematical formula}B1∪…∪Bk. The set {a mathematical formula}B∨= and the problem CSP(Γ) where {a mathematical formula}Γ⊆B∨= are the natural objects that are studied in connection with partition schemes. If {a mathematical formula}B is a partition scheme, then every relation in {a mathematical formula}B∨= is quantifier-free positive definable in {a mathematical formula}B but not necessarily pp-definable in {a mathematical formula}B (since disjunctions are not allowed in pp-definitions).
+       </paragraph>
+      </section>
+      <section label="2.2.2">
+       <section-title>
+        Membership in NP
+       </section-title>
+       <paragraph>
+        When a constraint language Γ is logically defined in some constraint language Θ, then Γ sometimes inherits useful properties of Θ. We have already encountered Theorem 4 which is one example of this. We will next present two results that connect logical definability with membership in NP. These results will be helpful in the forthcoming Sections 5 and 6.
+       </paragraph>
+       <paragraph label="Proof">
+        Let{a mathematical formula}Bdenote a partition scheme over domain D, and let Γ denote a finite constraint language that is quantifier-free definable in{a mathematical formula}B. If CSP{a mathematical formula}(B∪Dc)is in NP, then CSP{a mathematical formula}(Γ∪Dc)is in NP.We assume that {a mathematical formula}B={B1,…,Bk}, {a mathematical formula}Γ={R1,…,Rm}, and that every relation {a mathematical formula}Ri, {a mathematical formula}1≤i≤m, is defined by a quantifier-free formula {a mathematical formula}ϕi. Without loss of generality, we assume that {a mathematical formula}ϕi is written in conjunctive normal form. We first demonstrate that every clause in {a mathematical formula}ϕi can be rewritten as a disjunction of relations in {a mathematical formula}B. If {a mathematical formula}ϕi does not contain any negative literals, then {a mathematical formula}ϕi itself has this property. Otherwise, consider a negation such as {a mathematical formula}¬(Bi(x,y)). Since {a mathematical formula}B is a partition scheme, we have the following equivalence:{a mathematical formula}We can thus assume, without loss of generality, that {a mathematical formula}ϕi does not contain any negated literals.Let {a mathematical formula}I=(V,C) denote an arbitrary instance of CSP{a mathematical formula}(Γ∪Dc) with the solution {a mathematical formula}s:V→D. Pick an arbitrary constraint {a mathematical formula}Ri(x1,…,xn)∈C with {a mathematical formula}Ri∈Γ. We consider the defining formula {a mathematical formula}ϕi=σ1∧…∧σp. From each clause {a mathematical formula}σi, {a mathematical formula}1≤i≤p, choose one literal that is satisfied by solution s. Add these literals to the set {a mathematical formula}C′. Repeat this process for all constraints in C. Finally, add all constraints {a mathematical formula}U(x)∈C with {a mathematical formula}U∈Dc to {a mathematical formula}C′. Note the following.
+        <list>
+         {a mathematical formula}(V,C′) is an instance of CSP{a mathematical formula}(B∪Dc),the size of {a mathematical formula}(V,C′) is polynomially bounded in the size of {a mathematical formula}(V,C),{a mathematical formula}(V,C′) is satisfiable (as is witnessed by the function s), andthere exists a polynomial-time verifiable certificate for the satisfiability of {a mathematical formula}(V,C′) (since CSP{a mathematical formula}(B∪Dc) is in NP).Hence, there is a polynomial-time verifiable certificate for the satisfiability of
+        </list>
+        <paragraph>
+         {a mathematical formula}(V,C): concatenate the instance {a mathematical formula}(V,C′) with a polynomial-time verifiable certificate for the satisfiability of {a mathematical formula}(V,C′). This implies that CSP{a mathematical formula}(Γ∪Dc) is in NP.  □
+        </paragraph>
+       </paragraph>
+       <paragraph label="Proof">
+        Let Θ denote a constraint language over domain D, and let Γ denote a finite constraint language that is quantifier-free positive definable in Θ. If CSP{a mathematical formula}(Θ∪Dc)is in NP, then CSP{a mathematical formula}(Γ∪Dc)is in NP.The proof is virtually the same as the proof of Lemma 6. We merely observe the following: when a quantifier-free positive formula is converted into conjunctive normal form, the resulting formula is still positive, i.e., it contains no negation symbols. Thus, we will not need to rewrite negated literals as disjunctions and it is not required that Θ is a partition scheme.  □
+       </paragraph>
+       <paragraph>
+        Results like Lemma 6, Lemma 7 may give the impression that there is a strong connection between the complexity of CSP(Γ) and CSP{a mathematical formula}(Γ∪Dc). Unfortunately, this is not true in general. To see this, we begin by arbitrarily choosing a complexity class {a mathematical formula}C that admits complete problems under polynomial-time reductions (such as PSPACE or EXPTIME). Let {a mathematical formula}Γ={R1,R2,…} be a constraint language over domain {a mathematical formula}N such that CSP(Γ) is {a mathematical formula}C-complete under polynomial-time reductions. Results by Bodirsky and Grohe [9, Theorem 1] provide a systematic way of obtaining such Γ. However, one should note that it is often possible (and sometimes even simpler) to obtain such a Γ via ad hoc constructions.
+       </paragraph>
+       <paragraph>
+        Let {a mathematical formula}0k denote the all-zero vector with k elements. Given a relation {a mathematical formula}R∈Γ with arity k, we define{a mathematical formula} and let {a mathematical formula}Γ′={R′|R∈Γ}∪{S′} where{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        The problem CSP{a mathematical formula}(Γ′) is trivially in P since every instance {a mathematical formula}(V,C) is satisfied by assigning the value 0 to each variable. We will next show that the problem CSP{a mathematical formula}(Γ′∪Nc) is, on the other hand, {a mathematical formula}C-hard. We can thus find examples of {a mathematical formula}Γ′ such that CSP{a mathematical formula}(Γ′) and CSP{a mathematical formula}(Γ′∪Nc) are arbitrarily far separated.
+       </paragraph>
+       <paragraph>
+        To verify that CSP{a mathematical formula}(Γ′∪Nc) is {a mathematical formula}C-hard, we present a polynomial-time reduction from CSP(Γ) to CSP{a mathematical formula}(Γ′∪{{1}}). Let {a mathematical formula}(V,C) denote an arbitrary instance of CSP(Γ). Introduce one fresh variable y and define {a mathematical formula}(V′,C′) such that {a mathematical formula}V′=V∪{y} and{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        If {a mathematical formula}(V,C) has a solution {a mathematical formula}f:V→N, then it is obvious that the function {a mathematical formula}f′:V′→N defined by {a mathematical formula}f′(y)=1 and {a mathematical formula}f′(x)=f(x)+1, {a mathematical formula}x∈V, is a solution to {a mathematical formula}(V′,C′).
+       </paragraph>
+       <paragraph>
+        If {a mathematical formula}(V′,C′) has a solution {a mathematical formula}f′:V′→N, then we note that no variable can be assigned the value 0. Thus, it is easy to verify that the function {a mathematical formula}f:V→N defined by {a mathematical formula}f(x)=f′(x)−1 is a solution to {a mathematical formula}(V,C).
+       </paragraph>
+      </section>
+     </section>
+     <section label="2.3">
+      <section-title>
+       Automorphisms
+      </section-title>
+      <paragraph>
+       Keeping the homomorphism definition of CSPs in mind may be helpful in the rest of this section. Let Γ and Δ denote two relational τ-structures over domain D. We say that a function {a mathematical formula}f:D→Dpreserves{a mathematical formula}R∈Γ if for every {a mathematical formula}(a1,…,ak)∈R, the tuple {a mathematical formula}(f(a1),…,f(ak)) is in R, too. A bijective homomorphism f from Γ to Δ is called an isomorphism if the inverse of f is a homomorphism from Δ to Γ. If Γ and Δ are isomorphic, then it is clear that CSP(Γ) and CSP(Δ) are the same computational problem. An injective homomorphism that additionally preserves the complement of each relation is called an embedding; the complement of a k-ary relation R in Γ is the relation {a mathematical formula}Dk∖R. Homomorphisms from Γ to Γ are called endomorphisms of Γ. An automorphism of Γ is a bijective endomorphism whose inverse is also an endomorphism. In other words, automorphisms are bijective embeddings of Γ into Γ or isomorphisms from Γ to Γ. The set containing all endomorphisms of Γ is denoted {a mathematical formula}End(Γ) while the set of all automorphisms is denoted {a mathematical formula}Aut(Γ).
+      </paragraph>
+      <paragraph label="Example 8">
+       Let {a mathematical formula}R+={(x,y,z)∈Z3|x+y=z}. For arbitrary {a mathematical formula}a∈Z, let {a mathematical formula}ea:Z→Z be defined as {a mathematical formula}ea(n)=a⋅n. Let {a mathematical formula}e:Z→Z be an arbitrary endomorphism of {a mathematical formula}(Z;R+); e is a homomorphism so {a mathematical formula}(e(x),e(y),e(z))∈R+ whenever {a mathematical formula}(x,y,z)∈R+ and, more generally, {a mathematical formula}e(∑i=1kxi)=∑i=1ke(xi) when {a mathematical formula}x1,…,xk∈Z. Arbitrarily choose {a mathematical formula}n∈Z and note that{a mathematical formula} It follows that {a mathematical formula}End((Z;R+))={ea|a∈Z}. Note that {a mathematical formula}ea has an inverse if and only if {a mathematical formula}a∈{−1,1}. Thus, {a mathematical formula}Aut((Z;R+))={ea|a∈{−1,1}}.
+      </paragraph>
+      <paragraph>
+       A useful observation is that if {a mathematical formula}(V,C) is an instance of CSP(Γ) with a solution {a mathematical formula}s:V→D, then {a mathematical formula}s′:V→D defined by {a mathematical formula}s′(x)=α(s(x)) is a solution to {a mathematical formula}(V,C) for every α in {a mathematical formula}Aut(Γ) or {a mathematical formula}End(Γ). If a function {a mathematical formula}s:V→D is not a solution to {a mathematical formula}(V,C), then {a mathematical formula}s′(x)=α(s(x)) is not a solution for any {a mathematical formula}α∈Aut(Γ) while {a mathematical formula}s′ may or may not be a solution if {a mathematical formula}α∈End(Γ)∖Aut(Γ).
+      </paragraph>
+      <paragraph>
+       In the following, let G be a set of permutations of a set X. We say that G is a permutation group if the identity permutation is in G and for arbitrary {a mathematical formula}g,f∈G, the functions {a mathematical formula}x↦g(f(x)) and {a mathematical formula}x↦g−1(x) are also in G. In other words, G is closed under function composition and inversion. If Γ is a τ-structure, then {a mathematical formula}Aut(Γ) is a permutation group on the set {a mathematical formula}DΓ. For {a mathematical formula}n≥1, the orbit of an n-tuple {a mathematical formula}(t1,…,tn)∈Xn under G is the set {a mathematical formula}{(α(t1),…,α(tn))|α∈G}. Clearly, the orbits of n-tuples under G partition the set {a mathematical formula}Xn, that is, every {a mathematical formula}(t1,…,tn)∈Xn lies in precisely one orbit under G.
+      </paragraph>
+      <paragraph label="Example 9">
+       Consider once again the structure {a mathematical formula}(Z;R+) from Example 8. It is obvious that {a mathematical formula}{e1,e−1} forms a group under function composition. If {a mathematical formula}a∈Z, then the orbit of (a) equals {a mathematical formula}{a,−a} so {a mathematical formula}(Z;R+) admits an infinite number of different orbits under its automorphism group.
+      </paragraph>
+      <paragraph>
+       We will now introduce the central concept of ω-categoricity. It has been observed that ω-categoricity plays an important role in the context of qualitative reasoning. We will not go into the details here but the interested reader may refer to, for instance, Huang [35], Westphal et al. [62], Bodirsky and Dalmau [8], and Bodirsky and Jonsson [11].
+      </paragraph>
+      <paragraph>
+       A first-order theory is a set of first-order sentences. When the first-order sentences are over the signature τ, we say that T is a τ-theory. The (full) theory of a τ-structure Δ (denoted {a mathematical formula}Th(Δ)) is the set of τ-sentences ϕ such that {a mathematical formula}Δ⊨ϕ. A model of a τ-theory T is a τ-structure Δ such that Δ satisfies all sentences in T. Theories that have a model are called satisfiable. Since models are structures, the notion of isomorphism for structures immediately carries over to models. A satisfiable first-order theory T is ω-categorical if all countable models of T are isomorphic, and a structure is ω-categorical if its first-order theory is ω-categorical. All ω-categorical structures that appear in this article will be countably infinite so we make the convention that ω-categorical structures are countably infinite. Note that the first-order theory of a finite structure does not have infinite models so finite structures are ω-categorical. One of the first infinite structures that was found to be ω-categorical (by Cantor [22]) is the linear order of the rational numbers {a mathematical formula}(Q;&lt;). There are many characterisations of ω-categoricity and the most important one is in terms of the automorphism group.
+      </paragraph>
+      <paragraph label="Definition 10">
+       A permutation group G over a countably infinite set X is oligomorphic if G has only finitely many orbits of n-tuples for each {a mathematical formula}n≥1.
+      </paragraph>
+      <paragraph>
+       An accessible proof of the following theorem can be found in Hodges' book [34].
+      </paragraph>
+      <paragraph label="Theorem 11">
+       Engeler, Ryll-Nardzewski, SvenoniusLet Γ be a countably infinite structure with countable signature. Then, Γ is ω-categorical if and only if{a mathematical formula}Aut(Γ)is oligomorphic.
+      </paragraph>
+      <paragraph>
+       Example 9 immediately implies that {a mathematical formula}(Z;R+) is not an ω-categorical structure. Consider the structure {a mathematical formula}(Z;&lt;). One can verify that {a mathematical formula}Aut((Z;&lt;))={x↦x+a|a∈Z}. Hence, {a mathematical formula}(Z;&lt;) is not ω-categorical (despite the fact that {a mathematical formula}(Q;&lt;) is indeed ω-categorical): the orbits of {a mathematical formula}(0,0), {a mathematical formula}(0,1), {a mathematical formula}(0,2), … are distinct.
+      </paragraph>
+      <paragraph>
+       We conclude this section by presenting a result that connects first-order definability with ω-categoricity.
+      </paragraph>
+      <paragraph label="Theorem 12">
+       Thm. 7.3.8 in Hodges [34]If Γ is an ω-categorical structure and Δ is first-order definable in Γ, then Δ is ω-categorical, too.
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      CSP examples
+     </section-title>
+     <paragraph>
+      We will now give a brief introduction to three qualitative formalisms: temporal constraints (including the point algebra), Allen's algebra and RCC-5. These formalisms will be used as illustrating examples during the course of the article.
+     </paragraph>
+     <paragraph>
+      We begin with the structure {a mathematical formula}(Q;&lt;), that is, the rational numbers with the usual linear ordering relation. Constraint languages that are first-order definable in {a mathematical formula}(Q;&lt;) are well-studied in the literature and they are sometimes called temporal constraint languages. We have already noticed that {a mathematical formula}(Q;&lt;) is ω-categorical which implies that all temporal constraint languages are ω-categorical by Theorem 12. Furthermore, the computational complexity of CSP(Γ) is known for every finite temporal constraint language Γ [13]. In particular, CSP(Γ) is either in P or it is an NP-complete problem. The point algebra (PA) is the constraint language {a mathematical formula}{&lt;,=,&gt;}∨= and CSP(PA) is probably the most well-known example of a polynomial-time solvable temporal constraint language.
+     </paragraph>
+     <paragraph>
+      We continue by introducing Allen's algebra [1]. It was introduced to reason about intervals and the qualitative relationships between intervals. The variable domain is{a mathematical formula} that is, it consists of all closed intervals {a mathematical formula}[a,b] of rational numbers. If {a mathematical formula}I=[a,b]∈I, then we write {a mathematical formula}I− for a and {a mathematical formula}I+ for b. The basic relations are the 13 relations defined in Fig. 1. We let {a mathematical formula}A denote the set of Allen basic relations. Clearly, {a mathematical formula}A is a partition scheme and the 8192 relations of Allen's algebra are the contents of the set {a mathematical formula}A∨=. The structure {a mathematical formula}A∨= is known to be ω-categorical [32]. Observe that {a mathematical formula}A∨= is not a temporal constraint language since the domain is not {a mathematical formula}Q.
+     </paragraph>
+     <paragraph>
+      For every subset {a mathematical formula}Γ⊆A∨=, the complexity of CSP(Γ) is known [45]. Unlike temporal constraint languages, the complexity for all finite first-order definable constraint languages are not known. We will encounter the ORD-Horn subclass [55]{a mathematical formula}H⊆A∨= later on. A relation {a mathematical formula}R∈A∨= is a member of {a mathematical formula}H if and only if the following hold: {a mathematical formula}([I−,I+],[J−,J+])∈R if and only if {a mathematical formula}ϕ(I−,I+,J−,J+) evaluates to true, where ϕ is a positive CNF formula {a mathematical formula}ϕ(x−,x+,y−,y+) over {a mathematical formula}(Q;≤,=,≠) such that each clause contains at most one relation of the form {a mathematical formula}x=y or {a mathematical formula}x≤y. The constraint language {a mathematical formula}H is very well-studied within the literature on temporal constraints. We merely note that CSP{a mathematical formula}(H) is polynomial-time solvable, CSP{a mathematical formula}(H∪{R}) is NP-hard whenever {a mathematical formula}R∈A∨=∖H, and that {a mathematical formula}A⊆H.
+     </paragraph>
+     <paragraph>
+      We finally turn our attention to RCC-5. The RCC formalisms [58] are designed for reasoning about spatial regions and they are the basis for a large part of the work in qualitative spatial reasoning (QSR). There are several variants such as RCC-23, RCC-8, and RCC-5. We will henceforth concentrate on the simplest formalism RCC-5. RCC-5 is based on five basic relations PP, {a mathematical formula}PP⌣ (which is the inverse of PP), PO, DR, and EQ, which together form a partition scheme. Here, PP stands for proper part, PO stands for partial overlap, DR stands for disconnected regions, and EQ stands for equality. We will consider several different variants of RCC-5 based on different choices of variable domains.
+     </paragraph>
+     <paragraph>
+      The first variant is based on the standard representation of the spatial calculus RCC-8 (the reader is referred to Renz and Nebel [60, Sec. 3.1] for details concerning RCC-8) but where one is not able to distinguish regions from their topological closure: the disconnectedness relations DC and EC are replaced by DR and the tangential and non-tangential proper part relations TPP and NTPP are replaced by PP (and the relation {a mathematical formula}PP⌣ is introduced analogously). Here, the domain consists of the nonempty regular closed subsets of some regular and connected topological space. A subset of a topological space is called regular closed if it is equal to the closure of its interior. Note that the sets are not required to be connected. The basic relations of RCC-5 under this choice of variable domain is given in Fig. 2. We henceforth call this algebra RCC-5reg.
+     </paragraph>
+     <paragraph>
+      We continue by providing another variant of RCC-5. Here, we consider arbitrary non-empty subsets of an infinite set such as {a mathematical formula}N. We define the relations {a mathematical formula}PP,PP⌣,DR,PO,EQ as in Fig. 3 and denote the resulting structure by RCC-5set. RCC-{a mathematical formula}5set is not ω-categorical while it is unknown whether there is a topological space (with the properties described above) where one can define RCC-{a mathematical formula}5reg such that the resulting structure is ω-categorical. However, there are ways of defining RCC-5 such that the resulting structure is ω-categorical described in the literature. For instance, Bodirsky and Chen [7] presents such a structure based on Fraïssé amalgamation. We let RCC-{a mathematical formula}5ω−cat denote this constructions.
+     </paragraph>
+     <paragraph>
+      The following result is a consequence of Proposition 15 in Bodirsky and Jonsson [11] combined with Section 6 in Bodirsky and Chen [7].
+     </paragraph>
+     <paragraph label="Proposition 13">
+      Let{a mathematical formula}(V,C)be an instance of RCC-5. The following three statements are equivalent.
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       {a mathematical formula}(V,C)is satisfiable if the relations are interpreted over RCC-5reg.
+      </list-item>
+      <list-item label="2.">
+       {a mathematical formula}(V,C)is satisfiable if the relations are interpreted over RCC-5set.
+      </list-item>
+      <list-item label="3.">
+       {a mathematical formula}(V,C)is satisfiable if the relations are interpreted over RCC-5{a mathematical formula}ω−cat.
+      </list-item>
+     </list>
+     <paragraph>
+      In other words, the RCC-5 representations RCC-{a mathematical formula}5reg, RCC-5set, and RCC-{a mathematical formula}5ω−cat are indistinguishable from a computational perspective. The RCC-5 representation used by Li et al. [48] is restricted to regions in the plane. The exact computational properties of this representation are not known, but it is worth noting that Proposition 13 cannot be extended to RCC-5 based on non-empty open disks in the plane [11, Sec. 2.5.2]. Further discussions concerning different interpretations of RCC-5 and other spatial formalisms can be found in [7], [27], [49].
+     </paragraph>
+    </section>
+    <section label="4">
+     Method I: ω-categoricity and model-complete cores
+     <paragraph>
+      Our first method is based on analysing a given constraint language Γ with respect to its automorphisms and the central notions here are ω-categoricity and model-complete cores. We present the method in Section 4.1 and, as an example, apply it to an extended version of Allen's algebra in Section 4.2.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Constants and model-complete cores
+      </section-title>
+      <paragraph>
+       We first introduce the concept of homomorphically equivalent CSPs. Let Γ and Δ denote two relational τ-structures. If Γ and Δ are isomorphic, then it is clear that CSP(Γ) and CSP(Δ) correspond to the same computational problem. However, Γ and Δ may be non-isomorphic and still correspond to the same computational problem. Assume that {a mathematical formula}Γ=(D;R1,R2,…) and {a mathematical formula}Δ=(D′;R1′,R2′,…). Given an instance {a mathematical formula}(V,C) of CSP(Γ), let {a mathematical formula}(V,C′) denote the instance of CSP(Δ) where each relation {a mathematical formula}Ri appearing in C has been replaced by {a mathematical formula}Ri′. We say that Γ and Δ have the same CSP if the following holds for all instances {a mathematical formula}(V,C) of CSP(Γ): {a mathematical formula}(V,C) is satisfiable if and only if {a mathematical formula}(V,C′) is satisfiable. This is, for example, the case when there simultaneously exists a homomorphism from Γ to Δ and a homomorphism from Δ to Γ. In this case, we say that Γ and Δ are homomorphically equivalent and this defines an equivalence relation on structures. We note that there are structures that have the same CSP even when they are not homomorphically equivalent. Consider for example the structures {a mathematical formula}(Z;&lt;) and {a mathematical formula}(Q;&lt;). They have the same CSP and there is a homomorphism from {a mathematical formula}(Z;&lt;) to {a mathematical formula}(Q;&lt;) but there is no homomorphism from {a mathematical formula}(Q;&lt;) to {a mathematical formula}(Z;&lt;).
+      </paragraph>
+      <paragraph>
+       For ω-categorical structures Γ, the equivalence classes have interesting properties: the homomorphic equivalence class of Γ contains a distinguished member Δ which is up to isomorphism uniquely given by two properties: Δ is a core and Δ is model-complete. A relational structure Γ is a core if all endomorphisms of Γ are embeddings. Cores are important when studying the complexity of finite-domain CSPs: we refer to the textbook by Hell and Nešetřil [31] that extensively covers cores in the context of graph homomorphisms and to Bulatov et al. [20] that covers cores in general finite-domain CSPs. It is known that when the domain of a relational structure is infinite, then there are several reasonable ways of defining cores; see, for instance, Bauslaugh [4] or Bodirsky [6, Sec. 3.6.3]. The reason for choosing the definition above is simple: it is the definition used by Bodirsky [5] in his proof of the forthcoming Theorem 14.
+      </paragraph>
+      <paragraph>
+       Model completeness is a central concept in model theory. Let T be a first-order theory. We say that the formulas ϕ and ψ are equivalent modulo T if {a mathematical formula}T⊨(ϕ⇔ψ). A structure Γ is model-complete if every formula in {a mathematical formula}Th(Γ) is equivalent to an existential formula modulo T. This may be viewed as a limited notion of quantifier elimination.
+      </paragraph>
+      <paragraph>
+       Consider the relation &lt; over the rationals {a mathematical formula}Q. The structure {a mathematical formula}(Q;&lt;) admits quantifier elimination [46] so every formula in {a mathematical formula}Th((Q;&lt;)) is equivalent to a quantifier-free formula (and, naturally, an existential formula). It follows that {a mathematical formula}(Q;&lt;) is model-complete, and that every Γ that is first-order definable in {a mathematical formula}(Q;&lt;) is model-complete, too. The structure {a mathematical formula}(Q;&lt;) is also a core. Let {a mathematical formula}e:Q→Q be an endomorphism of {a mathematical formula}(Q;&lt;), i.e., if {a mathematical formula}a&lt;b, then {a mathematical formula}e(a)&lt;e(b). Clearly, e is injective and it preserves the relation ≥ (that is, the negation of &lt;) since if {a mathematical formula}a&gt;b, then {a mathematical formula}e(a)&gt;e(b) and if {a mathematical formula}a=b, then {a mathematical formula}e(a)=e(b). However, there are relations R that are first-order definable in {a mathematical formula}(Q;&lt;) and {a mathematical formula}(Q;R) is not a core. One trivial example is the equality relation =. The function {a mathematical formula}x↦1 is obviously an endomorphism of = but it is not injective and thus not an embedding. We have the following important result.
+      </paragraph>
+      <paragraph label="Theorem 14">
+       Theorem 16 in Bodirsky [5]Every ω-categorical structure Δ is homomorphically equivalent to a model-complete core structure Γ which is unique up to isomorphism. Moreover, Γ is ω-categorical and the orbits of n-tuples over{a mathematical formula}DΓare pp-definable in Γ for all{a mathematical formula}n≥1.
+      </paragraph>
+      <paragraph>
+       Since homomorphically equivalent structures have the same CSP, one can focus on ω-categorical structures that have these properties. The fact that we can pp-define the orbits of n-tuples will now become highly important.
+      </paragraph>
+      <paragraph label="Theorem 15">
+       Let Γ be a constraint language over the domain D. Assume the following:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        Γ is a model-complete ω-categorical core and
+       </list-item>
+       <list-item label="2.">
+        the domain elements are represented in a way such that given a vector{a mathematical formula}d¯=(d1,…,dn)∈Dn, a pp-definition in Γ of the orbit of{a mathematical formula}d¯can be generated in polynomial time (in the size of the representation of{a mathematical formula}d1,…,dn).
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       Let {a mathematical formula}Γ′=Γ∪Dc. The reduction from CSP(Γ) to CSP{a mathematical formula}(Γ′) is trivial so we concentrate on the other direction. Let {a mathematical formula}I′=(V′,C′) be an instance of CSP{a mathematical formula}(Γ′). Assume without loss of generality that if {a mathematical formula}{di}(x) is in {a mathematical formula}C′, then there is no variable {a mathematical formula}y≠x such that {a mathematical formula}{di}(y)∈C′; if so, the constraint {a mathematical formula}{di}(y) can be removed and the variable y be replaced by x. Normalising an instance in this way can easily be done in polynomial-time. We assume (without loss of generality) that the only constraints in {a mathematical formula}C′ with relations from {a mathematical formula}Dc are {a mathematical formula}{d1}(x1),…,{dm}(xm). This can be achieved in polynomial time by renaming of variables.Compute (in polynomial time) the formula {a mathematical formula}F(x1,…,xm) for the orbit of {a mathematical formula}(d1,…,dm). Define {a mathematical formula}I=(V,C) such that the constraint set C equals {a mathematical formula}C′ extended with {a mathematical formula}F(x1,…,xm) and with the constant relations removed. Let V denote {a mathematical formula}V′ expanded with the existentially quantified variables in {a mathematical formula}F(x1,…,xm). Note that I can be constructed in polynomial time and it is an instance of CSP(Γ).If the instance I has no solution, then it follows immediately that {a mathematical formula}I′ does not have a solution—one can view I as being a relaxation of {a mathematical formula}I′ since the formula {a mathematical formula}F(x1,…,xm) is, in particular, satisfiable when {a mathematical formula}x1=d1,…,xm=dm. If the instance I has a solution {a mathematical formula}s:V→D, then we claim that there is a solution {a mathematical formula}s′:V′→D to {a mathematical formula}I′, too. Since F describes the orbit of {a mathematical formula}(d1,…,dm), there is an automorphism α of Γ such that {a mathematical formula}α(s′(xi))=di, {a mathematical formula}1≤i≤m. This implies that {a mathematical formula}α(s′(x)) restricted to the set V is a solution to I.  □
+      </paragraph>
+      <paragraph>
+       For those that are familiar with the algebraic approach to finite-domain CSPs, it may be illuminating to compare the proof of Theorem 15 with the proof of Theorem 4.7 in Bulatov et al. [20].
+      </paragraph>
+      <paragraph>
+       We concretise the method by presenting an example based on temporal constraint languages, i.e. constraint languages that are first-order definable in the structure {a mathematical formula}(Q;&lt;). We have already observed (in Section 3) that temporal constraint languages are ω-categorical. It is additionally known (by Junker and Ziegler [41], also see Cameron [21]) that there are five possible choices of {a mathematical formula}Aut(Γ). We concentrate on the (for our purposes) most interesting case when {a mathematical formula}&lt;∈〈Γ〉 and {a mathematical formula}Aut(Γ)=Aut(Q;&lt;). Arbitrarily choose such a language Γ and assume (without loss of generality due to Theorem 4) that {a mathematical formula}&lt;∈Γ. We know that Γ is model-complete (by the discussion preceding Theorem 14) so we assume that Γ is a core. For instance, Γ may be the point algebra {a mathematical formula}{&lt;,&gt;,=}∨=. We represent all members of {a mathematical formula}Q in the natural way, i.e., as {a mathematical formula}(a/b) where {a mathematical formula}a,b are integers written in binary and {a mathematical formula}b≠0.
+      </paragraph>
+      <paragraph>
+       The automorphisms of {a mathematical formula}(Q;&lt;) are the bijective functions {a mathematical formula}f:Q→Q that are monotonically increasing. The orbit of 1-tuples equals {a mathematical formula}Q while the orbit of a 2-tuple {a mathematical formula}(a,b) with {a mathematical formula}a&lt;b equals {a mathematical formula}{(x,y)∈Q2|x&lt;y}. More generally, the orbit of a k-tuple {a mathematical formula}(a1,…,ak) with {a mathematical formula}a1&lt;a2&lt;…&lt;ak equals{a mathematical formula} so the orbit-defining formulas can be generated in polynomial time. Theorem 15 is thus applicable and CSP{a mathematical formula}(Γ∪Qc) is polynomial-time equivalent to CSP(Γ). In particular, CSP{a mathematical formula}(Γ∪Qc) is in P if CSP(Γ) is in P, and CSP{a mathematical formula}(Γ∪Qc) is in NP if CSP(Γ) is in NP.
+      </paragraph>
+      <paragraph>
+       This example shows that ω-categoricity is indispensable. Theorem 15 combined with the tractability of CSP{a mathematical formula}((Q;&lt;,≠)) implies that CSP{a mathematical formula}(ΓQ) is in P when {a mathematical formula}ΓQ denotes {a mathematical formula}(Q;&lt;,≠) extended with the constant relations in {a mathematical formula}Qc. Recall that {a mathematical formula}(Z;&lt;) and {a mathematical formula}(Z;&lt;,≠) are not ω-categorical and define {a mathematical formula}ΓZ by expanding {a mathematical formula}(Z;&lt;,≠) with {a mathematical formula}Zc. The problem CSP{a mathematical formula}(ΓZ) is NP-hard since the relation {a mathematical formula}{0,1,2} can be pp-defined via{a mathematical formula} and the problem CSP{a mathematical formula}((Z;{0,1,2},≠)) is NP-hard since there is an obvious polynomial-time reduction from 3-Colourability. A similar example of this phenomenon (but based on RCC-5 instead of {a mathematical formula}(Q;&lt;)) will be presented in Section 6.2.
+      </paragraph>
+      <paragraph>
+       By Theorem 14, we know that orbit-defining formulas always can be pp-defined in Γ under the given assumptions. Whether these can be generated or not in polynomial time is a completely different question, though. Bodirsky [5, Sec. 7] notes that if the set of possible constants is finite, then an orbit-defining formula for these constants can be computed off-line and subsequently be used without additional cost. This gives us the following result.
+      </paragraph>
+      <paragraph label="Corollary 16">
+       Let Γ be a constraint language over the domain D and let{a mathematical formula}Dc′be a finite subset of{a mathematical formula}Dc. If Γ is a model-complete ω-categorical core, then CSP(Γ) and CSP{a mathematical formula}(Γ∪Dc′)are polynomial-time equivalent problems.
+      </paragraph>
+      <paragraph>
+       Assuming that the set of constant relations is finite is sensible in applications such as geographical information systems: geographical maps contain a comparatively small number of features and they tend to evolve quite slowly.
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       An example based on Allen's algebra
+      </section-title>
+      <paragraph>
+       We will now illustrate the results presented in Section 4.1 with the aid of a slightly more involved example. There are several reasons for doing this. First of all, we want to show how the results can be used for studying non-binary constraint languages. One may argue that most constraint formalisms studied in AI are binary and studying higher-arity formalisms is of minor importance. However, there are many interesting formalisms based on relations with higher arity. We refer the reader to the survey by Dylla et al. [28] that contains both examples of higher-arity formalisms and a thorough discussion concerning their properties. Another reason is to give the reader some familiarity with the use of results such as Theorem 15. Even though it may seem quite abstract at first sight, it is both powerful and fairly easy to use in concrete applications.
+      </paragraph>
+      <paragraph>
+       Our departure is the following dichotomy result.
+      </paragraph>
+      <paragraph label="Theorem 17">
+       Theorem 5.5.23 in Bodirsky [6]Let Γ be a finite set of relations that are first-order definable in{a mathematical formula}Aand{a mathematical formula}m∈Γ(where{a mathematical formula}mis the Allen relation satisfying{a mathematical formula}(I,J)∈mif and only if{a mathematical formula}I+=J−). Then, CSP(Γ) is either polynomial-time solvable or NP-complete.
+      </paragraph>
+      <paragraph>
+       The reader may be puzzled about the restriction to constraint languages containing the relation {a mathematical formula}m. Intuitively, {a mathematical formula}m allows us to define certain relations that make endpoints identical and such relations are the very basis of the dichotomy result (see the construction in the beginning of Lemma 22).
+      </paragraph>
+      <paragraph>
+       Before continuing, we want to point out that switching from {a mathematical formula}A∨= to relations that are first-order definable in {a mathematical formula}A gives new possibilities but also poses new problems. Consider, for example, the following ternary Allen relation:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       This relation expresses that I, J, and K have the same starting point and the ending point of K is before at least one of the ending points of I and J. Note that the disjunction {a mathematical formula}s(K,I)∨s(K,J) is not expressible with relations in {a mathematical formula}A∨=. Relations that are first-order definable in {a mathematical formula}A are inherently different from the relations in {a mathematical formula}A∨=. We exemplify by the ORD-Horn class {a mathematical formula}H that was described in Section 3. Nebel and Bürckert [55] have proved that the ORD-Horn class {a mathematical formula}H has the following uniqueness property: if {a mathematical formula}A⊆X⊆A∨= and CSP(X) in P, then {a mathematical formula}X⊆H. Such a unique class of relations does not exist if we consider relations that are first-order definable in {a mathematical formula}A: there exist two incomparable classes of relations {a mathematical formula}X1,X2 that are first-order definable in {a mathematical formula}A, the ORD-Horn class is a strict subset of both, and CSP{a mathematical formula}(Xi), {a mathematical formula}1≤i≤2, is in P. This is a straightforward consequence of results proved by Bodirsky and Kára [14]; more details can be found in Bodirsky [6, Chapter 10]. One extension of {a mathematical formula}H can be used for studying the relation {a mathematical formula}R⁎: CSP{a mathematical formula}(H∪{R⁎}) is indeed polynomial-time solvable. First, {a mathematical formula}R⁎ can be rewritten as a relation that is definable in {a mathematical formula}(Q;&lt;) by splitting the intervals into variables that range over {a mathematical formula}Q:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Every relation in {a mathematical formula}H can be rewritten in a similar way; we let {a mathematical formula}H′ denote the resulting constraint language. Now, the constraint language {a mathematical formula}H′∪{R⁎⁎} is a subset of the tractable dual-ll class [14], and we conclude that CSP{a mathematical formula}(H∪{R⁎}) is tractable, too. This kind of transformations of constraint languages will be an important ingredient in the proofs of the forthcoming results.
+      </paragraph>
+      <paragraph>
+       Bodirsky's proof of Theorem 17 is based on the following fundamental result.
+      </paragraph>
+      <paragraph label="Theorem 18">
+       Bodirsky and Kára [13]Let Γ be a finite set of relations that are first-order definable in{a mathematical formula}(Q;&lt;). Then, CSP(Γ) is either polynomial-time solvable or NP-complete.
+      </paragraph>
+      <paragraph>
+       The problem of applying Theorem 18 directly to Allen relations stems from the different domains: the theorem is concerned with the domain {a mathematical formula}Q while Allen relations are defined over the interval domain {a mathematical formula}I. We will now generalise the dichotomy result for the first-order extension of Allen's algebra (Theorem 17) as follows: we show that adding constants to the constraint language do not change the complexity of the corresponding constraint satisfaction problem.
+      </paragraph>
+      <paragraph label="Theorem 19">
+       Let Γ be a finite set of relations that are first-order definable in{a mathematical formula}Aand{a mathematical formula}m∈Γ. Then, the problems CSP(Γ) and CSP{a mathematical formula}(Γ∪Ic)are polynomial-time equivalent. Additionally, these problems exhibit a dichotomy: they are either polynomial-time solvable or NP-complete depending on the choice of Γ.
+      </paragraph>
+      <paragraph>
+       Theorem 19 can be proved in several different ways. Our proof does not use any complex formal machinery and it emphasises the connections with the results in Section 4.1. The proof can be found in Section 4.2.1 and we discuss some aspects of this result in Section 4.2.2. Special cases of Theorem 19 and related results have been studied in the literature. We have already mentioned that Li et al. [48] have showed that CSP{a mathematical formula}(A∨=∪Ic) is in NP. Their approach seems difficult to generalise for handling relations with arbitrarily high arity. Another example is Jonsson and Bäckström [38] who have proved that CSP{a mathematical formula}(H∪Ic) is in P. Their approach does not easily generalise to larger classes of relations, either. In fact, it cannot be used for proving that CSP{a mathematical formula}(H∪{R⁎}∪Ic) is in P—a result that can easily be inferred from Theorem 19.
+      </paragraph>
+      <section label="4.2.1">
+       <section-title>
+        Dichotomy result
+       </section-title>
+       <paragraph>
+        We begin by proving that Allen relations admit quantifier elimination. The exact definition of homogeneity (which is used in the proof below) is not important at this point but we will come back to it in Section 5.
+       </paragraph>
+       <paragraph label="Proof">
+        Structure{a mathematical formula}Aadmits quantifier elimination.By Statement 2.22 in Cameron [21], we know that an ω-categorical structure admits quantifier elimination if and only if it is homogeneous. Corollary 5.9 in Hirsch [33] shows that {a mathematical formula}A∨= is homogeneous. Every homogeneous structure that contains a finite number of relations and has an infinite countable domain is ω-categorical, cf. Lemma 3.2.10 in Bodirsky [6]. We conclude that {a mathematical formula}A∨= admits quantifier elimination. This immediately implies that {a mathematical formula}A admits quantifier elimination, too, since every relation in {a mathematical formula}A∨= can be rewritten as a disjunction of relations in {a mathematical formula}A without introducing any quantifiers.  □
+       </paragraph>
+       <paragraph>
+        Let {a mathematical formula}R⊆Ik denote a k-ary relation that is first-order definable in {a mathematical formula}A. Assume without loss of generality (due to Lemma 20) that {a mathematical formula}(I1,…,Ik)∈R if and only if {a mathematical formula}ϕR(I1,…,Ik) holds where {a mathematical formula}ϕR is a quantifier-free formula. Define the formula {a mathematical formula}X(ϕR) to be a formula {a mathematical formula}ϕ′∧ϕ″ with 2k free variables {a mathematical formula}x1−,x1+,…,xk−,xk+ where
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         {a mathematical formula}ϕ′=x1−&lt;x1+∧…∧xk−&lt;x+k and
+        </list-item>
+        <list-item label="2.">
+         {a mathematical formula}ϕ″ is ϕ where each atomic formula {a mathematical formula}a(Im,In) with {a mathematical formula}a∈A is replaced by the corresponding definition in Fig. 1 over variables {a mathematical formula}xm−,x+m,xn−,xn+.
+        </list-item>
+       </list>
+       <paragraph>
+        Note that the formula {a mathematical formula}X(ϕ) is always quantifier-free first-order definable in {a mathematical formula}(Q;&lt;). We adapt {a mathematical formula}X(⋅) for handling relations in the natural way: for a relation R with arity a, let{a mathematical formula} If we go back to the relations {a mathematical formula}R⁎ and {a mathematical formula}R⁎⁎ that were introduced earlier, then we see that {a mathematical formula}R⁎⁎=Xˆ(R⁎). Finally, we extend {a mathematical formula}Xˆ to constraint languages: {a mathematical formula}Xˆ(Γ)={Xˆ(R)|R∈Γ}. By the very definition of {a mathematical formula}Xˆ(⋅), it is straightforward to verify that CSP(Γ) is polynomial-time reducible to CSP{a mathematical formula}(Xˆ(Γ)). The basic step is to replace each interval variable I with two point variables {a mathematical formula}x−,x+ where {a mathematical formula}x− is interpreted as the starting point of I and {a mathematical formula}x+ the ending point of {a mathematical formula}x+. Showing that there is a polynomial-time reduction in the other direction needs some more work.
+       </paragraph>
+       <paragraph label="Proof">
+        The relations{a mathematical formula}(s,s⌣,≡)and{a mathematical formula}(f,f⌣,≡)are pp-definable in{a mathematical formula}{m}.Note that{a mathematical formula} and that {a mathematical formula}(f,f⌣,≡) can be pp-defined analogously.  □
+       </paragraph>
+       <paragraph label="Proof">
+        Let Γ be a finite set of relations that are first-order definable in{a mathematical formula}Aand{a mathematical formula}m∈Γ. Then, CSP{a mathematical formula}(Xˆ(Γ))is polynomial-time reducible to CSP(Γ).Assume without loss of generality (due to Lemma 21 and Theorem 4) that {a mathematical formula}{(s,s⌣,≡),(f,f⌣,≡)}⊆Γ.Arbitrarily choose an instance {a mathematical formula}(V,C) of CSP{a mathematical formula}(Xˆ(Γ)). We say that variables {a mathematical formula}x,y∈V are a pair if x appears at position k (where k is odd) in some constraint in C and y appears in the same constraint at position {a mathematical formula}k+1. Note that if {a mathematical formula}x,y are a pair, then every solution must assign a strictly higher value to y than to x.Based on {a mathematical formula}(V,C), we define an instance {a mathematical formula}(V′,C′) of CSP(Γ) as follows.
+        <list>
+         For each pair of variables {a mathematical formula}x,y∈V, introduce an interval variable {a mathematical formula}Ix,y and put it into {a mathematical formula}V′.For variables {a mathematical formula}Ix,y and {a mathematical formula}Ix,z in {a mathematical formula}V′, add the constraint {a mathematical formula}(s,s⌣,≡)(Ix,y,Ix,z) to {a mathematical formula}C′.For variables {a mathematical formula}Iy,x and {a mathematical formula}Iz,x in {a mathematical formula}V′, add the constraint {a mathematical formula}(f,f⌣,≡)(Ix,y,Ix,z) to {a mathematical formula}C′.For variables {a mathematical formula}Iy,x and {a mathematical formula}Ix,z in {a mathematical formula}V′, add the constraint {a mathematical formula}m(Iy,x,Ix,z) to {a mathematical formula}C′.For variables {a mathematical formula}Ix,y and {a mathematical formula}Iz,x in {a mathematical formula}V′, add the constraint {a mathematical formula}m(Iz,x,Ix,y) to {a mathematical formula}C′.For each constraint {a mathematical formula}S(x1,x2,…,x2m−1,x2m)∈C, add the constraint {a mathematical formula}R(Ix1,x2,…,Ix2m−1,x2m) to {a mathematical formula}C′ where {a mathematical formula}R∈Γ satisfies {a mathematical formula}S=Xˆ(R).We claim that
+        </list>
+        <paragraph>
+         {a mathematical formula}(V′,C′) is satisfiable if and only if {a mathematical formula}(V,C) is satisfiable.Assume {a mathematical formula}(V,C) is satisfiable and that it has the solution {a mathematical formula}f:V→Q. Define the function {a mathematical formula}f′ such that {a mathematical formula}f′(Ix,y)=[f(x),f(y)]. The variables {a mathematical formula}x,y are a pair so they appear in some constraint that requires {a mathematical formula}f(x)&lt;f(y). Thus, {a mathematical formula}f′ is a function from {a mathematical formula}V′ to {a mathematical formula}I. If there are interval variables {a mathematical formula}Ix,y and {a mathematical formula}Ix,z in {a mathematical formula}V′, then we know that the constraint {a mathematical formula}(s,s⌣,≡)(Ix,y,Ix,z) is in {a mathematical formula}C′. The function {a mathematical formula}f′ satisfies this constraint since {a mathematical formula}f′(Ix,y)=[f(x),f(y)] and {a mathematical formula}f′(Ix,z)=[f(x),f(z)]. It can analogously be verified that the constraints introduced in steps 3–5 are satisfied by {a mathematical formula}f′. Finally, the constraints introduced in steps 6 are satisfied by {a mathematical formula}f′ due to the definition of {a mathematical formula}Xˆ(⋅).Assume {a mathematical formula}(V′,C′) is satisfiable and that it has the solution {a mathematical formula}f′:V′→I. For each variable {a mathematical formula}x∈V, there is at least one variable {a mathematical formula}Ix,y or {a mathematical formula}Iy,x in {a mathematical formula}V′ for some {a mathematical formula}y∈V. Arbitrarily choose a function {a mathematical formula}g:V→V′ such that for every {a mathematical formula}x∈V, {a mathematical formula}g(x)=Ix,y or {a mathematical formula}g(x)=Iy,x (for some {a mathematical formula}y∈V) and {a mathematical formula}g(x)∈V′. Define a function {a mathematical formula}f:V→Q as follows:
+        </paragraph>
+        <list>
+         <list-item label="1.">
+          {a mathematical formula}f(x)=a if {a mathematical formula}g(x)=Ix,y and {a mathematical formula}f′(Ix,y)=[a,b] or
+         </list-item>
+         <list-item label="2.">
+          {a mathematical formula}f(x)=b if {a mathematical formula}g(x)=Iy,x and {a mathematical formula}f′(Iy,x)=[a,b].
+         </list-item>
+        </list>
+        <paragraph>
+         Note that the exact choice of function g for defining {a mathematical formula}f(x) is irrelevant: whenever we have interval variables, say, {a mathematical formula}Ix,y and {a mathematical formula}Ix,z, then {a mathematical formula}f′(Ix,y)=[a,b] and {a mathematical formula}f′(Ix,z)=[a,c], due to the constraints introduced in steps 2–5 in the reduction. Thus, there exists exactly one function f corresponding to a given solution {a mathematical formula}f′.We conclude the proof by proving that f is a solution to {a mathematical formula}(V,C). Arbitrarily choose a constraint {a mathematical formula}S(x1,x2,…,x2m−1,x2m) in C. Assume first that all variables are distinct. We need to verify that {a mathematical formula}(f(x1),f(x2),…,f(x2m−1),f(x2m))∈S. We know that {a mathematical formula}(f′(Ix1,x2),…,f′(Ix2m−1,x2m))∈R so the very construction of f combined with the definition of {a mathematical formula}Xˆ(⋅) implies that this holds. Assume now instead that the variables are not distinct. We exemplify with a 4-ary constraint {a mathematical formula}S(x,y,x,z). This corresponds to a constraint {a mathematical formula}R(Ix,y,Ix,z) in {a mathematical formula}C′ where we additionally have the constraint {a mathematical formula}(s,s⌣,≡)(Ix,y,Ix,z)∈C′ due to step 2 in the reduction. It is thus guaranteed that the intervals {a mathematical formula}f′(Ix,y) and {a mathematical formula}f′(Ix,z) start at the same point. Since {a mathematical formula}(V′,C′) has a solution, we know that {a mathematical formula}(f′(Ix,y),f′(Ix,z))∈R. This implies that {a mathematical formula}(f(x),f(y),f(x),f(z))∈S due to the definition of {a mathematical formula}Xˆ(⋅). It is not hard to generalise this reasoning to constraints of higher arity.  □
+        </paragraph>
+       </paragraph>
+       <paragraph>
+        We are now ready to prove Theorem 19.
+       </paragraph>
+       <paragraph label="Proof">
+        We prove the result by giving four polynomial-time reductions.
+        <list>
+         CSP{a mathematical formula}(Γ∪Ic) to CSP{a mathematical formula}(Xˆ(Γ)∪Qc). We have earlier discussed the fact that there is a straightforward reduction from CSP(Γ) to CSP{a mathematical formula}(Xˆ(Γ)). Assume that we have a unary relation that constrains the interval variable I to have the value {a mathematical formula}[a,b]. In the reduction, I is associated with two variables {a mathematical formula}x− and {a mathematical formula}x+ ranging over {a mathematical formula}Q. It is easy to see that we can replace a constraint {a mathematical formula}[a,b](I) with {a mathematical formula}[a,b]∈Ic with the constraints {a mathematical formula}{a}(x−) and {a mathematical formula}{b}(x+) where {a mathematical formula}{a},{b}∈Qc.CSP{a mathematical formula}(Xˆ(Γ)∪Qc) to CSP{a mathematical formula}(Xˆ(Γ)). We merely note that the relation &lt; is pp-definable in {a mathematical formula}Xˆ(Γ) since {a mathematical formula}x&lt;y⇔∃z,w.Xˆ(m)(x,z,w,y) so the reduction exists due to the discussion after Theorem 15.CSP{a mathematical formula}(Xˆ(Γ)) to CSP(Γ). This reduction exists due to Lemma 22.CSP(Γ) to CSP{a mathematical formula}(Γ∪Ic). Trivial.For an arbitrary constraint language Θ that is first-order definable in
+        </list>
+        <paragraph>
+         {a mathematical formula}(Q;&lt;), we know that CSP(Θ) is either in P or is an NP-complete problem by Theorem 18. Since {a mathematical formula}Xˆ(Γ) is first-order definable in {a mathematical formula}(Q;&lt;), the reduction above shows that CSP(Γ), CSP{a mathematical formula}(Γ∪Ic), CSP{a mathematical formula}(Xˆ(Γ)), and CSP{a mathematical formula}(Xˆ(Γ)∪Qc) are either in P or they are NP-complete problems.  □
+        </paragraph>
+       </paragraph>
+       <paragraph>
+        Theorem 19 only gives the complexity for CSP{a mathematical formula}(Γ∪Ic) and not for CSP{a mathematical formula}(Γ∪If). However, we can conclude (by Lemma 3) that CSP{a mathematical formula}(Γ∪If) is in NP. Recall that the complexity of CSP(Γ) and CSP{a mathematical formula}(Γ∪Ic) is always the same (up to polynomial-time reductions) when {a mathematical formula}m∈Γ. This does not hold for CSP{a mathematical formula}(Γ∪If). Let {a mathematical formula}Θ={m,≢} where {a mathematical formula}≢=⋃B∈A∖{≡}B. CSP(Θ) is in P since Θ is a subset of the ORD-Horn class {a mathematical formula}H. The problem CSP{a mathematical formula}(Θ∪If) is NP-complete, though. This can be proved by a reduction from 3-Colourability. Let {a mathematical formula}G=(V,E) be an undirected graph. For each {a mathematical formula}v∈V, introduce a variable {a mathematical formula}v′ and the constraint {a mathematical formula}{[0,1],[1,2],[2,3]}(v′). For each edge {a mathematical formula}(v,w)∈E, introduce the constraint {a mathematical formula}≢(v′,w′). It is easy to see that the resulting instance is satisfiable if and only if G is 3-colourable, and this implies that CSP{a mathematical formula}(Γ∪If) is NP-complete.
+       </paragraph>
+      </section>
+      <section label="4.2.2">
+       <section-title>
+        Discussion
+       </section-title>
+       <paragraph>
+        It is now suitable to discuss some aspects of the dichotomy result presented in the previous section. One obvious question is what happens if we consider languages that do not contain the relation {a mathematical formula}m. Unfortunately, the proof breaks down. Let {a mathematical formula}Γ={R1,…,Rn} be first-order definable in {a mathematical formula}A such that {a mathematical formula}m∈Γ and {a mathematical formula}Ri, {a mathematical formula}1≤i≤n, is defined by the quantifier-free formula {a mathematical formula}ϕi. The reductions in the proof of Theorem 19 shows that the problems CSP(Γ) and CSP(Θ) have the same complexity up to polynomial-time reductions where the relations in Θ are defined via {a mathematical formula}X(ϕ1),…,X(ϕn). We demonstrate that this is not true in the general case where we do not have access to the relation {a mathematical formula}m.
+       </paragraph>
+       <paragraph>
+        Just as in the previous section, we let ≢ denote the ‘not equal’ relation, i.e., the relation {a mathematical formula}≢=⋃B∈A∖{≡}B. Let {a mathematical formula}ϕR(I,J,X,Y) denote the formula{a mathematical formula} and {a mathematical formula}ϕS(X,A,B,C) the formula{a mathematical formula} Define the relations {a mathematical formula}R,S⊆I4 as follows:{a mathematical formula}{a mathematical formula} Let {a mathematical formula}Γ′={R,S}. Clearly, {a mathematical formula}m∉Γ′ and the relations in {a mathematical formula}Γ′ are first-order definable in {a mathematical formula}A by definition. Observe that the problem CSP{a mathematical formula}(Γ′) is in P: if {a mathematical formula}(V,C) is an instance of CSP{a mathematical formula}(Γ′), then the constant function {a mathematical formula}f(v)=[0,1] is a solution to {a mathematical formula}(V,C). Now take {a mathematical formula}Θ′={R′,S′} where{a mathematical formula}{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        We show that the problem CSP{a mathematical formula}({R′,S′}) is NP-hard by a reduction from 3-Colourability. Let {a mathematical formula}(V,E) denote an arbitrary undirected graph. Introduce “colour variables” {a mathematical formula}c1−,c1+,c2−,c+2,c3−,c3+, auxiliary variables {a mathematical formula}a1,a2,a3, and impose the constraints
+       </paragraph>
+       <list>
+        <list-item label="(1)">
+         {a mathematical formula}R′(a1,a2,a2,a3,c1−,c1+,c2−,c2+),
+        </list-item>
+        <list-item label="(2)">
+         {a mathematical formula}R′(a1,a2,a2,a3,c1−,c1+,c3−,c3+),and
+        </list-item>
+        <list-item label="(3)">
+         {a mathematical formula}R′(a1,a2,a2,a3,c2−,c2+,c3−,c3+).
+        </list-item>
+       </list>
+       <paragraph>
+        We first note that these three constraints are simultaneously satisfiable: for instance, every function {a mathematical formula}f:{a1,a2,a3}∪{ci−,ci+|1≤i≤3}→Q such that{a mathematical formula}{a mathematical formula} is a solution. By inspecting the definition of {a mathematical formula}R′, it is evident that every solution f must satisfy {a mathematical formula}f(a1)&lt;f(a2)&lt;f(a3). Given this, it follows that for arbitrary {a mathematical formula}1≤i≠j≤3, either {a mathematical formula}f(ci−)≠f(cj−) or {a mathematical formula}f(ci+)≠f(cj+) (or both). We conclude that {a mathematical formula}[f(c1−),f(c1+)], {a mathematical formula}[f(c2−),f(c2+)], and {a mathematical formula}[f(c3−),f(c3+)] are distinct intervals.
+       </paragraph>
+       <paragraph>
+        For each vertex {a mathematical formula}v∈V, introduce variables {a mathematical formula}v−,v+ and the constraint{a mathematical formula} This constraint implies that {a mathematical formula}[f(v−),f(v+)]∈{[f(ci−),f(ci+)]|1≤i≤3}. Thus, {a mathematical formula}[f(v−),f(v+)] may have one of three possible values due to constraints (1)–(3). This value correspond to the colour given to vertex v.
+       </paragraph>
+       <paragraph>
+        Finally, for each edge {a mathematical formula}(v,w)∈E, introduce the constraint{a mathematical formula} This constraint ensures that {a mathematical formula}[f(v−),f(v+)]≠[f(w−),f(w+)], i.e., adjacent vertices are assigned different colours. It is not hard to verify that the resulting instance is satisfiable if and only if {a mathematical formula}(V,E) is 3-colourable. This shows that the complexities for CSP(Γ) and CSP(Θ) do not always match when {a mathematical formula}m∉Γ.
+       </paragraph>
+       <paragraph>
+        Another interesting question concerns the complexity of the metaproblem: given a constraint language Γ such that {a mathematical formula}m∈Γ and Γ is first-order definable in {a mathematical formula}A, what is the complexity of CSP(Γ)? Preferably, we want problems of this kind to be decidable. Let us first consider the structure {a mathematical formula}(Q;&lt;). Let Θ be a finite set of relations that are first-order definable in {a mathematical formula}(Q;&lt;). Bodirsky and Kára [13] have showed that there are nine different cases where CSP(Θ) is polynomial-time solvable, and they have algebraically characterised these classes. A similar algebraic classification is possible for CSP(Γ) and, consequently, CSP{a mathematical formula}(Γ∪Ic) by Theorem 19—the complexity of such a CSP is determined by a corresponding set of relations that are first-order definable in {a mathematical formula}(Q;&lt;). In practice, the following result may be more useful.
+       </paragraph>
+       <paragraph label="Theorem 23">
+        Bodirsky and Kára [13], see also Bodirsky et al. [15]Let{a mathematical formula}Γ={R1,…,Rn}be a finite set of relations that are first-order definable in{a mathematical formula}(Q;&lt;), and let{a mathematical formula}ϕ1,…,ϕndenote their quantifier-free first-order definitions. There is an algorithm that given{a mathematical formula}ϕ1,…,ϕndecides whether CSP(Γ) is polynomial-time solvable or NP-complete.
+       </paragraph>
+       <paragraph>
+        As far as we know, there are no specialised algorithms for performing quantifier elimination in Allen's algebra described in the literature. There are, however, general algorithms that can be used for this purpose.
+       </paragraph>
+       <paragraph label="Proposition 24">
+        Proposition 3.1.22 in Marker [54]Suppose that T is a decidable theory with quantifier elimination. Then, there is an algorithm which when given a formula ϕ as input will output a quantifier-free formula ψ such that{a mathematical formula}T⊨∀x1,…,xn.ϕ(x¯)↔ψ(x¯).
+       </paragraph>
+       <paragraph>
+        The theory of Allen relations is first-order axiomatisable: this follows from the fact that the theory of dense linear order has this property, (cf. Section 1.2 in Marker [54]) combined with the definitions of the basic relations in {a mathematical formula}A. By choosing T to be the theory of Allen relations, it follows from Proposition 24 that there exists a suitable quantifier elimination algorithm.
+       </paragraph>
+       <paragraph label="Proof">
+        Let{a mathematical formula}Γ={R1,…,Rn}be a finite set of relations that are first-order definable in{a mathematical formula}Aand contains the relation{a mathematical formula}m, and let{a mathematical formula}ϕ1,…,ϕndenote their first-order definitions. There is an algorithm that given{a mathematical formula}ϕ1,…,ϕndecides whether CSP(Γ) is polynomial-time solvable or NP-complete.The first-order formulas {a mathematical formula}ϕ1,…,ϕn can be algorithmically converted into logically equivalent quantifier-free formulas {a mathematical formula}ϕ1′,…,ϕn′, as described above. Given {a mathematical formula}ϕ1′,…,ϕn′, we can easily compute the quantifier-free formulas {a mathematical formula}X(ϕ1′),…,X(ϕn′) by exploiting the definitions in Fig. 1. We note the following.
+       </paragraph>
+       <list>
+        <list-item label="•">
+         CSP(Γ) is polynomial-time equivalent with CSP{a mathematical formula}(Xˆ(Γ)) by Lemma 22, and
+        </list-item>
+        <list-item label="•">
+         the computational complexity of CSP{a mathematical formula}(Xˆ(Γ)) is decidable by Theorem 23 since we have access to the formulas {a mathematical formula}X(ϕ1′),…,X(ϕn′) that define the relations in {a mathematical formula}Xˆ(Γ).
+        </list-item>
+       </list>
+       <paragraph>
+        The same result holds for CSP{a mathematical formula}(Γ∪Ic) by Theorem 19. Even though the metaproblem is indeed decidable, it is quite evident that the method outlined above is time-consuming. We want to stress that there may exist more efficient methods: one encouraging example is conservative constraints over finite domains. They admit a polynomial-time algorithm for the meta-problem whereas the straightforward algorithm is super-exponential [23].
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Method II: homogeneous structures
+     </section-title>
+     <paragraph>
+      Our second method is based on analysing a given constraint language Γ with respect to its automorphisms, just as method I. However, the central notion in method II is homogeneity instead of ω-categoricity. In our context, homogeneous structures are typically ω-categorical so method I is, in principle, applicable. The main advantage of working with homogeneous structures is that we do not need a method for computing orbit-defining formulas. This advantage comes at a price: the method is restricted to constraint languages based on partition schemes.
+     </paragraph>
+     <paragraph>
+      Homogeneous{sup:2} structures have been intensively studied in mathematics and logics (for instance, in connection with combinatorics, model theory, and group theory) and they are also highly relevant in the study of CSPs. Homogeneous structures have useful properties such as admitting quantifier elimination and they are ω-categorical whenever the structure contains a finite number of relations and the domain is countably infinite. Theoretically interesting examples include {a mathematical formula}(Q;&lt;), {a mathematical formula}(N;=), and the random (or Rado) graph. There are also many examples that are (more obviously) relevant in AI and computer science. One of the earliest studies of homogeneous structures in AI was performed by Hirsch [33]. He proved, among other things, that Allen's algebra under the interval representation is homogeneous. Another early example is the homogeneous representation of RCC-5 proposed by Bodirsky and Chen [7]; this is the ω-categorical representation that was briefly discussed in Section 3. Other examples include RCC-8 [16], phylogeny constraints [12], and temporal constraints for partially-ordered time [42].
+     </paragraph>
+     <paragraph>
+      We need some machinery before providing the formal definition of homogeneity. Let D be the domain of a relational τ-structure Γ and arbitrarily choose {a mathematical formula}S⊆D. Then the substructure induced by S in Γ is the τ-structure Δ with domain S such that {a mathematical formula}RΔ=RΓ∩Sn for each n-ary {a mathematical formula}R∈τ; we also write {a mathematical formula}Γ[S] for Δ. The structure Γ is called homogeneous if every isomorphism {a mathematical formula}f:D1→D2 between finite induced substructures of Γ can be extended to an automorphism of Γ, that is, there exists an automorphism α such that {a mathematical formula}f(x)=α(x) when {a mathematical formula}x∈D1. The survey by Macpherson [53] is a good introduction to homogeneous structures. We give a very simple example to illustrate the idea behind homogeneity.
+     </paragraph>
+     <paragraph label="Example 26">
+      We revisit Example 1. Assume {a mathematical formula}k≥1 to be fixed, let {a mathematical formula}D={1,…,k}, and let {a mathematical formula}Kk denote the binary relation {a mathematical formula}{(x,y)∈D2|x≠y}. One may easily verify that {a mathematical formula}Aut({Kk}) equals the full symmetric group on the set D, i.e., the group of all permutations of D.Arbitrarily choose {a mathematical formula}D1,D2⊆D and an isomorphism {a mathematical formula}f:D1→D2 between {a mathematical formula}Kk[D1] and {a mathematical formula}Kk[D2]. Note that {a mathematical formula}|D∖D1|=|D∖D2| and let {a mathematical formula}g:D∖D1→D∖D2 be an arbitrary bijection. If we define {a mathematical formula}α:D→D such that {a mathematical formula}α(d)=f(d) when {a mathematical formula}d∈D1 and {a mathematical formula}α(d)=g(d) otherwise, then α is an extension of f and α is a permutation on D which implies that {a mathematical formula}α∈Aut({Kk}). Since {a mathematical formula}D1, {a mathematical formula}D2, and f were arbitrarily chosen, we conclude that the structure {a mathematical formula}(D;Kk) is homogeneous.
+     </paragraph>
+     <paragraph>
+      Many additional examples can be found in, for instance, the article by Hirsch [33]. Homogeneity is a more “fragile” concept than ω-categoricity. For instance, Γ being homogeneous and Δ being first-order definable in Γ does not necessarily imply that Δ is homogeneous.
+     </paragraph>
+     <paragraph>
+      In the following, we will concentrate on partition schemes as defined in Section 2.2.
+     </paragraph>
+     <paragraph label="Theorem 27">
+      Let{a mathematical formula}B={B1,…,Bk}be a partition scheme over the domain D and let{a mathematical formula}B⊆Γ⊆B∨=. Assume the following:
+      <list>
+       Γ is homogeneous, andthe domain elements are represented in a way such that given two elements{a mathematical formula}a,b∈D, it is possible to find (by using an algorithm A) the unique{a mathematical formula}Bi,{a mathematical formula}1≤i≤k, such that{a mathematical formula}(a,b)∈Biin polynomial time (measured in the size of the representations of a and b).Then, CSP
+      </list>
+      <paragraph label="Proof">
+       (Γ) and CSP{a mathematical formula}(Γ∪Dc)are polynomial-time equivalent.Let {a mathematical formula}Γ′=Γ∪Dc. The reduction from CSP(Γ) to CSP{a mathematical formula}(Γ′) is trivial so we concentrate on the other direction. Let {a mathematical formula}I′=(V′,C′) be an instance of CSP{a mathematical formula}(Γ′). We assume without loss of generality (just as in the proof of Theorem 15) that the only constraints in {a mathematical formula}C′ with relations from {a mathematical formula}Dc are {a mathematical formula}{d1}(x1),…,{dm}(xm).Construct an instance {a mathematical formula}I=(V,C) of CSP(Γ) as follows: let
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}V=V′,
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}Cˆ={B(xi,xj)|1≤i≠j≤mandB=A(di,dj)}, and
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}C=(C′∪Cˆ)∖{{d1}(x1),…,{dm}(xm)}.
+       </list-item>
+      </list>
+      <paragraph>
+       The instance {a mathematical formula}I=(V,C) can obviously be generated in polynomial time.If the instance {a mathematical formula}I′ has a solution, then it follows immediately that I has a solution—the constraints in {a mathematical formula}Cˆ are satisfiable by the assignment {a mathematical formula}x1=d1,…,xm=dm.If the instance I has a solution {a mathematical formula}s:V→D, then we claim that there is a solution {a mathematical formula}s′:V→D to {a mathematical formula}I′, too. Let {a mathematical formula}S={s(x1),…,s(xm)} and {a mathematical formula}T={d1,…,dm}. The set T contains m elements by our initial assumptions and the set S contains m elements due to the constraints in {a mathematical formula}Cˆ; all variables in {a mathematical formula}{x1,…,xm} are assigned distinct values since none of the constraints in {a mathematical formula}Cˆ allows equality (due to the fact that {a mathematical formula}B is a partition scheme and {a mathematical formula}d1,…,dm are distinct values). Thus, {a mathematical formula}f:S→T is a well-defined bijective function if we let {a mathematical formula}f(s(xi))=di, {a mathematical formula}1≤i≤m. We continue by proving the following claim.Claim:f is an homomorphism from {a mathematical formula}B[S] to {a mathematical formula}B[T] when {a mathematical formula}B∈B. Arbitrarily choose a tuple {a mathematical formula}(a,b)∈B[S]. By the choice of S, we know that {a mathematical formula}a=s(xi) and {a mathematical formula}b=s(xj) for some distinct {a mathematical formula}1≤i,j≤m. We see that{a mathematical formula} We know that {a mathematical formula}di,dj∈T so it remains to show that {a mathematical formula}(di,dj)∈B. If {a mathematical formula}A(di,dj)=B, then we are done. If {a mathematical formula}A(di,dj)=B′≠B, then {a mathematical formula}B′(xi,xj)∈Cˆ⊆C so {a mathematical formula}(s(xi),s(xj))∈B′. This contradicts that {a mathematical formula}a=s(xi), {a mathematical formula}b=s(xj), and {a mathematical formula}(a,b)∈B since {a mathematical formula}B∩B′=∅.We show that f is an isomorphism between {a mathematical formula}Γ[S] and {a mathematical formula}Γ[T]. We have already verified that f is a bijective function. Hence, we need to show that f is a homomorphism from {a mathematical formula}Γ[S] to {a mathematical formula}Γ[T], and that the inverse function {a mathematical formula}f−1 is a homomorphism from {a mathematical formula}Γ[T] to {a mathematical formula}Γ[S].We begin by showing that f is a homomorphism from {a mathematical formula}Γ[S] to {a mathematical formula}Γ[T]. Arbitrarily choose a relation {a mathematical formula}R∈Γ where {a mathematical formula}R=B1∪…∪Bp and {a mathematical formula}Bi∈B, {a mathematical formula}1≤i≤p. Arbitrarily choose {a mathematical formula}(a,b)∈R[S]. The tuple {a mathematical formula}(a,b) is a member of some relation {a mathematical formula}Bi in {a mathematical formula}{B1,…,Bp}. By the Claim, {a mathematical formula}(f(a),f(b))∈Bi[T] so {a mathematical formula}(f(a),f(b))∈R[T] since {a mathematical formula}Bi⊆R. It follows that f is a homomorphism from {a mathematical formula}R[S] to {a mathematical formula}R[T] since {a mathematical formula}(a,b) was arbitrarily chosen in {a mathematical formula}R[S]. This, in turn, implies that f is a homomorphism from {a mathematical formula}Γ[S] to {a mathematical formula}Γ[T] since R was arbitrarily chosen in {a mathematical formula}B∨=.Next, we show that {a mathematical formula}f−1 is a homomorphism from {a mathematical formula}Γ[T] to {a mathematical formula}Γ[S]. Arbitrarily choose a relation {a mathematical formula}R∈Γ where {a mathematical formula}R=B1∪…∪Bp and {a mathematical formula}Bi∈B, {a mathematical formula}1≤i≤p. Arbitrarily choose {a mathematical formula}(di,dj)∈R[T]. The tuple {a mathematical formula}(di,dj) is a member of some relation {a mathematical formula}Bm in {a mathematical formula}{B1,…,Bp}. Now, consider the tuple {a mathematical formula}(f−1(di),f−1(dj)). By the definition of f, we see that {a mathematical formula}(f−1(di),f−1(dj))=(s(xi),s(xj)). If {a mathematical formula}(s(xi),s(xj))∈Bm, then we are done. Assume to the contrary that {a mathematical formula}(s(xi),s(xj))∈Bn where {a mathematical formula}n≠m. By the Claim, {a mathematical formula}(f(s(xi)),f(s(xj)))∈Bn and {a mathematical formula}(f(s(xi)),f(s(xj)))=(di,dj). This leads to a contradiction since {a mathematical formula}(di,dj) cannot simultaneously be a member of {a mathematical formula}Bn and {a mathematical formula}Bm due to the fact that {a mathematical formula}B is a partition scheme.Since Γ is a homogeneous structure, the function f can be extended to an automorphism α of Γ. It follows that the function {a mathematical formula}s′:V→D defined such that {a mathematical formula}s′(x)=α(s(x)) is a solution to {a mathematical formula}I′; merely note that {a mathematical formula}s′(xi)=di, {a mathematical formula}1≤i≤m.  □
+      </paragraph>
+     </paragraph>
+     <paragraph>
+      The major advantage of working with homogeneous structures instead of using method I is that we do not need any efficient algorithm for computing orbit formulas. Presumably, the computations required by condition (2) in Theorem 27 are easier to carry out than computing orbit formulas given that domain elements are represented in some suitable way. In fact, if the constants represent objects in the real world, we may very well know their relations a priori and we do not need an algorithm for computing them.
+     </paragraph>
+     <paragraph>
+      We exemplify the result by taking a look at Allen's algebra with domain {a mathematical formula}I. Hirsch [33] has shown that {a mathematical formula}A∨= is a homogeneous structure and the second precondition of Theorem 27 is clearly satisfied with the given representation. We conclude that CSP{a mathematical formula}(A∨=∪Ic) is an NP-complete problem since CSP{a mathematical formula}(A∨=) is NP-complete. By Lemma 3, it follows directly that CSP{a mathematical formula}(A∨=∪If) is an NP-complete problem, too. One may also note that CSP{a mathematical formula}(H∪Ic) is in P when {a mathematical formula}H is the ORD-Horn subclass [55] since {a mathematical formula}H contains all 13 basic relations.
+     </paragraph>
+     <paragraph>
+      RCC-8 may serve as another example. We first recall the result for RCC-8 presented by Li et al. [48]. They use a representation of RCC-8 where the objects are regions in the plane, and they show that RCC-8 extended with polygonal constants give rise to an NP-complete problem. Unfortunately, their representation of RCC-8 is not known to be homogeneous so method II is not applicable in this case. There are other representations that are homogeneous, though: one example is presented by Bodirsky and Wölfl [16]. In this case, we do not have an explicit method for analysing the relationships between domain elements. Thus, either one has to construct such a method or one may restrict oneself to objects with known relationships. In particular, one may restrict oneself to finite sets of constant relations. If {a mathematical formula}Dc′ is a finite set of constant relations, then the relations between the corresponding domain elements can be computed in advance. Since {a mathematical formula}Dc′ is finite, this information can be stored in a finite table which can be efficiently accessed. This gives us a result that is analogous to Corollary 16.
+     </paragraph>
+     <paragraph label="Corollary 28">
+      Let{a mathematical formula}B={B1,…,Bk}be a partition scheme over the domain D and let{a mathematical formula}B⊆Γ⊆B∨=. Let{a mathematical formula}Dc′denote a finite subset of{a mathematical formula}Dc. If Γ is homogeneous, then CSP(Γ) and CSP{a mathematical formula}(Γ∪Dc′)are polynomial-time equivalent.
+     </paragraph>
+     <paragraph>
+      One may additionally note that Corollary 28 is applicable to RCC-{a mathematical formula}5ω−cat since this representation is known to be homogeneous [7].
+     </paragraph>
+     <paragraph>
+      Theorem 27 can be utilised in many other ways. One example is the following result which “lifts” Theorem 27 to first-order definable relations. Note, however, that this result is only useful for proving membership in NP.
+     </paragraph>
+     <paragraph label="Corollary 29">
+      Let{a mathematical formula}B={B1,…,Bk}be a partition scheme and let{a mathematical formula}B⊆Γ⊆B∨=. Assume the following:
+      <list>
+       Γ is homogeneous,{a mathematical formula}Bsatisfies precondition (2) ofTheorem 27, andCSP{a mathematical formula}(B)is in NP.For every finite set
+      </list>
+      <paragraph label="Proof">
+       {a mathematical formula}Θ={R1,…,Rk}of relations that are first-order definable in Γ, CSP{a mathematical formula}(Θ∪Dc)and CSP{a mathematical formula}(Θ∪Df)are in NP.Arbitrarily choose a {a mathematical formula}Θ={R1,…,Rk} that satisfies the preconditions. Note that CSP(Γ) is in NP since CSP{a mathematical formula}(B) is in NP and {a mathematical formula}Γ⊆B∨=; this can easily be proved along the same lines as Lemma 6. By Theorem 27, CSP{a mathematical formula}(Γ∪Dc) is in NP since CSP(Γ) is in NP. This implies that CSP{a mathematical formula}(B∪Dc) is in NP since {a mathematical formula}B⊆Γ. By arguing as in the proof of Lemma 20, we may assume that each {a mathematical formula}Ri, {a mathematical formula}1≤i≤k, has a quantifier-free definition in {a mathematical formula}B. It follows from Lemma 6 that CSP{a mathematical formula}(Θ∪Dc) is in NP, too. By Lemma 3, it additionally holds that CSP{a mathematical formula}(Θ∪Df) is in NP.  □
+      </paragraph>
+     </paragraph>
+    </section>
+    <section label="6">
+     <section-title>
+      Method III: small solutions
+     </section-title>
+     <paragraph>
+      The methods in Sections 4 and 5 provide polynomial-time equivalences between CSP(Γ) and CSP{a mathematical formula}(Γ∪Dc) under certain conditions. In this section, we will instead analyse the constraint language {a mathematical formula}Γ∪Dc directly. The main result will be weaker than in the previous two sections since we will only be able to prove membership in NP. On the other hand, the approach is applicable also without ω-categoricity.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       The small solution property
+      </section-title>
+      <paragraph>
+       Let Γ be an arbitrary constraint language with domain D, and assume that the relations in Γ and the elements in D are represented is some fixed way. We say that Γ has the small solution property if there exists a polynomial p (that only depends on the choice of Γ) such that for every satisfiable instance {a mathematical formula}I=(V,C) of CSP(Γ), there exists a solution {a mathematical formula}s:V→D such that {a mathematical formula}‖s(v)‖≤p(‖I‖) for every {a mathematical formula}v∈V.
+      </paragraph>
+      <paragraph label="Lemma 30">
+       Let Γ denote a constraint language over the domain D. Assume that
+       <list>
+        Γ has the small solution property andthere exists an algorithm A and a polynomial q such that for arbitrary k-ary{a mathematical formula}R∈Γand{a mathematical formula}d1,…,dk∈D, algorithm A can verify whether{a mathematical formula}(d1,…,dk)∈Rin time{a mathematical formula}O(q(‖R‖+∑i=1k‖di‖)).Then CSP
+       </list>
+       <paragraph label="Proof">
+        (Γ) is in NP.Let {a mathematical formula}(V,C) denote an arbitrary instance of CSP(Γ). To show that {a mathematical formula}I=(V,C) is satisfiable, non-deterministically guess a solution {a mathematical formula}s:V→D such that {a mathematical formula}‖s(v)‖≤p(‖I‖) for every {a mathematical formula}v∈V (where p denotes a fixed polynomial). Such a solution exists since Γ has the small solution property, and the size of s is consequently polynomially bounded in {a mathematical formula}‖I‖. The solution s can thus be verified in polynomial time with the aid of algorithm A.  □
+       </paragraph>
+      </paragraph>
+      <paragraph>
+       Many well-known structures possess the small solution property. One example is the temporal constraint problem that we introduced in Sec. 3: if {a mathematical formula}(V,C) is an instance of this problem with a solution {a mathematical formula}s:V→Q, then there exists a solution {a mathematical formula}t:V→{1,…,|V|}, too, and this solution can be represented by approximately {a mathematical formula}|V|⋅log2⁡|V| bits. The existence of t can be shown along the following lines: let {a mathematical formula}S={s(v)|v∈V}={a1,…,ap} with {a mathematical formula}a1&lt;a2&lt;…&lt;ap, and define {a mathematical formula}t(v)=i if and only if {a mathematical formula}s(v)=ai. It is easy to verify that t is indeed a solution to {a mathematical formula}(V,C). This idea can, for instance, be used for verifying that Allen's algebra has the small solution property.
+      </paragraph>
+      <paragraph>
+       Another example is relations R defined by linear expressions, that is, R is defined by{a mathematical formula} or{a mathematical formula} where the coefficients are in {a mathematical formula}Z and the variables range over, for instance, {a mathematical formula}Q or {a mathematical formula}Z. Given a constraint language Γ containing such relations, the small solution property for {a mathematical formula}Q follows from the fact that linear programming can be solved (and a concrete solution written down) in polynomial time while the property for {a mathematical formula}Z has been proven by Papadimitriou [57]. This example is interesting in several respects. First of all, the constants in {a mathematical formula}Qc are, of course, linear. Furthermore, we know (from Example 8) that not even the language {a mathematical formula}Γ={{(x,y,z)∈Z3|x+y=z}} is ω-categorical; the same can be proved for the domain {a mathematical formula}Q. Thus, the methods in Section 4 and 5 are not applicable in this case.
+      </paragraph>
+      <paragraph>
+       An important observation is that it is not sufficient to verify that Γ itself has the small solution property—one needs to verify that {a mathematical formula}Γ∪Dc has the small solution property if one wants to use Lemma 30 in connection with constants. We exemplify by using the relation {a mathematical formula}R={(x,y)∈N2|x=2y−1}. The constraint language {a mathematical formula}{R} has the small solution property since every instance has the solution that assigns 1 to every variable. However, CSP{a mathematical formula}({R,{2}}) does not have small solutions if we assume integers to be written in binary. Consider the instance {a mathematical formula}(V,C) where {a mathematical formula}V={x0,…,xn} and{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       It is easy to verify that {a mathematical formula}(V,C) is solvable and every solution {a mathematical formula}s:V→N must satisfy {a mathematical formula}s(xn)=Tower(n) where Tower is the rapidly increasing function{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The small solution property is particularly useful in connection with relations that are constructed via logical definitions.
+      </paragraph>
+      <paragraph label="Corollary 31">
+       Let Γ be a set of relations with domain D such that precondition (2) ofLemma 30is satisfied and{a mathematical formula}Γ∪Dchas the small solution property.
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        If Γ is a partition scheme and Θ is a finite set of relations that are quantifier-free definable in Γ, then CSP{a mathematical formula}(Θ∪Dc)and CSP{a mathematical formula}(Θ∪Df)are in NP.
+       </list-item>
+       <list-item label="2.">
+        If Θ is a finite set of relations that are quantifier-free positive definable in Γ, then CSP{a mathematical formula}(Θ∪Dc)and CSP{a mathematical formula}(Θ∪Df)are in NP.
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       We begin by proving case 1. Hence, assume that Γ is a partition scheme. We know that {a mathematical formula}Γ∪Dc has the small solution property so CSP{a mathematical formula}(Γ∪Dc) is in NP by Lemma 30. Lemma 6 implies that CSP{a mathematical formula}(Θ∪Dc) is in NP and, consequently, CSP{a mathematical formula}(Θ∪Df) is in NP by Lemma 3.We continue by proving case 2. We know that Θ has a quantifier-free positive definition in Γ. This and the fact that CSP{a mathematical formula}(Γ∪Dc) is in NP allow us to apply Lemma 7 and conclude that CSP{a mathematical formula}(Θ∪Dc) is in NP and that CSP{a mathematical formula}(Θ∪Df) is in NP by Lemma 3.  □
+      </paragraph>
+      <paragraph>
+       We exemplify Corollary 31 with the point algebra PA over {a mathematical formula}Z; recall from Sec. 2.3 that {a mathematical formula}(Z;&lt;) is not ω-categorical so methods I and II are not applicable. Let Γ denote the basic relations {a mathematical formula}{&lt;,&gt;,=} over the domain {a mathematical formula}Z. By using the same idea as we used for proving that temporal constraints have the small solution property, it follows that if an instance {a mathematical formula}(V,C) of CSP(Γ) has a solution, then it has a solution {a mathematical formula}s:V→{1,…,|V|} and Γ has the small solution property. Let us now consider the constraint language {a mathematical formula}Γ∪Zc. We assume as usual that the constants in {a mathematical formula}Zc are represented by c written in binary. Let {a mathematical formula}(V,C) denote an arbitrary instance of CSP{a mathematical formula}(Γ∪Zc) and define {a mathematical formula}S={d|{d}(x)∈C}. Building on the same proof idea once again, one can easily verify that if {a mathematical formula}(V,C) has a solution, then it has a solution {a mathematical formula}s:V→{(min⁡S)−|V|,…,(max⁡S)+|V|}. Now, at most {a mathematical formula}r=⌈log2⁡(|min⁡S|)+1⌉ and {a mathematical formula}r′=⌈log2⁡(|max⁡S|)+1⌉ bits are needed to represent the numbers {a mathematical formula}min⁡S and {a mathematical formula}max⁡S, respectively. This implies that {a mathematical formula}Γ∪Zc has the small solution property since r and {a mathematical formula}r′ are smaller than {a mathematical formula}‖(V,C)‖. We see that Γ is a partition scheme and {a mathematical formula}Γ∪Zc satisfies precondition (2) of Lemma 30. We conclude that both CSP{a mathematical formula}(Θ∪Zc) and CSP{a mathematical formula}(Θ∪Zf) are members of NP whenever Θ is quantifier-free first-order definable in Γ.
+      </paragraph>
+     </section>
+     <section label="6.2">
+      An example based on RCC-{a mathematical formula}5set
+      <paragraph>
+       We will now illustrate the small solution property with RCC-5set. Henceforth, let {a mathematical formula}R denote the RCC-5 basic relations interpreted as RCC-{a mathematical formula}5set relations (see Fig. 3 in Section 3). It is known that RCC-{a mathematical formula}5set is not ω-categorical so the methods in Sections 4 and 5 are not applicable. As a warm-up, we give a simple way of proving this under the assumption that P ≠ NP. Let {a mathematical formula}Γ=R∪{≠} where ≠ equals {a mathematical formula}⋃B∈R∖{EQ}B. It is known that CSP(Γ) is in P [39], [59]. We extend Γ with one constant: {a mathematical formula}Γ′=Γ∪{{0,1,2}}. Consider the constraints {a mathematical formula}{PP(y,z),{0,1,2}(z)}. It is clear that if s is a solution, then{a mathematical formula} so there are 6 distinct possible choices for the variable y. This implies that there is a straightforward polynomial-time reduction from 6-Colourability to CSP{a mathematical formula}(Γ′) (since the relation ≠ is in {a mathematical formula}Γ′) and, consequently, that CSP{a mathematical formula}(Γ′) is NP-complete. If Theorem 15 or Theorem 27 were applicable, then CSP{a mathematical formula}(Γ′) would be polynomial-time solvable.
+      </paragraph>
+      <paragraph>
+       Proving that a particular constraint language has the small solution property may be a non-trivial task; one may, for instance, think of the previously mentioned results concerning linear and integer programming. When studying qualitative constraint languages, one often encounters relations that only relates “smaller” objects with “larger” objects: obvious examples include the less-than relation &lt; or the subset relation ⊂. Such relations are occasionally useful for inductively proving the small solution property. This idea is illustrated in the next lemma.
+      </paragraph>
+      <paragraph label="Proof">
+       Let{a mathematical formula}D=2N∖{∅}. The constraint language{a mathematical formula}R∪Dchas the small solution property.Let {a mathematical formula}I=(V,C) be a satisfiable instance of CSP{a mathematical formula}(R∪Dc) with solution {a mathematical formula}s:V→2N∖{∅}. Construct a new instance {a mathematical formula}I′=(V′,C′) as follows.Step 1. Remove every {a mathematical formula}EQ(x,y) constraint: this can be done by collapsing the variables x and y (we leave the obvious details of this step to the reader).Step 2. Replace every {a mathematical formula}PP⌣(x,y) constraint with {a mathematical formula}PP(y,x).Step 3. Remove every {a mathematical formula}PO(x,y) constraint by replacing it with{a mathematical formula} where {a mathematical formula}z1,z2,z3 are fresh variables.Note the following.
+       <list>
+        {a mathematical formula}I′ is a satisfiable instance of CSP{a mathematical formula}(R∪Dc),the only non-unary relations that appear in I are DR and PP, andthe size of {a mathematical formula}V′ is upper bounded by some polynomial q (that does not depend on {a mathematical formula}(V,C)).Fact 3 can be established as follows: fresh variables are only introduced in Step 3 where
+       </list>
+       <paragraph>
+        PO constraints are removed, and there are at most {a mathematical formula}O(|V|2) such constraints since PO is a binary relation.We say that two variables {a mathematical formula}u,v in {a mathematical formula}I′ are PP-connected if there exists a sequence of variables {a mathematical formula}w1,…,wp such that
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         {a mathematical formula}w1=u,
+        </list-item>
+        <list-item label="2.">
+         {a mathematical formula}wp=v, and
+        </list-item>
+        <list-item label="3.">
+         {a mathematical formula}PP(wi,wi+1)∈C′ for all {a mathematical formula}1≤i&lt;p.
+        </list-item>
+       </list>
+       <paragraph>
+        Note that if u and v are PP-connected, then in any solution {a mathematical formula}s′ of {a mathematical formula}I′ we have that {a mathematical formula}(s′(u),s′(v))∈PP.Given a constant relation {a mathematical formula}U={{a1,…,ak}}∈Dc, we let {a mathematical formula}sz(U)=k. Now, let{a mathematical formula} If u is PP-connected with some variable v and {a mathematical formula}U(v)∈C′, then we know that {a mathematical formula}|s′(u)|&lt;T for any solution {a mathematical formula}s′ to {a mathematical formula}I′.We prove that at most {a mathematical formula}|V′|⋅T different elements are needed for representing a solution by induction over the number of variables in {a mathematical formula}V′. This implies the result by reasoning as follows: we can without loss of generality assume that the set of possible values is {a mathematical formula}2{1,…,|V′|⋅T}∖{∅}. To represent such a value, i.e., a set, we need at most {a mathematical formula}|V′|⋅T bits if we view each value as a bit vector where the ith component equals 1 if and only if i is a member of the set. Hence, CSP{a mathematical formula}(R∪Dc) has the small solution property since {a mathematical formula}|V′|≤q(|V|)≤q(‖I‖) and {a mathematical formula}T≤‖I‖≤q(‖I‖).Basis step. If {a mathematical formula}|V′|=1 and {a mathematical formula}V′={v}, then either a singleton set is sufficient as a value for v (if v is not constrained by a unary relation) or a set with cardinality T is sufficient (otherwise).Induction hypothesis. Assume the claim holds when {a mathematical formula}|V′|=p.Induction step. We show the claim when {a mathematical formula}|V′|=p+1. If there are variables {a mathematical formula}v,v′∈V′ such that v is PP-connected to {a mathematical formula}v′ and {a mathematical formula}v′ is PP-connected to v, then {a mathematical formula}(V′,C′) has no solution and this leads to a contradiction. Thus, we can choose a variable {a mathematical formula}v∈V′ such that v is maximal with respect to PP-connectedness, i.e. v is not PP-connected to any other variable. Let {a mathematical formula}I″ be the instance {a mathematical formula}I′ restricted to variable set {a mathematical formula}V∖{v}. By the induction hypothesis, we need at most pT values for the instance {a mathematical formula}I″. If there exists {a mathematical formula}U(v)∈C, then we need at most T values for v which gives us at most {a mathematical formula}pT+T=(p+1)T values in total. If there is no {a mathematical formula}U(v)∈C, then we need at most one additional value for v so we need at most {a mathematical formula}pT+1≤(p+1)T values in total. To see this, v may (in the worst case) be PP-connected to every other variable and v must (by the induction hypothesis) contain at least pT different values. However, it must also be a strict superset of the other variables and this is accomplished by adding one fresh element.  □
+       </paragraph>
+      </paragraph>
+      <paragraph label="Proof">
+       Let Γ be a finite set of relations that are quantifier-free definable in{a mathematical formula}R. Then, CSP{a mathematical formula}(Γ∪Dc)and CSP{a mathematical formula}(Γ∪Df)are in NP.Combine Lemma 32 with Corollary 31.  □
+      </paragraph>
+     </section>
+     <section label="6.3">
+      <section-title>
+       Discussion
+      </section-title>
+      <paragraph>
+       The idea behind Lemma 32 can readily be extended to other classes of relations that are related to RCC-5 such as (certain variants of) set relations (cf. Bodirsky and Hils [10] and the references in their article), and it can also be generalised in other directions. An interesting observation is that the NP membership results for RCC-5 and RCC-8 in the plane by Li et al. [48] is implicitly based on the small solution property. There, the representational size of the regions are analysed and bounded by exploiting a particular parameter that is related to embeddings of planar graphs in the plane. Another interesting observation is that Li [47] uses concepts that are similar to PP-connectedness when constructing different realisations of the RCC-8 formalism. This may indicate that the approach taken in the proof of Lemma 32 could quite easily be adapted to other spatial formalisms.
+      </paragraph>
+      <paragraph>
+       We conclude this section by a few observations concerning the small solution property. First of all, it is important to realise that the converse of Lemma 30 does not necessarily hold. Clearly, the function {a mathematical formula}log⁡(Tower(n)) grows faster than any polynomial in n. Now consider the constraint language {a mathematical formula}Γ={U1,U2,…} where {a mathematical formula}Ui={x∈N|x=Tower(i)}. Checking if an instance of CSP(Γ) is satisfiable or not can trivially be solved in polynomial time if {a mathematical formula}U1,U2,… are represented in a reasonable way—for instance, if {a mathematical formula}Ui is represented by the number i written in binary. Thus, CSP(Γ) is in NP, too. It is obvious, though, that Γ does not have the small solution property if we represent the natural numbers in binary.
+      </paragraph>
+      <paragraph>
+       Finally, we want to emphasise once again that the choice of exact interpretation and representation of relations and domain elements is extremely important. Recall the ω-categorical and homogeneous representation of RCC-5 that we denoted RCC-{a mathematical formula}5ω−cat. In this case, adding constants preserves computational complexity (up to polynomial-time reductions) by Theorem 27 (given that relations and domain elements are represented in a suitable way). Recall that adding a finite number of constant relations always preserve the complexity by Corollary 28. We know from an earlier example that adding even a single constant may not preserve the complexity of RCC-{a mathematical formula}5set. At the same time, we know from Proposition 13 that the CSPs for RCC-{a mathematical formula}5set and RCC-{a mathematical formula}5ω−cat are the very same computational problem.
+      </paragraph>
+     </section>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

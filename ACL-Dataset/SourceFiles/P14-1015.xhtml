@@ -1,0 +1,794 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Unsupervised Solution Post Identification from Discussion Forums</title>
+<!--Generated on Tue Jun 10 17:18:20 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Unsupervised Solution Post Identification from Discussion Forums</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Deepak P 
+<br class="ltx_break"/>IBM Research - India 
+<br class="ltx_break"/>Bangalore, India 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">deepak.s.p@in.ibm.com</span> 
+<br class="ltx_break"/>&amp;Karthik Visweswariah 
+<br class="ltx_break"/>IBM Research - India 
+<br class="ltx_break"/>Bangalore, India 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">v-karthik@in.ibm.com</span> 
+<br class="ltx_break"/>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Discussion forums have evolved into a dependable source of knowledge to solve common problems. However, only a minority of the posts in discussion forums are solution posts. Identifying solution posts from discussion forums, hence, is an important research problem. In this paper, we present a technique for unsupervised solution post identification leveraging a so far unexplored textual feature, that of lexical correlations between problems and solutions. We use translation models and language models to exploit lexical correlations and solution post character respectively. Our technique is designed to not rely much on structural features such as post metadata since such features are often not uniformly available across forums. Our clustering-based iterative solution identification approach based on the EM-formulation performs favorably in an empirical evaluation, beating the only unsupervised solution identification technique from literature by a very large margin. We also show that our unsupervised technique is competitive against methods that require supervision, outperforming one such technique comfortably.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Discussion forums have become a popular knowledge source for finding solutions to common problems. StackOverflow<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>http://www.stackoverflow.com</span></span></span>, a popular discussion forum for programmers is among the top-100 most visited sites globally<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>http://www.alexa.com/siteinfo/stackoverflow.com</span></span></span>. Now, there are discussion forums for almost every major product ranging from automobiles<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>http://www.cadillacforums.com/</span></span></span> to gadgets such as those of Mac<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>https://discussions.apple.com/</span></span></span> or Samsung<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup>http://www.galaxyforums.net/</span></span></span>. These typically start with a registered user posting a question/problem<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">6</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">6</sup>We use problem and question, as well as solution and answer interchangeably in this paper.</span></span></span> to which other users respond. Typical response posts include solutions or clarification requests, whereas feedback posts form another major category of forum posts. As is the case with any community of humans, discussion forums have their share of inflammatory remarks too. Mining problem-solution pairs from discussion forums has attracted much attention from the scholarly community in the recent past. Since the first post most usually contains the problem description, identifying its solutions from among the other posts in the thread has been the focus of many recent efforts (e.g., <cite class="ltx_cite">[<a href="#bib.bib14" title="Domain adaptive answer extraction for discussion boards" class="ltx_ref">8</a>, <a href="#bib.bib11" title="A classification-based approach to question answering in discussion boards" class="ltx_ref">9</a>]</cite>). Extracting problem-solution pairs from forums enables the usage of such knowledge in knowledge reuse frameworks such as case-based reasoning <cite class="ltx_cite">[<a href="#bib.bib6" title="An introduction to case-based reasoning" class="ltx_ref">11</a>]</cite> that use problem-solution pairs as raw material. In this paper, we address the problem of unsupervised solution post identification<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">7</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">7</sup>This problem has been referred to as <span class="ltx_text ltx_font_italic">answer extraction</span> by some papers earlier. However, we use <span class="ltx_text ltx_font_italic">solution identification</span> to refer to the problem since <span class="ltx_text ltx_font_italic">answer</span> and <span class="ltx_text ltx_font_italic">extraction</span> have other connotations in the Question-Answering and Information Extraction communities respectively.</span></span></span> from discussion forums.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Among the first papers to address the solution identification problem was the unsupervised approach proposed by <cite class="ltx_cite">[<a href="#bib.bib13" title="Finding question-answer pairs from online forums" class="ltx_ref">4</a>]</cite>. It employs a graph propagation method that prioritizes posts that are (a) more similar to the problem post, (b) more similar to other posts, and (c) authored by a more authoritative user, to be labeled as solution posts. Though seen to be effective in identifying solutions from travel forums, the first two assumptions, (a) and (b), were seen to be not very reliable in solution identification in other kinds of discussion boards. <cite class="ltx_cite">[<a href="#bib.bib12" title="Does similarity matter? the case of answer extraction from technical discussion forums." class="ltx_ref">3</a>]</cite> reports a study that illustrates that non-solution posts are, on an average, as similar to the problem as solution posts in technical forums. The second assumption (i.e., (b) above) was also not seen to be useful in discussion forums since posts that are highly similar to other posts were seen to be complaints, repetitive content being more pervasive among complaint posts than solutions <cite class="ltx_cite">[<a href="#bib.bib16" title="Semi-supervised answer extraction from discussion forums" class="ltx_ref">2</a>]</cite>. Having exhausted the two obvious textual features for solution identification, subsequent approaches have largely used the presence of lexical cues signifying solution-like narrative (e.g., instructive narratives such as <span class="ltx_text ltx_font_italic">”check the router for any connection issues”</span>) as the primary content-based feature for solution identification.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">All solution identification approaches since <cite class="ltx_cite">[<a href="#bib.bib13" title="Finding question-answer pairs from online forums" class="ltx_ref">4</a>]</cite> have used supervised methods that require training data in the form of labeled solution and non-solution posts. The techniques differ from one another mostly in the non-textual features that are employed in representing posts. A variety of high precision assumptions such as <span class="ltx_text ltx_font_italic">solution post typically follows a problem post</span> <cite class="ltx_cite">[<a href="#bib.bib1" title="Finding problem solving threads in online forum." class="ltx_ref">15</a>]</cite>, <span class="ltx_text ltx_font_italic">solution posts are likely to be within the first few posts</span>, <span class="ltx_text ltx_font_italic">solution posts are likely to have been acknowledged by the problem post author</span> <cite class="ltx_cite">[<a href="#bib.bib12" title="Does similarity matter? the case of answer extraction from technical discussion forums." class="ltx_ref">3</a>]</cite>, <span class="ltx_text ltx_font_italic">users with high authoritativeness are likely to author solutions</span> <cite class="ltx_cite">[<a href="#bib.bib11" title="A classification-based approach to question answering in discussion boards" class="ltx_ref">9</a>]</cite>, and so on have been seen to be useful in solution identification. Being supervised methods, the above assumptions are implicitly factored in by including the appropriate feature (e.g., post position in thread) in the feature space so that the learner may learn the correlation (e.g., solution posts typically are among the first few posts) using the training data. Though such assumptions on structural features, if generic enough, may be built into unsupervised techniques to aid solution identification, the variation in availability of such features across forums limits the usage of models that rely heavily on structural features. For example, some forums employ chronological order based flattening of threads <cite class="ltx_cite">[<a href="#bib.bib7" title="Online community search using thread structure" class="ltx_ref">16</a>]</cite> making reply-to information unavailable; models that harness reply-to features would then have limited utility on identifying solutions within such flattened threads. On medical forums, privacy considerations may force forum data to be dumped without author information, making a host of author-id based features unavailable. On datasets that contain data from across forums, the model may have to be aware of the absence of certain features in subsets of the data, or be modeled using features that are available on all threads.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Our Contribution:</span> We propose an unsupervised method for solution identification. The cornerstone of our technique is the usage of a hitherto unexplored textual feature, <span class="ltx_text ltx_font_italic">lexical correlations between problems and solutions</span>, that is exploited along with language model based characterization of solution posts. We model the lexical correlation and solution post character using regularized translation models and unigram language models respectively. To keep our technique applicable across a large variety of forums with varying availability of non-textual features, we design it to be able to work with <span class="ltx_text ltx_font_italic">minimal availability of non-textual features</span>. In particular, we show that by using post position as the only non-textual feature, we are able to achieve accuracies comparable to supervision-based approaches that use many structural features <cite class="ltx_cite">[<a href="#bib.bib16" title="Semi-supervised answer extraction from discussion forums" class="ltx_ref">2</a>]</cite>.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related Work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">In this section, we provide a brief overview of previous work related to our problem. Though most of the answer/solution identification approaches proposed so far in literature are supervised methods that require a labeled training corpus, there are a few that require limited or no supervision. Table <a href="#S2.T1" title="Table 1 ‣ 2 Related Work ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> provides an overview of some of the more recent solution identification techniques from literature, with a focus on some features that we wish to highlight. The common observation that most problem-solving discussion threads have a problem description in the first post has been explicitly factored into many techniques; knowing the problem/question is important for solution identification since author relations between problem and other posts provide valuable cues for solution identification. Most techniques use a variety of such features as noted in Section <a href="#S1" title="1 Introduction ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>. SVMs have been the most popular method for supervised and semi-supervised learning for the task of solution identification.</p>
+</div>
+<div id="S2.T1" class="ltx_table">
+<table class="ltx_tabular ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_tt">Paper Reference</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">Supervision</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">Assumptions on</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">Features other than</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">Learning</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">Problem Position</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r">Post Content Used</td>
+<td class="ltx_td ltx_align_center ltx_border_r">Technique</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_tt"><cite class="ltx_cite">[<a href="#bib.bib1" title="Finding problem solving threads in online forum." class="ltx_ref">15</a>]</cite></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">Supervised</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">First Post likely</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">HMM assumes</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt">Naive Bayes</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">to be problem</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">solution follows problem</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r">&amp; HMM</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><cite class="ltx_cite">[<a href="#bib.bib2" title="Using conditional random fields to extract contexts and answers of questions from online forums" class="ltx_ref">7</a>]</cite></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Supervised</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">First Post</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Post Position, Author,</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">CRFs</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">Context Posts</span></td>
+<td class="ltx_td ltx_border_r"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><cite class="ltx_cite">[<a href="#bib.bib5" title="Tagging and linking web forum posts" class="ltx_ref">10</a>]</cite></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Supervised</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">None</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Post Position, Author,</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">MaxEnt,</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">Previous Posts, Profile etc.</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r">SVM, CRF</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><cite class="ltx_cite"><span class="ltx_text ltx_font_small">[</span><a href="#bib.bib11" title="A classification-based approach to question answering in discussion boards" class="ltx_ref">9</a><span class="ltx_text ltx_font_small">]</span></cite></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Supervised</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">First Post</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Post Position, Author,</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">SVM</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">Author Authority</span></td>
+<td class="ltx_td ltx_border_r"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><cite class="ltx_cite"><span class="ltx_text ltx_font_small">[</span><a href="#bib.bib12" title="Does similarity matter? the case of answer extraction from technical discussion forums." class="ltx_ref">3</a><span class="ltx_text ltx_font_small">]</span></cite></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Supervised</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">First Post</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Post Position, Author, Problem</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">SVM</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">Author’s activities wrt Post</span></td>
+<td class="ltx_td ltx_border_r"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><cite class="ltx_cite"><span class="ltx_text ltx_font_small">[</span><a href="#bib.bib16" title="Semi-supervised answer extraction from discussion forums" class="ltx_ref">2</a><span class="ltx_text ltx_font_small">]</span></cite></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Limited</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">First Post</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Post Position/Rating, Author,</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">SVMs &amp;</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_r">Supervision</td>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">Author Rating, Post Ack</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r">Co-Training</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t"><cite class="ltx_cite">[<a href="#bib.bib13" title="Finding question-answer pairs from online forums" class="ltx_ref">4</a>]</cite></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Unsupervised</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">None</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Author, Author Authority,</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Graph</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">Relation to Problem Author</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r">Propagation</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">Our Method</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Unsupervised</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">First Post</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Post Position</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Translation</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_b ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_border_b ltx_border_r"/>
+<td class="ltx_td ltx_border_b ltx_border_r"/>
+<td class="ltx_td ltx_border_b ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">Models &amp; LM</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span>Summary of Some Solution Identification Techniquess</div>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">Of particular interest to us are approaches that use limited or no supervision, since we focus on unsupervised solution identification in this paper. The <span class="ltx_text ltx_font_bold">only</span> unsupervised approach for the task, that from <cite class="ltx_cite">[<a href="#bib.bib13" title="Finding question-answer pairs from online forums" class="ltx_ref">4</a>]</cite>, uses a graph propagation method on a graph modeled using posts as vertices, and relies on the assumptions that posts that bear high similarity to the problem and other posts and those authored by authoritative users are more likely to be solution posts. Some of those assumptions, as mentioned in Section <a href="#S1" title="1 Introduction ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>, were later found to be not generalizable to beyond travel forums. The semi-supervised approach presented in <cite class="ltx_cite">[<a href="#bib.bib16" title="Semi-supervised answer extraction from discussion forums" class="ltx_ref">2</a>]</cite> uses a few labeled threads to bootstrap SVM based learners which are then co-trained in an iterative fashion. In addition to various features explored in literature, they use acknowledgement modeling so that posts that have been acknowledged positively may be favored for being labeled as solutions.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">We will use translation and language models in our method for solution identification. Usage of translation models for modeling the correlation between textual problems and solutions have been explored earlier starting from the answer retrieval work in <cite class="ltx_cite">[<a href="#bib.bib18" title="Retrieval models for question and answer archives" class="ltx_ref">18</a>]</cite> where new queries were conceptually expanded using the translation model to improve retrieval. Translation models were also seen to be useful in segmenting incident reports into the problem and solution parts <cite class="ltx_cite">[<a href="#bib.bib17" title="Two-part segmentation of text documents" class="ltx_ref">5</a>]</cite>; we will use an adaptation of the generative model presented therein, for our solution extraction formulation. Entity-level translation models were recently shown to be useful in modeling correlations in QA archives <cite class="ltx_cite">[<a href="#bib.bib15" title="Entity based q&amp;a retrieval" class="ltx_ref">17</a>]</cite>.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Problem Definition</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">Let a thread <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m1" class="ltx_Math" alttext="\mathcal{T}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒯</mi></math> from a discussion forum be made up of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m2" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math> posts. Since we assume, much like many other earlier papers, that the first post is the problem post, the task is to identify which among the remaining <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m3" class="ltx_Math" alttext="t-1" display="inline"><mrow><mi>t</mi><mo>-</mo><mn>1</mn></mrow></math> posts are solutions. There could be multiple (most likely, different) solutions within the same thread. We may now model the thread <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m4" class="ltx_Math" alttext="\mathcal{T}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒯</mi></math> as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m5" class="ltx_Math" alttext="t-1" display="inline"><mrow><mi>t</mi><mo>-</mo><mn>1</mn></mrow></math> post pairs, each pair having the problem post as the first element, and one of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m6" class="ltx_Math" alttext="t-1" display="inline"><mrow><mi>t</mi><mo>-</mo><mn>1</mn></mrow></math> remaining posts (i.e., reply posts in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m7" class="ltx_Math" alttext="\mathcal{T}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒯</mi></math>) as the second element. Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m8" class="ltx_Math" alttext="\mathcal{C}=\{(p_{1},r_{1}),(p_{2},r_{2}),\ldots,(p_{n},r_{n})\}" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒞</mi><mo>=</mo><mrow><mo>{</mo><mrow><mrow><mo>(</mo><mrow><msub><mi>p</mi><mn>1</mn></msub><mo>,</mo><msub><mi>r</mi><mn>1</mn></msub></mrow><mo>)</mo></mrow><mo>,</mo><mrow><mo>(</mo><mrow><msub><mi>p</mi><mn>2</mn></msub><mo>,</mo><msub><mi>r</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mrow><mo>(</mo><mrow><msub><mi>p</mi><mi>n</mi></msub><mo>,</mo><msub><mi>r</mi><mi>n</mi></msub></mrow><mo>)</mo></mrow></mrow><mo>}</mo></mrow></mrow></math> be the set of such problem-reply pairs from across threads in the discussion forum. We are interested in finding a subset <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m9" class="ltx_Math" alttext="\mathcal{C}^{\prime}" display="inline"><msup><mi class="ltx_font_mathcaligraphic">𝒞</mi><mo>′</mo></msup></math> of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m10" class="ltx_Math" alttext="\mathcal{C}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒞</mi></math> such that most of the pairs in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m11" class="ltx_Math" alttext="\mathcal{C}^{\prime}" display="inline"><msup><mi class="ltx_font_mathcaligraphic">𝒞</mi><mo>′</mo></msup></math> are problem-solution pairs, and most of those in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m12" class="ltx_Math" alttext="\mathcal{C}-\mathcal{C}^{\prime}" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒞</mi><mo>-</mo><msup><mi class="ltx_font_mathcaligraphic">𝒞</mi><mo>′</mo></msup></mrow></math> are not so. In short, we would like to find problem-solution pairs from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m13" class="ltx_Math" alttext="\mathcal{C}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒞</mi></math> such that the F-measure<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">8</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">8</sup>http://en.wikipedia.org/wiki/F1_score</span></span></span> for solution identification is maximized.</p>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Our Approach</h2>
+
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>The Correlation Assumption</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">Central to our approach is the assumption of lexical correlation between the problem and solution texts. At the word level, this translates to assuming that there exist word pairs such that the presence of the first word in the problem part predicts the presence/absence of the second word in the solution part well. Though not yet harnessed for solution identification, the correlation assumption is not at all novel. Infact, the assumption that similar problems have similar solutions (of which the correlation assumption is an offshoot) forms the foundation of case-based reasoning systems <cite class="ltx_cite">[<a href="#bib.bib6" title="An introduction to case-based reasoning" class="ltx_ref">11</a>]</cite>, a kind of knowledge reuse systems that could be the natural consumers of problem-solution pairs mined from forums. The usage of translation models in QA retrieval <cite class="ltx_cite">[<a href="#bib.bib18" title="Retrieval models for question and answer archives" class="ltx_ref">18</a>, <a href="#bib.bib15" title="Entity based q&amp;a retrieval" class="ltx_ref">17</a>]</cite> and segmentation <cite class="ltx_cite">[<a href="#bib.bib17" title="Two-part segmentation of text documents" class="ltx_ref">5</a>]</cite> were also motivated by the correlation assumption. We use an IBM Model 1 translation model <cite class="ltx_cite">[<a href="#bib.bib10" title="A statistical approach to machine translation" class="ltx_ref">1</a>]</cite> in our technique; simplistically, such a model <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m1" class="ltx_Math" alttext="m" display="inline"><mi>m</mi></math> may be thought of as a 2-d associative array where the value <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m2" class="ltx_Math" alttext="m[w_{1}][w_{2}]" display="inline"><mrow><mi>m</mi><mo>⁢</mo><mrow><mo>[</mo><msub><mi>w</mi><mn>1</mn></msub><mo>]</mo></mrow><mo>⁢</mo><mrow><mo>[</mo><msub><mi>w</mi><mn>2</mn></msub><mo>]</mo></mrow></mrow></math> is directly related to the probability of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m3" class="ltx_Math" alttext="w_{1}" display="inline"><msub><mi>w</mi><mn>1</mn></msub></math> occuring in the problem when <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m4" class="ltx_Math" alttext="w_{2}" display="inline"><msub><mi>w</mi><mn>2</mn></msub></math> occurs in the solution.</p>
+</div>
+<div id="S4.T2" class="ltx_table">
+<table class="ltx_tabular ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r ltx_border_tt"/>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_bold">In K-Means</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_bold">In Our Approach</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">Data</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Multi-dimensional Points</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m1" class="ltx_Math" alttext="(p,r)" display="inline"><mrow><mo>(</mo><mrow><mi>p</mi><mo>,</mo><mi>r</mi></mrow><mo>)</mo></mrow></math> pairs</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">Cluster Model</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Respective Centroid Vector</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Respective <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m2" class="ltx_Math" alttext="\mathcal{S}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒮</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m3" class="ltx_Math" alttext="\mathcal{T}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒯</mi></math> Models for each cluster</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">Initialization</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Random Choice of Centroids</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Models learnt using <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m4" class="ltx_Math" alttext="(p,r)" display="inline"><mrow><mo>(</mo><mrow><mi>p</mi><mo>,</mo><mi>r</mi></mrow><mo>)</mo></mrow></math> pairs labeled</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_r">using the Post Position of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m5" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">E-Step</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m6" class="ltx_Math" alttext="label(d)=" display="inline"><mrow><mrow><mi>l</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mrow><mo>(</mo><mi>d</mi><mo>)</mo></mrow></mrow><mo>=</mo><mi/></mrow></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m7" class="ltx_Math" alttext="label((p,r))=\mathop{\arg\max}_{i}F((p,r),\mathcal{S}_{i},\mathcal{T}_{i})" display="inline"><mrow><mrow><mi>l</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mo>(</mo><mrow><mi>p</mi><mo>,</mo><mi>r</mi></mrow><mo>)</mo></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><msub><mrow><mi>arg</mi><mo>⁢</mo><mo>max</mo></mrow><mi>i</mi></msub><mrow><mi>F</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mo>(</mo><mrow><mi>p</mi><mo>,</mo><mi>r</mi></mrow><mo>)</mo></mrow><mo>,</mo><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><mi>i</mi></msub><mo>,</mo><msub><mi class="ltx_font_mathcaligraphic">𝒯</mi><mi>i</mi></msub></mrow><mo>)</mo></mrow></mrow></mrow></mrow></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_r">    <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m8" class="ltx_Math" alttext="\mathop{\arg\min}_{i}dist(d,centroid_{i})" display="inline"><mrow><msub><mrow><mi>arg</mi><mo>⁢</mo><mo>min</mo></mrow><mi>i</mi></msub><mrow><mi>d</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>d</mi><mo>,</mo><mrow><mi>c</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><msub><mi>d</mi><mi>i</mi></msub></mrow></mrow><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r">(Sec <a href="#S4.SS3.SSS1" title="4.3.1 E-Step: Estimating Labels ‣ 4.3 Clustering-based Approach ‣ 4 Our Approach ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3.1</span></a>), and learn solution word</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_r">source probabilities (Sec <a href="#S4.SS3.SSS2" title="4.3.2 E-Step: Estimating Reply Word Source ‣ 4.3 Clustering-based Approach ‣ 4 Our Approach ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3.2</span></a>)</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t">M-Step</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m9" class="ltx_Math" alttext="centroid_{i}=avg\{d|label(d)=i\}" display="inline"><mrow><mrow><mi>c</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><msub><mi>d</mi><mi>i</mi></msub></mrow><mo>=</mo><mrow><mi>a</mi><mo>⁢</mo><mi>v</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mrow><mo>{</mo><mrow><mi>d</mi><mo separator="true">|</mo><mrow><mrow><mi>l</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mrow><mo>(</mo><mi>d</mi><mo>)</mo></mrow></mrow><mo>=</mo><mi>i</mi></mrow></mrow><mo>}</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Re-learn <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m10" class="ltx_Math" alttext="\mathcal{S}_{S}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><mi>S</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m11" class="ltx_Math" alttext="\mathcal{T}_{S}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒯</mi><mi>S</mi></msub></math> using pairs labeled <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m12" class="ltx_Math" alttext="S" display="inline"><mi>S</mi></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_border_l ltx_border_r"/>
+<td class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m13" class="ltx_Math" alttext="\mathcal{S}_{N}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><mi>N</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m14" class="ltx_Math" alttext="\mathcal{T}_{N}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒯</mi><mi>N</mi></msub></math> using pairs labeled <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m15" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math> (Sec <a href="#S4.SS3.SSS3" title="4.3.3 M-Step: Learning Models ‣ 4.3 Clustering-based Approach ‣ 4 Our Approach ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3.3</span></a>)</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_r ltx_border_t">Output</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">The clustering of points</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m16" class="ltx_Math" alttext="(p,r)" display="inline"><mrow><mo>(</mo><mrow><mi>p</mi><mo>,</mo><mi>r</mi></mrow><mo>)</mo></mrow></math> pairs labeled as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m17" class="ltx_Math" alttext="S" display="inline"><mi>S</mi></math></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 2: </span>Illustrating Our Approach wrt K-Means Clustering</div>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Generative model for Solution Posts</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">Consider a unigram language model <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m1" class="ltx_Math" alttext="\mathcal{S}_{S}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><mi>S</mi></msub></math> that models the lexical characteristics of solution posts, and a translation model <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m2" class="ltx_Math" alttext="\mathcal{T}_{S}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒯</mi><mi>S</mi></msub></math> that models the lexical correlation between problems and solutions. Our generative model models the reply part of a <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m3" class="ltx_Math" alttext="(p,r)" display="inline"><mrow><mo>(</mo><mrow><mi>p</mi><mo>,</mo><mi>r</mi></mrow><mo>)</mo></mrow></math> pair (in which <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m4" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math> is a solution) as being generated from the statistical models in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m5" class="ltx_Math" alttext="\{\mathcal{S}_{S},\mathcal{T}_{S}\}" display="inline"><mrow><mo>{</mo><mrow><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><mi>S</mi></msub><mo>,</mo><msub><mi class="ltx_font_mathcaligraphic">𝒯</mi><mi>S</mi></msub></mrow><mo>}</mo></mrow></math> as follows.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<ul id="I1" class="ltx_itemize">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p">For each word <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i1.p1.m1" class="ltx_Math" alttext="w_{s}" display="inline"><msub><mi>w</mi><mi>s</mi></msub></math> occuring in <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i1.p1.m2" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math>,</p>
+<ol id="I1.I1" class="ltx_enumerate">
+<li id="I1.I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">(a)</span> 
+<div id="I1.I1.i1.p1" class="ltx_para">
+<p class="ltx_p">Choose <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.I1.i1.p1.m1" class="ltx_Math" alttext="z\ \sim\ U(0,1)" display="inline"><mrow><mpadded width="+5.0pt"><mi>z</mi></mpadded><mo rspace="7.5pt">∼</mo><mrow><mi>U</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mn>0</mn><mo>,</mo><mn>1</mn></mrow><mo>)</mo></mrow></mrow></mrow></math></p>
+</div></li>
+<li id="I1.I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">(b)</span> 
+<div id="I1.I1.i2.p1" class="ltx_para">
+<p class="ltx_p">If <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.I1.i2.p1.m1" class="ltx_Math" alttext="z\leq\lambda" display="inline"><mrow><mi>z</mi><mo>≤</mo><mi>λ</mi></mrow></math>, Choose <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.I1.i2.p1.m2" class="ltx_Math" alttext="w\ \sim\ Mult(\mathcal{S}_{S})" display="inline"><mrow><mpadded width="+5.0pt"><mi>w</mi></mpadded><mo rspace="7.5pt">∼</mo><mrow><mi>M</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><mi>S</mi></msub><mo>)</mo></mrow></mrow></mrow></math></p>
+</div></li>
+<li id="I1.I1.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">(c)</span> 
+<div id="I1.I1.i3.p1" class="ltx_para">
+<p class="ltx_p">Else, Choose <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.I1.i3.p1.m1" class="ltx_Math" alttext="w\ \sim\ Mult(\mathcal{T}_{S}^{p})" display="inline"><mrow><mpadded width="+5.0pt"><mi>w</mi></mpadded><mo rspace="7.5pt">∼</mo><mrow><mi>M</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mrow><mo>(</mo><msubsup><mi class="ltx_font_mathcaligraphic">𝒯</mi><mi>S</mi><mi>p</mi></msubsup><mo>)</mo></mrow></mrow></mrow></math></p>
+</div></li>
+</ol>
+</div></li>
+</ul>
+</div>
+<div id="S4.SS2.p3" class="ltx_para">
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m1" class="ltx_Math" alttext="\mathcal{T}_{S}^{p}" display="inline"><msubsup><mi class="ltx_font_mathcaligraphic">𝒯</mi><mi>S</mi><mi>p</mi></msubsup></math> denotes the multionomial distribution obtained from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m2" class="ltx_Math" alttext="\mathcal{T}_{S}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒯</mi><mi>S</mi></msub></math> conditioned over the words in the post <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m3" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math>; this is obtained by assigning each candidate solution word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m4" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> a weight equal to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m5" class="ltx_Math" alttext="avg\{\mathcal{T}_{S}[w^{\prime}][w]|w^{\prime}\in p\}" display="inline"><mrow><mi>a</mi><mo>⁢</mo><mi>v</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mrow><mo>{</mo><mrow><mrow><msub><mi class="ltx_font_mathcaligraphic">𝒯</mi><mi>S</mi></msub><mo>⁢</mo><mrow><mo>[</mo><msup><mi>w</mi><mo>′</mo></msup><mo>]</mo></mrow><mo>⁢</mo><mrow><mo>[</mo><mi>w</mi><mo>]</mo></mrow></mrow><mo separator="true">|</mo><mrow><msup><mi>w</mi><mo>′</mo></msup><mo>∈</mo><mi>p</mi></mrow></mrow><mo>}</mo></mrow></mrow></math>, and normalizing such weights across all solution words. <span class="ltx_text ltx_font_italic">In short, each solution word is assumed to be generated from the language model or the translation model (conditioned on the problem words) with a probability of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m6" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m7" class="ltx_Math" alttext="1-\lambda" display="inline"><mrow><mn mathvariant="normal">1</mn><mo mathvariant="normal">-</mo><mi>λ</mi></mrow></math> respectively, thus accounting for the correlation assumption</span>. The generative model above is similar to the proposal in <cite class="ltx_cite">[<a href="#bib.bib17" title="Two-part segmentation of text documents" class="ltx_ref">5</a>]</cite>, adapted suitably for our scenario. We model non-solution posts similarly with the sole difference being that they would be sampled from the analogous models <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m8" class="ltx_Math" alttext="\mathcal{S}_{N}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><mi>N</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p3.m9" class="ltx_Math" alttext="\mathcal{T}_{N}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒯</mi><mi>N</mi></msub></math> that characterize behavior of non-solution posts.</p>
+</div>
+<div id="S4.SS2.p4" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Example:</span> Consider the following illustrative example of a problem and solution post:</p>
+</div>
+<div id="S4.SS2.p5" class="ltx_para">
+<ul id="I2" class="ltx_itemize">
+<li id="I2.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">Problem:</span> I am unable to surf the web on the BT public wifi.</p>
+</div></li>
+<li id="I2.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i2.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_italic">Solution:</span> Maybe, you should try disconnecting and rejoining the network.</p>
+</div></li>
+</ul>
+</div>
+<div id="S4.SS2.p6" class="ltx_para">
+<p class="ltx_p">Of the solution words above, generic words such as <span class="ltx_text ltx_font_italic">try</span> and <span class="ltx_text ltx_font_italic">should</span> could probably be explained by (i.e., sampled from) the solution language model, whereas <span class="ltx_text ltx_font_italic">disconnect</span> and <span class="ltx_text ltx_font_italic">rejoin</span> could be correlated well with <span class="ltx_text ltx_font_italic">surf</span> and <span class="ltx_text ltx_font_italic">wifi</span> and hence are more likely to be supported better by the translation model.</p>
+</div>
+</div>
+<div id="S4.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.3 </span>Clustering-based Approach</h3>
+
+<div id="S4.SS3.p1" class="ltx_para">
+<p class="ltx_p">We propose a clustering based approach so as to cluster each of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p1.m1" class="ltx_Math" alttext="(p,r)" display="inline"><mrow><mo>(</mo><mrow><mi>p</mi><mo>,</mo><mi>r</mi></mrow><mo>)</mo></mrow></math> pairs into either the <span class="ltx_text ltx_font_italic">solution</span> cluster or the <span class="ltx_text ltx_font_italic">non-solution</span> cluster. The objective function that we seek to maximize is the following:</p>
+</div>
+<div id="S4.SS3.p2" class="ltx_para">
+<table id="S4.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E1.m1" class="ltx_Math" alttext="\sum_{(p,r)\in\mathcal{C}}\begin{cases}F((p,r),\mathcal{S}_{S},\mathcal{T}_{S}%&#10;)&amp;\text{{\it if label((p,r))=S}}\\&#10;F((p,r),\mathcal{S}_{N},\mathcal{T}_{N})&amp;\text{{\it if label((p,r))=N}}\\&#10;\end{cases}" display="block"><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mrow><mo>(</mo><mrow><mi>p</mi><mo>,</mo><mi>r</mi></mrow><mo>)</mo></mrow><mo>∈</mo><mi class="ltx_font_mathcaligraphic">𝒞</mi></mrow></munder><mrow><mo>{</mo><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mrow><mi>F</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mo>(</mo><mrow><mi>p</mi><mo>,</mo><mi>r</mi></mrow><mo>)</mo></mrow><mo>,</mo><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><mi>S</mi></msub><mo>,</mo><msub><mi class="ltx_font_mathcaligraphic">𝒯</mi><mi>S</mi></msub></mrow><mo>)</mo></mrow></mrow></mtd><mtd columnalign="left"><mtext mathvariant="italic">if label((p,r))=S</mtext></mtd></mtr><mtr><mtd columnalign="left"><mrow><mi>F</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mo>(</mo><mrow><mi>p</mi><mo>,</mo><mi>r</mi></mrow><mo>)</mo></mrow><mo>,</mo><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><mi>N</mi></msub><mo>,</mo><msub><mi class="ltx_font_mathcaligraphic">𝒯</mi><mi>N</mi></msub></mrow><mo>)</mo></mrow></mrow></mtd><mtd columnalign="left"><mtext mathvariant="italic">if label((p,r))=N</mtext></mtd></mtr></mtable></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+</div>
+<div id="S4.SS3.p3" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m1" class="ltx_Math" alttext="F((p,r),\mathcal{S},\mathcal{T})" display="inline"><mrow><mi>F</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mo>(</mo><mrow><mi>p</mi><mo>,</mo><mi>r</mi></mrow><mo>)</mo></mrow><mo>,</mo><mi class="ltx_font_mathcaligraphic">𝒮</mi><mo>,</mo><mi class="ltx_font_mathcaligraphic">𝒯</mi></mrow><mo>)</mo></mrow></mrow></math> indicates the conformance of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m2" class="ltx_Math" alttext="(p,r)" display="inline"><mrow><mo>(</mo><mrow><mi>p</mi><mo>,</mo><mi>r</mi></mrow><mo>)</mo></mrow></math> pair (details in Section <a href="#S4.SS3.SSS1" title="4.3.1 E-Step: Estimating Labels ‣ 4.3 Clustering-based Approach ‣ 4 Our Approach ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3.1</span></a>) with the generative model that uses the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m3" class="ltx_Math" alttext="\mathcal{S}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒮</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m4" class="ltx_Math" alttext="\mathcal{T}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒯</mi></math> models as the language and translation models respectively. The clustering based approach labels each <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m5" class="ltx_Math" alttext="(p,r)" display="inline"><mrow><mo>(</mo><mrow><mi>p</mi><mo>,</mo><mi>r</mi></mrow><mo>)</mo></mrow></math> pair as either solution (i.e., <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m6" class="ltx_Math" alttext="S" display="inline"><mi>S</mi></math>) or non-solution (i.e., <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m7" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math>). Since we do not know the models or the labelings to start with, we use an iterative approach modeled on the EM meta-algorithm <cite class="ltx_cite">[<a href="#bib.bib9" title="Maximum likelihood from incomplete data via the em algorithm" class="ltx_ref">6</a>]</cite> involving iterations, each comprising of an E-step followed by the M-step. For simplicity and brevity, instead of deriving the EM formulation, we illustrate our approach by making an analogy with the popular K-Means clustering <cite class="ltx_cite">[<a href="#bib.bib8" title="Some methods for classification and analysis of multivariate observations" class="ltx_ref">13</a>]</cite> algorithm that also uses the EM formulation and crisp assignments of data points like we do. K-Means is a clustering algorithm that clusters objects represented as multi-dimensional points into <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p3.m8" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> clusters where each cluster is represented by the centroid of all its members. Each iteration in K-Means starts off with assigning each data object to its nearest centroid, followed by re-computing the centroid vector based on the assignments made. The analogy with K-Means is illustrated in Table <a href="#S4.T2" title="Table 2 ‣ 4.1 The Correlation Assumption ‣ 4 Our Approach ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.</p>
+</div>
+<div id="S4.SS3.p4" class="ltx_para">
+<p class="ltx_p">Though the analogy in Table <a href="#S4.T2" title="Table 2 ‣ 4.1 The Correlation Assumption ‣ 4 Our Approach ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> serves to provide a high-level picture of our approach, the details require further exposition. In short, our approach is a 2-way clustering algorithm that uses two pairs of models, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p4.m1" class="ltx_Math" alttext="[\mathcal{S}_{S},\mathcal{T}_{S}]" display="inline"><mrow><mo>[</mo><mrow><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><mi>S</mi></msub><mo>,</mo><msub><mi class="ltx_font_mathcaligraphic">𝒯</mi><mi>S</mi></msub></mrow><mo>]</mo></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p4.m2" class="ltx_Math" alttext="[\mathcal{S}_{N},\mathcal{T}_{N}]" display="inline"><mrow><mo>[</mo><mrow><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><mi>N</mi></msub><mo>,</mo><msub><mi class="ltx_font_mathcaligraphic">𝒯</mi><mi>N</mi></msub></mrow><mo>]</mo></mrow></math>, to model solution pairs and non-solution pairs respectively. At each iteration, the post-pairs are labeled as either solution (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p4.m3" class="ltx_Math" alttext="S" display="inline"><mi>S</mi></math>) or non-solution (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p4.m4" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math>) based on which pair of models they better conform to. Within the same iteration, the four models are then re-learnt using the labels and other side information. At the end of the iterations, the pairs labeled <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p4.m5" class="ltx_Math" alttext="S" display="inline"><mi>S</mi></math> are output as solution pairs. We describe the various details in separate subsections herein.</p>
+</div>
+<div id="S4.SS3.SSS1" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">4.3.1 </span>E-Step: Estimating Labels</h4>
+
+<div id="S4.SS3.SSS1.p1" class="ltx_para">
+<p class="ltx_p">As outlined in Table <a href="#S4.T2" title="Table 2 ‣ 4.1 The Correlation Assumption ‣ 4 Our Approach ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>, each <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS1.p1.m1" class="ltx_Math" alttext="(p,r)" display="inline"><mrow><mo>(</mo><mrow><mi>p</mi><mo>,</mo><mi>r</mi></mrow><mo>)</mo></mrow></math> pair would be assigned to one of the classes, solution or non-solution, based on whether it conforms better with the solution models (i.e., <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS1.p1.m2" class="ltx_Math" alttext="\mathcal{S}_{S}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><mi>S</mi></msub></math> &amp; <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS1.p1.m3" class="ltx_Math" alttext="\mathcal{T}_{S}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒯</mi><mi>S</mi></msub></math>) or non-solution models (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS1.p1.m4" class="ltx_Math" alttext="\mathcal{S}_{N}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><mi>N</mi></msub></math> &amp; <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS1.p1.m5" class="ltx_Math" alttext="\mathcal{T}_{N}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒯</mi><mi>N</mi></msub></math>), as determined using the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS1.p1.m6" class="ltx_Math" alttext="F((p,r),\mathcal{S},\mathcal{T})" display="inline"><mrow><mi>F</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mo>(</mo><mrow><mi>p</mi><mo>,</mo><mi>r</mi></mrow><mo>)</mo></mrow><mo>,</mo><mi class="ltx_font_mathcaligraphic">𝒮</mi><mo>,</mo><mi class="ltx_font_mathcaligraphic">𝒯</mi></mrow><mo>)</mo></mrow></mrow></math> function, i.e.,</p>
+</div>
+<div id="S4.SS3.SSS1.p2" class="ltx_para">
+<table id="S4.Ex1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex1.m1" class="ltx_Math" alttext="label((p,r))=\mathop{\arg\max}_{i\in\{S,N\}}F((p,r),\mathcal{S}_{i},\mathcal{T%&#10;}_{i})" display="block"><mrow><mrow><mi>l</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mo>(</mo><mrow><mi>p</mi><mo>,</mo><mi>r</mi></mrow><mo>)</mo></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><msub><mrow><mi>arg</mi><mo>⁢</mo><mo movablelimits="false">max</mo></mrow><mrow><mi>i</mi><mo>∈</mo><mrow><mo>{</mo><mrow><mi>S</mi><mo>,</mo><mi>N</mi></mrow><mo>}</mo></mrow></mrow></msub><mrow><mi>F</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mo>(</mo><mrow><mi>p</mi><mo>,</mo><mi>r</mi></mrow><mo>)</mo></mrow><mo>,</mo><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><mi>i</mi></msub><mo>,</mo><msub><mi class="ltx_font_mathcaligraphic">𝒯</mi><mi>i</mi></msub></mrow><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S4.SS3.SSS1.p3" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS1.p3.m1" class="ltx_Math" alttext="F(.)" display="inline"><mrow><mi>F</mi><mrow><mo>(</mo><mo>.</mo><mo>)</mo></mrow></mrow></math> falls out of the generative model:</p>
+</div>
+<div id="S4.SS3.SSS1.p4" class="ltx_para">
+<table id="S4.Ex2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex2.m1" class="ltx_Math" alttext="F((p,r),\mathcal{S},\mathcal{T})=\prod_{w\in r}\lambda\times\mathcal{S}[w]+(1-%&#10;\lambda)\times\mathcal{T}^{p}[w]" display="block"><mrow><mrow><mi>F</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mo>(</mo><mrow><mi>p</mi><mo>,</mo><mi>r</mi></mrow><mo>)</mo></mrow><mo>,</mo><mi class="ltx_font_mathcaligraphic">𝒮</mi><mo>,</mo><mi class="ltx_font_mathcaligraphic">𝒯</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∏</mo><mrow><mi>w</mi><mo>∈</mo><mi>r</mi></mrow></munder><mrow><mrow><mi>λ</mi><mo>×</mo><mi class="ltx_font_mathcaligraphic">𝒮</mi></mrow><mo>⁢</mo><mrow><mo>[</mo><mi>w</mi><mo>]</mo></mrow></mrow></mrow><mo>+</mo><mrow><mrow><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><mi>λ</mi></mrow><mo>)</mo></mrow><mo>×</mo><msup><mi class="ltx_font_mathcaligraphic">𝒯</mi><mi>p</mi></msup></mrow><mo>⁢</mo><mrow><mo>[</mo><mi>w</mi><mo>]</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S4.SS3.SSS1.p5" class="ltx_para">
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS1.p5.m1" class="ltx_Math" alttext="\mathcal{S}[w]" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒮</mi><mo>⁢</mo><mrow><mo>[</mo><mi>w</mi><mo>]</mo></mrow></mrow></math> denotes the probability of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS1.p5.m2" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS1.p5.m3" class="ltx_Math" alttext="\mathcal{S}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒮</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS1.p5.m4" class="ltx_Math" alttext="\mathcal{T}^{p}[w]" display="inline"><mrow><msup><mi class="ltx_font_mathcaligraphic">𝒯</mi><mi>p</mi></msup><mo>⁢</mo><mrow><mo>[</mo><mi>w</mi><mo>]</mo></mrow></mrow></math> denotes the probability of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS1.p5.m5" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> from the multinomial distribution derived from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS1.p5.m6" class="ltx_Math" alttext="\mathcal{T}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒯</mi></math> conditioned over the words in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS1.p5.m7" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math>, as in Section <a href="#S4.SS2" title="4.2 Generative model for Solution Posts ‣ 4 Our Approach ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.</p>
+</div>
+</div>
+<div id="S4.SS3.SSS2" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">4.3.2 </span>E-Step: Estimating Reply Word Source</h4>
+
+<div id="S4.SS3.SSS2.p1" class="ltx_para">
+<p class="ltx_p">Since the language and translation models operate at the word level, the objective function entails that we let the models learn based on their fractional contribution of the words from the language and translation models. Thus, we estimate the proportional contribution of each word from the language and translation models too, in the E-step. The fractional contributions of the word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS2.p1.m1" class="ltx_Math" alttext="w\in r" display="inline"><mrow><mi>w</mi><mo>∈</mo><mi>r</mi></mrow></math> in the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS2.p1.m2" class="ltx_Math" alttext="(p,r)" display="inline"><mrow><mo>(</mo><mrow><mi>p</mi><mo>,</mo><mi>r</mi></mrow><mo>)</mo></mrow></math> pair labeled as solution (i.e., <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS2.p1.m3" class="ltx_Math" alttext="S" display="inline"><mi>S</mi></math>) is as follows:</p>
+</div>
+<div id="S4.SS3.SSS2.p2" class="ltx_para">
+<table id="S4.Ex3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex3.m1" class="ltx_Math" alttext="f_{\mathcal{S}_{S}}^{(p,r)}(w)=\frac{\mathcal{S}_{S}[w]}{\mathcal{S}_{S}[w]+%&#10;\mathcal{T}_{S}^{p}[w]}" display="block"><mrow><mrow><msubsup><mi>f</mi><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><mi>S</mi></msub><mrow><mo>(</mo><mrow><mi>p</mi><mo>,</mo><mi>r</mi></mrow><mo>)</mo></mrow></msubsup><mo>⁢</mo><mrow><mo>(</mo><mi>w</mi><mo>)</mo></mrow></mrow><mo>=</mo><mfrac><mrow><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><mi>S</mi></msub><mo>⁢</mo><mrow><mo>[</mo><mi>w</mi><mo>]</mo></mrow></mrow><mrow><mrow><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><mi>S</mi></msub><mo>⁢</mo><mrow><mo>[</mo><mi>w</mi><mo>]</mo></mrow></mrow><mo>+</mo><mrow><msubsup><mi class="ltx_font_mathcaligraphic">𝒯</mi><mi>S</mi><mi>p</mi></msubsup><mo>⁢</mo><mrow><mo>[</mo><mi>w</mi><mo>]</mo></mrow></mrow></mrow></mfrac></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<table id="S4.Ex4" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex4.m1" class="ltx_Math" alttext="f_{\mathcal{T}_{S}}^{(p,r)}(w)=\frac{\mathcal{T}_{S}^{p}[w]}{\mathcal{S}_{S}[w%&#10;]+\mathcal{T}_{S}^{p}[w]}" display="block"><mrow><mrow><msubsup><mi>f</mi><msub><mi class="ltx_font_mathcaligraphic">𝒯</mi><mi>S</mi></msub><mrow><mo>(</mo><mrow><mi>p</mi><mo>,</mo><mi>r</mi></mrow><mo>)</mo></mrow></msubsup><mo>⁢</mo><mrow><mo>(</mo><mi>w</mi><mo>)</mo></mrow></mrow><mo>=</mo><mfrac><mrow><msubsup><mi class="ltx_font_mathcaligraphic">𝒯</mi><mi>S</mi><mi>p</mi></msubsup><mo>⁢</mo><mrow><mo>[</mo><mi>w</mi><mo>]</mo></mrow></mrow><mrow><mrow><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><mi>S</mi></msub><mo>⁢</mo><mrow><mo>[</mo><mi>w</mi><mo>]</mo></mrow></mrow><mo>+</mo><mrow><msubsup><mi class="ltx_font_mathcaligraphic">𝒯</mi><mi>S</mi><mi>p</mi></msubsup><mo>⁢</mo><mrow><mo>[</mo><mi>w</mi><mo>]</mo></mrow></mrow></mrow></mfrac></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S4.SS3.SSS2.p3" class="ltx_para">
+<p class="ltx_p">The fractional contributions are just the actual supports for the word <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS2.p3.m1" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math>, normalized by the total contribution for the word from across the two models. Similar estimates, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS2.p3.m2" class="ltx_Math" alttext="f_{\mathcal{S}_{N}}^{(p,r)}(.)" display="inline"><mrow><msubsup><mi>f</mi><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><mi>N</mi></msub><mrow><mo>(</mo><mrow><mi>p</mi><mo>,</mo><mi>r</mi></mrow><mo>)</mo></mrow></msubsup><mrow><mo>(</mo><mo>.</mo><mo>)</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS2.p3.m3" class="ltx_Math" alttext="f_{\mathcal{S}_{N}}^{(p,r)}(.)" display="inline"><mrow><msubsup><mi>f</mi><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><mi>N</mi></msub><mrow><mo>(</mo><mrow><mi>p</mi><mo>,</mo><mi>r</mi></mrow><mo>)</mo></mrow></msubsup><mrow><mo>(</mo><mo>.</mo><mo>)</mo></mrow></mrow></math> are made for reply words from pairs labeled <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS2.p3.m4" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math>. In our example from Section <a href="#S4.SS2" title="4.2 Generative model for Solution Posts ‣ 4 Our Approach ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>, words such as <span class="ltx_text ltx_font_italic">rejoin</span> are likely to get higher <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS2.p3.m5" class="ltx_Math" alttext="f_{\mathcal{T}_{S}}^{(p,r)}(.)" display="inline"><mrow><msubsup><mi>f</mi><msub><mi class="ltx_font_mathcaligraphic">𝒯</mi><mi>S</mi></msub><mrow><mo>(</mo><mrow><mi>p</mi><mo>,</mo><mi>r</mi></mrow><mo>)</mo></mrow></msubsup><mrow><mo>(</mo><mo>.</mo><mo>)</mo></mrow></mrow></math> scores due to being better correlated with problem words and consequently better supported by the translation model; those such as <span class="ltx_text ltx_font_italic">try</span> may get higher <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS2.p3.m6" class="ltx_Math" alttext="f_{\mathcal{S}_{S}}^{(p,r)}(.)" display="inline"><mrow><msubsup><mi>f</mi><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><mi>S</mi></msub><mrow><mo>(</mo><mrow><mi>p</mi><mo>,</mo><mi>r</mi></mrow><mo>)</mo></mrow></msubsup><mrow><mo>(</mo><mo>.</mo><mo>)</mo></mrow></mrow></math> scores.</p>
+</div>
+</div>
+<div id="S4.SS3.SSS3" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">4.3.3 </span>M-Step: Learning Models</h4>
+
+<div id="S4.SS3.SSS3.p1" class="ltx_para">
+<p class="ltx_p">We use the labels and reply-word source estimates from the E-step to re-learn the language and translation models in this step. As may be obvious from the ensuing discussion, those pairs labeled as solution pairs are used to learn the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p1.m1" class="ltx_Math" alttext="\mathcal{S}_{S}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><mi>S</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p1.m2" class="ltx_Math" alttext="\mathcal{T}_{S}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒯</mi><mi>S</mi></msub></math> models and those labeled as non-solution pairs are used to learn the models with subscript <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p1.m3" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math>. We let each reply word contribute as much to the respective language and translation models according to the estimates in Section <a href="#S4.SS3.SSS2" title="4.3.2 E-Step: Estimating Reply Word Source ‣ 4.3 Clustering-based Approach ‣ 4 Our Approach ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3.2</span></a>. In our example, if the word <span class="ltx_text ltx_font_italic">disconnect</span> is assigned a source probability of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p1.m4" class="ltx_Math" alttext="0.9" display="inline"><mn>0.9</mn></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p1.m5" class="ltx_Math" alttext="0.1" display="inline"><mn>0.1</mn></math> for the translation and language models respectively, the virtual document-pair from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p1.m6" class="ltx_Math" alttext="(p,r)" display="inline"><mrow><mo>(</mo><mrow><mi>p</mi><mo>,</mo><mi>r</mi></mrow><mo>)</mo></mrow></math> that goes into the training of the respective <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p1.m7" class="ltx_Math" alttext="\mathcal{T}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒯</mi></math> model would assume that <span class="ltx_text ltx_font_italic">disconnect</span> occurs in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p1.m8" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math> with a frequency of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p1.m9" class="ltx_Math" alttext="0.9" display="inline"><mn>0.9</mn></math>; similarly, the respective <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p1.m10" class="ltx_Math" alttext="\mathcal{S}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒮</mi></math> would account for <span class="ltx_text ltx_font_italic">disconnect</span> with a frequency of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p1.m11" class="ltx_Math" alttext="0.1" display="inline"><mn>0.1</mn></math>. Though fractional word frequencies are not possible in real documents, statistical models can accomodate such fractional frequencies in a straightforward manner. The language models are learnt only over the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p1.m12" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math> parts of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p1.m13" class="ltx_Math" alttext="(p,r)" display="inline"><mrow><mo>(</mo><mrow><mi>p</mi><mo>,</mo><mi>r</mi></mrow><mo>)</mo></mrow></math> pairs since they are meant to characterize reply behavior; on the other hand, translation models learn over both <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p1.m14" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p1.m15" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math> parts to model correlation.</p>
+</div>
+<div id="S4.SS3.SSS3.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Regularizing the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p2.m1" class="ltx_Math" alttext="\mathcal{T}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒯</mi></math> models:</span> In our formulation, the language and translation models may be seen as competing for ”ownership” of reply words. Consider the post and reply vocabularies to be of sizes <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p2.m2" class="ltx_Math" alttext="A" display="inline"><mi>A</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p2.m3" class="ltx_Math" alttext="B" display="inline"><mi>B</mi></math> respectively; then, the translation model would have <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p2.m4" class="ltx_Math" alttext="A\times B" display="inline"><mrow><mi>A</mi><mo>×</mo><mi>B</mi></mrow></math> variables, whereas the unigram language model has only <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p2.m5" class="ltx_Math" alttext="B" display="inline"><mi>B</mi></math> variables. This gives the translation model an implicit edge due to having more parameters to tune to the data, putting the language models at a disadvantage. To level off the playing field, we use a regularization<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">9</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">9</sup>We use the word <span class="ltx_text ltx_font_italic">regularization</span> in a generic sense to mean adapting models to avoid overfitting; in particular, it may be noted that we are not using popular regularization methods such as L1-regularization.</span></span></span> operation in the learning of the translation models. The IBM Model 1 learning process uses an internal EM approach where the E-step estimates the alignment vector for each problem word; this vector indicates the distribution of alignments of the problem word across the solution words. In our example, an example alignment vector for <span class="ltx_text ltx_font_italic">wifi</span> could be: <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p2.m6" class="ltx_Math" alttext="\{rejoin:0.4,network:0.4,disconnect:0.1,\ldots\}" display="inline"><mrow><mo>{</mo><mrow><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>j</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi></mrow><mo separator="true">:</mo><mrow><mrow><mn>0.4</mn><mo>,</mo><mrow><mi>n</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>w</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>k</mi></mrow></mrow><mo>:</mo><mrow><mn>0.4</mn><mo>,</mo><mrow><mi>d</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mi>t</mi></mrow></mrow><mo>:</mo><mrow><mn>0.1</mn><mo>,</mo><mi mathvariant="normal">…</mi></mrow></mrow></mrow><mo>}</mo></mrow></math>. Our regularization method uses a parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p2.m7" class="ltx_Math" alttext="\tau" display="inline"><mi>τ</mi></math> to discard the long tail in the alignment vector by resetting entries having a value <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p2.m8" class="ltx_Math" alttext="\leq\tau" display="inline"><mrow><mi/><mo>≤</mo><mi>τ</mi></mrow></math> to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p2.m9" class="ltx_Math" alttext="0.0" display="inline"><mn>0.0</mn></math> followed by re-normalizing the alignment vector to add up to 1.0. Such pruning is performed at each iteration in the learning of the translation model, so that the following M-steps learn the probability matrix according to such modified alignment vectors.</p>
+</div>
+<div id="S4.SS3.SSS3.p3" class="ltx_para">
+<p class="ltx_p">The semantics of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p3.m1" class="ltx_Math" alttext="\tau" display="inline"><mi>τ</mi></math> parameter may be intuitively outlined. If we would like to allow alignment vectors to allow a problem word to align with upto two reply words, we would need to set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p3.m2" class="ltx_Math" alttext="\tau" display="inline"><mi>τ</mi></math> to a value close to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p3.m3" class="ltx_Math" alttext="0.5(=\frac{1}{2})" display="inline"><mrow><mn>0.5</mn><mspace width="veryverythickmathspace"/><mrow><mo>(</mo><mrow><mi/><mo>=</mo><mfrac><mn>1</mn><mn>2</mn></mfrac></mrow><mo>)</mo></mrow></mrow></math>; ideally though, to allow for the mass consumed by an almost inevitable long tail of very low values in the alignment vector, we would need to set it to slightly lower than <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p3.m4" class="ltx_Math" alttext="0.5" display="inline"><mn>0.5</mn></math>, say <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p3.m5" class="ltx_Math" alttext="0.4" display="inline"><mn>0.4</mn></math>.</p>
+</div><span class="ltx_ERROR undefined">{algorithm}</span>
+<div id="S4.SS3.SSS3.p4" class="ltx_para">
+<p class="ltx_p">[t]
+<span class="ltx_text ltx_caption ltx_font_italic">Clustering-based Solution Identification</span><span class="ltx_text ltx_font_bold">
+Input. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p4.m1" class="ltx_Math" alttext="\mathcal{C}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒞</mi></math>, a set of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p4.m2" class="ltx_Math" alttext="(p,r)" display="inline"><mrow><mo mathvariant="bold">(</mo><mrow><mi>p</mi><mo mathvariant="bold">,</mo><mi>r</mi></mrow><mo mathvariant="bold">)</mo></mrow></math> pairs 
+<br class="ltx_break"/>Output. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p4.m3" class="ltx_Math" alttext="\mathcal{C}^{\prime}" display="inline"><msup><mi class="ltx_font_mathcaligraphic">𝒞</mi><mo mathvariant="normal">′</mo></msup></math>, the set of identified solution pairs
+<span class="ltx_ERROR undefined">{code}</span>
+</span><span class="ltx_text ltx_font_italic">Initialization</span><span class="ltx_text ltx_font_bold"> 
+<br class="ltx_break"/><span class="ltx_ERROR undefined">\uln</span>. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p4.m4" class="ltx_Math" alttext="\forall(p,r)\in\mathcal{C}" display="inline"><mrow><mrow><mo mathvariant="normal">∀</mo><mrow><mo mathvariant="bold">(</mo><mrow><mi>p</mi><mo mathvariant="bold">,</mo><mi>r</mi></mrow><mo mathvariant="bold">)</mo></mrow></mrow><mo mathvariant="normal">∈</mo><mi class="ltx_font_mathcaligraphic">𝒞</mi></mrow></math> 
+<br class="ltx_break"/><span class="ltx_ERROR undefined">\uln</span>.  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p4.m5" class="ltx_Math" alttext="if(r.postpos=2)\ label((p,r))=S" display="inline"><mrow><mi>i</mi><mi>f</mi><mrow><mo mathvariant="normal">(</mo><mi>r</mi><mo mathvariant="normal">.</mo><mi>p</mi><mi>o</mi><mi>s</mi><mi>t</mi><mi>p</mi><mi>o</mi><mi>s</mi><mo mathvariant="normal">=</mo><mn mathvariant="normal">2</mn><mo mathvariant="normal" rspace="7.5pt">)</mo></mrow><mi>l</mi><mi>a</mi><mi>b</mi><mi>e</mi><mi>l</mi><mrow><mo mathvariant="normal">(</mo><mrow><mo mathvariant="normal">(</mo><mi>p</mi><mo mathvariant="normal">,</mo><mi>r</mi><mo mathvariant="normal">)</mo></mrow><mo mathvariant="normal">)</mo></mrow><mo mathvariant="normal">=</mo><mi>S</mi></mrow></math> 
+<br class="ltx_break"/><span class="ltx_ERROR undefined">\uln</span>.  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p4.m6" class="ltx_Math" alttext="else\ label((p,r))=N" display="inline"><mrow><mrow><mi>e</mi><mo mathvariant="bold">⁢</mo><mi>l</mi><mo mathvariant="bold">⁢</mo><mi>s</mi><mo mathvariant="bold">⁢</mo><mpadded width="+5.0pt"><mi>e</mi></mpadded><mo mathvariant="bold">⁢</mo><mi>l</mi><mo mathvariant="bold">⁢</mo><mi>a</mi><mo mathvariant="bold">⁢</mo><mi>b</mi><mo mathvariant="bold">⁢</mo><mi>e</mi><mo mathvariant="bold">⁢</mo><mi>l</mi><mo mathvariant="bold">⁢</mo><mrow><mo mathvariant="bold">(</mo><mrow><mo mathvariant="bold">(</mo><mrow><mi>p</mi><mo mathvariant="bold">,</mo><mi>r</mi></mrow><mo mathvariant="bold">)</mo></mrow><mo mathvariant="bold">)</mo></mrow></mrow><mo mathvariant="normal">=</mo><mi>N</mi></mrow></math> 
+<br class="ltx_break"/><span class="ltx_ERROR undefined">\uln</span>. Learn <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p4.m7" class="ltx_Math" alttext="\mathcal{S}_{S}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><mi>S</mi></msub></math> &amp; <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p4.m8" class="ltx_Math" alttext="\mathcal{T}_{S}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒯</mi><mi>S</mi></msub></math> using pairs labeled <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p4.m9" class="ltx_Math" alttext="S" display="inline"><mi>S</mi></math> 
+<br class="ltx_break"/><span class="ltx_ERROR undefined">\uln</span>. Learn <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p4.m10" class="ltx_Math" alttext="\mathcal{S}_{N}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><mi>N</mi></msub></math> &amp; <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p4.m11" class="ltx_Math" alttext="\mathcal{T}_{N}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒯</mi><mi>N</mi></msub></math> using pairs labeled <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p4.m12" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math> 
+<br class="ltx_break"/></span><span class="ltx_text ltx_font_italic">EM Iterations</span><span class="ltx_text ltx_font_bold"> 
+<br class="ltx_break"/><span class="ltx_ERROR undefined">\uln</span>. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p4.m13" class="ltx_Math" alttext="while(not\ converged\wedge\#Iterations&lt;10)" display="inline"><mrow><mi>w</mi><mi>h</mi><mi>i</mi><mi>l</mi><mi>e</mi><mrow><mo mathvariant="normal">(</mo><mi>n</mi><mi>o</mi><mpadded width="+5.0pt"><mi>t</mi></mpadded><mi>c</mi><mi>o</mi><mi>n</mi><mi>v</mi><mi>e</mi><mi>r</mi><mi>g</mi><mi>e</mi><mi>d</mi><mo mathvariant="normal">∧</mo><mi mathvariant="normal">#</mi><mi>I</mi><mi>t</mi><mi>e</mi><mi>r</mi><mi>a</mi><mi>t</mi><mi>i</mi><mi>o</mi><mi>n</mi><mi>s</mi><mo mathvariant="normal">&lt;</mo><mn mathvariant="normal">10</mn><mo mathvariant="normal">)</mo></mrow></mrow></math> 
+<br class="ltx_break"/>   </span><span class="ltx_text ltx_font_italic">E-Step:</span><span class="ltx_text ltx_font_bold"> 
+<br class="ltx_break"/><span class="ltx_ERROR undefined">\uln</span>.   <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p4.m14" class="ltx_Math" alttext="\forall(p,r)\in\mathcal{C}" display="inline"><mrow><mrow><mo mathvariant="normal">∀</mo><mrow><mo mathvariant="bold">(</mo><mrow><mi>p</mi><mo mathvariant="bold">,</mo><mi>r</mi></mrow><mo mathvariant="bold">)</mo></mrow></mrow><mo mathvariant="normal">∈</mo><mi class="ltx_font_mathcaligraphic">𝒞</mi></mrow></math> 
+<br class="ltx_break"/><span class="ltx_ERROR undefined">\uln</span>.    <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p4.m15" class="ltx_Math" alttext="label((p,r))=\mathop{\arg\max}_{i}F((p,r),\mathcal{S}_{i},\mathcal{T}_{i})" display="inline"><mrow><mrow><mi>l</mi><mo mathvariant="bold">⁢</mo><mi>a</mi><mo mathvariant="bold">⁢</mo><mi>b</mi><mo mathvariant="bold">⁢</mo><mi>e</mi><mo mathvariant="bold">⁢</mo><mi>l</mi><mo mathvariant="bold">⁢</mo><mrow><mo mathvariant="bold">(</mo><mrow><mo mathvariant="bold">(</mo><mrow><mi>p</mi><mo mathvariant="bold">,</mo><mi>r</mi></mrow><mo mathvariant="bold">)</mo></mrow><mo mathvariant="bold">)</mo></mrow></mrow><mo mathvariant="normal">=</mo><mrow><msub><mrow><mi mathvariant="normal">arg</mi><mo mathvariant="bold">⁢</mo><mo mathvariant="normal">max</mo></mrow><mi>i</mi></msub><mrow><mi>F</mi><mo mathvariant="bold">⁢</mo><mrow><mo mathvariant="bold">(</mo><mrow><mrow><mo mathvariant="bold">(</mo><mrow><mi>p</mi><mo mathvariant="bold">,</mo><mi>r</mi></mrow><mo mathvariant="bold">)</mo></mrow><mo mathvariant="bold">,</mo><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><mi>i</mi></msub><mo mathvariant="bold">,</mo><msub><mi class="ltx_font_mathcaligraphic">𝒯</mi><mi>i</mi></msub></mrow><mo mathvariant="bold">)</mo></mrow></mrow></mrow></mrow></math> 
+<br class="ltx_break"/><span class="ltx_ERROR undefined">\uln</span>.    <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p4.m16" class="ltx_Math" alttext="\forall w\in r" display="inline"><mrow><mrow><mo mathvariant="normal">∀</mo><mi>w</mi></mrow><mo mathvariant="normal">∈</mo><mi>r</mi></mrow></math> 
+<br class="ltx_break"/><span class="ltx_ERROR undefined">\uln</span>.     <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p4.m17" class="ltx_Math" alttext="Estimate\ f_{\mathcal{S}_{label(p,r)}}^{(p,r)}(w)\ ,f_{\mathcal{T}_{label(p,r)%&#10;}}^{(p,r)}(w)" display="inline"><mrow><mrow><mi>E</mi><mo mathvariant="bold">⁢</mo><mi>s</mi><mo mathvariant="bold">⁢</mo><mi>t</mi><mo mathvariant="bold">⁢</mo><mi>i</mi><mo mathvariant="bold">⁢</mo><mi>m</mi><mo mathvariant="bold">⁢</mo><mi>a</mi><mo mathvariant="bold">⁢</mo><mi>t</mi><mo mathvariant="bold">⁢</mo><mpadded width="+5.0pt"><mi>e</mi></mpadded><mo mathvariant="bold">⁢</mo><msubsup><mi>f</mi><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><mrow><mi>l</mi><mo mathvariant="bold">⁢</mo><mi>a</mi><mo mathvariant="bold">⁢</mo><mi>b</mi><mo mathvariant="bold">⁢</mo><mi>e</mi><mo mathvariant="bold">⁢</mo><mi>l</mi><mo mathvariant="bold">⁢</mo><mrow><mo mathvariant="bold">(</mo><mrow><mi>p</mi><mo mathvariant="bold">,</mo><mi>r</mi></mrow><mo mathvariant="bold">)</mo></mrow></mrow></msub><mrow><mo mathvariant="bold">(</mo><mrow><mi>p</mi><mo mathvariant="bold">,</mo><mi>r</mi></mrow><mo mathvariant="bold">)</mo></mrow></msubsup><mo mathvariant="bold">⁢</mo><mpadded width="+5.0pt"><mrow><mo mathvariant="bold">(</mo><mi>w</mi><mo mathvariant="bold">)</mo></mrow></mpadded></mrow><mo mathvariant="bold">,</mo><mrow><msubsup><mi>f</mi><msub><mi class="ltx_font_mathcaligraphic">𝒯</mi><mrow><mi>l</mi><mo mathvariant="bold">⁢</mo><mi>a</mi><mo mathvariant="bold">⁢</mo><mi>b</mi><mo mathvariant="bold">⁢</mo><mi>e</mi><mo mathvariant="bold">⁢</mo><mi>l</mi><mo mathvariant="bold">⁢</mo><mrow><mo mathvariant="bold">(</mo><mrow><mi>p</mi><mo mathvariant="bold">,</mo><mi>r</mi></mrow><mo mathvariant="bold">)</mo></mrow></mrow></msub><mrow><mo mathvariant="bold">(</mo><mrow><mi>p</mi><mo mathvariant="bold">,</mo><mi>r</mi></mrow><mo mathvariant="bold">)</mo></mrow></msubsup><mo mathvariant="bold">⁢</mo><mrow><mo mathvariant="bold">(</mo><mi>w</mi><mo mathvariant="bold">)</mo></mrow></mrow></mrow></math> 
+<br class="ltx_break"/>   </span><span class="ltx_text ltx_font_italic">M-Step:</span><span class="ltx_text ltx_font_bold"> 
+<br class="ltx_break"/><span class="ltx_ERROR undefined">\uln</span>.   Learn <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p4.m18" class="ltx_Math" alttext="\mathcal{S}_{S}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><mi>S</mi></msub></math> &amp; <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p4.m19" class="ltx_Math" alttext="\mathcal{T}_{S}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒯</mi><mi>S</mi></msub></math> from pairs labeled <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p4.m20" class="ltx_Math" alttext="S" display="inline"><mi>S</mi></math> 
+<br class="ltx_break"/>  using the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p4.m21" class="ltx_Math" alttext="f_{\mathcal{S}_{S}}^{(p,r)}(.)" display="inline"><mrow><msubsup><mi>f</mi><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><mi>S</mi></msub><mrow><mo mathvariant="bold">(</mo><mrow><mi>p</mi><mo mathvariant="bold">,</mo><mi>r</mi></mrow><mo mathvariant="bold">)</mo></mrow></msubsup><mrow><mo mathvariant="normal">(</mo><mo mathvariant="normal">.</mo><mo mathvariant="normal">)</mo></mrow></mrow></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p4.m22" class="ltx_Math" alttext="f_{\mathcal{T}_{S}}^{(p,r)}(.)" display="inline"><mrow><msubsup><mi>f</mi><msub><mi class="ltx_font_mathcaligraphic">𝒯</mi><mi>S</mi></msub><mrow><mo mathvariant="bold">(</mo><mrow><mi>p</mi><mo mathvariant="bold">,</mo><mi>r</mi></mrow><mo mathvariant="bold">)</mo></mrow></msubsup><mrow><mo mathvariant="normal">(</mo><mo mathvariant="normal">.</mo><mo mathvariant="normal">)</mo></mrow></mrow></math> estimates 
+<br class="ltx_break"/><span class="ltx_ERROR undefined">\uln</span>.   Learn <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p4.m23" class="ltx_Math" alttext="\mathcal{S}_{N}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><mi>N</mi></msub></math> &amp; <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p4.m24" class="ltx_Math" alttext="\mathcal{T}_{N}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒯</mi><mi>N</mi></msub></math> from pairs labeled <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p4.m25" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math> 
+<br class="ltx_break"/>  using the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p4.m26" class="ltx_Math" alttext="f_{\mathcal{S}_{N}}^{(p,r)}(.)" display="inline"><mrow><msubsup><mi>f</mi><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><mi>N</mi></msub><mrow><mo mathvariant="bold">(</mo><mrow><mi>p</mi><mo mathvariant="bold">,</mo><mi>r</mi></mrow><mo mathvariant="bold">)</mo></mrow></msubsup><mrow><mo mathvariant="normal">(</mo><mo mathvariant="normal">.</mo><mo mathvariant="normal">)</mo></mrow></mrow></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p4.m27" class="ltx_Math" alttext="f_{\mathcal{T}_{N}}^{(p,r)}(.)" display="inline"><mrow><msubsup><mi>f</mi><msub><mi class="ltx_font_mathcaligraphic">𝒯</mi><mi>N</mi></msub><mrow><mo mathvariant="bold">(</mo><mrow><mi>p</mi><mo mathvariant="bold">,</mo><mi>r</mi></mrow><mo mathvariant="bold">)</mo></mrow></msubsup><mrow><mo mathvariant="normal">(</mo><mo mathvariant="normal">.</mo><mo mathvariant="normal">)</mo></mrow></mrow></math> estimates 
+<br class="ltx_break"/></span><span class="ltx_text ltx_font_italic">Output</span><span class="ltx_text ltx_font_bold"> 
+<br class="ltx_break"/><span class="ltx_ERROR undefined">\uln</span>. Output <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p4.m28" class="ltx_Math" alttext="(p,r)" display="inline"><mrow><mo mathvariant="bold">(</mo><mrow><mi>p</mi><mo mathvariant="bold">,</mo><mi>r</mi></mrow><mo mathvariant="bold">)</mo></mrow></math> pairs from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p4.m29" class="ltx_Math" alttext="\mathcal{C}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒞</mi></math> with 
+<br class="ltx_break"/>  <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p4.m30" class="ltx_Math" alttext="label((p,r))=S" display="inline"><mrow><mrow><mi>l</mi><mo mathvariant="bold">⁢</mo><mi>a</mi><mo mathvariant="bold">⁢</mo><mi>b</mi><mo mathvariant="bold">⁢</mo><mi>e</mi><mo mathvariant="bold">⁢</mo><mi>l</mi><mo mathvariant="bold">⁢</mo><mrow><mo mathvariant="bold">(</mo><mrow><mo mathvariant="bold">(</mo><mrow><mi>p</mi><mo mathvariant="bold">,</mo><mi>r</mi></mrow><mo mathvariant="bold">)</mo></mrow><mo mathvariant="bold">)</mo></mrow></mrow><mo mathvariant="normal">=</mo><mi>S</mi></mrow></math> as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS3.p4.m31" class="ltx_Math" alttext="\mathcal{C}^{\prime}" display="inline"><msup><mi class="ltx_font_mathcaligraphic">𝒞</mi><mo mathvariant="normal">′</mo></msup></math>
+
+</span></p>
+</div>
+</div>
+<div id="S4.SS3.SSS4" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">4.3.4 </span>Initialization</h4>
+
+<div id="S4.SS3.SSS4.p1" class="ltx_para">
+<p class="ltx_p">K-Means clustering mostly initializes centroid vectors randomly; however, it is non-trivial to initialize the complex translation and language models randomly. Moreover, an initialization such that the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS4.p1.m1" class="ltx_Math" alttext="\mathcal{S}_{S}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><mi>S</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS4.p1.m2" class="ltx_Math" alttext="\mathcal{T}_{S}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒯</mi><mi>S</mi></msub></math> models favor the solution pairs more than the non-solution pairs is critical so that they may progressively lean towards modeling solution behaviour better across iterations. Towards this, we make use of a structural feature; in particular, adapting the hypothesis that solutions occur in the first <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS4.p1.m3" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math> posts (Ref. <cite class="ltx_cite">[<a href="#bib.bib12" title="Does similarity matter? the case of answer extraction from technical discussion forums." class="ltx_ref">3</a>]</cite>), <span class="ltx_text ltx_font_italic">we label the pairs that have the the reply from the second post (note that the first post is assumed to be the problem post) in the thread as a solution post, and all others as non-solution posts</span>. Such an initialization along with uniform reply word source probabilities is used to learn the initial estimates of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS4.p1.m4" class="ltx_Math" alttext="\mathcal{S}_{S}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><mi>S</mi></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS4.p1.m5" class="ltx_Math" alttext="\mathcal{T}_{S}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒯</mi><mi>S</mi></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS4.p1.m6" class="ltx_Math" alttext="\mathcal{S}_{N}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><mi>N</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS4.p1.m7" class="ltx_Math" alttext="\mathcal{T}_{N}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒯</mi><mi>N</mi></msub></math> models to be used in the E-step for the first iteration. We will show that we are able to effectively perform solution identification using our approach by exploiting just one structural feature, the post position, as above. However, we will also show that we can exploit other features as and when available, to deliver higher accuracy clusterings.</p>
+</div>
+</div>
+<div id="S4.SS3.SSS5" class="ltx_subsubsection">
+<h4 class="ltx_title ltx_title_subsubsection"><span class="ltx_tag ltx_tag_subsubsection">4.3.5 </span>Method Summary</h4>
+
+<div id="S4.SS3.SSS5.p1" class="ltx_para">
+<p class="ltx_p">The overall method comprising the steps that have been described is presented in Algorithm <a href="#S4.SS3.SSS3" title="4.3.3 M-Step: Learning Models ‣ 4.3 Clustering-based Approach ‣ 4 Our Approach ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3.3</span></a>. The initialization using the post position (Ref. Sec <a href="#S4.SS3.SSS4" title="4.3.4 Initialization ‣ 4.3 Clustering-based Approach ‣ 4 Our Approach ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3.4</span></a>) is illustrated in Lines 1-5, whereas the EM-iterations form Steps 6 through 12. Of these, the E-step incorporates labeling (Line 8) as described in Sec <a href="#S4.SS3.SSS1" title="4.3.1 E-Step: Estimating Labels ‣ 4.3 Clustering-based Approach ‣ 4 Our Approach ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3.1</span></a> and reply-word source estimation (Line 10) detailed in Sec <a href="#S4.SS3.SSS2" title="4.3.2 E-Step: Estimating Reply Word Source ‣ 4.3 Clustering-based Approach ‣ 4 Our Approach ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3.2</span></a>. The models are then re-learnt in the M-Step (Lines 11-12) as outlined in Sec <a href="#S4.SS3.SSS3" title="4.3.3 M-Step: Learning Models ‣ 4.3 Clustering-based Approach ‣ 4 Our Approach ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3.3</span></a>. At the end of the iterations that may run up to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS5.p1.m1" class="ltx_Math" alttext="10" display="inline"><mn>10</mn></math> times if the labelings do not stabilize earlier, the pairs labeled <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS5.p1.m2" class="ltx_Math" alttext="S" display="inline"><mi>S</mi></math> are output as identified solutions (Line 13).</p>
+</div>
+<div id="S4.SS3.SSS5.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Time Complexity:</span> Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS5.p2.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> denote <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS5.p2.m2" class="ltx_Math" alttext="|\mathcal{C}|" display="inline"><mrow><mo fence="true">|</mo><mi class="ltx_font_mathcaligraphic">𝒞</mi><mo fence="true">|</mo></mrow></math>, and the number of unique words in each problem and reply post be <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS5.p2.m3" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS5.p2.m4" class="ltx_Math" alttext="b" display="inline"><mi>b</mi></math> respectively. We will denote the vocabulary size of problem posts as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS5.p2.m5" class="ltx_Math" alttext="A" display="inline"><mi>A</mi></math> and that of reply posts as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS5.p2.m6" class="ltx_Math" alttext="B" display="inline"><mi>B</mi></math>. Learning of the language and translation models in each iteration costs <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS5.p2.m7" class="ltx_Math" alttext="\mathcal{O}(nb+B)" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒪</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mi>n</mi><mo>⁢</mo><mi>b</mi></mrow><mo>+</mo><mi>B</mi></mrow><mo>)</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS5.p2.m8" class="ltx_Math" alttext="\mathcal{O}(k^{\prime}(nab+AB))" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒪</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi>k</mi><mo>′</mo></msup><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mi>n</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>b</mi></mrow><mo>+</mo><mrow><mi>A</mi><mo>⁢</mo><mi>B</mi></mrow></mrow><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></math> respectively (assuming the translation model learning runs for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS5.p2.m9" class="ltx_Math" alttext="k^{\prime}" display="inline"><msup><mi>k</mi><mo>′</mo></msup></math> iterations). The E-step labeling and source estimation cost <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS5.p2.m10" class="ltx_Math" alttext="\mathcal{O}(nab)" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒪</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>n</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>b</mi></mrow><mo>)</mo></mrow></mrow></math> each. For <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS5.p2.m11" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math> iterations of our algorithm, this leads to an overall complexity of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.SSS5.p2.m12" class="ltx_Math" alttext="\mathcal{O}(kk^{\prime}(nab+AB))" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒪</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>k</mi><mo>⁢</mo><msup><mi>k</mi><mo>′</mo></msup><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mi>n</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>b</mi></mrow><mo>+</mo><mrow><mi>A</mi><mo>⁢</mo><mi>B</mi></mrow></mrow><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></math>.</p>
+</div>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Experimental Evaluation</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">We use a crawl of 140k threads from Apple Discussion forums<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">10</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">10</sup>http://discussions.apple.com</span></span></span>. Out of these, 300 threads (comprising 1440 posts) were randomly chosen and each post was manually tagged as either solution or non-solution by the authors of <cite class="ltx_cite">[<a href="#bib.bib16" title="Semi-supervised answer extraction from discussion forums" class="ltx_ref">2</a>]</cite> (who were kind enough to share the data with us) with an inter-annotator agreement<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">11</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">11</sup>http://en.wikipedia.org/wiki/Cohen’s_kappa</span></span></span> of 0.71. On an average, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m1" class="ltx_Math" alttext="40\%" display="inline"><mrow><mn>40</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> of replies in each thread and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m2" class="ltx_Math" alttext="77\%" display="inline"><mrow><mn>77</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> of first replies were seen to be solutions, leading to an F-measure of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m3" class="ltx_Math" alttext="53\%" display="inline"><mrow><mn>53</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> for our initialization heuristic. We use the F-measure<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">12</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">12</sup>http://en.wikipedia.org/wiki/F1_score</span></span></span> for solution identification, as the primary evaluation measure. While we vary the various parameters separately in order to evaluate the trends, we use a dataset of 800 threads (containing the 300 labeled threads) and set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m4" class="ltx_Math" alttext="\lambda=0.5" display="inline"><mrow><mi>λ</mi><mo>=</mo><mn>0.5</mn></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m5" class="ltx_Math" alttext="\tau=0.4" display="inline"><mrow><mi>τ</mi><mo>=</mo><mn>0.4</mn></mrow></math> unless otherwise mentioned. Since we have only 300 labeled threads, accuracy measures are reported on those (like in <cite class="ltx_cite">[<a href="#bib.bib16" title="Semi-supervised answer extraction from discussion forums" class="ltx_ref">2</a>]</cite>). We pre-process the post data by stemming words <cite class="ltx_cite">[<a href="#bib.bib3" title="An algorithm for suffix stripping" class="ltx_ref">14</a>]</cite>.</p>
+</div>
+<div id="S5.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_tt" colspan="2"><span class="ltx_text ltx_font_bold">Technique</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_bold">Precision</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_bold">Recall</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_bold">F-Measure</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="2">Unsupervised Graph Propagation <cite class="ltx_cite">[<a href="#bib.bib13" title="Finding question-answer pairs from online forums" class="ltx_ref">4</a>]</cite></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">29.7 %</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">55.6 %</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">38.7 %</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="2">Our Method with only Translation Models (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m1" class="ltx_Math" alttext="\lambda=0.0" display="inline"><mrow><mi>λ</mi><mo>=</mo><mn>0.0</mn></mrow></math>)</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">41.8 %</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">86.8 %</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">56.5 %</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="2">Our Method with only Language Models (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m2" class="ltx_Math" alttext="\lambda=1.0" display="inline"><mrow><mi>λ</mi><mo>=</mo><mn>1.0</mn></mrow></math>)</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">63.2 %</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">62.1 %</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">62.6 %</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="2">Our Method with Both Models (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T3.m3" class="ltx_Math" alttext="\lambda=0.5" display="inline"><mrow><mi>λ</mi><mo>=</mo><mn>0.5</mn></mrow></math>)</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">61.3 %</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">66.9 %</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t" style="background-color:#E6E6E6;"><span class="ltx_text ltx_font_bold">64.0 %</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_r ltx_border_t" rowspan="2"><span class="ltx_text ltx_font_small">Methods using <span class="ltx_text ltx_font_bold">Supervision</span> <cite class="ltx_cite">[<a href="#bib.bib16" title="Semi-supervised answer extraction from discussion forums" class="ltx_ref">2</a>]</cite></span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">ANS CT</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">40.6 %</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">88.0 %</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">55.6 %</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">ANS-ACK PCT</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">56.8 %</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">84.1 %</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_bold">67.8%</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 3: </span>Quality Evaluation</div>
+</div>
+<div id="S5.F1" class="ltx_figure"><img src="P14-1015/image001.png" id="S5.F1.g1" class="ltx_graphics" width="271" height="126" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>F% (Y) vs. #Iterations (X)</div>
+</div>
+<div id="S5.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" rowspan="6"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m1" class="ltx_Math" alttext="\mathcal{T}_{S}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒯</mi><mi>S</mi></msub></math></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_italic">ProblemWord, SolutionWord</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m2" class="ltx_Math" alttext="\mathcal{T}_{S}[p][s]" display="inline"><mrow><msub><mi class="ltx_font_mathcaligraphic">𝒯</mi><mi>S</mi></msub><mo>⁢</mo><mrow><mo>[</mo><mi>p</mi><mo>]</mo></mrow><mo>⁢</mo><mrow><mo>[</mo><mi>s</mi><mo>]</mo></mrow></mrow></math></th></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_italic">network, guest</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.0754</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_italic">connect, adaptor</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.0526</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_italic">wireless, adaptor</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.0526</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_italic">translat, shortcut</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.0492</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_italic">updat, rebuilt</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.0405</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_l ltx_border_r ltx_border_t" rowspan="6"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m3" class="ltx_Math" alttext="\mathcal{S}_{S}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><mi>S</mi></msub></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_italic">SolutionWord</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m4" class="ltx_Math" alttext="\mathcal{S}_{S}[s]" display="inline"><mrow><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><mi>S</mi></msub><mo>⁢</mo><mrow><mo>[</mo><mi>s</mi><mo>]</mo></mrow></mrow></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_italic">your</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.0115</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_italic">try</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.0033</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_italic">router</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.0033</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_italic">see</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.0033</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_italic">password</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">0.0023</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 4: </span>Sample <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m7" class="ltx_Math" alttext="\mathcal{T}_{S}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒯</mi><mi>S</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.T4.m8" class="ltx_Math" alttext="\mathcal{S}_{S}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><mi>S</mi></msub></math> Estimates</div>
+</div>
+<div id="S5.F4" class="ltx_figure">
+<span class="ltx_inline-block ltx_minipage ltx_align_bottom" style="width:130.1pt;"><img src="P14-1015/image003.png" id="S5.F4.g1" class="ltx_graphics" width="180" height="118" alt=""/>
+</span>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 2: </span><span class="ltx_text ltx_font_small">F% (Y) vs. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F4.m2" class="ltx_Math" alttext="\lambda" display="inline"><mi mathsize="normal" stretchy="false">λ</mi></math> (X)</span></div>
+<span class="ltx_inline-block ltx_minipage ltx_align_bottom" style="width:130.1pt;"><img src="P14-1015/image004.png" id="S5.F4.g2" class="ltx_graphics" width="180" height="118" alt=""/>
+</span>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 3: </span><span class="ltx_text ltx_font_small">F% (Y) vs. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F4.m4" class="ltx_Math" alttext="\tau" display="inline"><mi mathsize="normal" stretchy="false">τ</mi></math> (X)</span></div>
+<span class="ltx_inline-block ltx_minipage ltx_align_bottom" style="width:130.1pt;"><img src="P14-1015/image002.png" id="S5.F4.g3" class="ltx_graphics" width="180" height="118" alt=""/>
+</span>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 4: </span><span class="ltx_text ltx_font_small">F% (Y) vs. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F4.m6" class="ltx_Math" alttext="\#" display="inline"><mi mathsize="normal" mathvariant="normal" stretchy="false">#</mi></math>Threads (X)</span></div>
+</div>
+<div id="S5.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.1 </span>Quality Evaluation</h3>
+
+<div id="S5.SS1.p1" class="ltx_para">
+<p class="ltx_p">In this study, we compare the performance of our method under varying settings of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p1.m1" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math> against the only unsupervised approach for solution identification from literature, that from <cite class="ltx_cite">[<a href="#bib.bib13" title="Finding question-answer pairs from online forums" class="ltx_ref">4</a>]</cite>. We use an independent implementation of the technique using Kullback-Leibler Divergence <cite class="ltx_cite">[<a href="#bib.bib4" title="Information theory and statistics" class="ltx_ref">12</a>]</cite> as the similarity measure between posts; KL-Divergence was seen to perform best in the experiments reported in <cite class="ltx_cite">[<a href="#bib.bib13" title="Finding question-answer pairs from online forums" class="ltx_ref">4</a>]</cite>.</p>
+</div>
+<div id="S5.SS1.p2" class="ltx_para">
+<p class="ltx_p">Table <a href="#S5.T3" title="Table 3 ‣ 5 Experimental Evaluation ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> illustrates the comparative performance on various quality metrics, of which F-Measure is typically considered most important. Our pure-LM<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">13</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">13</sup>Language Model</span></span></span> setting (i.e., <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p2.m1" class="ltx_Math" alttext="\lambda=1" display="inline"><mrow><mi>λ</mi><mo>=</mo><mn>1</mn></mrow></math>) was seen to perform up to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p2.m2" class="ltx_Math" alttext="6" display="inline"><mn>6</mn></math> F-Measure points better than the pure-TM<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">14</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">14</sup>Translation Model</span></span></span> setting (i.e., <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p2.m3" class="ltx_Math" alttext="\lambda=0" display="inline"><mrow><mi>λ</mi><mo>=</mo><mn>0</mn></mrow></math>), whereas the uniform mix is seen to be able to harness both to give a <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p2.m4" class="ltx_Math" alttext="1.4" display="inline"><mn>1.4</mn></math> point (i.e., <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p2.m5" class="ltx_Math" alttext="2.2\%" display="inline"><mrow><mn>2.2</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math>) improvement over the pure-LM case. The comparison with the approach from <cite class="ltx_cite">[<a href="#bib.bib13" title="Finding question-answer pairs from online forums" class="ltx_ref">4</a>]</cite> illustrates that our method is very clearly the superior method for solution identification outperforming the former by large margins on all the evaluation measures, with the improvement on F-measure being more than <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p2.m6" class="ltx_Math" alttext="25" display="inline"><mn>25</mn></math> points.</p>
+</div>
+<div id="S5.SS1.p3" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Comparison wrt Methods from <cite class="ltx_cite">[<a href="#bib.bib16" title="Semi-supervised answer extraction from discussion forums" class="ltx_ref">2</a>]</cite>:</span> Table <a href="#S5.T3" title="Table 3 ‣ 5 Experimental Evaluation ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> also lists the performance of SVM-based methods from <cite class="ltx_cite">[<a href="#bib.bib16" title="Semi-supervised answer extraction from discussion forums" class="ltx_ref">2</a>]</cite> that use supervised information for solution identification, to help put the performance of our technique in perspective. Of the two methods therein, ANS CT is a more general method that uses two views (structural and lexical) of solutions which are then co-trained. ANS-ACK PCT is an enhanced method that requires author-id information and a means of classifying posts as acknowledgements (which is done using additional supervision); a post being acknowledged by the problem author is then used as a signal to enhance the solution-ness of a post. In the absence of author information (such as may be common in privacy-constrained domains such as medical forums) and extrinsic information to enable identify acknowledgements, ANS CT is the only technique available. Our technique is seen to outperform ANS CT by a respectable margin (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p3.m1" class="ltx_Math" alttext="8.6" display="inline"><mn>8.6</mn></math> F-measure points) while trailing behind the enhanced ANS-ACK PCT method with a reasonably narrow <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p3.m2" class="ltx_Math" alttext="3.8" display="inline"><mn>3.8</mn></math> F-measure point margin. Thus, our unsupervised method is seen to be a strong competitor even for techniques using supervision outlined in <cite class="ltx_cite">[<a href="#bib.bib16" title="Semi-supervised answer extraction from discussion forums" class="ltx_ref">2</a>]</cite>, illustrating the effectiveness of LM and TM modeling of reply posts.</p>
+</div>
+<div id="S5.SS1.p4" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Across Iterations:</span> For scenarios where computation is at a premium, it is useful to know how quickly the quality of solution identification stabilizes, so that the results can be collected after fewer iterations. Figure <a href="#S5.F1" title="Figure 1 ‣ 5 Experimental Evaluation ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> plots the F-measure across iterations for the run with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p4.m1" class="ltx_Math" alttext="\lambda=0.5,\tau=0.4" display="inline"><mrow><mrow><mi>λ</mi><mo>=</mo><mn>0.5</mn></mrow><mo>,</mo><mrow><mi>τ</mi><mo>=</mo><mn>0.4</mn></mrow></mrow></math> setting, where the F-measure is seen to stabilize in as few as 4-5 iterations. Similar trends were observed for other runs as well, confirming that the run may be stopped as early as after the fourth iteration without considerable loss in quality.</p>
+</div>
+<div id="S5.SS1.p5" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Example Estimates from LMs and TMs:</span> In order to understand the behavior of the statistical models, we took the highest 100 entries from both <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p5.m1" class="ltx_Math" alttext="\mathcal{S}_{S}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><mi>S</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p5.m2" class="ltx_Math" alttext="\mathcal{T}_{S}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒯</mi><mi>S</mi></msub></math> and attempted to qualitatively evaluate semantics of the words (or word pairs) corresponding to those. Though the stemming made it hard to make sense of some entries, we present some of the understandable entries from among the top-100 in Table <a href="#S5.T4" title="Table 4 ‣ 5 Experimental Evaluation ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>. The first three entries from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p5.m3" class="ltx_Math" alttext="\mathcal{T}_{S}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒯</mi><mi>S</mi></msub></math> deal with connection issues for which <span class="ltx_text ltx_font_italic">adaptor</span> or <span class="ltx_text ltx_font_italic">guest account</span> related solutions are proposed, whereas the remaining have something to do with the <span class="ltx_text ltx_font_italic">mac translator app</span> and <span class="ltx_text ltx_font_italic">rebuilding</span> libraries after an <span class="ltx_text ltx_font_italic">update</span>. The top words from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS1.p5.m4" class="ltx_Math" alttext="\mathcal{S}_{S}" display="inline"><msub><mi class="ltx_font_mathcaligraphic">𝒮</mi><mi>S</mi></msub></math> include imperative words and words from solutions to common issues that include actions pertaining to the <span class="ltx_text ltx_font_italic">router</span> or <span class="ltx_text ltx_font_italic">password</span>.</p>
+</div>
+</div>
+<div id="S5.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.2 </span>Varying Parameter Settings</h3>
+
+<div id="S5.SS2.p1" class="ltx_para">
+<p class="ltx_p">We now analyse the performance of our approach against varying parameter settings. In particular, we vary <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m1" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m2" class="ltx_Math" alttext="\tau" display="inline"><mi>τ</mi></math> values and the dataset size, and experiment with some initialization variations.</p>
+</div>
+<div id="S5.SS2.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Varying <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m1" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math>:</span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m2" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math> is the weighting parameter that indicates the fraction of weight assigned to LMs (vis-a-vis TMs). As may be seen from Figure <a href="#S5.F4" title="Figure 4 ‣ 5 Experimental Evaluation ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>, the quality of the results as measured by the F-measure is seen to peak around the middle (i.e., <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m3" class="ltx_Math" alttext="\lambda=0.5" display="inline"><mrow><mi>λ</mi><mo>=</mo><mn>0.5</mn></mrow></math>), and decline slowly towards either extreme, with a sharp decline at <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m4" class="ltx_Math" alttext="\lambda=0" display="inline"><mrow><mi>λ</mi><mo>=</mo><mn>0</mn></mrow></math> (i.e., pure-TM setting). This indicates that a uniform mix is favorable; however, if one were to choose only one type of model, usage of LMs is seen to be preferable than TMs.</p>
+</div>
+<div id="S5.SS2.p3" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Varying <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p3.m1" class="ltx_Math" alttext="\tau" display="inline"><mi>τ</mi></math>:</span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p3.m2" class="ltx_Math" alttext="\tau" display="inline"><mi>τ</mi></math> is directly related to the extent of pruning of TMs, in the regularization operation; all values in the alignment vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p3.m3" class="ltx_Math" alttext="\leq\tau" display="inline"><mrow><mi/><mo>≤</mo><mi>τ</mi></mrow></math> are pruned. Thus, each problem word is roughly allowed to be aligned with at most <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p3.m4" class="ltx_Math" alttext="\sim\frac{1}{\tau}" display="inline"><mrow><mi/><mo>∼</mo><mfrac><mn>1</mn><mi>τ</mi></mfrac></mrow></math> solution words. The trends from Figure <a href="#S5.F4" title="Figure 4 ‣ 5 Experimental Evaluation ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> suggests that allowing a problem word to be aligned to up to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p3.m5" class="ltx_Math" alttext="2.5" display="inline"><mn>2.5</mn></math> solution words (i.e., <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p3.m6" class="ltx_Math" alttext="\tau=0.4" display="inline"><mrow><mi>τ</mi><mo>=</mo><mn>0.4</mn></mrow></math>) is seen to yield the best performance though the quality decline is graceful towards either side of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p3.m7" class="ltx_Math" alttext="[0.1,0.5]" display="inline"><mrow><mo>[</mo><mrow><mn>0.1</mn><mo>,</mo><mn>0.5</mn></mrow><mo>]</mo></mrow></math> range.</p>
+</div>
+<div id="S5.SS2.p4" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Varying Data Size:</span> Though more data always tends to be beneficial since statistical models benefit from redundancy, the marginal utility of additional data drops to very small levels beyond a point; we are interested in the amount of data beyond which the quality of solution identification flattens out. Figure <a href="#S5.F4" title="Figure 4 ‣ 5 Experimental Evaluation ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> suggests that there is a sharp improvement in quality while increasing the amount of data from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p4.m1" class="ltx_Math" alttext="300" display="inline"><mn>300</mn></math> threads (i.e., <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p4.m2" class="ltx_Math" alttext="1440" display="inline"><mn>1440</mn></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p4.m3" class="ltx_Math" alttext="(p,r)" display="inline"><mrow><mo>(</mo><mrow><mi>p</mi><mo>,</mo><mi>r</mi></mrow><mo>)</mo></mrow></math> pairs) to 550 (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p4.m4" class="ltx_Math" alttext="2454" display="inline"><mn>2454</mn></math> pairs), whereas the increment is smaller when adding another 250 pairs (total of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p4.m5" class="ltx_Math" alttext="3400" display="inline"><mn>3400</mn></math> pairs). Beyond <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p4.m6" class="ltx_Math" alttext="800" display="inline"><mn>800</mn></math> threads, the F-measure was seen to flatten out rapidly and stabilize at <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p4.m7" class="ltx_Math" alttext="\sim 64\%" display="inline"><mrow><mi/><mo>∼</mo><mrow><mn>64</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></mrow></math>.</p>
+</div>
+<div id="S5.SS2.p5" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Initialization:</span> In Apple discussion forums, posts by Apple employees that are labeled with the <span class="ltx_text ltx_font_italic">Apple employees</span> tag (approximately <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p5.m1" class="ltx_Math" alttext="\sim 7\%" display="inline"><mrow><mi/><mo>∼</mo><mrow><mn>7</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></mrow></math> of posts in our dataset) tend to be solutions. So are posts that are marked <span class="ltx_text ltx_font_italic">Helpful</span> (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p5.m2" class="ltx_Math" alttext="\sim 3\%" display="inline"><mrow><mi/><mo>∼</mo><mrow><mn>3</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></mrow></math> of posts) by other users. Being specific to Apple forums, we did not use them for initialization in experiments so far with the intent of keeping the technique generic. However, when such posts are initialized as solutions (in addition to first replies as we did earlier), the F-score for solution identification for our technique was seen to improve slightly, to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p5.m3" class="ltx_Math" alttext="64.5\%" display="inline"><mrow><mn>64.5</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math> (from <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p5.m4" class="ltx_Math" alttext="64\%" display="inline"><mrow><mn>64</mn><mo>⁢</mo><mi mathvariant="normal">%</mi></mrow></math>). Thus, our technique is able to exploit any extra solution identifying structural features that are available.</p>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Conclusions and Future Work</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">We considered the problem of unsupervised solution post identification from discussion forum threads. Towards identifying solutions to the problem posed in the initial post, we proposed the usage of a hitherto unexplored textual feature for the solution identification problem; that of lexical correlations between problems and solutions. We model and harness lexical correlations using translation models, in the company of unigram language models that are used to characterize reply posts, and formulate a clustering-based EM approach for solution identification. We show that our technique is able to effectively identify solutions using just one non-content based feature, the post position, whereas previous techniques in literature have depended heavily on structural features (that are not always available in many forums) and supervised information. Our technique is seen to outperform the sole unsupervised solution identification technique in literature, by a large margin; further, our method is even seen to be competitive to recent methods that use supervision, beating one of them comfortably, and trailing another by a narrow margin. In short, our empirical analysis illustrates the superior performance and establishes our method as the method of choice for unsupervised solution identification.</p>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p class="ltx_p">Exploration into the usage of translation models to aid other operations in discussion forums such as proactive word suggestions for solution authoring would be interesting direction for follow-up work. Discovery of problem-solution pairs in cases where the problem post is not known beforehand, would be a challenging problem to address.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. F. Brown, J. Cocke, S. A. D. Pietra, V. J. D. Pietra, F. Jelinek, J. D. Lafferty, R. L. Mercer and P. S. Roossin</span><span class="ltx_text ltx_bib_year">(1990)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A statistical approach to machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational linguistics</span> <span class="ltx_text ltx_bib_volume">16</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 79–85</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.p1" title="4.1 The Correlation Assumption ‣ 4 Our Approach ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib16" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Catherine, R. Gangadharaiah, K. Visweswariah and D. Raghu</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Semi-supervised answer extraction from discussion forums</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p4" title="1 Introduction ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.T1" title="Table 1 ‣ 2 Related Work ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p2" title="2 Related Work ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S5.SS1.p3" title="5.1 Quality Evaluation ‣ 5 Experimental Evaluation ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>,
+<a href="#S5.T3" title="Table 3 ‣ 5 Experimental Evaluation ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S5.p1" title="5 Experimental Evaluation ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Catherine, A. Singh, R. Gangadharaiah, D. Raghu and K. Visweswariah</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Does similarity matter? the case of answer extraction from technical discussion forums.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 175–184</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p3" title="1 Introduction ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.T1" title="Table 1 ‣ 2 Related Work ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.SS3.SSS4.p1" title="4.3.4 Initialization ‣ 4.3 Clustering-based Approach ‣ 4 Our Approach ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3.4</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. Cong, L. Wang, C. Lin, Y. Song and Y. Sun</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Finding question-answer pairs from online forums</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 467–474</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p3" title="1 Introduction ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.T1" title="Table 1 ‣ 2 Related Work ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.p2" title="2 Related Work ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S5.SS1.p1" title="5.1 Quality Evaluation ‣ 5 Experimental Evaluation ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>,
+<a href="#S5.SS1.p2" title="5.1 Quality Evaluation ‣ 5 Experimental Evaluation ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>,
+<a href="#S5.T3" title="Table 3 ‣ 5 Experimental Evaluation ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib17" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Deepak, K. Visweswariah, N. Wiratunga and S. Sani</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Two-part segmentation of text documents</span>.
+</span>
+<span class="ltx_bibblock">See <span class="ltx_text ltx_bib_crossref"><cite class="ltx_cite"/></span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 793–802</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related Work ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.SS1.p1" title="4.1 The Correlation Assumption ‣ 4 Our Approach ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>,
+<a href="#S4.SS2.p3" title="4.2 Generative model for Solution Posts ‣ 4 Our Approach ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. P. Dempster, N. M. Laird and D. B. Rubin</span><span class="ltx_text ltx_bib_year">(1977)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Maximum likelihood from incomplete data via the em algorithm</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of the Royal Statistical Society. Series B (Methodological)</span>, <span class="ltx_text ltx_bib_pages"> pp. 1–38</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS3.p3" title="4.3 Clustering-based Approach ‣ 4 Our Approach ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+<li id="bib.bib2" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Ding, G. Cong, C. Lin and X. Zhu</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Using conditional random fields to extract contexts and answers of questions from online forums</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.T1" title="Table 1 ‣ 2 Related Work ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib14" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Gandhe, D. Raghu and R. Catherine</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Domain adaptive answer extraction for discussion boards</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 501–502</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Hong and B. D. Davison</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A classification-based approach to question answering in discussion boards</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 171–178</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p3" title="1 Introduction ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.T1" title="Table 1 ‣ 2 Related Work ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. N. Kim, L. Wang and T. Baldwin</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Tagging and linking web forum posts</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 192–202</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.T1" title="Table 1 ‣ 2 Related Work ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. L. Kolodner</span><span class="ltx_text ltx_bib_year">(1992)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">An introduction to case-based reasoning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Artificial Intelligence Review</span> <span class="ltx_text ltx_bib_volume">6</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 3–34</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.SS1.p1" title="4.1 The Correlation Assumption ‣ 4 Our Approach ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_book"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Kullback</span><span class="ltx_text ltx_bib_year">(1997)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Information theory and statistics</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Courier Dover Publications</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS1.p1" title="5.1 Quality Evaluation ‣ 5 Experimental Evaluation ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5.1</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. MacQueen</span><span class="ltx_text ltx_bib_year">(1967)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Some methods for classification and analysis of multivariate observations</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">1</span>, <span class="ltx_text ltx_bib_pages"> pp. 14</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS3.p3" title="4.3 Clustering-based Approach ‣ 4 Our Approach ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.3</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. F. Porter</span><span class="ltx_text ltx_bib_year">(1980)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">An algorithm for suffix stripping</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Program: electronic library and information systems</span> <span class="ltx_text ltx_bib_volume">14</span> (<span class="ltx_text ltx_bib_number">3</span>), <span class="ltx_text ltx_bib_pages"> pp. 130–137</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p1" title="5 Experimental Evaluation ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Z. Qu and Y. Liu</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Finding problem solving threads in online forum.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1413–1417</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.T1" title="Table 1 ‣ 2 Related Work ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Seo, W. B. Croft and D. A. Smith</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Online community search using thread structure</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1907–1910</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib15" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Singh</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Entity based q&amp;a retrieval</span>.
+</span>
+<span class="ltx_bibblock">See <span class="ltx_text ltx_bib_crossref"><cite class="ltx_cite"/></span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1266–1277</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related Work ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.SS1.p1" title="4.1 The Correlation Assumption ‣ 4 Our Approach ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">X. Xue, J. Jeon and W. B. Croft</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Retrieval models for question and answer archives</span>.
+</span>
+<span class="ltx_bibblock">See <span class="ltx_text ltx_bib_crossref"><cite class="ltx_cite"/></span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 475–482</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p3" title="2 Related Work ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S4.SS1.p1" title="4.1 The Correlation Assumption ‣ 4 Our Approach ‣ Unsupervised Solution Post Identification from Discussion Forums" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 17:18:20 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

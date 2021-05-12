@@ -1,0 +1,685 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Sequential plan recognition: An iterative approach to disambiguating between hypotheses.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Plan recognition (PR), the task of inferring agents' plans based on their observed actions, is a fundamental problem in AI, with a broad range of applications, such as inferring transportation routines [35], advising in health care [1], or recognizing users' activities in gaming and educational software [26], [55].
+     </paragraph>
+     <paragraph>
+      A hypothesis is a set of plans that explain an agent's intended activities. Ideally, the output of a PR algorithm is a single hypothesis that explains the plans carried by the agent to achieve its goal. However, PR algorithms output multiple hypotheses that are consistent with the observations. This raises a fundamental problem of how to disambiguate between such multiple hypotheses.
+     </paragraph>
+     <paragraph>
+      Consider for example an e-learning software for conducting chemistry laboratory experiments [3], [37]. There are many possible plans (solution strategies) that students can use to solve problems, and variations within each due to exploratory activities and mistakes carried out by the student. A hypothesis in this context includes solution strategies performed by the student as well as mistakes or failed attempts. The input to the PR algorithm in this setting is a set of observations (actions in the software), and the output is a set of hypotheses.
+     </paragraph>
+     <paragraph>
+      The set of possible hypotheses can be very large, even for a small number of observations. In particular, each observation of a student's action in the software can be part of a given solution strategy, but it can also possibly be part of a failed attempt or a mistake. To illustrate, in the chemistry domain just seven observations produced over 11,000 hypotheses on average.
+     </paragraph>
+     <paragraph>
+      A straightforward approach to identify the correct hypothesis is to ask the observed agent to reveal it, but soliciting complete plans is time and effort consuming and prone to error. Alternatively, querying whether a given hypothesis is correct will not contribute any information about the correct hypothesis should the answer be “false”.
+     </paragraph>
+     <paragraph>
+      Our approach is to query the observed agent (or a domain expert) about whether a given plan is part of the correct hypothesis. The query can be performed in real time, e.g., a student may be asked questions about her solution strategy for a chemistry problem during her interaction with the educational software. It can also be performed offline after all observations were collected, e.g., a system administrator observing suspicious behavior that can ask a cyber security expert for an opinion regarding these actions. The response to a query conveys information that can be used to reduce the set of possible hypotheses without removing the correct hypothesis. For example, if the answer to the query for a given plan is “false”, then it is possible to eliminate all of the hypotheses which contain the given plan, or plans that may develop to it after additional observations have been collected.
+     </paragraph>
+     <paragraph>
+      The first contribution of this paper is to define the sequential plan recognition (SPR) process, in which we iteratively query whether a given part in one of the hypotheses is correct, and update all hypotheses accordingly. This approach separates the PR task from the disambiguation task.
+     </paragraph>
+     <paragraph>
+      A key challenge in the SPR process is how to update the set of possible hypotheses following the results of a query. Because recognition can be performed in real-time, the hypothesis set contains plans that explain the observations seen so far. Thus, for example, if the result of a query on a plan p is true (i.e., the agent plans to perform p), we cannot simply discard all hypotheses that do not contain p, because they may contain plans that will evolve to perform p in the future. To address this challenge we developed two new criteria for determining whether plans will eventually appear in the correct hypothesis. We show that the SPR process using these criteria is both sound and complete and provide a complexity analysis.
+     </paragraph>
+     <paragraph>
+      The second contribution of this paper is how to compute a good policy for choosing which plan in the current set of hypotheses to query. We consider different heuristic strategies that choose candidate plans to query based on the likelihood of the different hypotheses and the potential information-gain of each query. We also introduce the concept of querying about components of plans we call subplans. We show that in some cases, this can reduce the number of queries significantly in comparison to queries about the full plan.
+     </paragraph>
+     <paragraph>
+      The third contribution of this paper is to evaluate approaches for solving the sequential PR problem in two domains from the PR literature that exhibit varying degrees of ambiguity. One of the domains was synthetically generated [28], by configuring the branching factor, depth and ordering constraints of generated plans, while the other domain was taken from real students' traces when interacting with the aforementioned virtual chemistry lab [3], [2]. In both cases, we generated the agent response to queries. We evaluate the performance of the SPR process using different metrics, including the degree of reduction in the size of the hypothesis set, as well as computation time. We present a thorough analysis of how various features of a domain can affect the performance of the SPR process for the different measures. In both domains, our approach significantly decreased the number of queries compared to a baseline policy. The number of queries performed by the information-gain approach was significantly smaller than the alternative approaches. We also show that querying about subplans of candidate plans can reduce the size of the hypothesis set more quickly, but will generate more queries.
+     </paragraph>
+     <paragraph>
+      This work extends an initial publication of the SPR process [39], [40] in several ways. First, we provide a new query process that includes subplans and avoids redundant queries. Second, we analyze the performance of SPR on different domains and analyze the effect of different domain features. Third, we include a complexity analysis of the SPR process. All of these contributions are supported by new empirical results.
+     </paragraph>
+     <paragraph>
+      The remainder of this paper is organized as follows. Section 2 provides necessary background on PR and introduces the notion of plan refinement. Section 3 presents the SPR process, provides soundness and completeness guarantees, and describes several query policies. We also discuss limitations of our approach. Section 4 empirically evaluates the query policies on two domains from the literature. It studies offline settings in which the SPR process is applied to the PR output after a fixed number of observations, and online settings in which the SPR process is integrated with the PR algorithm. Section 5 empirically study the use of subplans in the different query policies. Section 6 discusses related work in the PR and model based diagnosis literature. Section 7 concludes and discusses future research.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Background
+     </section-title>
+     <paragraph label="Definition 1">
+      Before defining the SPR process, we present some background. There are multiple approaches in the literature to defining PR problem [42], [45]. In this paper we assume the existence of a plan library that defines the possible behaviors of the observed agent [28]. Plan libraryA plan library is a tuple {a mathematical formula}L=〈B,C,G,R〉, where B is a set of basic actions, C is a set of complex actions, {a mathematical formula}G⊆C is a list of goals and R is a set of refinement methods of the form {a mathematical formula}c→(τ,O), where (1) {a mathematical formula}c∈C; (2) {a mathematical formula}τ∈(B∪C)⁎; (3) and O is a partial order over τ representing ordering constraints over the actions in τ.
+     </paragraph>
+     <paragraph>
+      The refinement methods represent how complex actions can be decomposed into (basic or complex) actions.
+     </paragraph>
+     <paragraph>
+      A plan library can also be viewed as equivalent to a context-free grammar extended with partial-ordering constraints or to a Hierarchical Task Network [19]. There is a natural analogy between PR and parsing as well [36], [25]. The non-terminals of the grammars are complex actions, the start symbols are mapped to goals, the terminals are the basic actions (observations).
+     </paragraph>
+     <paragraph label="Definition 2">
+      A plan in a plan library L is a labeled tree {a mathematical formula}p=(V,E,L), where (1) V and E are the nodes and edges of the tree, respectively, (2) {a mathematical formula}L is a labeling function {a mathematical formula}L:V→B∪C mapping every node in the tree to either a basic or a complex action in L, and (3) the children of a node labeled by a complex action are a decomposition of this complex action into constituent actions, according to one of the refinement methods.
+     </paragraph>
+     <paragraph>
+      The set of all leaves of a plan p is denoted by {a mathematical formula}leaves(p). Note that sibling nodes in a plan can have implicit ordering constraints between them, according to the refinement method used to create them.
+     </paragraph>
+     <paragraph label="Definition 3">
+      A plan is said to be complete iff all its leaf nodes are labeled basic actions, i.e., {a mathematical formula}∀v∈leaves(p),L(v)∈B.
+     </paragraph>
+     <paragraph>
+      An observation sequence is an ordered set of basic actions that represents actions carried out by the observed agent. A plan pexplains an observation sequence O iff every observation is mapped to a leaf in the tree.
+     </paragraph>
+     <paragraph>
+      Formally, there exists an injective function {a mathematical formula}f:O→leaves(p)∩B such that {a mathematical formula}f(o)=v with {a mathematical formula}v∈leaves(p).
+     </paragraph>
+     <paragraph>
+      The observed agent chooses a subset of complex actions as intended goals and then carries out a separate plan for completing each of these goals. We assume that the actions carried out by the agent are deterministic and fully observable.
+     </paragraph>
+     <paragraph label="Definition 4">
+      A hypothesis that explains an observation sequence is a set of plans such that each plan explains a mutually exclusive subset of the observation sequence and taken together the plans explain all of the observations.
+     </paragraph>
+     <paragraph>
+      We will illustrate these concepts using an open-ended educational software package for chemistry called VirtualLabs, which also comprises part of our empirical analysis [58]. VirtualLabs allows students to design and carry out their own experiments for investigating chemical processes by simulating the conditions and effects that characterize scientific inquiry in the physical laboratory. Such software is open-ended and flexible and is generally used in classes too large for teachers to monitor all students and provide assistance when needed. Thus, there is a need to develop recognition tools to support teachers' understanding of students' activities using the software.
+     </paragraph>
+     <paragraph>
+      We use the following problem (called Oracle) as a running example: Given four substances {a mathematical formula}A;B;C, and D that react in a way that is unknown, design and perform virtual lab experiments to determine which of these substances react, including their stoichiometric coefficients.
+     </paragraph>
+     <paragraph>
+      There are two classes of strategies used by students to solve the above problem in VirtualLabs [22]. The most common strategy, called pairwise, is to mix pairs of solutions (A with B, A with C, etc.) in order to determine which solutions react with one another. In some cases, students stop mixing pairs when a reaction occurs because this is sufficient to identify the reactants. In the four-way solution strategy, all substances are mixed in a single flask, which is sufficient to identify which solution pair were the reactants and which did not react, since the non-reactants are still observable after the reaction. Fig. 1 show a plan for the four-way strategy (left) and pairwise strategy (right).{sup:1}
+     </paragraph>
+     <paragraph>
+      Now suppose that the student is observed to mix solutions A and B together in a single flask. Without receiving additional information, both the pairwise and four-way strategies are hypotheses that are consistent with the observations, and both include an incomplete plan explaining the student's actions. Incomplete plans include nodes labeled with complex level actions that have not been decomposed using a refinement method. These open frontier nodes represent activities that the agent will carry out in future and have yet to be refined. This ambiguity is exemplified in Fig. 1, showing one hypothesis for the four-way solution strategy (left) and one for the pairwise solution strategy (right). Each of these hypotheses contain a single incomplete plan. The nodes representing the observations A and B are underlined. The dashed nodes denote open frontier nodes.
+     </paragraph>
+     <paragraph>
+      We can now define the PR problem using the formalism above.
+     </paragraph>
+     <paragraph label="Definition 5">
+      Plan recognition (PR)A PR problem is defined by the tuple {a mathematical formula}〈L,O〉 where L is a plan library and O is an observation sequence. A PR algorithm accepts a PR problem and outputs a set of hypotheses H. the observation sequence.
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       Plan refinement
+      </section-title>
+      <paragraph>
+       Let {a mathematical formula}h⁎ be the correct hypothesis, i.e., the set of plans the observed agent intends to follow. Of course, {a mathematical formula}h⁎ is not known to the PR algorithm. When recognition is performed in real-time, observations are collected over time, there is uncertainty about future activities, and the agent's plans may be incomplete (e.g., the agent may have not decided how to perform some of the planned complex actions). To address this challenge we need to define the notion of plan refinement.
+      </paragraph>
+      <paragraph label="Definition 6">
+       Refinement of a planA plan p is a refinement of a plan {a mathematical formula}p′, denoted by {a mathematical formula}p′∼rp, if the plan p can be obtained by applying to {a mathematical formula}p′ a (possibly empty) sequence of refinement methods from the plan library L.
+      </paragraph>
+      <paragraph>
+       The refinement criterion is asymmetric and transitive. Using the parsing analogy introduced in the previous section, a refinement is a sequence of derivation steps using the rules in the grammar. Note that a plan can always be refined from itself using an empty sequence of refinement methods. We extend the refinement criteria to hypotheses as follows. A hypothesis h is a refinement of a hypothesis {a mathematical formula}h′, denoted ({a mathematical formula}h′∼rh), if there is a one-to-one mapping between every plan {a mathematical formula}p∈h and a plan {a mathematical formula}p′∈h′ such that p is a refinement of {a mathematical formula}p′{a mathematical formula}(p′∼rp).
+      </paragraph>
+      <paragraph>
+       Using this definition, a PR algorithm is complete if it returns a hypothesis set H such that {a mathematical formula}h∼rh⁎→h∈H, that is, H contains all possible hypotheses that can be refined to {a mathematical formula}h⁎. A PR algorithm is sound if for every hypothesis {a mathematical formula}h∈H→h∼rh⁎.
+      </paragraph>
+      <paragraph>
+       To illustrate, the top part of Fig. 2 shows part of a hypothesis set {a mathematical formula}H1,…,H4, where each of these hypotheses explains the observations A, B, and C. Each hypothesis {a mathematical formula}Hi ({a mathematical formula}i=1,…,4) consists of two plans, {a mathematical formula}p1i and {a mathematical formula}p2i, such that together the two plans explain the observation sequence {a mathematical formula}A,B,C. The number under each hypothesis {a mathematical formula}Hi is the probability that {a mathematical formula}Hi is correct, as computed by the PR algorithm. Nodes in gray represent the observations and nodes with dashed outline represent open-frontier actions.
+      </paragraph>
+      <paragraph>
+       The plans {a mathematical formula}p11 and {a mathematical formula}p13 are both refinements of {a mathematical formula}p12 ({a mathematical formula}p12∼rp11 and {a mathematical formula}p12∼rp13), but they are not refinement of each other ({a mathematical formula}p11≁rp13 and {a mathematical formula}p13≁rp11). In addition, {a mathematical formula}H1 is not a refinement of {a mathematical formula}H2 ({a mathematical formula}H2≁rH1) because the plan {a mathematical formula}p21 is not a refinement of {a mathematical formula}p22{a mathematical formula}(p22≁rp21). Similarly, {a mathematical formula}H3 is not a refinement of {a mathematical formula}H2 ({a mathematical formula}H2≁rH3).
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Plan recognition algorithms
+      </section-title>
+      <paragraph>
+       This paper assumes a sound and complete PR algorithm that outputs a set of hypotheses that explain the given observation sequence (see Definition 5). We mention representative examples of the state-of-the-art. The PHATT algorithm [24], which is used in the empirical section of this paper generates hypothesis in a top-down manner. SLIM [38] and SBR [4] are similar to PHATT in the format of outputted hypothesis set, and vary only in the approach they are using to construct this set. SBR represents all possible plans in the library as a single tree. Unlike PHATT, it does not enumerate hypotheses for every observations, but construct hypotheses by request.
+      </paragraph>
+      <paragraph>
+       SLIM combines a top-down and bottom-up recognition processes which allow it to commit only to the minimum necessary actions in real-time, but still provide complete hypotheses post factum.
+      </paragraph>
+      <paragraph>
+       ELEXIR [23] differs from these algorithms, as it uses as input a Combinatory Categorial Grammar (CCG), but its underlying formulation is based on similar components. Other PR algorithms do not use plan libraries as their underlying model, such as [44], [52] and [14] and are beyond the scope of this work.
+      </paragraph>
+      <paragraph>
+       To exemplify the mechanics of PR algorithms, we provide here a brief description of PHATT. At the first observation {a mathematical formula}σ0, PHATT constructs hypotheses for explaining this observation. Each hypothesis includes a single plan tree such that 1) the root node is labeled with a goal {a mathematical formula}g∈G; 2) there exists a leaf node that is labeled with {a mathematical formula}σ0; 3) the path from the root to the leaf includes actions that are derived from the refinement methods of the plan library; 4) all other leaves in the plan tree are open frontier nodes. while the plan is referred to as a leftmost tree. When introducing a new observation {a mathematical formula}σ1 into an existing hypothesis, PHATT considers two possibilities:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        Adding {a mathematical formula}σ1 as a new plan in the hypothesis, which requires to construct a leftmost tree that derives {a mathematical formula}σ1 with a root in G, the set of goals.
+       </list-item>
+       <list-item label="2.">
+        Updating an existing plan in the hypothesis with {a mathematical formula}σ1. This option requires to construct another leftmost tree deriving {a mathematical formula}σ1 with a root that matches one of the open frontier nodes of an existing plan.
+       </list-item>
+      </list>
+      <paragraph>
+       This process is iterated over all observations, maintaining a set of hypotheses H that explain the sequence of observations seen so far. To this end, PHATT modifies and extends the hypotheses in H, and, if necessary, adds and removes hypotheses, so that H contains hypotheses that explain the new updated sequence of observations {a mathematical formula}σ1…,σn.
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      Sequential plan recognition
+     </section-title>
+     <paragraph>
+      In this section we define the Sequential Plan Recognition (SPR) process. We begin by defining query function and query policy as follows:
+     </paragraph>
+     <paragraph label="Definition 7">
+      Query functionA query QA is a function that receives as input a plan p and outputs whether one of the plans in the correct hypothesis {a mathematical formula}h⁎ can be refined from p.{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      A query policy selects a plan given the current set of hypothesis.
+     </paragraph>
+     <paragraph label="Definition 8">
+      Query policyA query policy is a function {a mathematical formula}π:2H→Plans(H), where H is a set of hypotheses and {a mathematical formula}Plans(H) is the set of all plans in all hypotheses in H.
+     </paragraph>
+     <paragraph>
+      Such a policy needs to trade off the immediate benefits of a query with the short and long term costs associated with disrupting the acting agent. Following the above notation, for a set of hypotheses H we denote by {a mathematical formula}Plans(H) the set of plans used by one or more hypothesis in H, i.e., {a mathematical formula}Plans(H)=⋃h∈Hh.
+     </paragraph>
+     <paragraph label="Definition 9">
+      SPR processSPR process takes as input a set of hypotheses {a mathematical formula}H0, a query function QA and a query policy π. It outputs a set of hypotheses {a mathematical formula}H⊆H0. A sound SPR process outputs a set H such that {a mathematical formula}∀h∈H,h∼rh⁎ where {a mathematical formula}h⁎ is the correct hypothesis. A complete SPR process outputs a set of hypotheses H such that {a mathematical formula}∀h∈H0,h∼rh⁎→h∈H.
+     </paragraph>
+     <paragraph>
+      Fig. 3 illustrates how a PR algorithm and a SPR process interact. The PR algorithm accepts observations and outputs a set of hypotheses. The SPR process accepts this set of hypotheses and outputs and subset of it.
+     </paragraph>
+     <paragraph>
+      In this work we make several assumptions. First, we assume that the output of the query function is always correct. This corresponds to assuming that the answering agent in omniscient and truthful. Second, we assume that the acting agent plans deterministically and that we have full observability of its actions. Third, we assume that the acting agent generates observations that can be explained using plans in the PL. Lastly, we assume that a complete PR algorithm is available. All these assumptions are used in this work, in particular when proving theoretical properties over the SPR process.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       A complete and sound SPR process
+      </section-title>
+      <paragraph>
+       Algorithm 1 is an implementation of the SPR process. In every iteration i of Algorithm 1, a candidate plan p is chosen from {a mathematical formula}Plans(Hi) using the query policy π. Then, a query is performed on p, and the result is used to generate an updated hypothesis set {a mathematical formula}Hi+1. To avoid performing more than one query on the same plan, we maintain a list of plans that were queried up to step i, denoted {a mathematical formula}CLOSED. Algorithm 1 terminates when {a mathematical formula}Hi contains just a single hypothesis or if it reached an iteration i such that there is no plan in {a mathematical formula}Plans(Hi) that is not in {a mathematical formula}CLOSED (line 2). The output of Algorithm 1 is the set {a mathematical formula}Hi at the last iteration.
+      </paragraph>
+      <paragraph>
+       The remainder of this section details how to revise the hypothesis set given the result of the query (line 4).
+      </paragraph>
+      <paragraph>
+       The key step in Algorithm 1 is how {a mathematical formula}Hi should change after performing a query on a plan p (line 4). Suppose {a mathematical formula}QA(p)=True. According to Definition 7, this means that there exists a plan {a mathematical formula}p⁎∈h⁎ such that {a mathematical formula}p⁎ is a refinement of p. If we knew {a mathematical formula}p⁎ we could simply remove from {a mathematical formula}Hi all hypotheses that do not contain a plan {a mathematical formula}p′ that can be refined to {a mathematical formula}p⁎ ({a mathematical formula}p′∼rp⁎).
+      </paragraph>
+      <paragraph>
+       Since we do not know {a mathematical formula}p⁎, a natural option is to remove from {a mathematical formula}Hi all the hypotheses that do not have any plan {a mathematical formula}p′ that can be refined from p. However, in certain situations this may lead us to discard the correct hypotheses. Consider the example of Fig. 2 and assume that we query plan {a mathematical formula}p11 which returns true (i.e., {a mathematical formula}QA(p11)=True). If we remove all hypotheses that do not contain plans that are refinements of {a mathematical formula}p11, then hypothesis {a mathematical formula}H3 will be removed, since neither {a mathematical formula}p13 nor {a mathematical formula}p23 are refinements of {a mathematical formula}p11. However, it may be the case that one of the agent's intended plans is plan Q (right of Fig. 2). The query on {a mathematical formula}p11 returned true because {a mathematical formula}p11∼rQ. However, note that {a mathematical formula}H3 is a valid hypothesis and should not be discarded, since {a mathematical formula}p13∼rQ. Thus, we require a different pruning criteria for the hypotheses, given an outcome of query.
+      </paragraph>
+      <paragraph>
+       To handle this problem, we devised a new criteria for determining whether two plans can be used to refine a third plan. This criteria will be used to update the set of hypotheses for the next time step in a way that preserves the completeness of the SPR process.
+      </paragraph>
+      <paragraph label="Definition 10">
+       Matching of plansA pair of plans p and {a mathematical formula}p′ are said to match, denoted by {a mathematical formula}p′∼mp (or {a mathematical formula}p∼mp′), if there exists a plan {a mathematical formula}p″ that is a refinement of both plans p and {a mathematical formula}p′ ({a mathematical formula}p∼rp″ and {a mathematical formula}p′∼rp″).
+      </paragraph>
+      <paragraph>
+       Note that the match criteria is symmetric. We illustrate this concept using the example in Fig. 2. Even though {a mathematical formula}p11 and {a mathematical formula}p13 are not refinements of each other, they match ({a mathematical formula}p11∼mp13). This means that there is at least one plan which is a refinement of both. The complete plan Q is an example of such a plan, since {a mathematical formula}p11∼rQ and {a mathematical formula}p13∼rQ.
+      </paragraph>
+      <paragraph>
+       Next, we define the Update function in Algorithm 1 (line 4) that uses both match and refinement, and we show that it results in an SPR process that is complete and sound:
+      </paragraph>
+      <paragraph>
+       Case 1:{a mathematical formula}QA(p) = True. For this case we define the set {a mathematical formula}ϕ(H,p,True) which includes only hypotheses in which at least one of the plans match p:{a mathematical formula} In our example in Fig. 2, if {a mathematical formula}QA(p1)=True then we know that the correct hypothesis {a mathematical formula}h⁎ will contain a complete plan that is a refinement of {a mathematical formula}p11. In particular, Q is a possible refinement of {a mathematical formula}p11. Thus, any hypothesis {a mathematical formula}h∈{H1…,H4} that has at least one plan p that can be refined to Q (or any other plan that is a refinement of {a mathematical formula}p11) cannot be pruned. Therefore, the hypothesis {a mathematical formula}H2 is not pruned, because Q is a refinement of {a mathematical formula}p2 ({a mathematical formula}p12∼rQ). Similarly, the hypothesis {a mathematical formula}H3 is not pruned, because Q is a refinement of {a mathematical formula}p13 ({a mathematical formula}p13∼rQ). However, the hypothesis {a mathematical formula}H4 is pruned since there is no plan in it that can be refined to a plan that is also a refinement of {a mathematical formula}p11.
+      </paragraph>
+      <paragraph>
+       Case 2: QA(p) = False. This means that there is no plan {a mathematical formula}p⁎∈h⁎ that is a refinement of p. The refinement operator is transitive, i.e., if {a mathematical formula}p″ is a refinement of {a mathematical formula}p′ and {a mathematical formula}p′ is a refinement of p, then {a mathematical formula}p″ is also a refinement of p. Therefore, if {a mathematical formula}h⁎ does not contain any plan that is a refinement of p, we can safely remove from H every hypothesis that contains a plan {a mathematical formula}p′ such that {a mathematical formula}p′ is a refinement of p.{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       In our example in Fig. 2, if {a mathematical formula}QA(p2)=False, there does not exist any plan in {a mathematical formula}h⁎ that is a refinement of {a mathematical formula}p12. Therefore, we can safely remove hypotheses {a mathematical formula}H1, {a mathematical formula}H2, and {a mathematical formula}H3, because each of them has at least one plan that is a refinement of {a mathematical formula}p12 (formally, {a mathematical formula}p12∼rp11,p12∼rp12, and {a mathematical formula}p12∼rp13). If {a mathematical formula}QA(p11)=False, then only {a mathematical formula}H1 is pruned.
+      </paragraph>
+      <paragraph>
+       We can now define the update rule (line 5) for the SPR process as follows:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       We can now state the conditions upon which the SPR process described in Algorithm 1 is both sound and complete:
+      </paragraph>
+      <paragraph label="Theorem 1">
+       Given a complete PR algorithm that provides a set of hypotheses, and a responder that always provides with correct answers to queries,Algorithm 1will converge – meaning it will terminate with a hypothesis set{a mathematical formula}Hk⊆H0such that the following holds:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        Termination: There exists a finite number k such that after k iterationsAlgorithm 1will necessarily terminate.
+       </list-item>
+       <list-item label="2.">
+        Completeness:Algorithm 1does not remove any hypothesis that can be refined to the correct hypothesis{a mathematical formula}h⁎. Formally,{a mathematical formula}∀h∈H0,h∼rh⁎→h∈Hk.
+       </list-item>
+       <list-item label="3.">
+        Soundness: Every hypothesis outputted byAlgorithm 1can be refined to the correct hypothesis{a mathematical formula}h⁎. Formally,{a mathematical formula}∀h∈Hk,h∼rh⁎.
+       </list-item>
+      </list>
+      <paragraph label="Proof">
+       We first show that Algorithm 1 necessarily terminates. At each iteration i we ask about a plan from the remaining set of plans ({a mathematical formula}Pi∖CLOSED), which means that {a mathematical formula}Plans(H(i+1)⊆Plans(Hi). Thus, in the worst case, if no hypothesis is removed, the process will terminate after {a mathematical formula}|Plans(Hi)| iterations.We prove completeness by showing that every h that was removed from {a mathematical formula}H0, cannot be refined to {a mathematical formula}h⁎. We do so by reasoning about the different resulting sets after performing a query on some plan p, and showing that the hypotheses that were discarded cannot be refined to {a mathematical formula}h⁎.Case 1:{a mathematical formula}QA(p) = True{a mathematical formula} We use notation {a mathematical formula}ϕ(H0,p,True)‾ to represent {a mathematical formula}H0∖ϕ(H0,p,True) (and similarly for {a mathematical formula}ϕ(H0,p,False)‾.) From the update rule we know that{a mathematical formula}We can conclude that if every plan in h does not match the query plan p, we can safely remove the hypothesis h because {a mathematical formula}h⁎ cannot be refined from h.Case 2:{a mathematical formula}QA(p)=False{a mathematical formula} From the update rule we know that{a mathematical formula} Thus, we can conclude that if the query plan p can be refined from {a mathematical formula}p′∈h, we can safely remove the hypothesis h because {a mathematical formula}h⁎ cannot be refined from h.Lastly we show that Algorithm 1 is sound. Let {a mathematical formula}Hk be the set of all hypotheses after k iterations and {a mathematical formula}h⁎ is the correct hypothesis. If there is still a hypothesis {a mathematical formula}h∈Hk such that {a mathematical formula}¬(h∼rh⁎), then {a mathematical formula}∃p∈h{a mathematical formula}∀p⁎∈h⁎ s.t. {a mathematical formula}¬(p∼rp⁎). Thus, we can still query about p and k is not the final iteration of the algorithm. Hence, at the final iteration of the algorithm we have that {a mathematical formula}∀hh∼rh⁎. □
+      </paragraph>
+      <paragraph>
+       Note that Theorem 1 holds regardless of which query policy is used. The only effect the query policies have is on the number of queries needed to reach the minimal set of hypotheses. Indeed, in many scenarios every query is costly and it is desirable to minimize the number of queries performed. We formalize this minimization problem as follows.
+      </paragraph>
+      <paragraph label="Definition 11">
+       SPR problemAn SPR problem is defined by a tuple {a mathematical formula}〈L,H0〉, where L is a plan library and {a mathematical formula}H0 is a set of hypotheses that explain some observation sequence with respect to L. A solution to the SPR problem is an SPR process with a query policy that decides which plans to select in order to reduce the size of {a mathematical formula}H0 with as few queries as possible.
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Query policies
+      </section-title>
+      <paragraph>
+       We propose several query policies for the SPR process. These policies rely on the assumption that each hypothesis h is associated with a probability {a mathematical formula}P(h) that is assigned by the PR algorithm. Many algorithms assign such probabilities (such as PHATT, DOPLAR and ELEXIR [24], [28], [23]).
+      </paragraph>
+      <paragraph>
+       The hypothesis set in SPR is mapped to the diagnosis set in sequential diagnosis, and the queries in SPR are the probes in sequential diagnosis. In addition, a query policy in SPR is mapped to the probing policy in sequential diagnosis, i.e. which component should be tested in order to confirm or disprove diagnoses.
+      </paragraph>
+      <paragraph>
+       The first query policy we introduce is to choose a plan from the hypothesis h that is associated with the highest probability and was not yet queried about, i.e., choose a plan p from hypothesis h such that {a mathematical formula}P(h)=maxh′∈HP(h′). We call this query policy the Most Probable Hypothesis (MPH) query policy.
+      </paragraph>
+      <section>
+       <section-title>
+        Most probable plan (MPP)
+       </section-title>
+       <paragraph>
+        A limitation of MPH is that it does not specify which plan to query from the most probable hypothesis. The next query policy we propose, called the Most Probable Plan (MPP), addresses this limitation. MPP is intended to choose the plan that is most likely part of the agent's plans. That is, the plan p that maximize the probability that {a mathematical formula}h⁎ contains a plan that is a refinement of p. We denote this probability by {a mathematical formula}P⁎(p).{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        The challenge in computing MPP is that PR algorithms output probabilities over hypotheses, and not over plans. In fact, we show in Appendix B that computing {a mathematical formula}P⁎(p) exactly is not possible. However, the following values provide a lower and an upper bound {a mathematical formula}P⁎(p) (see proof in Appendix B):{a mathematical formula}{a mathematical formula} In our experiments, we found empirically that using the lower bound estimate, i.e., {a mathematical formula}Pr(p), worked better in practice.
+       </paragraph>
+      </section>
+      <section>
+       <section-title>
+        Maximal information gain (or minimal entropy)
+       </section-title>
+       <paragraph>
+        Information gain is a standard metric for quantifying the amount of information gained by a query [48], [9]. In the general case, the information gain is calculated as the change in information entropy from a state prior to and following the result of a query. The entropy of a set X is defined as {a mathematical formula}Ent(X)=−∑x∈XP(x)⋅log(P(x)). Similarly, the information of querying about a plan is calculated with respect to a set of hypotheses. The information gain of a query is the difference in the entropy of the hypothesis set X before the query and the entropy of the hypothesis set {a mathematical formula}X′ remaining after the query, {a mathematical formula}(Ent(X)−Ent(X′)). Entropy has been used in many settings where the best way to extract information is sought (such as [17], [49], [21], [60]). In this work, we need to adjust the entropy calculation to take into account the matching and refinement notions.
+       </paragraph>
+       <paragraph>
+        Given a hypothesis set H, the initial entropy will be the same for all possible queries. This means we only need to compute the entropy of the result of a query p on H. This is done by computing the weighted entropy of the outputted hypothesis set, using the update Equations (2) and (3). If the query result is False, then the entropy of the resulting hypothesis set is defined as follows:{a mathematical formula} Recall that {a mathematical formula}ϕ(H,p,False) is the set of all hypotheses such that none of their plans can be refined to be p (Equation (3)). Similarly, if the query result is True, then the entropy of the resulting hypothesis set is defined as follows:{a mathematical formula} Recall that {a mathematical formula}ϕ(H,p,True) is the set of all hypotheses that contain at least one plan which is a match of p (Equation (2)).
+       </paragraph>
+       <paragraph>
+        The Entropy policy will choose the plan that minimizes the change in entropy to the updated hypothesis set, weighted by the likelihood that the plan is part of the correct hypothesis. As discussed in Appendix B, we can approximate the likelihood that the plan is part of the correct hypothesis – {a mathematical formula}P⁎(p) – by choosing a value between {a mathematical formula}Pr(p) and {a mathematical formula}Pm(p). Thus, in practice, we implemented the Entropy policy by using {a mathematical formula}Pr(p) and {a mathematical formula}Pm(p) instead of {a mathematical formula}P⁎(p) when computing the change in entropy, as follows.{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        To illustrate the difference between the strategies above, consider Fig. 2, which contains four candidate hypotheses {a mathematical formula}H1,…,H4. The correct hypothesis is the single plan Q. Using the MPH policy, the chosen plan to query will be either {a mathematical formula}p2 or {a mathematical formula}p2′, since {a mathematical formula}H2 is the hypothesis with the highest probability, {a mathematical formula}P(H2)=0.4. The query result {a mathematical formula}QA(p2) is True, since {a mathematical formula}p2 can be refined to Q. This results in discarding {a mathematical formula}H4 from the updated hypothesis set, since there is no plan in {a mathematical formula}H4 that can be matched to {a mathematical formula}p2. Both {a mathematical formula}p1 and {a mathematical formula}p3 matches {a mathematical formula}p2, so no other hypothesis will be discarded. The query result {a mathematical formula}QA(p2′) is False, since {a mathematical formula}p2′ cannot be refined to Q. This results in discarding of hypothesis {a mathematical formula}H2 from the updated hypothesis set since there is a plan (namely {a mathematical formula}p2′ itself) that can be refined to {a mathematical formula}p2′. None of the other hypotheses have plans that can be refined to {a mathematical formula}p2′, so {a mathematical formula}H2 is the only hypothesis that is discarded from the updated set.
+       </paragraph>
+       <paragraph>
+        Using the MPP policy, the chosen plan to query will be either {a mathematical formula}p3′ or {a mathematical formula}p4′, since the accumulated probability of each of these plans is {a mathematical formula}P(H3)+P(H4)=0.5. Asking about either of these plans will return a query result of False and cause to discard both {a mathematical formula}H3 and {a mathematical formula}H4 from the updated hypothesis set.
+       </paragraph>
+       <paragraph>
+        Finally we show how to compute the plan with minimal entropy. We will show for example the entropy computation when querying {a mathematical formula}p3′. It contains two parts – Equation (12) is the entropy of the remaining hypotheses if {a mathematical formula}p3′ is part of the correct hypothesis, which is the sum of entropy of the two hypotheses which contain {a mathematical formula}p3′, equals to {a mathematical formula}ϕ(H,p3′,True)={H3,H4}. Similarly, Equation (11) is the entropy of the remaining hypotheses if {a mathematical formula}p3′ is not part of the correct hypothesis, which is the sum of entropy of the two hypotheses which contain {a mathematical formula}p3′, equals to {a mathematical formula}ϕ(Hi,p3′,False)={H1,H2}. Using Equation (13), the total entropy associated with the updated hypothesis set following a query about {a mathematical formula}p3′ is{a mathematical formula} A similar computation shows that querying about {a mathematical formula}p3′ or {a mathematical formula}p4′ yields the highest information gain. In this example, the MPH policy will choose a different query than MPP or Entropy. However, the behavior of these policies can vary. In our empirical work, we show that the Entropy policy outperforms the other policies.
+       </paragraph>
+      </section>
+     </section>
+     <section label="3.3">
+      <section-title>
+       Complexity analysis
+      </section-title>
+      <paragraph>
+       Algorithm 1 receives as input a set of hypotheses with {a mathematical formula}|H| hypotheses. It iteratively chooses a query and updates the hypothesis set. We will now compute the runtime complexity of each such iteration, given that P is the number of plans in the hypothesis set and {a mathematical formula}maxP is the number of nodes in the largest plan.
+      </paragraph>
+      <paragraph>
+       The first step of each iteration of Algorithm 1 is choosing which plan to query. Choosing a plan using the Random policy is the most simple policy, and can be performed in {a mathematical formula}O(1). For the MPH policy, we need to iterate over all hypotheses in the set and find the hypothesis with the maximal probability. This can be performed in {a mathematical formula}O(|H|). For the MPP policy, we need to iterate all plans in the set and choose the plan with the maximal accumulated probability. This process a runtime of {a mathematical formula}O(|P|).
+      </paragraph>
+      <paragraph>
+       For the Entropy policy, we need to compute for each plan p the entropy of the hypothesis set with and without p. To compute the updated hypothesis set {a mathematical formula}ϕ(H,p,True) (Equation (2)) we need to go over all plans in H and check whether they are refinements of p. A naive implementation of checking whether a plan {a mathematical formula}p′∈H is a refinement of p (Definition 6) is to exhaustively check if there exists a sequence of refinement methods that can be applied to p to obtain {a mathematical formula}p′. This can be done more efficiently in a top-down traversal of the trees in plan p and {a mathematical formula}p′ (as described in Appendix A) provided that the following definitions hold: First, both p and {a mathematical formula}p′ were generated using the refinement methods in the library. Second, each of the refinements is a production rule that replaces a single non-terminal with a set of non terminals and terminal action (our empirical domains in the following section comply with these assumptions). Similarly, computing whether {a mathematical formula}p′ matches p can also be implemented by a top-down traversal of the two trees. Therefore the updated hypothesis set can be computed in time {a mathematical formula}O(maxP).
+      </paragraph>
+      <paragraph>
+       To conclude the complexity of the entropy policy, we need to compare every two plans, which takes {a mathematical formula}O(maxP), so iterating over all possible plans in the hypothesis and finding the plan with minimal entropy (Equation (13)) takes {a mathematical formula}O(|P|2⋅maxP).
+      </paragraph>
+      <paragraph>
+       The final step of Algorithm 1 is to discard all the impossible hypotheses according to the response of the user to the query. This requires another loop over all remaining hypotheses which is {a mathematical formula}O(|P|). Notice that in practice, there is a tradeoff between choosing a plan to query faster and the number of queries that will be asked.
+      </paragraph>
+      <paragraph>
+       The final step of each iteration, regardless of the chosen policy, is the normalization of the probabilities and checking if they are a refinement or a match of p, which takes {a mathematical formula}O(|P|⋅maxP). The upper bound of the number of iterations, meaning the number of queries, is the number of plans in the hypothesis set P.
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Empirical evaluation
+     </section-title>
+     <paragraph>
+      We evaluated the query policies described in the previous sections on two separate domains from the PR literature. The first domain involves students' interactions with the VirtualLabs system when solving two different types of problems: the Oracle problem described in Section 2, and a problem called Unknown Acid which required students to determine the concentration level of an unknown acid solution by performing a chemical titration process.
+     </paragraph>
+     <paragraph>
+      These two problems differ widely in the types of solution strategies they require from students, which is reflected in the length and the types of actions in the logs that we sampled. A hypothesis in the Oracle problem will usually consist of several shallow plans (with a depth of 3–4), while in the unknown acid it will consist of a single deep plan. However, the branching factor of the plans in these settings is always two, due to the plan library that was chosen. In this settings, we can not assume that observations are generated from our plan library, because students can explore and/or make mistakes.
+     </paragraph>
+     <paragraph>
+      In each of the logs, we used domain experts (chemistry teachers and researchers) to tag the correct hypothesis. We sampled 35 logs of students' interactions in VirtualLabs to solve the above problems. The plan library was the one used by Amir and Gal [3] which included parameterized actions and ordering constraints.
+     </paragraph>
+     <paragraph>
+      The second domain is a synthetic domain used by Kabanza et al. [28]. This domain generates plan libraries that can be configured using several features which are known to affect the hypothesis set size [24]:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Or Branching Factor: This is the number of different ways a complex action can be decomposed into a sequence of subactions.
+      </list-item>
+      <list-item label="•">
+       And Branching Factor: This is the number of constituents which decompose a complex action.
+      </list-item>
+      <list-item label="•">
+       Ordering Constraints: This is an indication of how many ordering constraints exist between the constituents of a refinement method. There are various possible configurations, we focus in the paper on two which are easy to compare: Unordered, meaning that the constituents can be observed in any order; and partially ordered, meaning that some of the constituents must come in a particular order, but not all of them. The latter configuration is commonly used in PR literature to represent real world domains.
+      </list-item>
+      <list-item label="•">
+       Number of Goals: Representing the number of different goals an agent might pursue at the same time.
+      </list-item>
+      <list-item label="•">
+       Depth: Representing the depth of the plan library. Specifically, in our configurations it represents how many refinement methods are used, in the largest tree, to construct a path from a leaf representing an observation to a root representing a goal.
+      </list-item>
+      <list-item label="•">
+       Alphabet Size: Representing the number of basic actions possible in the grammar.
+      </list-item>
+     </list>
+     <paragraph>
+      We used the same configuration as Kabanza et al. [28] which consisted of 100 different plan libraries with an alphabet of 100 actions and five identified goal. The refinement method were represented as AND-OR trees with an AND branching factor of 3, and an OR branching factor of 2.
+     </paragraph>
+     <paragraph>
+      We compare the performance of the query policies introduced in Section 3.2 (using a random tie-breaking rule). For each policy, we evaluate the performance using three metrics:
+     </paragraph>
+     <paragraph>
+      The runtime of each query policy, the number of queries required until convergence, and the decrease in the size of the hypothesis set. In both domains, the correct hypothesis is known in advance (whether it was determined by the domain expert, as in the VL domain, or by simulation, as in the synthetic domain). Therefore we can generate the query of the agent automatically.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Evaluation of query policies
+      </section-title>
+      <paragraph>
+       In this section we show the results of testing a selected set of query policies on the two domains. Specifically, we compared between the following policies: the Most Probable Plan (MPP), the Most Probable Hypothesis (MPH) and the Minimal Entropy (Entropy) approaches, as well as a baseline approach that picked a plan to query at random (Random).
+      </paragraph>
+      <paragraph>
+       In all cases, we ran the PHATT PR algorithm once on a given set of observations, and then proceeded to run the SPR process described in Algorithm 1. We first show the number of hypotheses that were outputted by the PHATT algorithm without query interventions. As can be seen in Table 1, the number of hypotheses in the synthetic domain grows linearly in the number of observations, but for the real-world domain, the number of hypotheses grows exponentially, reaching over 10,000 hypotheses after just 7 actions. Fig. 4 shows the average percentage of hypotheses remaining from the initial hypothesis set ({a mathematical formula}H0) as a function of the number of queries performed. Before the first query, all algorithms start with 100% of the hypotheses in {a mathematical formula}H0, and this number decreases as more queries are performed. For both domains we used the PR output after 7 observations.
+      </paragraph>
+      <paragraph>
+       As seen in Fig. 4, all MPH, MPP and Entropy query policies were able to reduce the number of hypotheses significantly compared to the baseline random policy. In both domains, the Entropy query policy performed better than all other policies. The SPR process was able to converge to a single hypothesis (100% reduction in hypothesis size compared to {a mathematical formula}H0) after about 20 queries in the VirtualLabs domain, while converging to a minimal hypothesis set of about 30% of the number of hypotheses in {a mathematical formula}H0 of the synthetic domain. We attribute this to inherent ambiguity in this domain that cannot be resolved by making further queries. In both domains, the advantage of the Entropy over all other approaches after just five queries strongly significant ({a mathematical formula}p≤0.01). This is important since queries are costly and the number of queries that can be asked in practice may be small.
+      </paragraph>
+      <paragraph>
+       Table 2 shows the average number of queries needed until reaching the minimal set of hypotheses, for each query policy. Notice that the number of hypotheses increase with each new observation. This is due to the fact that for each hypothesis, a new observation can initiate a new plan or complement an existing plan (or both), so the size of the hypothesis set will be at least the size of the original one [41]. This table shows that the Entropy query policy made significantly fewer queries than the other approaches.
+      </paragraph>
+      <paragraph>
+       The runtime was measured in seconds, on a commodity i-7 server, with the initial hypothesis set for the first 7 observations. The table shows that the Entropy policy exhibited higher runtime than the other approaches but not by a significant margin.
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       The effect of domain characteristics
+      </section-title>
+      <paragraph>
+       We studied the effect of different domain characteristics on the performance of the SPR process in the synthetic domain. To this end, we varied three factors of the environment: the or-branching, and-branching factors and ordering constraints. For this purpose we generated four domains that differ from the synthetic domain used in the previous section in a single feature: increasing the or-branching factor from two to four; increasing the and-branching factor from three to six; removing the ordering constraints.
+      </paragraph>
+      <paragraph>
+       For each of these synthetic domains, there was a different number of hypotheses generated after five observations: The baseline domain used in the previous section produced 428 hypotheses on average; modifying the or-branching factor produced 5,460 hypotheses; modifying the and-branching 434 hypotheses; removing the ordering constraints produced 942 hypotheses.
+      </paragraph>
+      <paragraph>
+       Fig. 5 shows the decrease in hypothesis set size after five observations for each policy in each of the domains. Interestingly, the best decrease in the hypothesis set size was obtained for the domain with the modified or-branching factor, which was also associated with the highest ambiguity. Thus the ability of the SPR process to reach convergence cannot be attributed solely to the initial number of hypotheses in the domain. We attribute the improved performance in the or-branching domain to the fact that each hypothesis provides a mutually exclusive explanation, so it is easier to separate them.
+      </paragraph>
+     </section>
+     <section label="4.3">
+      <section-title>
+       Online SPR
+      </section-title>
+      <paragraph>
+       In the results presented thus far, the querying process was performed after a fixed number of observations to establish a uniform baseline. In this section we interleave the execution of the PR algorithm with the SPR process between observation processing. Specifically, the recognition process is performed on the updated hypothesis set following the query response, and outputs a new set of possible hypotheses, which is subsequently used to perform the next query. This interleaved process is called online SPR.
+      </paragraph>
+      <paragraph>
+       Fig. 6 shows how online SPR is used with PR. In the original (offline) case, the SPR module comes after the PR module is done (Fig. 3). In the online case, on the other hand, the plan recognizer only receives a subset of the observations, {a mathematical formula}o1,…,ok and the outputted hypotheses explain only these observations. Then, the SPR process is applied to discard unnecessary hypotheses. This reduced set is given back to the plan recognizer together with more observations and this loop continues until all observations have been processed. We note that this variant of the SPR process is only possible if the plan recognizer can handle online recognition of a partial sequence of observations. This is a common requirement and many algorithms fulfill it [23], [24], [28], [38], [41].
+      </paragraph>
+      <paragraph>
+       When online SPR is integrated with PR, there are some parameters that can vary, such as the frequency of SPR between observations and the number of queries asked per SPR execution. We run several types of experiments on the synthetic domain in order to explore these different combinations of online SPR with PR.
+      </paragraph>
+      <paragraph>
+       Interval probing We performed a query and ran the PR algorithm (PHATT) at fixed intervals of observations. The results are shown in Fig. 7. We measured the number of hypotheses (in log scale) remaining after processing all of the observations, as well as the runtime (in seconds). The results show that when the query interval is smaller, there is a greater reduction in the number of hypotheses. In particular, we achieve a significant reduction in the hypothesis space when decreasing the query interval from two observations to one (Fig. 7, left), which corresponds to querying after each observation. On the one hand, decreasing the interval size increases the amount of queries and associated updates to the hypothesis space. On the other hand, this also reduces the number of hypotheses we update at each step, which reduces the run time necessary to perform these actions (Fig. 7, right).
+      </paragraph>
+      <paragraph>
+       Interestingly, when the probing is performed more frequently, this reduces the number of hypotheses. This shows that the benefit from the SPR process can overcome the cost of having to perform queries more frequently. For example, there is a decrease in the number of hypotheses between the 8th and 9th observation when probing after each observation, but not when the probing is done less frequently.
+      </paragraph>
+      <paragraph>
+       One time query Assuming that querying is associated with a cost (e.g., interrupting the user), we investigate when is the best time to perform the probing process, whether earlier or later in the recognition process. We ran the same experiment, but now we initiated the probing process just once, after a predefined number of observations (set to 2, 4 and 6). Fig. 8 shows the runtime and number of hypotheses remaining after the query process. It shows that the earlier we use the probing process, the fewer hypotheses we have to reason about in the future. This means that early disambiguation can be advantageous the PR process. Similarly, the runtime is smaller when there are less hypotheses to consider.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Subplans and inferred query pruning
+     </section-title>
+     <paragraph>
+      In Section 3.2 we proposed several query policies whose aim is to choose intelligently which plan to query that will result in the smallest hypothesis set. In this section we study the use of subplans, rather than full plans, in the query process.
+     </paragraph>
+     <paragraph label="Definition 12">
+      For a plan p, we define the set of subplans of p to be the set of plans that can be refined to p: {a mathematical formula}Subs(p)={p′|p′∼rp}. We extend this definition to a set of plans P to be {a mathematical formula}Subs(P)=⋃p∈PSubs(p).
+     </paragraph>
+     <paragraph>
+      Note that the root of any subplan of p is the same as the original plan p.
+     </paragraph>
+     <paragraph>
+      Subplans provide a different level of granularity than complete plans. The intuition is that we may be able to prune the hypothesis set more by querying about less specific, rather than more specific plans. For example, in the VirtualLabs domain, consider the sub-plan corresponding to a pairwise mix, but without committing to specify the specific compounds. If the answer to querying the sub-plan is False, we can prune all hypotheses including pairwise mixes. In contrast, if we choose a complete plan specifying exactly which compounds are mixed, we will only be able to prune hypotheses that include these compounds.
+     </paragraph>
+     <paragraph>
+      Allowing the SPR process to perform queries on subplans as well as full plans may result in finding the correct plan with fewer queries.
+     </paragraph>
+     <paragraph>
+      To demonstrate that allowing subplan queries can be helpful, consider the example in Fig. 9. The hypothesis set has 6 hypotheses {a mathematical formula}H4,H5,…H9, each consisting of a plan {a mathematical formula}p4,p5,…,p9, respectively. All these hypotheses are equally likely and none of the plans are refinements of each other.
+     </paragraph>
+     <paragraph>
+      Table 4 shows the possible outcomes of querying about each of the plans in terms of the set of outputted hypotheses. If only one of these six hypotheses is the correct one, it can be beneficial to query about the subplans {a mathematical formula}p2 and {a mathematical formula}p3 instead of the refined ones. If we ask about {a mathematical formula}p4,…,p9, in the worst case we will need to perform five queries to eliminate all the wrong hypotheses. However, if we first ask about either of the subplans {a mathematical formula}p2 or {a mathematical formula}p3, in the worst case we will need to perform three queries to eliminate all the wrong plans.
+     </paragraph>
+     <paragraph>
+      Note that in general, if one had the optimal query policy, then querying about subplans as well as complete plans can only improve the SPR process by performing less queries in total. Our query strategies, however, are not optimal, but we show that querying about subplans can still result in less queries.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Query policies
+      </section-title>
+      <paragraph>
+       Let {a mathematical formula}Subs(P) be the set of all subplans and full plans that are refinements of a plan from the set of plans P. To implement the query process using subplans, we only need to change the query function π in Algorithm 1 to choose any subplan in {a mathematical formula}Subs(P). We now show how we adapt the query policies defined in Section 3.2.
+      </paragraph>
+      <paragraph>
+       Most Probable Hypothesis (MPH). Choose a plan or subplan from the hypothesis h that is associated with the highest probability and was not yet queried about, i.e., choose a plan or subplan t such that {a mathematical formula}t∈Subs(Ph) where {a mathematical formula}Ph={p|p∈h=arg⁡maxh∈HiP(h)}.
+      </paragraph>
+      <paragraph>
+       Most Probable Plan (MPP). Choose the plan or subplan that is associated with the highest probability across all hypotheses: {a mathematical formula}arg⁡maxp∈Subs(P)Pr(p), where P is the union set of all plans in all of the hypotheses H.
+      </paragraph>
+      <paragraph>
+       Maximal Information Gain (or Minimal Entropy). The computation of the minimal Entropy is the same as before, only we need to consider all possible subplans:{a mathematical formula} where the standard entropy computation over the resulting hypothesis set remains the same.
+      </paragraph>
+      <paragraph>
+       We will now show that querying about subplans does not hinder soundness and completeness of the SPR process.
+      </paragraph>
+      <paragraph label="Proposition 1">
+       Let {a mathematical formula}H′⊆H be the set of hypotheses remaining after convergence of the SPR process. Any hypothesis that was discarded ({a mathematical formula}h∈H∖H′) by using complete plans will also be discarded by querying with subplans (and vice versa).
+      </paragraph>
+      <paragraph label="Proof">
+       Suppose that a hypothesis is discarded by SPR using only full plans, it means that there is a query p that its update causes the hypothesis to be discarded. Since {a mathematical formula}P⊆Subs(P) and the SPR process does not end while there are still possible queries, when using SPR with subplans, at some point p must be chosen out of the set of all subplans and then the hypothesis will be discarded as well.In addition, all discarded hypotheses using subplans will be discarded when using only full plans: Assume that there is some hypothesis H which is not in the final set of hypotheses using subplans. This means that there is a query about some subplan {a mathematical formula}p′ that can eliminate H. However, since all subplans are constructed from full plans, there is some full plan p such that {a mathematical formula}p′∼rp.If {a mathematical formula}QA(p′)=True and H is discarded, then {a mathematical formula}∀ph∈H¬(ph∼mp′){a mathematical formula}⇒∀ph∈H′¬(ph∼mp){a mathematical formula}⇒∃pp′∼rp such that {a mathematical formula}H′ will be discarded when asking about the full plan p.If {a mathematical formula}QA(p′)=False then it must hold that {a mathematical formula}QA(p)=False, meaning that H is discarded since {a mathematical formula}∃ph∈Hph∼rp′{a mathematical formula}⇒∃ph∈Hph∼rp⇒H will be discarded when asking about the full plan p. □
+      </paragraph>
+      <paragraph>
+       This means that in practice, the number of hypotheses that are left after convergence is equal when using both query approaches. The difference is in the number of queries that is required to reach convergence. The next section empirically explores that using subplans requires less queries than full plans.
+      </paragraph>
+      <paragraph>
+       Also, note that by adding subplans we also introduce more cases in which plans are equally preferable when using the above query policies. An extreme case is the MPH query policy, in which all the subplans of a given plan are equally preferable according to MPH, thus raising the issue of how to break ties in such cases.
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Experimental results
+      </section-title>
+      <paragraph>
+       We evaluated the query policies for subplans on the VirtualLabs domain and the variants of the synthetic domain. To avoid having an exponential number of subplans, we made the following changes to the initial set {a mathematical formula}Sub(P). First, for any plan {a mathematical formula}p∈P, we generated all subplans {a mathematical formula}p′∼rp such that for each node n in p, either n appears in {a mathematical formula}p′ with all of its children or with none of them.
+      </paragraph>
+      <paragraph>
+       Second, we further reduced the set of subplans during the SPR process itself. Given the set of subplans {a mathematical formula}Subs(P) in a current iteration of the SPR process: If p was queried and is part of the correct hypothesis, discard all candidate subplans {a mathematical formula}p′∈Subs(P) such that {a mathematical formula}p∼rp′. If p was not part of the correct hypothesis, discard all plans {a mathematical formula}p′ such that {a mathematical formula}p′∼rp. Note that removing subplans does not impede the completeness and soundness of the SPR process. For any plan p, the set of subplans {a mathematical formula}Sub(p) always contains the complete plan itself, which will not be removed.
+      </paragraph>
+      <paragraph>
+       Fig. 10 shows the results of using the entropy query policy with full plans and with subplans, after 5 observations in both the VirtualLabs and the synthetic domain. As seen in this figure, querying about subplans achieves a higher reduction of the hypothesis set than querying about full plans in early stages of the SPR process. This result suggests that using subplans is preferred when the number of queries is small. In both domains, there exists a point in the query process beyond which the full plans achieve a higher reduction in the hypothesis set. In the VirtualLabs domain, this point is almost in the convergence while in the synthetic domain, this point is reached well earlier.
+      </paragraph>
+      <paragraph>
+       Interestingly, using subplans requires significantly more queries to converge than using complete plans. We attribute this to the fact that the number of subplans can be larger than the number of plans. Thus the process has to consider a “long tail” of subplans to query until reaching convergence, unlike in the full plan case. To illustrate, assume we have some plan p which was chosen by our query policy. If we ask about p and receive a positive answer, then p can be refined to {a mathematical formula}p⁎∈h⁎, the correct hypothesis. This means that p and any plan {a mathematical formula}p′ such that {a mathematical formula}p∼rp′ and {a mathematical formula}p′∼rp⁎ will not be discarded.
+      </paragraph>
+      <paragraph>
+       It can be shown that the theoretical worst-case number of possible queries when considering subplans, is {a mathematical formula}O(|P|⋅rd), where P is the number of full plans, r is the largest and-branching factor (the width of the longest refinement method) and d is the depth of the plan. In practice, the increase was much smaller in our domains: In the VirtualLabs domain, the average number of subplans created per plan is 9.62 and in the synthetic domain, the average number of subplans created per plan is 19.55. The average runtime of the first query was 0.12 seconds in the synthetic domain and 10.14 seconds in the VirtualLabs domain, which was significantly larger than when using only full trees (see Table 3).
+      </paragraph>
+      <paragraph>
+       Importantly, these results do not imply that querying over full plans should always be preferred over subplans. In early stages, the query process produces informative subplans which are able to provide a greater benefit in reduction than do complete plans. When the number of queries is small (e.g., interrupting a student) the subplan approach may provide better performance. For example, when interacting with a student or teachers in a real classroom, even a reduction of 3 queries represents a real improvement. It is a reasonable assumption to make that the user will not be patient enough to let us query them until convergence, and as seen in Fig. 10, using subplans decreases the set size faster (in both domains).
+      </paragraph>
+      <paragraph>
+       Fig. 11 shows the performance of using subplans on the different domains when using the Entropy query policy on settings varying the or-branching factor, and-branching factor (left) and alphabet size (right). We compared the percentage of reduction in the original set of hypotheses for the subplans and full plans after four queries. For domains with low ambiguity, in which the number of hypotheses was small, there was no difference in performance between the two approaches. To illustrate, when the or-branching factor was set to 1, the size of the initial hypothesis set was 21, and both approaches reduced the hypothesis set by about 20%. The benefit of subplans is highly distinct for domains of high ambiguity, such as when setting the or-branching factor to 4. In this case, the size of the initial hypothesis set was 15,460. Using subplans reduced the hypothesis set by 92%, while using full plans reduced the hypothesis set by 65%.
+      </paragraph>
+      <paragraph>
+       To conclude this section, it seems that using subplans instead of complete trees has a real benefit in domains of high ambiguity. Moreover, updating the set of possible queries at each point proved to be an important and useful addition to the original algorithm.
+      </paragraph>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Related work
+     </section-title>
+     <paragraph>
+      This work relates to work on hypothesis disambiguation in two separate subfields of literature in AI, PR and automatic diagnosis.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       Hypothesis disambiguation in plan recognition
+      </section-title>
+      <paragraph>
+       Plan recognition is the problem of inferring an agent's plan given a knowledge base of possible plans and a sequence of observations. We focus on settings where computers need to infer users' plan in real time. Examples include detecting students' solution strategies to problems in educational software [55], assisting teams in disaster response [10], analyzing computer games [28], [20], story understanding [57], detecting cyber attacks [24] and online surveillance [15].
+      </paragraph>
+      <paragraph>
+       Our work relates to different approaches in the PR literature on disambiguation of the hypothesis set during run-time. Most of the approaches admit all of the hypotheses that are consistent with the observed history and rank them. Notable examples include Avrahami-Zilberbrand and Kaminka [5], who rank hypotheses based on the expected utility to the observer agent and probabilistic information in the plan library, and the PHATT algorithm [24] which has been widely used in many applications uses and-or trees to represent hypotheses and maintains a probability distribution over this hypothesis space. Wiseman and Shieber [57] propose an abduction technique that discriminatively scores hypotheses based on features of the plan trees.
+      </paragraph>
+      <paragraph>
+       Other works control the hypothesis space by generating only certain hypotheses or by pruning the hypothesis space itself during run-time: Kabanza et al. [28] generate a hypothesis that is estimated to make the largest contribution for predicting the agent's goals. Mirsky and Gal [38] propose a bottom-up algorithm that avoids early commitment. Some approaches use probabilistic constraints over the plan duration [18] as well as resource dependencies in the plan library to eliminate hypotheses [54], [41].
+      </paragraph>
+      <paragraph>
+       Few works exist on interacting with the observed agent as means to disambiguate the hypothesis set during PR: Bisson et al. [9] suggest to “provoke” the acting agent to perform an action that will disambiguate between two possible goals. Fagundes et al. [20] make a decision to query the observed agent if the expected time to disambiguate between its plans does not exceed a predefined window of response to the recognized plan. They ask the observed agent directly about its intentions and do not prune the hypothesis set. They evaluate their approach in a synthetic domain. These works don't consider incomplete plans or that the hypothesis set dynamically changes over time.
+      </paragraph>
+      <paragraph>
+       Our work differs from all of the works above in that it separates the task of the recognition from the task of the disambiguation. For the recognition process, we assume an external plan recognizer (which can be almost any of the above in a straightforward way). For the disambiguation, we propose the SPR process as a method that interacts with the agent in order to discard hypotheses that cannot be refined into the correct hypothesis.
+      </paragraph>
+      <paragraph>
+       Keren et al. [30] defined Goal Recognition Design as the problem of designing a domain in a way that will allow easy identification of agents' goals. They introduce a worst-case distinctiveness (wcd) measure that is an upper bound on the number of observations needed to solve the problem for a given domain, and showed how to compute this measure in domains based on the STRIPS representations. Later works improved these approaches to account for non-optimal agents [31] and non-observable actions [32]. Keren et al. later generalized their work to reason about various types of utility-maximizations, such that the wcd becomes a single possible metric, and others can be defined as well [33]. Wayllace et al. [56] defined GRD with stochastic agent action outcomes and Son et al. [53] presented an approach to solving GRD using Answer Set Programming (ASP). These works consider an orthogonal problem, how to modify the environment to reduce the ambiguity.
+      </paragraph>
+     </section>
+     <section label="6.2">
+      <section-title>
+       Sequential model-based diagnosis
+      </section-title>
+      <paragraph>
+       Diagnosis is the problem of finding faulty system components that are responsible for an observed abnormal system behavior. The diagnosis task can be mapped to a PR problem, where the plan to recognize is the set of components that caused the system to exhibit abnormal behavior [6], [51], [43]. The model of the observed agent's behavior is represented by the plan library. Similarly to PR, where there can be multiple hypotheses that explain a set of observations, in diagnosis there can be more than one set of components that may have caused the abnormal behavior.
+      </paragraph>
+      <paragraph>
+       Sequential diagnosis is the process of taking “a sequence of measurements of [components in] the system until the faults causing the abnormalities are identified” [49]. These measurements, referred to as probes, validate whether given components in a diagnosis are faulty. The most basic probe measures a single internal component in the system and reveals the value it outputs to its adjacent internal components. Many works in sequential diagnosis place probes in an iterative manner [17], [49], [21], [60]. In every iteration several possible diagnoses that are consistent with the system behavior are generated. If only a single diagnosis is found, the algorithm halts. Otherwise, a probe is decided upon and executed, providing a new observation for the diagnosis algorithm, with the intent of narrowing the set of possible diagnoses.
+      </paragraph>
+      <paragraph>
+       Our work on SPR is inspired by sequential diagnosis. A probe in sequential diagnosis is similar to querying the user in the sequential PR process. SPR extends the diagnosis work to reasoning about incomplete plans and to show how to update the hypothesis space given a query.
+      </paragraph>
+     </section>
+     <section label="6.3">
+      <section-title>
+       Choosing queries as a Markov decision problem
+      </section-title>
+      <paragraph>
+       We will briefly frame the choice of the next query to perform as a decision-making under uncertainty problem [11]. This task can be formalized as a Markov Decision Problem (MDP) [47].
+      </paragraph>
+      <paragraph>
+       An MDP is defined by a tuple {a mathematical formula}〈S,I,A,Tr,R〉 where S is the set of possible states, I is the initial state, A is the set of actions, Tr is the state transition function, and R is the reward function. The transition function {a mathematical formula}(s′,a,s) is the probability that performing action a at state s will result in a state {a mathematical formula}s′. A solution to an MDP is a policy π, that specifies for each state the optimal action to take.
+      </paragraph>
+      <paragraph>
+       We can formalize the SPR problem as an MDP as follows. The set of possible states S is the power set of the initial set of states {a mathematical formula}H0, i.e., {a mathematical formula}S=2H0. The initial state of the MDP {a mathematical formula}S0 is {a mathematical formula}H0 itself. There is a one-to-one mapping from any hypothesis set {a mathematical formula}Hi∈H to a state {a mathematical formula}si∈S at step i in the SPR. Performing an action in the MDP corresponds to performing a query, so {a mathematical formula}A={p|p∈⋃h∈Hh}, that is the set of plans in all possible hypotheses.
+      </paragraph>
+      <paragraph>
+       The transition function {a mathematical formula}Tr(si+1,p,si) is the probability that the set of hypotheses corresponding to the state {a mathematical formula}si+1 is obtained after updating the hypothesis set with respect to the answer to query p, given that the previous set of hypotheses corresponds to the set {a mathematical formula}si. The set of hypotheses {a mathematical formula}Hi+1 is determined by the {a mathematical formula}Update(QA(p),Hi,p) function in Equation (4). Note that in SPR it is always the case that {a mathematical formula}si+1⊆si since performing a query prunes the set of hypotheses.
+      </paragraph>
+      <paragraph>
+       The transition probability {a mathematical formula}Tr(si+1,p,si) is defined as {a mathematical formula}P⁎(p) and {a mathematical formula}1−P⁎(p), when the result of query p is True or False. Following our previous discussion on {a mathematical formula}P⁎(p), we can approximate {a mathematical formula}P⁎(p) and {a mathematical formula}1−P⁎(p) by {a mathematical formula}Pm(p) and {a mathematical formula}1−Pr(p), respectively.{sup:2}
+      </paragraph>
+      <paragraph>
+       If a given state {a mathematical formula}si represents a set of hypotheses that cannot be disambiguated with any query (i.e., {a mathematical formula}Tr(si+1,p,si)=1 where {a mathematical formula}si+1=si for all queries p), then {a mathematical formula}si transitions to a terminal state.
+      </paragraph>
+      <paragraph>
+       Since we want to minimize the number of queries, the reward function returns a fixed cost for every state-action pair, e.g., {a mathematical formula}R(si,p)=−1.
+      </paragraph>
+      <paragraph>
+       A policy π that solves the MDP described above is a query policy that provides the minimal number of queries until convergence.
+      </paragraph>
+      <paragraph>
+       For example, Fig. 12 shows part of the state space of the MDP for the four candidate hypotheses in the example of Fig. 2. The initial state is {a mathematical formula}s0={H1,H2,H3,H4}. If we perform the query {a mathematical formula}p12, then we can reach the following two states: {a mathematical formula}s1={H1,H2,H3} (in case that querying {a mathematical formula}p12 will return true) and {a mathematical formula}s2={H4} (in case that querying {a mathematical formula}p12 will return false). The transition probabilities {a mathematical formula}(s1,a,s0),(s2,a,s0) depend on the initial probabilities of the hypotheses. Given the probabilities from the example, {a mathematical formula}Tr({H4},p12,{H1,H2,H3,H4})=0.4. For every {a mathematical formula}s′≠s1,s2 it holds {a mathematical formula}Tr(s′,p12,s)=0. Similarly, in the second level, {a mathematical formula}Tr({H2,H3},p11,{H1,H2,H3})=P(H2)+P(H3)/P(H1)+2⁎P(H2)+2⁎P(H3)=0.865/1.865=0.464. Notice that the probability of both states is normalized by the sum of probabilities of all hypotheses in both outcomes.
+      </paragraph>
+      <paragraph>
+       In theory, this formalization allows using a general purpose MDP solver, such as Value Iteration or RTDP [7], to generate an optimal query policy, i.e., one that has the minimal expected number of queries until it reaches the minimal set of hypotheses. We note that in practice, the size of the MDP's state space ({a mathematical formula}S=2H0) may require more sophisticated MDP solvers, such as ones based on Monte-Carlo Tree Search (e.g., [34], [13], [50]). A different approach will be to formalize the partial observability of the user's actions as a POMDP [12], [27], but this again will require some sophisticated solvers, due to the size of the space of all possible hypotheses. Another possible approach is to model SPR as a non-deterministic planning problem (e.g. as a search for a strong cyclic plan [16], [8]).
+      </paragraph>
+      <paragraph>
+       Young et al. [59] propose a system for dialogue management that repeatedly interacts with the user to infer its goal. They represent goals using a set of simple ontological rules, and use a POMDP to construct a dialogue policy that provides the necessary information for completing its goal. The belief state of the POMDP is updated based on the response to the system's generated requests. Their approach was shown to significantly reduce the uncertainty over user's goals in a lab study. There are several similarities between Young et al. and SPR: Both approaches use queries to disambiguate between possible hypotheses about the user's intentions, and both use a tree-based model to represent the domain. There are several differences between SPR and dialogue management. First, they solve different problems, whether providing information to the user (DM) or reducing the uncertainty over the user's intended plans (SPR). Second, the DM approach use simple ontology rules to represent their domain. We consider a richer representation that allows for parameterized actions, multiple goals and partial ordering over actions. The use of a complex representation makes the belief update be non-trivial in the SPR setting. Extending our approach to support dialogue systems using our grammar can be an interesting synergy between the two works, but is out of the scope of this paper.
+      </paragraph>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      Conclusion
+     </section-title>
+     <paragraph>
+      This paper proposed the SPR process, a sound and complete process in which it is possible to query whether a chosen plan is part of the correct hypothesis, and subsequently remove all incorrect plans from the hypothesis set. It defined the SPR problem, with the goal is to minimize the number of queries to converge to the minimal hypothesis set that can be refined to the correct hypothesis. We presented a number of approaches for choosing a plan to query – the plan that maximizes the expected information gain, as well as the plan that is ranked highest in terms of likelihood by the PR algorithm. We evaluated these approaches on two domains from the literature, showing that both were able to converge to the correct hypothesis using significantly less queries than a random baseline, with the maximal information gain technique exhibiting a clear advantage over all approaches. We also showed that using subplans, we may be able to make the querying process more efficient in some cases. We presented empirical settings using different domain configuration and discussed the impact of each of them when using the SPR process.
+     </paragraph>
+     <paragraph>
+      We chose a simple protocol between the recognizer and observed agent (a query and a yes/no response). We also assume perfect answers to a query. Future work will consider richer queries, such as asking for more information from the observed agent. To this end we intend to combine optimization approaches from dialogue and interruption management [59], [46], [29]. We also intend to consider non-uniform query costs.
+     </paragraph>
+     <paragraph>
+      We intend to run the SPR algorithm in online domains such as intelligently querying students about their solution strategy in the virtual labs system in a way that minimizes the disruption. We also wish to develop machine learning models for predicting whether a given plan belongs to the correct hypothesis.
+     </paragraph>
+     <paragraph>
+      We used a plan library as the domain description for SPR. We also intend to adapt our approach to other domain representations such as domain theory [44], [52].
+     </paragraph>
+     <paragraph>
+      Lastly, in future work we will design more sophisticated query policies that employ look ahead. To this end we are working on a compact representation of a state space for using the MDP.
+     </paragraph>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     <section-title>
+      Pseudo-code for refinement and Match methods
+     </section-title>
+     <paragraph>
+      We specify below the pseudo-code for the refine (Algorithm 2) and match (Algorithm 3) conditions. We use the following methods:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       {a mathematical formula}label(p) – takes a plan p and returns the letter mapped to its root node.
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}childNum(p) – takes a plan p and returns the numbers of child nodes under its root node.
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}childAt(p,i) – takes a plan p and returns the its ith child node of its root node.
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}isExpanded(p) – takes a plan p and return True iff its root node has been expanded using a refinement method.
+      </list-item>
+     </list>
+    </section>
+    <section label="Appendix B">
+     <section-title>
+      Computing probabilities for plans
+     </section-title>
+     <paragraph>
+      In this appendix we discuss how to approximate the probability that a query about a plan p will return true, given a probability distribution of a set of hypotheses. This probability, denoted earlier as {a mathematical formula}P⁎(p), is formally defined as follows as the probability that {a mathematical formula}h⁎ contains a plan that is a refinement of p.{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      The challenge in {a mathematical formula}P⁎(p) is that PR algorithms output probabilities over hypotheses, and not over plans. However, as we show below, the probabilities over hypotheses outputted by PR algorithms can be used to approximate {a mathematical formula}P⁎(p).
+     </paragraph>
+     <paragraph>
+      Consider the following sets of hypotheses H: (1) {a mathematical formula}Hr(p), the set of hypothesis in H that contain a plan that is a refinement of p; (2) {a mathematical formula}Hm(p), the set of hypothesis in H that contain a plan that is a match of p; and (3) {a mathematical formula}H¬m(p), the set of hypothesis in H that do not contain a plan that is a match of p.
+     </paragraph>
+     <paragraph>
+      For every set of hypothesis {a mathematical formula}H′, we denote by {a mathematical formula}P(H′) the sum of the probabilities of the hypotheses in {a mathematical formula}H′, i.e., {a mathematical formula}P(H′)=∑h∈H′P(h).
+     </paragraph>
+     <paragraph label="Lemma 1">
+      If the PR algorithm is complete, then:{a mathematical formula}
+     </paragraph>
+     <paragraph label="Proof">
+      Every hypothesis in {a mathematical formula}Hr(p) has a plan that is a refinement of p. So, for every {a mathematical formula}h∈Hr(p), if {a mathematical formula}h∼rh⁎ then there's a plan {a mathematical formula}p′∈h⁎ such that {a mathematical formula}p∼rp′. Thus, {a mathematical formula}P⁎(p)≥P(Hr). On the other hand, every hypothesis that contains a refinement of p must be a refinement of a hypothesis in {a mathematical formula}Hm(p). Thus, {a mathematical formula}P⁎(p)≤P(Hm). □
+     </paragraph>
+     <paragraph>
+      Computing {a mathematical formula}P⁎(p) exactly, however, is not possible with the standard output of even complete PR algorithms. This is because computing {a mathematical formula}P⁎(p) exactly requires a distribution over the likelihood of all the complete hypotheses, while PR algorithms (including complete ones) output a distribution over a set of hypothesis such that some of the hypotheses may be incomplete.
+     </paragraph>
+     <paragraph>
+      To demonstrate this, consider a scenario in which the PR algorithm outputs two hypothesis, {a mathematical formula}h1={p1,p2} and {a mathematical formula}h2={p1′,p3}, and assume both hypotheses are equally likely ({a mathematical formula}P(h1)=P(h2)=0.5) and that {a mathematical formula}p1′ is a refinement of {a mathematical formula}p1. Assume we wish to compute the probability that a query on {a mathematical formula}p1′ will return True ({a mathematical formula}P⁎(p1′)).
+     </paragraph>
+     <paragraph>
+      There are two options: either {a mathematical formula}h1 is correct or {a mathematical formula}h2 is correct. If {a mathematical formula}h2 is correct then clearly querying on {a mathematical formula}p1′ will return true. Therefore, {a mathematical formula}P⁎(p1′)≥P(h2)=0.5. This follows Lemma 1, since {a mathematical formula}Hr(p1′)={h2}.
+     </paragraph>
+     <paragraph>
+      Now consider the case that {a mathematical formula}h1 is correct. What does this mean about {a mathematical formula}P⁎(p1′)? If {a mathematical formula}h1 can only be refined to complete hypothesis that contains a plan that {a mathematical formula}p1′ is a refinement of, then clearly querying {a mathematical formula}p1′ will return true in this case also, and so {a mathematical formula}P⁎(p1′)=1. However, if {a mathematical formula}h1 can be refined to a different complete hypothesis that does not contain any plan that is a refinement of {a mathematical formula}p1′, then {a mathematical formula}P⁎(p1′) is lower than one.
+     </paragraph>
+     <paragraph>
+      So given the PR algorithm's output, all we can say is that {a mathematical formula}P⁎(p1′) is between 0.5 and 1.0. Put formally, since {a mathematical formula}Hr(p1′)={h2} and {a mathematical formula}Hm(p1′)={h1,h2} then we can only say that {a mathematical formula}0.5≤P⁎(p)≤1.
+     </paragraph>
+     <paragraph>
+      In conclusion, computing {a mathematical formula}P⁎ exactly is not possible using only probabilities over hypotheses. Therefore, we approximated {a mathematical formula}P⁎ by choosing values between the bounds specified in Lemma 1.
+     </paragraph>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

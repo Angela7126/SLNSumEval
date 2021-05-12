@@ -1,0 +1,1160 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Characterizing acceptability semantics of argumentation frameworks with recursive attack and support relations.
+   </title>
+   <abstract>
+    Over the last decade, several extensions of Dung's Abstract Argumentation Frameworks (AFs) have been introduced in the literature. Some of these extensions concern the nature of the attack relation, such as the consideration of recursive attacks, whereas others incorporate additional interactions, such as a support relation. Recently, the Attack–Support Argumentation Framework (ASAF) was proposed, which accounts for recursive attacks and supports, attacks to supports and supports to attacks, at any level, where the support relation is interpreted as necessity. Currently, to determine the accepted elements of an ASAF (which may be arguments, attacks, and supports) it is required to translate such an ASAF into a Dung's AF. In this work, we provide a formal characterization of acceptability semantics directly on the ASAF, without requiring such a translation. We prove that our characterization is sound since it satisfies different results from Dung's argumentation theory; moreover, we formally show that the approach proposed here for addressing acceptability is equivalent to the preexisting one, in which the ASAF was translated into an AF. Also, we formalize the relationship between the ASAF and other frameworks on which it is inspired: the Argumentation Framework with Recursive Attacks (AFRA) and the Argumentation Framework with Necessities (AFN).
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Argumentation has been shown as an important and fertile topic of research in Artificial Intelligence [11], [14], [52], [42], [6], for instance, by providing a reasoning model for rational decision making [37], [39], [12], [7], for decision making under uncertainty and/or dynamic environments [5], [35], for handling inconsistencies in logic-based environments [53], [15], [13], [36], Artificial Intelligence and Law [1], [51], and for reaching agreements [40], [4], [55]. In particular, within the community of argumentation, there has been considerable interest in studying Abstract Argumentation Frameworks (AFs) [30] since they allow to abstract from the way in which arguments and interactions are obtained, while enabling to explore different theoretical properties on arguments and their relationships, as well as providing various ways for characterizing their acceptability semantics [8].
+     </paragraph>
+     <paragraph>
+      Briefly, Dung's AFs are directed graphs in which the nodes are arguments and the edges represent attacks (conflicts) between them; starting from that work, in the last decade, several extensions of AFs were introduced. On the one hand, we can consider extensions that regard the attack relation, including the formalization of collective attacks from sets of arguments [43], the consideration of arguments that attack attacks [41], and a generalization of [41]'s ideas by characterizing Argumentation Frameworks with Recursive Attacks (AFRAs) [9], [10]. On the other hand, we can consider extensions to AFs by adding new forms of interactions. Among these, we can add a preference relation to decide the effects of attacks in AFs [3], or consider a support relation between arguments leading to the characterization of Bipolar Argumentation Frameworks (BAFs) [23].
+     </paragraph>
+     <paragraph>
+      Following the work of [23], where the support relation was just considered as a positive interaction between arguments, different interpretations for the support relation were proposed in the literature. In particular, the most well-known interpretations are evidential support [47], deductive support [57], and necessary support [46]. Each one of these perspectives establishes some acceptability constraints on the arguments related by the support relation. Then, the different approaches characterize a series of complex attacks [24], which enforce those acceptability constraints by taking into account the coexistence of attacks and supports in the framework.
+     </paragraph>
+     <paragraph>
+      Beginning with the works presented in [24] and [27], where different interpretations of support were compared and discussed, the interest in studying AFs that consider a support relation has grown. Furthermore, recent works have focused on a deeper study of the necessity interpretation of the support relation (see [44], [50], [48], [25]). Among these we can distinguish [50], where the author gives an instantiation of necessary support in aspic+ using sub-arguments; and [25], where an axiomatization of necessary support was proposed through different frameworks.
+     </paragraph>
+     <paragraph>
+      In [29], two lines of work for extending Dung's AFs were combined by defining the Attack–Support Argumentation Framework (ASAF). Specifically, the ASAF extends the AF by incorporating a necessary support relation and allowing for attacks and supports between arguments, as well as attacks and supports from an argument to the attack and support relations, at any level. The intuition behind the existence of a high-order support (i.e., a support targeting an attack/support link) is that the supporting argument provides the context under which the target interaction holds. Hence, for instance, given a support α from an argument {a mathematical formula}A to an attack or a support β, argument {a mathematical formula}A should be accepted in order for the interaction β to hold. Similarly, extending the intuition behind the existence of a recursive attack relation (e.g., in [41] to model preferences), high-order attacks in an ASAF (i.e., attacks targeting an attack/support link) capture the intuition that the attacking argument provides a context under which the target interaction should not hold. Next, we introduce an example that illustrates the capabilities of the ASAF, providing representational tools that facilitate the modeling through the use of high-order attacks and supports.
+     </paragraph>
+     <paragraph>
+      Let us consider a scenario where there is a room that has one lamp. Then, for the room to be illuminated, it is necessary that the lamp is on; in particular, this makes sense in the given context, where there is no other lamp in the room. Also, for the lamp to be on, it is necessary that the room has electricity. However, if the lamp in the room is an emergency lamp, its light can be on without receiving electricity. Furthermore, the fact that in the room there is an open window with no curtains provides a context where the fact that the lamp is on is not necessary for the room to be illuminated; nevertheless, this observation only helps in a context in which there is daylight coming from the outside. Finally, let us suppose that the lamp in the room is broken and that the building in which the room is located is suffering from a power outage. In this scenario we can identify the following arguments, whose conclusions are detailed next:
+     </paragraph>
+     <list>
+      <list-item>
+       “The room is illuminated”
+      </list-item>
+      <list-item>
+       “The lamp in the room is on”
+      </list-item>
+      <list-item>
+       “There is no other lamp in the room (the lamp is the only one)”
+      </list-item>
+      <list-item>
+       “There is electricity in the room”
+      </list-item>
+      <list-item>
+       “The lamp in the room is an emergency lamp”
+      </list-item>
+      <list-item>
+       “There is an open window with no curtains in the room”
+      </list-item>
+      <list-item>
+       “There is daylight on the outside”
+      </list-item>
+      <list-item>
+       “The lamp in the room is broken”
+      </list-item>
+      <list-item>
+       “The building where the room is located is affected by a power outage”
+      </list-item>
+     </list>
+     <paragraph>
+      These arguments and the interactions involving them can be represented by the ASAF illustrated below, where a single arrow ⟶ denotes an attack and a double arrow ⟹ denotes a support, adopting a necessity interpretation.{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Given the characteristics of the attack and support relations of the ASAF, it is possible to have interactions (attacks or supports) that do not hold since they are somehow made ineffective by other interactions. For instance, given the example introduced above, the necessity support relation between arguments {a mathematical formula}LO and {a mathematical formula}RI is made ineffective by the attack from {a mathematical formula}OW. This is because, as expressed before, having an open window through which daylight comes into the room provides a context under which the necessity relation expressing that the lamp should be on in order for the room to be illuminated does not hold. These complex interactions, which require accounting for the “validity” of attacks and supports, are captured in [29] by allowing for extensions of the ASAF to contain not only arguments but also attacks and supports; hence, the attacks and supports present in the corresponding extensions are those that hold. In particular, acceptability calculus in [29] is addressed by translating the ASAF into a Dung's AF, by means of an intermediate AFN, and then obtaining the extensions of the ASAF in terms of the corresponding extensions of its associated AF.
+     </paragraph>
+     <paragraph>
+      The first contribution of this paper is to obtain a full characterization of acceptability semantics directly from the ASAF.{sup:1} Before characterizing semantic notions directly on the ASAF, we will formally define the conditions under which defeats on the elements of an ASAF occur, given the coexistence of the recursive attack and support relations. As highlighted in the literature of abstract argumentation, having a characterization of the semantics is significant because it yields a natural and intuitive mechanism for studying different characteristics of a framework, as well as for determining the acceptability status of its elements under different criteria. In particular, having such a characterization allows the user to focus on the semantic aspects of the ASAF, exploring and identifying features of its arguments, attacks and supports directly. That is, the direct approach we propose in this paper allows the user to abstract from the intrinsic details of a translation such as the one given in [29], while also avoiding the need for understanding the particularities related to the formalization of an AFN or an AF, and the process carried out for obtaining its extensions. Furthermore, if new semantics for the ASAF were to be defined in the future, they could exploit specific aspects leading to the existence of defeats, as well as other intermediate semantic notions involved in the direct characterization proposed in this paper.
+     </paragraph>
+     <paragraph>
+      We will show that our characterization of the ASAF semantics is sound in the sense that it satisfies different theoretical results established in [30] for Dung's AFs. On the other hand, as the second and main contribution of this paper, we will formally show that the extension-based approach we introduced here is equivalent to the one proposed in [29] in the sense that they both lead to obtaining the same extensions of the framework under the same semantics. Furthermore, given our characterization of the acceptability semantics for the ASAF, we will formally determine the relationship between the ASAF and the frameworks on which its foundations rely on: the Argumentation Framework with Recursive Attacks (AFRA) [9], [8] and the Argumentation Framework with Necessities (AFN) [45], [46], [16].
+     </paragraph>
+     <paragraph>
+      The rest of this paper is organized as follows. Section 2 starts by giving some background, including notions from Dung's theory [30], the AFRA[10], the AFN[46], and the formal definition of the ASAF. Then, Section 3 identifies the different conflicts that may arise between the elements of the ASAF, leading to the characterization of diverse forms of defeat. In particular, since attacks and supports in an ASAF may be affected by other interactions, we will also account for the conditions under which the attacks and supports of the ASAF are defeated. Section 4 formally defines the acceptability semantics of the ASAF. We start by defining some basic semantic notions and then follow Dung's extension-based approach for defining the extensions of the ASAF under different semantics. Later, in Section 5, we show that the approach for obtaining the extensions of an ASAF proposed in Section 4 is equivalent to the one given in [29], in the sense that they lead to obtaining the same extensions of a given framework. Section 6 discusses related work and provides a formal account of the relationship between the ASAF and the AFRA, and between the ASAF and the AFN. Finally, in Section 7, we draw some conclusions and comment on future lines of work.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Essential background
+     </section-title>
+     <paragraph>
+      In this section, we include the background required for characterizing the acceptability semantics of the ASAF. We first present some basic notions related to Dung's AFs [30]. Then, we include some background corresponding to the Argumentation Framework with Recursive Attacks [9], [10] and the Argumentation Framework with Necessities [45], [46], [16]. Finally, we introduce the ASAF proposed in [29].
+     </paragraph>
+     <section label="2.1">
+      Abstract Argumentation Framework {a mathematical formula}(AF)
+      <paragraph>
+       The Abstract Argumentation Framework defined in [30] consists of a set of arguments and a set of conflicts between them:
+      </paragraph>
+      <paragraph label="Definition 1">
+       AFAn Abstract Argumentation Framework (AF) is a pair {a mathematical formula}〈A,R〉, where {a mathematical formula}A is a finite and non-empty set of arguments and {a mathematical formula}R⊆A×A is an attack relation.
+      </paragraph>
+      <paragraph>
+       Given an AF, in [30] a series of semantic notions are defined leading to the characterization of collectively acceptable sets of arguments. In particular, we will use the prefix ‘D’ when referring to semantic notions for Dung's AFs. As will become clear in Section 5, this will help to distinguish whether the semantic notions apply to an AF or to an ASAF.
+      </paragraph>
+      <paragraph label="Definition 2">
+       D-conflict-freeness, D-acceptability, D-admissibilityLet {a mathematical formula}〈A,R〉 be an AF and {a mathematical formula}S⊆A.
+      </paragraph>
+      <list>
+       <list-item label="•">
+        S is D-conflict-free iff {a mathematical formula}∄A,B∈S s.t. {a mathematical formula}(A,B)∈R.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}A∈A is D-acceptable w.r.t.S iff {a mathematical formula}∀B∈A s.t. {a mathematical formula}(B,A)∈R, {a mathematical formula}∃C∈S s.t. {a mathematical formula}(C,B)∈R.
+       </list-item>
+       <list-item label="•">
+        S is D-admissible iff it is D-conflict-free and {a mathematical formula}∀A∈S, {a mathematical formula}A is D-acceptable w.r.t. S.
+       </list-item>
+      </list>
+      <paragraph>
+       Then, by adding restrictions to the notion of admissibility, the complete, preferred, stable, and grounded extensions of an AF are defined as follows:
+      </paragraph>
+      <paragraph label="Definition 3">
+       AF D-extensionsLet {a mathematical formula}AF=〈A,R〉 and {a mathematical formula}S⊆A.
+      </paragraph>
+      <list>
+       <list-item label="•">
+        S is a D-complete extension of AF iff it is D-admissible and {a mathematical formula}∀A∈A, if {a mathematical formula}A is D-acceptable w.r.t. S, then {a mathematical formula}A∈S.
+       </list-item>
+       <list-item label="•">
+        S is a D-preferred extension of AF iff it is a maximal (w.r.t. ⊆) D-admissible set of AF.
+       </list-item>
+       <list-item label="•">
+        S is a D-stable extension of AF iff it is D-conflict-free and {a mathematical formula}∀A∈A\S, {a mathematical formula}∃B∈S s.t. {a mathematical formula}(B,A)∈R.
+       </list-item>
+       <list-item label="•">
+        S is the D-grounded extension of AF iff it is the smallest (w.r.t. ⊆) D-complete extension of AF.
+       </list-item>
+      </list>
+     </section>
+     <section label="2.2">
+      Argumentation Framework with Recursive Attacks (AFRA)
+      <paragraph>
+       Next, we briefly review the Argumentation Framework with Recursive Attacks (AFRA) [9], [10], which extends Dung's approach by allowing for attacks to the attack relation.
+      </paragraph>
+      <paragraph label="Definition 4">
+       AFRAAn Argumentation Framework with Recursive Attacks (AFRA) is a pair {a mathematical formula}〈A,R〉 where {a mathematical formula}A is a set of arguments and {a mathematical formula}R⊆A×(A∪R) is an attack relation.
+      </paragraph>
+      <paragraph>
+       Given an attack {a mathematical formula}α=(A,X)∈R, {a mathematical formula}A is called the source of α, denoted {a mathematical formula}src(α)=A, and X is called the target of α, denoted {a mathematical formula}trg(α)=X. The authors in [10] consider that attacks, rather than their source arguments, are the subjects able to defeat arguments and other attacks. Then, they provide a characterization of defeats, distinguishing between direct and indirect defeats. On the one hand, direct defeats to an argument or an attack are obtained directly from the AFRA's attack relation. On the other hand, defeats on arguments are propagated to the attacks they originate, and are identified as indirect defeats.
+      </paragraph>
+      <paragraph label="Definition 5">
+       Defeat in AFRALet {a mathematical formula}〈A,R〉 be an AFRA, {a mathematical formula}α,β∈R and {a mathematical formula}X∈A∪R:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        αdirectly defeatsX iff {a mathematical formula}trg(α)=X.
+       </list-item>
+       <list-item label="•">
+        αindirectly defeatsβ iff {a mathematical formula}trg(α)=X, and {a mathematical formula}X=src(β).
+       </list-item>
+      </list>
+      <paragraph>
+       In [9], [10] the authors characterize the acceptability semantics of the AFRA in a similar way to [30]. First, they define the following basic semantic notions.
+      </paragraph>
+      <paragraph label="Definition 6">
+       AFRA semantic notionsLet {a mathematical formula}〈A,R〉 be an AFRA, {a mathematical formula}S⊆A∪R and {a mathematical formula}X∈A∪R:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        S is conflict-free iff {a mathematical formula}∄α,Y∈S s.t. α defeats Y.
+       </list-item>
+       <list-item label="•">
+        X is acceptable w.r.t. S iff {a mathematical formula}∀α∈R s.t. α defeats X, {a mathematical formula}∃β∈S s.t. β defeats α.
+       </list-item>
+       <list-item label="•">
+        S is admissible iff it is conflict-free and {a mathematical formula}∀Y∈S, Y is acceptable w.r.t. S.
+       </list-item>
+      </list>
+      <paragraph>
+       Then, the complete, preferred, stable, and grounded{sup:2} extensions of an AFRA are defined as follows.
+      </paragraph>
+      <paragraph label="Definition 7">
+       AFRA extensionsLet {a mathematical formula}Γ=〈A,R〉 be an AFRA and {a mathematical formula}S⊆A∪R:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        S is a complete extension of Γ iff it is admissible and {a mathematical formula}∀X∈(A∪R), if X is acceptable w.r.t. S, then {a mathematical formula}X∈S.
+       </list-item>
+       <list-item label="•">
+        S is a preferred extension of Γ iff it is a maximal (w.r.t. ⊆) admissible set of Γ.
+       </list-item>
+       <list-item label="•">
+        S is a stable extension of Γ iff it is conflict-free and {a mathematical formula}∀X∈(A∪R)\S, {a mathematical formula}∃α∈S s.t. α defeats X.
+       </list-item>
+       <list-item label="•">
+        S is the grounded extension of Γ iff it is the least fixed point of {a mathematical formula}FΓ:2A∪R↦2A∪R, where {a mathematical formula}FΓ(S)={X|X is acceptable w.r.t. S}. Equivalently, S is the grounded extension of Γ iff it is the smallest (w.r.t. ⊆) complete extension of Γ.
+       </list-item>
+      </list>
+      <paragraph>
+       Note that in Definition 1, Definition 3, S was used to denote a set of arguments. In contrast, in Definition 6, Definition 7, it was used to denote a set of arguments and attacks. This difference relies on the context where the reference to the set is made. In the context of an AF, where arguments are the only elements to be accounted for when characterizing semantic notions, a set S will only contain arguments of the AF. Then, in the context of an AFRA, where arguments and attacks are relevant for the semantics of the framework, a set S may contain attacks as well as arguments. Furthermore, as will become evident in Sections 3–5, in the context of an ASAF a set S may also contain supports, in addition to arguments and attacks. In general, when we want to refer to a set of elements of a given framework (whether it is an AF, an AFRA, or an ASAF), we will use an uppercase bold letter, regardless of the elements the set may contain (i.e., arguments, attacks and/or supports); moreover, a set will be generally named using the letter ‘S’, being the initial letter of ‘set’, resulting in S. Finally, it should be noted that uppercase non-bold letters like ‘X’ or ‘Y’ are used to denote arbitrary elements within a set of elements of a given framework. Thus, elements like X or Y are not to be confused with sets like S, {a mathematical formula}S′, or T.
+      </paragraph>
+     </section>
+     <section label="2.3">
+      Argumentation Framework with Necessities (AFN)
+      <paragraph>
+       Here, we will introduce some background notions of the Argumentation Framework with Necessities (AFN) [45], [46], [16], which extends Dung's framework by incorporating a support relation between arguments. In particular, the support relation of the AFN has a necessity interpretation, where the meaning of {a mathematical formula}A supporting {a mathematical formula}B is that the acceptance of {a mathematical formula}A is necessary to obtain the acceptance of {a mathematical formula}B. In other words, the necessary support relation in the AFN imposes the following acceptability constraints on the arguments it relates: the acceptance of {a mathematical formula}B implies the acceptance of {a mathematical formula}A or, equivalently, the non-acceptance of {a mathematical formula}A implies the non-acceptance of {a mathematical formula}B.
+      </paragraph>
+      <paragraph label="Definition 8">
+       AFNAn Argumentation Framework with Necessities (AFN) is a tuple {a mathematical formula}〈A,R,N〉 where {a mathematical formula}A is a set of arguments, {a mathematical formula}R⊆A×A is an attack relation, and {a mathematical formula}N⊆A×A is an irreflexive and transitive necessity relation.
+      </paragraph>
+      <paragraph>
+       The attack relation {a mathematical formula}R of the AFN coincides with the analogous relation in Dung's AF. On the other hand, given the acceptability constraints associated with the support relation of the AFN, the authors characterize the notion of extended defeat{sup:3} in order to reinforce such constraints. Specifically, an extended defeat will occur when having an attack followed by a necessary support.
+      </paragraph>
+      <paragraph label="Definition 9">
+       AFN extended defeatLet {a mathematical formula}〈A,R,N〉 be an AFN and {a mathematical formula}A,B∈A. There is an extended defeat from {a mathematical formula}A to {a mathematical formula}B, noted as {a mathematical formula}AR+B, iff {a mathematical formula}ARB or {a mathematical formula}∃C∈A s.t. {a mathematical formula}ARCNB.
+      </paragraph>
+      <paragraph>
+       In [46] the authors show that every AFN has an associated AF, as characterized by the following definition. Then, they show that the extensions of an AFN and its associated AF under the complete, preferred, stable and grounded semantics coincide.
+      </paragraph>
+      <paragraph label="Definition 10">
+       AF associated with an AFNGiven an AFN {a mathematical formula}〈A,R,N〉, its associated AF is {a mathematical formula}〈A,R+〉.
+      </paragraph>
+      <paragraph>
+       In particular, the AF associated with an AFN takes the extended defeat relation {a mathematical formula}R+ into account. Then, since direct attacks are a particular case of extended defeats (see Definition 9), the associated AF contemplates the original attacks and the additional extended defeats on the arguments of the AFN.
+      </paragraph>
+     </section>
+     <section label="2.4">
+      Attack–Support Argumentation Framework (ASAF)
+      <paragraph>
+       Next, we will present the fundamental background notions regarding the Attack–Support Argumentation Framework (ASAF) [29]. The ASAF formalism extends the AFRA presented in Section 2.2 by incorporating a support relation enabling to express support not only for arguments but also for attacks and for the support relation itself, and extending the AFRA's attack relation by allowing for attacks to the support relation. In particular, the support relation of the ASAF follows the necessity interpretation of the AFN introduced in Section 2.3. As a result, the ASAF also extends the AFN by allowing for recursive attacks and supports, as well as attacks to supports, and vice-versa. Below, we include the definition of the ASAF, corresponding to an AF with recursive attack and support relations.
+      </paragraph>
+      <paragraph label="Definition 11">
+       ASAFAn Attack–Support Argumentation Framework (ASAF) is a tuple {a mathematical formula}〈A,R,S〉 where {a mathematical formula}A is a set of arguments, {a mathematical formula}R⊆A×(A∪R∪S) is an attack relation and {a mathematical formula}S⊆A×(A∪R∪S) is a necessary support relation. We assume that {a mathematical formula}S is acyclic and {a mathematical formula}R∩S=∅.
+      </paragraph>
+      <paragraph>
+       As stated before, attacks and supports in an ASAF can also be attacked and supported. Thus, for instance, an attack from an argument {a mathematical formula}A to a support from {a mathematical formula}B to X will be represented by a pair {a mathematical formula}(A,(B,X)) in the attack relation {a mathematical formula}R of the ASAF, where the pair {a mathematical formula}(B,X) belongs to the support relation {a mathematical formula}S of the ASAF. In cases like this one, to simplify the notation, we will denote the attack originated by {a mathematical formula}A with the pair {a mathematical formula}(A,α), where {a mathematical formula}α=(B,X). In general terms, the attack from an argument {a mathematical formula}C to an attack or a support {a mathematical formula}α=(A,X) will be referred to as {a mathematical formula}(C,α); similarly, the support from an argument {a mathematical formula}D to an attack or a support {a mathematical formula}β=(B,Y) will be referred to as {a mathematical formula}(D,β). Moreover, as in [9], [10], given an attack {a mathematical formula}α=(A,X)∈R, {a mathematical formula}A is called the source of α, denoted {a mathematical formula}src(α)=A, and X is called the target of α, denoted {a mathematical formula}trg(α)=X. Analogously, given a support {a mathematical formula}β=(B,Y)∈S, {a mathematical formula}B is called the source of β, denoted {a mathematical formula}src(β)=B, and Y is called the target of β, denoted {a mathematical formula}trg(β)=Y.
+      </paragraph>
+      <paragraph>
+       It can be noted that the support relation {a mathematical formula}S of an ASAF is required to be acyclic. As expressed by the authors in [16], such cycles are undesirable because they correspond to a type of fallacy known as begging the question (Latin petitio principii) also accurately referred to as arguing in a cycle. Furthermore, necessity cycles are excluded in the AFN by requiring the support relation {a mathematical formula}N to be irreflexive and transitive. Even though, as also mentioned by the authors in [16] one could generalize the results to an arbitrary necessity relation by filtering out the extensions containing cycles of necessities, the formalization of the ASAF in [29] followed the direction of [16] requiring the support relation of the ASAF to be acyclic. Finally, note that the acyclicity requirement captures the non-reflexivity of [16]. Then, even though the support relation {a mathematical formula}S is not required to be transitive, as will become clear later, the transitivity of support will be captured by explicitly accounting for the existence of chains of support when characterizing defeats in the ASAF.
+      </paragraph>
+      <paragraph>
+       In [29] the authors state that, given the combination of attack and support relations in an ASAF, it is required to identify attacks and supports unequivocally. This is because, when an argument {a mathematical formula}A is attacking (respectively, supporting) a pair {a mathematical formula}α=(B,X), one needs to know whether {a mathematical formula}A is attacking (respectively, supporting) an attack from {a mathematical formula}B to X or a support from {a mathematical formula}B to X. If {a mathematical formula}α=(B,X) is such that it may correspond to both an attack and a support from {a mathematical formula}B to X, when {a mathematical formula}A attacks (respectively, supports) α it would not be possible to determine whether {a mathematical formula}A is attacking (respectively, supporting) the attack from {a mathematical formula}B to X or the support from {a mathematical formula}B to X. As a result, the attack and support relations of the ASAF are assumed to be disjoint (i.e.,{a mathematical formula}R∩S=∅) and thus, a pair {a mathematical formula}γ=(E,Z) in the attack relation or the support relation will be unequivocally identified by γ.
+      </paragraph>
+      <paragraph>
+       Another reason why it is required that the attack and support relations of an ASAF to be disjoint relates to the situations under which extended defeats occur in the AFN. If {a mathematical formula}A⟶B and {a mathematical formula}A⟹B, the attack encodes the intuition that if {a mathematical formula}A is accepted, then {a mathematical formula}B should not be accepted (analogously, if {a mathematical formula}B is accepted, {a mathematical formula}A should not be accepted); in contrast, the support encodes the intuition that if {a mathematical formula}B is accepted, then {a mathematical formula}A should be accepted. Therefore, by simultaneously having an attack and a support from {a mathematical formula}A to {a mathematical formula}B in a scenario where {a mathematical formula}B is accepted, {a mathematical formula}A would have to be simultaneously accepted and not accepted, reflecting some kind of inconsistency within argument {a mathematical formula}B. As a result, to avoid situations like this one, it is assumed that {a mathematical formula}R∩S=∅.
+      </paragraph>
+      <paragraph>
+       An ASAF can be graphically represented using a graph-like notation: an argument {a mathematical formula}A∈A will be denoted as a node in the graph, an attack {a mathematical formula}α=(A,X)∈R will be denoted as {a mathematical formula}A⟶αX, and a support {a mathematical formula}β=(B,Y)∈S will be denoted as {a mathematical formula}B⟹βY. To illustrate this, let us consider the following example.
+      </paragraph>
+      <paragraph label="Example 1">
+       Let us consider the ASAF {a mathematical formula}Δ1 with the following graphical representation:{a mathematical formula} We have the first-level attacks {a mathematical formula}α=(A,B), {a mathematical formula}ε=(D,F), {a mathematical formula}η=(F,G), {a mathematical formula}λ=(I,H), {a mathematical formula}τ=(N,J) and {a mathematical formula}κ=(J,N). The first-level supports are {a mathematical formula}β=(B,C), {a mathematical formula}γ=(C,D) and {a mathematical formula}ω=(D,L). The second-level interactions are the attacks {a mathematical formula}δ=(E,β) and {a mathematical formula}π=(M,ω). Then, we have the third-level attack and support on δ: respectively, {a mathematical formula}φ=(K,δ) and {a mathematical formula}θ=(H,δ). Finally, the only fourth-level interaction is the support {a mathematical formula}μ=(J,θ).
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     Different forms of defeat in the ASAF
+     <paragraph>
+      To characterize the acceptability semantics of the ASAF we first need to identify the conflicts that may occur between its elements. The set of all conflicts between the elements of the ASAF will be called the set of defeats, in order to distinguish them from the conflicts explicitly given in the attack relation. Similarly to [10], we consider a notion of defeat which regards attacks, rather than their source arguments, as the subjects able to defeat arguments, attacks or supports.
+     </paragraph>
+     <paragraph>
+      In the following, we will distinguish between two groups of defeats: those that are inferred directly from the attack relation of the ASAF, and those that result from the combination of the attack and support relations of the ASAF. The former will be referred to as unconditional defeats, and are defined in Section 3.1, whereas the latter are the conditional defeats, defined in Section 3.2.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Unconditional defeats
+      </section-title>
+      <paragraph>
+       Unconditional defeats in the ASAF are obtained in two cases. The first case corresponds to conflicts already captured by the attack relation of the ASAF, which we call direct defeats.
+      </paragraph>
+      <paragraph label="Definition 12">
+       Direct defeatLet {a mathematical formula}Δ=〈A,R,S〉 be an ASAF, {a mathematical formula}α∈R and {a mathematical formula}X∈(A∪R∪S). We say that α directly defeats X, denoted α{a mathematical formula}d-defX, iff {a mathematical formula}trg(α)=X.
+      </paragraph>
+      <paragraph>
+       Recall that attacks are the entities able to effect defeat on other elements in the ASAF. However, as pointed out in [10] attacks are strictly related to their source arguments, meaning that an attack does not make sense if its source argument does not hold. To capture this intuition, next we will characterize the second kind of unconditional defeat which can be inferred directly from the attack relation of the ASAF: the indirect defeat.
+      </paragraph>
+      <paragraph label="Definition 13">
+       Indirect defeatLet {a mathematical formula}Δ=〈A,R,S〉 be an ASAF and {a mathematical formula}α,β∈R. We say that α indirectly defeats β, denoted α{a mathematical formula}i-defβ, iff α{a mathematical formula}d-def{a mathematical formula}src(β).
+      </paragraph>
+      <paragraph>
+       Note that supports in an ASAF cannot be indirectly defeated. This is because, differently from attacks, a support {a mathematical formula}γ=(A,B)∈S still makes sense when its source ({a mathematical formula}A) is not accepted. Moreover, in such a case where {a mathematical formula}A is not accepted and the support γ holds, the acceptability constraint stating that {a mathematical formula}B should not be accepted either must be enforced (and, as will be shown in Section 3.2, this will be achieved through the characterization of conditional defeats).
+      </paragraph>
+      <paragraph>
+       Then, both forms of unconditional defeat are grouped together in the following definition.
+      </paragraph>
+      <paragraph label="Definition 14">
+       Unconditional defeatLet {a mathematical formula}Δ=〈A,R,S〉 be an ASAF, {a mathematical formula}α∈R and {a mathematical formula}X∈(A∪R∪S). We say that α unconditionally defeats X, denoted α{a mathematical formula}u-defX, iff α{a mathematical formula}d-defX or α{a mathematical formula}i-defX.
+      </paragraph>
+      <paragraph label="Example 2">
+       Given the ASAF {a mathematical formula}Δ1 from Example 1, the following unconditional defeats occur. The direct defeats are: α{a mathematical formula}d-def{a mathematical formula}B, ε{a mathematical formula}d-def{a mathematical formula}F, η{a mathematical formula}d-def{a mathematical formula}G, λ{a mathematical formula}d-def{a mathematical formula}H, τ{a mathematical formula}d-def{a mathematical formula}J, κ{a mathematical formula}d-def{a mathematical formula}N, δ{a mathematical formula}d-defβ, φ{a mathematical formula}d-defδ, π{a mathematical formula}d-defω; and the indirect defeats are: ε{a mathematical formula}i-defη, τ{a mathematical formula}i-defκ, κ{a mathematical formula}i-defτ.
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Conditional defeats
+      </section-title>
+      <paragraph>
+       As we mentioned, the coexistence of attacks and supports may lead to having conflicts that are not captured by the attack relation of the ASAF alone. These conflicts will be identified as conditional defeats since, unlike the defeats defined in Section 3.1, their existence depends on the consideration of the support relation (in addition to the attack relation) of the ASAF. Following the interpretation of support as necessity, such conflicts are handled in [46] by characterizing the notion of extended defeat, which reinforces the acceptability constraints presented in Section 2: given an attack {a mathematical formula}A⟶B and a sequence of necessary supports {a mathematical formula}B⟹…⟹C, there is an extended defeat from {a mathematical formula}A to {a mathematical formula}C.
+      </paragraph>
+      <paragraph>
+       These intuitions are captured in the ASAF by characterizing the situations under which an extended defeat occurs. In particular, we will distinguish the support sequence involved in this form of defeat, and the corresponding supports will be referred to as the support set.
+      </paragraph>
+      <paragraph label="Definition 15">
+       Support sequence and support setLet {a mathematical formula}Δ=〈A,R,S〉 be an ASAF and {a mathematical formula}X∈(A∪R∪S). We say that {a mathematical formula}Σ=[A1,…,An=X] is a support sequence for X{a mathematical formula}(n≥2) iff for every {a mathematical formula}Ai{a mathematical formula}(1≤i≤n−1) it holds that {a mathematical formula}(Ai,Ai+1)∈S. We define the support set of Σ as {a mathematical formula}S=⋃i=1n−1{Si}, with {a mathematical formula}Si=(Ai,Ai+1), where {a mathematical formula}Ai and {a mathematical formula}Ai+1 are consecutive elements of Σ.
+      </paragraph>
+      <paragraph>
+       Note that since the support relation {a mathematical formula}S is defined so that the source of a support link in an ASAF is an argument (by Definition 11, {a mathematical formula}S⊆A×(A∪R∪S)), all elements in a support sequence but the last one (i.e., the {a mathematical formula}Ai in Definition 15) will be arguments. Furthermore note that, as expressed by the condition {a mathematical formula}X∈(A∪R∪S) in Definition 15, this does not prevent the last element in a support sequence from being an argument as well.
+      </paragraph>
+      <paragraph label="Definition 16">
+       Extended defeatLet {a mathematical formula}Δ=〈A,R,S〉 be an ASAF, {a mathematical formula}α∈R, {a mathematical formula}X∈(A∪R∪S) and {a mathematical formula}S⊆S. We say that α extendedly defeats X givenS, denoted α{a mathematical formula}e-defXgivenS, iff there exists a support sequence {a mathematical formula}Σ=[A1,…,An=X] for X s.t. {a mathematical formula}trg(α)=A1 and S is the support set of Σ.
+      </paragraph>
+      <paragraph>
+       Extended defeats in the ASAF are illustrated by the following example.
+      </paragraph>
+      <paragraph label="Example 3">
+       Given the {a mathematical formula}ASAF{a mathematical formula}Δ1 from Example 1, the following extended defeats occur: α{a mathematical formula}e-def{a mathematical formula}Cgiven{a mathematical formula}{β}, α{a mathematical formula}e-def{a mathematical formula}Dgiven{a mathematical formula}{β,γ}, α{a mathematical formula}e-def{a mathematical formula}Lgiven{a mathematical formula}{β,γ,ω}, λ{a mathematical formula}e-defδgiven{a mathematical formula}{θ}, and τ{a mathematical formula}e-defθgiven{a mathematical formula}{μ}.
+      </paragraph>
+      <paragraph>
+       It can be noted that Definition 16 explicitly identifies the support sequence originating an extended defeat. Therefore, as shown by the following proposition, adding a support link to a support sequence results in a new extended defeat. The proof of this proposition, together with the proofs of every other formal result of the paper are included in the Appendix.
+      </paragraph>
+      <paragraph label="Proposition 1">
+       Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF,{a mathematical formula}α∈R,{a mathematical formula}β∈Sand{a mathematical formula}S⊆S. If α{a mathematical formula}e-def{a mathematical formula}src(β)givenS, then α{a mathematical formula}e-def{a mathematical formula}trg(β)given{a mathematical formula}S∪{β}.
+      </paragraph>
+      <paragraph>
+       Moreover, the following proposition shows that the existence of an extended defeat implies the existence of a direct defeat.
+      </paragraph>
+      <paragraph label="Proposition 2">
+       Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF,{a mathematical formula}α∈R,{a mathematical formula}X∈(A∪R∪S)and{a mathematical formula}S⊆S. If α{a mathematical formula}e-defX givenS, then{a mathematical formula}∃β∈Ss.t. α{a mathematical formula}d-def{a mathematical formula}src(β).
+      </paragraph>
+      <paragraph>
+       Given that the ASAF combines intuitions and results from the AFRA[10] and the AFN[46], it is reasonable to combine the intuitions behind the notions of indirect defeat and extended defeat to characterize additional conflicts between the elements of the ASAF. In other words, similarly to the indirect defeat, we define the notion of extended-indirect defeat where an extended defeat on an argument is propagated to the attacks it originates. This kind of defeat is also conditional since it relies on the existence of an extended defeat, hence on the existence of supports.
+      </paragraph>
+      <paragraph label="Definition 17">
+       Extended-indirect defeatLet {a mathematical formula}Δ=〈A,R,S〉 be an ASAF, {a mathematical formula}α,β∈R and {a mathematical formula}S⊆S. We say that α extended-indirectly defeats β givenS, denoted α{a mathematical formula}ei-defβgivenS, iff α{a mathematical formula}e-def{a mathematical formula}src(β)givenS.
+      </paragraph>
+      <paragraph label="Example 4">
+       Given the ASAF {a mathematical formula}Δ1 from Example 1, the only extended-indirect defeat is α{a mathematical formula}ei-defεgiven{a mathematical formula}{β,γ}. This is because, as shown in Example 3, α{a mathematical formula}e-def{a mathematical formula}Dgiven{a mathematical formula}{β,γ} and, as illustrated in Example 1, {a mathematical formula}D=src(ε).
+      </paragraph>
+      <paragraph>
+       Here, similarly to Proposition 2, the following proposition shows that the existence of an extended-indirect defeat implies the existence of a direct defeat.
+      </paragraph>
+      <paragraph label="Proposition 3">
+       Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF,{a mathematical formula}α,γ∈Rand{a mathematical formula}S⊆S. If α{a mathematical formula}ei-defγ givenS, then{a mathematical formula}∃β∈Ss.t. α{a mathematical formula}d-def{a mathematical formula}src(β).
+      </paragraph>
+      <paragraph>
+       Finally, the extended and extended-indirect defeats are grouped together under the general notion of conditional defeat.
+      </paragraph>
+      <paragraph label="Definition 18">
+       Conditional defeatLet {a mathematical formula}Δ=〈A,R,S〉 be an ASAF, {a mathematical formula}α∈R, {a mathematical formula}X∈(A∪R∪S) and {a mathematical formula}S⊆S. We say that α conditionally defeats X givenS, denoted α{a mathematical formula}c-defXgivenS, iff α{a mathematical formula}e-defXgivenS or α{a mathematical formula}ei-defXgivenS.
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     The acceptability semantics of the ASAF
+     <paragraph>
+      After identifying the situations under which defeats between the elements of the ASAF occur, in this section we will characterize the extensional semantics of the ASAF. In particular, as stated in [29], the extensions of the ASAF may not only include arguments, but also attacks and supports. This is to reflect the fact that attacks and supports can be affected by other interactions; hence, the presence of an attack or a support in an extension of the ASAF will imply that the corresponding relationship holds.
+     </paragraph>
+     <paragraph>
+      Following the methodology of [30], in Section 4.1 we will first define some basic semantic notions for the ASAF. Then, we will show that the notion of acceptability complies with the constraints imposed by the attack and support relations of the ASAF. Moreover, we will show that important results from [30] regarding the notions of acceptability and admissibility also hold in the context of the ASAF. Then, in Section 4.2, we will define the acceptability semantics of the ASAF by characterizing its complete, preferred, stable, and grounded extensions; furthermore, we will show that the ASAF satisfies the relationships between the complete, preferred, stable and grounded extensions given in [30].
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Semantic notions
+      </section-title>
+      <paragraph>
+       As in [30], the notion of conflict-freeness establishes the minimum requirements a set of elements of an ASAF should satisfy in order to be collectively accepted. In particular, since the ASAF allows for unconditional and conditional defeats, a set will be conflict-free if it does not contain all the elements leading to the occurrence of one of those defeats.
+      </paragraph>
+      <paragraph label="Definition 19">
+       Conflict-freenessLet {a mathematical formula}Δ=〈A,R,S〉 be an ASAF and {a mathematical formula}S⊆(A∪R∪S). We say that Sis conflict-free iff:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}∄α,X∈S s.t. α{a mathematical formula}u-defX; and
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}∄β,Y∈S, {a mathematical formula}∄S′⊆S s.t. β{a mathematical formula}c-defYgiven{a mathematical formula}S′.
+       </list-item>
+      </list>
+      <paragraph>
+       Recall that, as mentioned at the end of Section 2.2, bold uppercase letters like S are used to denote sets of elements of a given framework. For instance, in Definition 15, Definition 18, S denotes a set of supports of an ASAF (i.e.,{a mathematical formula}S⊆S). In contrast, in Definition 19, S is used to denote a set of arguments, attacks and/or supports of an ASAF (i.e.,{a mathematical formula}S⊆A∪R∪S). That is, notwithstanding the naming similarity between S and {a mathematical formula}S, the use of S to denote a set of elements of an ASAF has no implication whatsoever of S being a set of supports; rather, the nature of the elements in a set S will be explicitly indicated, and will depend on the context in which the set is characterized.
+      </paragraph>
+      <paragraph label="Example 5">
+       Let {a mathematical formula}Δ1 be the ASAF from Example 1. Some conflict-free sets of {a mathematical formula}Δ1 are: ∅, {a mathematical formula}{M,ω}, {a mathematical formula}{N,J}, {a mathematical formula}{λ,δ}, {a mathematical formula}{μ,E,δ}, {a mathematical formula}{α,β,ε}, {a mathematical formula}{A,B,C,D,E,F,G,H,I,J,K,L,M,N,β,γ,ω,θ,μ} and {a mathematical formula}{A,α,γ,M,π,L,I,λ,K,φ,β,F,η,E,μ}. In contrast, the sets {a mathematical formula}{α,B}, {a mathematical formula}{λ,θ,δ}, {a mathematical formula}{π,ω} and {a mathematical formula}{τ,κ}, among others, are not conflict-free.
+      </paragraph>
+      <paragraph>
+       According to Definition 19, any set of elements of an ASAF which does not include an attack will be conflict-free. This is the case of the set {a mathematical formula}{A,B,C,D,E,F,G,H,I,J,K,L,M,N,β,γ,ω,θ,μ} illustrated in Example 5, which includes every argument and support of the ASAF{a mathematical formula}Δ1 but none of its attacks. Moreover, when considering conditional defeats, all the elements required for the existence of a defeat must be included in a non-conflict-free set. Hence, if one of the supports in the corresponding support set is missing, the resulting set is conflict-free. This situation is illustrated by the conflict-free sets {a mathematical formula}{λ,δ} and {a mathematical formula}{α,β,ε} in Example 5.
+      </paragraph>
+      <paragraph>
+       Next, we define the notion of acceptability in the context of an ASAF, which characterizes the defense by a set of arguments, attacks and supports against the occurrence of defeats on its elements. Since the ASAF allows for unconditional and conditional defeats, we need to consider all the defeats that may occur, as well as the different ways for providing defense against them.
+      </paragraph>
+      <paragraph label="Definition 20">
+       AcceptabilityLet {a mathematical formula}Δ=〈A,R,S〉 be an ASAF, {a mathematical formula}X∈(A∪R∪S) and {a mathematical formula}S⊆(A∪R∪S). We say that X is acceptable w.r.t.S iff it holds that:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}∀α∈R s.t. α{a mathematical formula}u-defX, either:
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}∀α∈R, {a mathematical formula}∀T⊆S s.t. α{a mathematical formula}c-defXgivenT, either:
+       </list-item>
+      </list>
+      <paragraph>
+       As the preceding definition shows, defense against an unconditional defeat may only be achieved by defeating the corresponding attack. On the other hand, a conditional defeat may be repelled by defeating the corresponding attack or one of the supports in the support set; in either case, defense can be provided by both unconditional and conditional defeats. Moreover, it should be noted that, although Definition 20 accounts for a set S of arguments, attacks and supports of an ASAF, the only elements contributing to the defense are the attacks and supports. This is because attacks and supports are ones leading to the existence of defeats (see Definition 14, Definition 18). In other words, similarly to the AFRA, defense through an unconditional defeat can only be provided by an attack. In contrast, defense through a conditional defeat is provided by an attack and a support set. These intuitions are illustrated in the following example.
+      </paragraph>
+      <paragraph label="Example 6">
+       If we consider the {a mathematical formula}ASAF{a mathematical formula}Δ1 from Example 1, e.g.,{a mathematical formula}A and φ are acceptable w.r.t. ∅ since they are not defeated (neither unconditionally nor conditionally) in {a mathematical formula}Δ1. Also, {a mathematical formula}N is acceptable w.r.t. {a mathematical formula}{τ}; this is because κ{a mathematical formula}d-def{a mathematical formula}N and τ{a mathematical formula}i-defκ (case {a mathematical formula}1.a in Definition 20). Similarly, β is acceptable w.r.t. {a mathematical formula}{λ,θ} since δ{a mathematical formula}d-defβ is the only defeat on β, and λ{a mathematical formula}e-defδgiven{a mathematical formula}{θ} (case {a mathematical formula}1.b). As another example, θ is acceptable w.r.t. {a mathematical formula}{κ} because even though τ{a mathematical formula}e-defθgiven{a mathematical formula}{μ}, it holds that κ{a mathematical formula}i-defτ (case {a mathematical formula}2.a). Then, for instance, {a mathematical formula}D is acceptable w.r.t. {a mathematical formula}{δ}. This is because α{a mathematical formula}e-def{a mathematical formula}Dgiven{a mathematical formula}{β,γ} is the only defeat on {a mathematical formula}D, and it holds that δ{a mathematical formula}d-defβ (case {a mathematical formula}2.b). Finally, {a mathematical formula}F and η are acceptable w.r.t. {a mathematical formula}{α,β,γ}. In particular, ε{a mathematical formula}d-def{a mathematical formula}F and ε{a mathematical formula}i-defη, whereas α{a mathematical formula}ei-defεgiven{a mathematical formula}{β,γ} (case {a mathematical formula}2.c). In contrast, for example, {a mathematical formula}B is not acceptable w.r.t. ∅, since {a mathematical formula}B is directly defeated by α and the empty set does not have elements leading to the existence of a defeat (neither unconditional nor conditional) on α. In addition, δ is not acceptable w.r.t. {a mathematical formula}{τ,μ}. This is because λ{a mathematical formula}e-defδgiven{a mathematical formula}{θ} and φ{a mathematical formula}d-defδ; then, even though τ{a mathematical formula}e-defθgiven{a mathematical formula}{μ} (case {a mathematical formula}2.d), no elements in the set {a mathematical formula}{τ,μ} allow to obtain an unconditional or conditional defeat on φ.
+      </paragraph>
+      <paragraph>
+       Note that, as established by Definition 20 and illustrated in Example 6, in order for an element X of an ASAF to be acceptable w.r.t. a set S, this set should defend X against every defeat it receives. In particular, this should also be the case given the existence of multiple conditional defeats on X; furthermore, this applies to the case where multiple conditional defeats are originated by combining the same attack with alternative support sequences. For example, let us consider an ASAF where the relations in the graph below hold:{a mathematical formula} Given such an ASAF, it is the case that ψ{a mathematical formula}e-def{a mathematical formula}Tgiven{a mathematical formula}{χ1,χ2,χ3} and ψ{a mathematical formula}e-def{a mathematical formula}Tgiven{a mathematical formula}{χ4,χ5}. As a result, argument {a mathematical formula}T will be acceptable w.r.t. a set S that is able to defeat (either unconditionally or conditionally) the attack ψ or at least one element of each support set {a mathematical formula}{χ1,χ2,χ3} and {a mathematical formula}{χ4,χ5}.
+      </paragraph>
+      <paragraph>
+       The following proposition shows that, like in the AFRA, the acceptability of an attack implies the acceptability of its source.
+      </paragraph>
+      <paragraph label="Proposition 4">
+       Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF,{a mathematical formula}α∈Rand{a mathematical formula}S⊆(A∪R∪S). If α is acceptable w.r.t.S, then{a mathematical formula}src(α)is acceptable w.r.t.S.
+      </paragraph>
+      <paragraph>
+       The following proposition shows that the notion of acceptability meets the constraints imposed by the necessity interpretation of support adopted by the ASAF.
+      </paragraph>
+      <paragraph label="Proposition 5">
+       Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF,{a mathematical formula}S⊆(A∪R∪S)a conflict-free set and{a mathematical formula}α∈Sacceptable w.r.t.S. If{a mathematical formula}trg(α)is acceptable w.r.t.S, then{a mathematical formula}src(α)is acceptable w.r.t.S; equivalently, if{a mathematical formula}src(α)is not acceptable w.r.t.S, then{a mathematical formula}trg(α)is not acceptable w.r.t.S.
+      </paragraph>
+      <paragraph>
+       The following proposition shows that the notion of acceptability is monotonic with respect to set inclusion.
+      </paragraph>
+      <paragraph label="Proposition 6">
+       Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF,{a mathematical formula}X∈(A∪R∪S)and{a mathematical formula}S⊆(A∪R∪S). If X is acceptable w.r.t.S, then{a mathematical formula}∀S′⊆(A∪R∪S)s.t.{a mathematical formula}S⊆S′: X is acceptable w.r.t.{a mathematical formula}S′.
+      </paragraph>
+      <paragraph>
+       Next, like in [30], admissible sets of the {a mathematical formula}ASAF are defined by combining the notions of conflict-freeness and acceptability.
+      </paragraph>
+      <paragraph label="Definition 21">
+       AdmissibilityLet {a mathematical formula}Δ=〈A,R,S〉 be an ASAF and {a mathematical formula}S⊆(A∪R∪S). We say that Sis admissible iff it is conflict-free and {a mathematical formula}∀X∈S:X is acceptable w.r.t. S.
+      </paragraph>
+      <paragraph label="Example 7">
+       Let {a mathematical formula}Δ1 be the ASAF from Example 1. Some admissible sets of {a mathematical formula}Δ1 are ∅, {a mathematical formula}{α,β,γ,φ,F,M} and {a mathematical formula}{A,α,γ,M,π,L,I,λ,K,φ,β,F,η,E,μ,τ,N}. In contrast, for instance, the sets {a mathematical formula}{β,θ,J,κ} and {a mathematical formula}{ε,G} are not admissible; the former because no defeat on δ (which directly defeats β) can be obtained from the set {a mathematical formula}{β,θ,J,κ}, whereas the latter because α{a mathematical formula}ei-defεgiven{a mathematical formula}{β,γ} and the set {a mathematical formula}{ε,G} provides no way of defeating α, β nor γ.
+      </paragraph>
+      <paragraph>
+       The following lemma shows that the notions of acceptability and admissibility recently introduced for the ASAF allow to extend Dung's fundamental lemma to this framework.
+      </paragraph>
+      <paragraph label="Lemma 1">
+       Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF,{a mathematical formula}S⊆(A∪R∪S)an admissible set of Δ, and{a mathematical formula}X,Y∈(A∪R∪S)s.t. X and Y are acceptable w.r.t.S. Then, it holds that (1) {a mathematical formula}S′=S∪{X}is admissible, and (2) Y is acceptable w.r.t.{a mathematical formula}S′.
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Extensional semantics of the ASAF
+      </section-title>
+      <paragraph>
+       From the semantic notions defined in Section 4.1, we are now able to characterize the complete, preferred, stable, and grounded extensions of the ASAF.
+      </paragraph>
+      <paragraph label="Definition 22">
+       ASAF extensionsLet {a mathematical formula}Δ=〈A,R,S〉 be an ASAF and {a mathematical formula}S⊆(A∪R∪S).
+      </paragraph>
+      <list>
+       <list-item label="•">
+        S is a complete extension of Δ iff it is admissible and {a mathematical formula}∀X∈(A∪R∪S), if X is acceptable w.r.t. S, then {a mathematical formula}X∈S.
+       </list-item>
+       <list-item label="•">
+        S is a preferred extension of Δ iff it is a maximal (w.r.t. ⊆) admissible set of Δ.
+       </list-item>
+       <list-item label="•">
+        S is a stable extension of Δ iff it is conflict-free and {a mathematical formula}∀X∈(A∪R∪S)\S, {a mathematical formula}∃α∈S, {a mathematical formula}∃S′⊆S s.t. α{a mathematical formula}u-defX or α{a mathematical formula}c-defXgiven{a mathematical formula}S′.
+       </list-item>
+       <list-item label="•">
+        S is the grounded extension of Δ iff it is the smallest (w.r.t. ⊆) complete extension of Δ.
+       </list-item>
+      </list>
+      <paragraph label="Example 8">
+       Let us consider the ASAF {a mathematical formula}Δ1 from Example 1 and the grounded and preferred semantics. The grounded extension of {a mathematical formula}Δ1 is {a mathematical formula}GΔ={A,α,γ,M,π,L,I,λ,K,φ,β,F,η,E,μ}. Note that although {a mathematical formula}src(μ) is involved in an attack cycle that is not resolved when considering the grounded semantics, the support μ holds and thus, {a mathematical formula}μ∈GΔ. Then, when considering the preferred semantics, there are two alternatives for resolving the attack cycle involving {a mathematical formula}src(μ), leading to the existence of two preferred extensions of {a mathematical formula}Δ1: {a mathematical formula}P1Δ=GΔ∪{τ,N} and {a mathematical formula}P2Δ=GΔ∪{κ,J,θ}. In particular, even though λ{a mathematical formula}e-defδgiven{a mathematical formula}{θ} and {a mathematical formula}{τ,μ}⊆P1Δ is such that τ{a mathematical formula}e-defθgiven{a mathematical formula}{μ}, as discussed in Example 6, it is also the case that φ{a mathematical formula}d-defδ but no elements in {a mathematical formula}P1Δ allow to obtain a defeat (either unconditional or conditional) on φ; therefore, {a mathematical formula}δ∉P1Δ.
+      </paragraph>
+      <paragraph label="Example 9">
+       Let us consider again the example given in the introduction, where the depicted ASAF is {a mathematical formula}Δ9=〈A9,R9,S9〉, with {a mathematical formula}A9={RI,LO,OLR,ER,EL,OW,D,BL,PO}, {a mathematical formula}R9={δ=(EL,γ),ε=(OW,α),λ=(BL,LO),μ=(PO,ER)}, and {a mathematical formula}S9={α=(LO,RI),β=(OLR,α),γ=(ER,LO),κ=(D,ε)}. Then, for instance, given the grounded and preferred semantics, the only grounded and preferred extension of {a mathematical formula}Δ9 is {a mathematical formula}GPΔ={D,κ,OW,ε,BL,λ,EL,δ,PO,μ,OLR,β,RI}. As a result, since the support α does not belong to the grounded and preferred extension (meaning that it is not necessary for the lamp to be on in order for the room to be illuminated), argument {a mathematical formula}RI is accepted (i.e., the room is illuminated) even though argument {a mathematical formula}LO is not (i.e., the lamp in the room is not on).
+      </paragraph>
+      <paragraph>
+       Next, we will show that the ASAF semantics from Definition 22 fulfill the relationships between the homonymous semantics proposed in [30]. The following lemma illustrates the relationship between the preferred and complete extensions of an ASAF.
+      </paragraph>
+      <paragraph label="Lemma 2">
+       Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF. Every preferred extension of Δ is also a complete extension of Δ, but not vice-versa.
+      </paragraph>
+      <paragraph>
+       Similarly, the following lemma relates the stable and preferred extensions of an ASAF.
+      </paragraph>
+      <paragraph label="Lemma 3">
+       Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF. Every stable extension of Δ is also a preferred extension of Δ, but not vice-versa.
+      </paragraph>
+      <paragraph>
+       Then, by combining the two preceding results, we obtain the following corollary.
+      </paragraph>
+      <paragraph label="Corollary 1">
+       Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF. Every stable extension of Δ is also a complete extension of Δ, but not vice-versa.
+      </paragraph>
+      <paragraph>
+       Finally, in [30] it was shown that the grounded extension of an AF is, in particular, a complete extension of the AF. It can be noted that this result is trivially satisfied in the context of the ASAF since, by Definition 22, the grounded extension of an ASAF is characterized as its smallest (w.r.t. ⊆) complete extension.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     Equivalent approaches for the acceptability calculus in the ASAF
+     <paragraph>
+      Now, we will set about studying the relationship between the form in which acceptability was determined in the ASAF proposed in [29] and the one proposed in Section 4. We will show that these two approaches are equivalent in the sense that they lead to obtaining the same outcome when considering the complete, preferred, stable, or grounded semantics.{sup:4}
+     </paragraph>
+     <paragraph>
+      We will start introducing the proposal in [29], which requires transforming the ASAF into a Dung's AF, obtaining the extensions from this AF, and then getting the ASAF's extensions from them. This transformation requires two steps: first, the ASAF is translated into an AFN; and then, the AF associated with that AFN is obtained.
+     </paragraph>
+     <paragraph>
+      The following definition characterizes the first step of the translation showing how to translate an ASAF into its associated AFN.{sup:5}
+     </paragraph>
+     <paragraph label="Definition 23">
+      AFN associated with an ASAFLet {a mathematical formula}Δ=〈A,R,S〉 be an ASAF. The AFN associated with Δ is {a mathematical formula}ΔAFN=〈AAFN,RAFN,NAFN〉, where:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       {a mathematical formula}AAFN=A∪R∪S∪{β+,β−|β∈S}.
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}RAFN and {a mathematical formula}NAFN are such that:
+      </list-item>
+     </list>
+     <paragraph>
+      This translation is such that arguments, attacks and supports of the ASAF are mapped into arguments in the associated AFN. Since, similarly to the AFRA, an attack {a mathematical formula}α=(A,X) in the ASAF is dependent on its source argument {a mathematical formula}A, the associated AFN includes a necessary support from {a mathematical formula}A to α. On the other hand, recall that the support relation of the ASAF follows a necessity interpretation, thus establishing constraints on the elements it relates. Given a support {a mathematical formula}β=(B,Y), the constraint relating {a mathematical formula}B and Y can be seen (and satisfied) from two points of view. From a positive point of view, it establishes that “if Y is accepted, then {a mathematical formula}B should also be accepted”; we will refer to this as the positive constraint. From a negative point of view, the constraint indicates that “if {a mathematical formula}B is not accepted, then Y should not be accepted either”; we refer to this as the negative constraint.{sup:6}
+     </paragraph>
+     <paragraph>
+      The translation incorporates the arguments {a mathematical formula}β+ and {a mathematical formula}β− in the associated AFN, which are used for encoding the positive and negative constraints. Then, since these arguments express constraints relating the source and target of a support β, either one of them should only be enforced when the support β holds; this is captured in the associated AFN by including necessary supports from β to {a mathematical formula}β+ and {a mathematical formula}β−. Since the positive constraint corresponds to the case where the source {a mathematical formula}B (also, the target Y) is accepted (otherwise, if {a mathematical formula}B was not accepted, the negative constraint would have held), a necessary support from {a mathematical formula}B to {a mathematical formula}β+ is included in the associated AFN. Similarly, the attack from {a mathematical formula}B to {a mathematical formula}β− models the intuition that if the source {a mathematical formula}B is accepted (thus, the positive constraint would hold), then the negative constraint is not satisfied. Finally, the attack from {a mathematical formula}β− to Y in the associated AFN captures the fact that if the negative constraint holds (in which case the source {a mathematical formula}B would not be accepted, in contrast with the {a mathematical formula}β− argument), then the target Y cannot be accepted.
+     </paragraph>
+     <paragraph>
+      A graphical representation of the translation given in Definition 23 is illustrated in Fig. 1. The first two cases in Fig. 1 consider the translation of an attack and a support between arguments. The remaining four cases correspond to translations where a combination of the attack and support relations occur: respectively, attack to attack, support to attack, attack to support, and support to support. It can be noted that the translation of attacks and supports is the same in all cases. In other words, the translation of attacks and supports from an ASAF into its associated AFN does not depend on the nature of the targets of interactions (i.e., it does not matter whether the targets are arguments, attacks or supports).
+     </paragraph>
+     <paragraph>
+      To characterize the second step of the translation from an ASAF into its associated AF, [29] makes use of the existing translation of an AFN into its associated AF (see Definition 10). Hence, the AF associated with an ASAF is obtained as follows.
+     </paragraph>
+     <paragraph label="Definition 24">
+      AF associated with an ASAFLet Δ be an ASAF and {a mathematical formula}ΔAFN the AFN associated with Δ. The AF associated with Δ is {a mathematical formula}ΔAF, where {a mathematical formula}ΔAF is the AF associated with {a mathematical formula}ΔAFN.
+     </paragraph>
+     <paragraph>
+      As mentioned before, the support relation of an ASAF is required to be acyclic, whereas the support relation of an AFN is required to be irreflexive and transitive. However, this difference does not interfere with the translation of an ASAF into an AF which involves an intermediate translation into an AFN. This is because support chains in the ASAF cease to exist when translated into the associated AFN, given the incorporation of the β, {a mathematical formula}β+ and {a mathematical formula}β− arguments corresponding to a support β of the ASAF.
+     </paragraph>
+     <paragraph>
+      Finally, in [29] the extensions of an ASAF are obtained by mapping the extensions of its associated AF into sets of arguments, attacks and supports of the ASAF.
+     </paragraph>
+     <paragraph label="Definition 25">
+      AF–ASAF individual mapping functionLet {a mathematical formula}Δ=〈A,R,S〉 be an ASAF and {a mathematical formula}ΔAF=〈AAF,RAF〉 its associated AF. Given {a mathematical formula}X∈AAF, the AF–ASAF individual mapping function{a mathematical formula}D-IMap:AAF⟼A∪R∪S is defined as follows:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       If {a mathematical formula}X∈A∪R∪S, then {a mathematical formula}D-IMap(X)=X.
+      </list-item>
+      <list-item label="•">
+       If {a mathematical formula}X=β+ or {a mathematical formula}X=β−, with {a mathematical formula}β∈S, then {a mathematical formula}D-IMap(X)=β.
+      </list-item>
+     </list>
+     <paragraph label="Definition 26">
+      AF–ASAF mapping functionLet {a mathematical formula}Δ=〈A,R,S〉 be an ASAF and {a mathematical formula}ΔAF=〈AAF,RAF〉 its associated AF. Given {a mathematical formula}S⊆AAF, the AF–ASAF mapping function{a mathematical formula}D-Map:2AAF⟼2A∪R∪S is defined as {a mathematical formula}D-Map(S)={D-IMap(X)|X∈S}.
+     </paragraph>
+     <paragraph>
+      As a result, following the approach of [29], extensions of an ASAF Δ under a semantics σ do not exist “on their own”. That is, they are obtained by applying the {a mathematical formula}D-Map function to the extensions of its associated AF{a mathematical formula}ΔAF under σ.
+     </paragraph>
+     <paragraph label="Definition 27">
+      ASAF mapped extensionsLet Δ be an ASAF and {a mathematical formula}ΔAF its associated AF. If E is an extension of {a mathematical formula}ΔAF under a {a mathematical formula}D-σ semantics, with {a mathematical formula}σ∈{complete, preferred, stable, grounded}, then {a mathematical formula}EΔ is an extension of Δ under the semantics σ, where {a mathematical formula}D-Map(E)=EΔ.
+     </paragraph>
+     <paragraph label="Example 10">
+      Let {a mathematical formula}Δ1 be the ASAF from Example 1. The AFN associated with {a mathematical formula}Δ1 is {a mathematical formula}Δ1AFN, and is illustrated in Fig. 2. Then, the AF associated with {a mathematical formula}Δ1 (and with {a mathematical formula}Δ1AFN) is {a mathematical formula}Δ1AF, and is depicted in Fig. 3. If we consider the D-grounded semantics, the D-grounded extension of {a mathematical formula}Δ1AF is {a mathematical formula}GAF={A,α,β−,γ−,L,β,γ,I,λ,φ,K,F,π,E,η,M,μ}. Then, {a mathematical formula}D-Map(GAF)={A,α,β,γ,L,I,λ,φ,K,F,π,E,η,M,μ}; therefore, {a mathematical formula}D-Map(GAF)=GΔ, where {a mathematical formula}GΔ is the grounded extension of {a mathematical formula}Δ1 obtained in Example 8.If we now consider the D-preferred semantics, the D-preferred extensions of {a mathematical formula}Δ1AF are {a mathematical formula}P1AF=GAF∪{N,τ,μ−} and {a mathematical formula}P2AF=GAF∪{κ,J,μ+,θ,θ−}. Then, we have {a mathematical formula}D-Map(P1AF)=D-Map(GAF∪{N,τ,μ−})=GΔ∪{N,τ}; therefore, {a mathematical formula}D-Map(P1AF)=P1Δ, where {a mathematical formula}P1Δ is the first preferred extension of {a mathematical formula}Δ1 obtained in Example 8. Similarly, {a mathematical formula}D-Map(P2AF)=D-Map(GAF∪{κ,J,μ+,θ,θ−})=GΔ∪{κ,J,θ}; therefore, {a mathematical formula}D-Map(P2AF)=P2Δ, where {a mathematical formula}P2Δ is the second preferred extension of {a mathematical formula}Δ1 obtained in Example 8.
+     </paragraph>
+     <paragraph>
+      As it can be observed from Example 8, Example 10, the grounded and preferred extensions of the ASAF{a mathematical formula}Δ1 obtained by mapping the extensions of its associated AF are the same as those obtained directly from the ASAF, in Example 8. The remainder of this section is devoted to formally show the equivalence between these two approaches. In order to prove this equivalence, we will use some intermediate results, showing the relationship between the semantic notions characterized directly on the ASAF, and those corresponding to its associated AF. As mentioned before, we will use the prefix ‘D’ to distinguish the semantic notions corresponding to an AF (in this case, the AF associated with an ASAF) from those corresponding to the ASAF.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Intermediate results
+      </section-title>
+      <paragraph>
+       The intermediate results developed in this section will be used later for proving the equivalence between the approach proposed in Section 4 for obtaining the complete, preferred, stable and grounded extensions of the ASAF and the one given in [29]. Specifically, we will show that the complete, preferred, stable, and grounded extensions of the ASAF after applying the corresponding mapping function (respectively, {a mathematical formula}Map or {a mathematical formula}D-Map) coincide with the D-complete, D-preferred, D-stable, and D-grounded extensions of its associated AF. Thus, in some cases, we will start by assuming that the set of elements of the associated AF (respectively, of the ASAF) under analysis is a D-complete (respectively, complete) extension.
+      </paragraph>
+      <paragraph>
+       The following lemma establishes a correspondence between D-conflict-free sets of the AF associated with an ASAF and conflict-free sets of the ASAF.
+      </paragraph>
+      <paragraph label="Lemma 4">
+       Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF and{a mathematical formula}ΔAF=〈AAF,RAF〉its associated AF. If{a mathematical formula}S⊆AAFis a D-complete extension of{a mathematical formula}ΔAF, then{a mathematical formula}D-Map(S)is a conflict-free set of Δ.
+      </paragraph>
+      <paragraph>
+       To show the reverse of Lemma 4, we need to characterize a mapping function that, given a set of arguments, attacks and supports of an ASAF, leads to obtaining a set of arguments of its associated AF.
+      </paragraph>
+      <paragraph label="Definition 28">
+       ASAF-AF mapping functionLet {a mathematical formula}Δ=〈A,R,S〉 be an ASAF and {a mathematical formula}ΔAF=〈AAF,RAF〉 its associated AF. Given {a mathematical formula}S⊆A∪R∪S, we define {a mathematical formula}Map:2A∪R∪S⟼2AAF the ASAF-AF mapping function s.t. {a mathematical formula}Map(S)=SΔAF and for every {a mathematical formula}X∈S it holds that:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        If {a mathematical formula}X∈A∪R, then {a mathematical formula}X∈SΔAF.
+       </list-item>
+       <list-item label="2.">
+        If {a mathematical formula}X∈S, then {a mathematical formula}X∈SΔAF and:
+       </list-item>
+      </list>
+      <paragraph>
+       The example below shows how the {a mathematical formula}Map(⋅) function provides a way of mapping extensions obtained directly from an ASAF into extensions of its associated AF.
+      </paragraph>
+      <paragraph label="Example 11">
+       Let us consider the ASAF {a mathematical formula}Δ1 from Example 1 and its grounded and preferred extensions illustrated in Example 8; respectively, the grounded extension {a mathematical formula}GΔ={A,α,γ,M,π,L,I,λ,K,φ,β,F,η,E,μ} and the preferred extensions {a mathematical formula}P1Δ=GΔ∪{τ,N} and {a mathematical formula}P2Δ=GΔ∪{κ,J,θ}. Then, we have {a mathematical formula}Map(GΔ)={A,α,L,I,λ,φ,K,F,π,E,η,M,β,β−,γ,γ−,μ}; therefore, {a mathematical formula}Map(GΔ)=GAF. Similarly, {a mathematical formula}Map(P1Δ)=Map(GΔ∪{N,τ}) and {a mathematical formula}Map(P2Δ)=Map(GΔ∪{κ,J,θ}). Thus, {a mathematical formula}Map(P1Δ)=GAF∪{N,τ,μ−}=P1AF, whereas {a mathematical formula}Map(P2Δ)=GAF∪{κ,J,θ,μ+,θ−}=P2AF.
+      </paragraph>
+      <paragraph>
+       The following lemma formalizes the fact that applying the mapping function {a mathematical formula}Map(⋅) to a complete extension of an ASAF leads to a D-conflict-free set of arguments from its associated AF.
+      </paragraph>
+      <paragraph label="Lemma 5">
+       Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF and{a mathematical formula}ΔAF=〈AAF,RAF〉its associated AF. If{a mathematical formula}S⊆A∪R∪Sis a complete extension of Δ, then{a mathematical formula}Map(S)is a D-conflict-free set of{a mathematical formula}ΔAF.
+      </paragraph>
+      <paragraph>
+       Next, Lemma 6 characterizes a correspondence between the notions of acceptability and D-acceptability when considering an ASAF and its associated AF.
+      </paragraph>
+      <paragraph label="Lemma 6">
+       Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF and{a mathematical formula}ΔAF=〈AAF,RAF〉its associated AF.
+      </paragraph>
+      <list>
+       <list-item>
+        If{a mathematical formula}S⊆AAFis a D-complete extension of{a mathematical formula}ΔAFand{a mathematical formula}X∈AAFis D-acceptable w.r.t.S, then{a mathematical formula}D-IMap(X)is acceptable w.r.t.{a mathematical formula}D-Map(S).
+       </list-item>
+       <list-item>
+        If{a mathematical formula}S⊆A∪R∪Sis a complete extension of Δ and{a mathematical formula}X∈A∪R∪Sis acceptable w.r.t.S, then X is D-acceptable w.r.t.{a mathematical formula}Map(S).
+       </list-item>
+      </list>
+      <paragraph>
+       The following lemma complements Lemma 6 by addressing the acceptability of the arguments {a mathematical formula}X+ and {a mathematical formula}X− of the associated AF, where X is a support in the ASAF.
+      </paragraph>
+      <paragraph label="Lemma 7">
+       Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF,{a mathematical formula}ΔAF=〈AAF,RAF〉its associated AF,{a mathematical formula}X∈Sand{a mathematical formula}S⊆A∪R∪Sa complete extension of Δ.
+      </paragraph>
+      <list>
+       <list-item>
+        If X and{a mathematical formula}src(X)are acceptable w.r.t.S, then{a mathematical formula}X+is D-acceptable w.r.t.{a mathematical formula}Map(S).
+       </list-item>
+       <list-item>
+        If X is acceptable w.r.t.Sand{a mathematical formula}∃α∈R,{a mathematical formula}∃T⊆Ss.t. α is acceptable w.r.t.S,{a mathematical formula}∀Si∈Tit holds that{a mathematical formula}Siis acceptable w.r.t.S, and α{a mathematical formula}u-def{a mathematical formula}src(X)or α{a mathematical formula}c-def{a mathematical formula}src(X)givenT, then{a mathematical formula}X−is D-acceptable w.r.t.{a mathematical formula}Map(S).
+       </list-item>
+      </list>
+      <paragraph>
+       Finally, by combining the results from Lemma 4, Lemma 7, we can establish a correspondence between the notions of D-admissibility and admissibility, as shown by Lemma 8.
+      </paragraph>
+      <paragraph label="Lemma 8">
+       Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF and{a mathematical formula}ΔAF=〈AAF,RAF〉its associated AF.
+      </paragraph>
+      <list>
+       <list-item>
+        If{a mathematical formula}S⊆AAFis a D-complete extension of{a mathematical formula}ΔAF, then{a mathematical formula}D-Map(S)is admissible.
+       </list-item>
+       <list-item>
+        If{a mathematical formula}S⊆A∪R∪Sis a complete extension of Δ, then{a mathematical formula}Map(S)is D-admissible.
+       </list-item>
+      </list>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Correspondence between extensions of an ASAF and its associated AF
+      </section-title>
+      <paragraph>
+       After establishing a correspondence between the basic semantic notions for an ASAF and its associated AF, we will now turn to formalize a correspondence between the complete, preferred, stable, and grounded extensions of an ASAF, and the D-complete, D-preferred, D-stable, and D-grounded extensions of its associated AF. Theorem 1 starts by establishing the correspondence for the case of D-complete and complete extensions.
+      </paragraph>
+      <paragraph label="Theorem 1">
+       Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF and{a mathematical formula}ΔAF=〈AAF,RAF〉its associated AF.
+      </paragraph>
+      <list>
+       <list-item>
+        If{a mathematical formula}S⊆AAFis a D-complete extension of{a mathematical formula}ΔAF, then{a mathematical formula}D-Map(S)is a complete extension of Δ.
+       </list-item>
+       <list-item>
+        If{a mathematical formula}S⊆A∪R∪Sis a complete extension of Δ, then{a mathematical formula}Map(S)is a D-complete extension of{a mathematical formula}ΔAF.
+       </list-item>
+      </list>
+      <paragraph>
+       The correspondence between the preferred extensions of an ASAF and the D-preferred extensions of its associated AF is addressed by Theorem 2.
+      </paragraph>
+      <paragraph label="Theorem 2">
+       Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF and{a mathematical formula}ΔAF=〈AAF,RAF〉its associated AF.
+      </paragraph>
+      <list>
+       <list-item>
+        If{a mathematical formula}S⊆AAFis a D-preferred extension of{a mathematical formula}ΔAF, then{a mathematical formula}D-Map(S)is a preferred extension of Δ.
+       </list-item>
+       <list-item>
+        If{a mathematical formula}S⊆A∪R∪Sis a preferred extension of Δ, then{a mathematical formula}Map(S)is a D-preferred extension of{a mathematical formula}ΔAF.
+       </list-item>
+      </list>
+      <paragraph>
+       Then, the correspondence between D-stable and stable extensions is shown in Theorem 3.
+      </paragraph>
+      <paragraph label="Theorem 3">
+       Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF and{a mathematical formula}ΔAF=〈AAF,RAF〉its associated AF.
+      </paragraph>
+      <list>
+       <list-item>
+        If{a mathematical formula}S⊆AAFis a D-stable extension of{a mathematical formula}ΔAF, then{a mathematical formula}D-Map(S)is a stable extension of Δ.
+       </list-item>
+       <list-item>
+        If{a mathematical formula}S⊆A∪R∪Sis a stable extension of Δ, then{a mathematical formula}Map(S)is a D-stable extension of{a mathematical formula}ΔAF.
+       </list-item>
+      </list>
+      <paragraph>
+       Finally, completing the characterization of the semantic relations between extensions, the correspondence between the grounded extension of an ASAF and the D-grounded extension of its associated AF is given by Theorem 4.
+      </paragraph>
+      <paragraph label="Theorem 4">
+       Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF and{a mathematical formula}ΔAF=〈AAF,RAF〉its associated AF.
+      </paragraph>
+      <list>
+       <list-item>
+        If{a mathematical formula}S⊆AAFis the D-grounded extension of{a mathematical formula}ΔAF, then{a mathematical formula}D-Map(S)is the grounded extension of Δ.
+       </list-item>
+       <list-item>
+        If{a mathematical formula}S⊆A∪R∪Sis the grounded extension of Δ, then{a mathematical formula}Map(S)is the D-grounded extension of{a mathematical formula}ΔAF.
+       </list-item>
+      </list>
+      <paragraph>
+       The preceding theorems show that, given an ASAF Δ and its associated AF{a mathematical formula}ΔAF, for each extension {a mathematical formula}E of Δ under a given semantics {a mathematical formula}σ∈{complete, preferred, stable, grounded}, there exists a corresponding extension in {a mathematical formula}ΔAF; conversely, for each extension {a mathematical formula}E′ of {a mathematical formula}ΔAF under a semantics D-σ there exists a corresponding extension in Δ. That is, we have shown that each extension of the ASAF has a corresponding extension in the associated AF and vice-versa. Nonetheless, to show that the two approaches are equivalent it is necessary to show that there exists a one-to-one correspondence between the extensions of the ASAF and those of its associated AF; that is to say, that computing the extensions at the level of the ASAF leads to obtaining the same results as the ones obtained when computing the extensions through its associated AF. To do this, the following lemma shows that the functions {a mathematical formula}Map(⋅) and {a mathematical formula}D-Map(⋅) are the inverse of each other when considering, respectively, D-complete and complete extensions.
+      </paragraph>
+      <paragraph label="Lemma 9">
+       Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF and{a mathematical formula}ΔAF=〈AAF,RAF〉its associated AF.
+      </paragraph>
+      <list>
+       <list-item>
+        If{a mathematical formula}S⊆AAFis a D-complete extension of{a mathematical formula}ΔAF, then{a mathematical formula}Map(D-Map(S))=S.
+       </list-item>
+       <list-item>
+        If{a mathematical formula}S⊆A∪R∪Sis a complete extension of Δ, then{a mathematical formula}D-Map(Map(S))=S.
+       </list-item>
+      </list>
+      <paragraph>
+       As a result, the following theorem establishes a one-to-one correspondence between the extensions of the ASAF and those of its associated AF under the complete, preferred, stable, and grounded semantics.
+      </paragraph>
+      <paragraph label="Theorem 5">
+       Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF,{a mathematical formula}ΔAF=〈AAF,RAF〉its associated AF and a semantics{a mathematical formula}σ∈{complete, preferred, stable, grounded}. It holds that E is an extension of Δ under the σ semantics iff{a mathematical formula}Map(E)is an extension of{a mathematical formula}ΔAFunder the D-σ semantics. Equivalently,{a mathematical formula}E′is an extension of{a mathematical formula}ΔAFunder the D-σ semantics iff{a mathematical formula}D-Map(E′)is an extension of Δ under the σ semantics.
+      </paragraph>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Related work and discussion
+     </section-title>
+     <paragraph>
+      This paper extends the work in [28], characterizing the acceptability semantics of the Attack–Support Argumentation Framework (ASAF) proposed in [29]. We have shown that several properties originally proposed in [30] for Dung's Abstract Argumentation Framework (AF) also hold for the ASAF. Additionally, in Section 5 we showed that the approach proposed here (specifically, in Section 4) is equivalent to the one proposed in [29], since they lead to obtaining the same extensions of the ASAF under the complete, preferred, stable and grounded semantics.
+     </paragraph>
+     <paragraph>
+      Differently from [29], the approach proposed here for obtaining the extensions of an ASAF does not make use of a translation into a Dung's AF. As mentioned in the introduction, having a characterization of semantic notions directly on the ASAF provides various advantages. In particular, the understanding of such semantic notions can be of help to achieve better models when encoding knowledge. This is because, initially, the knowledge engineer may consider a given set of arguments and interactions (attacks and supports) to make up an ASAF. Then, after analyzing the outcome of the framework, it might be the case that undesired results were obtained as a consequence of some interactions being wrongfully represented.
+     </paragraph>
+     <paragraph>
+      For instance, if we account for the example given in the introduction, one could consider an alternative representation where the argument expressing that there is an open window in the room ({a mathematical formula}OW) provides support for the argument claiming that the room is illuminated ({a mathematical formula}RI). However, such a representation would not be correct since the consideration of the support link {a mathematical formula}OW⟹RI, together with the existence of the support {a mathematical formula}LO⟹RI, would imply that both{a mathematical formula}LO and {a mathematical formula}OW have to be accepted in order for {a mathematical formula}RI to be accepted.{sup:7} Similarly, one could think that the argument expressing that there is only one lamp in the room ({a mathematical formula}OLR) provides additional support for {a mathematical formula}RI, meaning that there exists a support {a mathematical formula}OLR⟹RI in the ASAF. However, again, this representation would not be correct since, together with the support {a mathematical formula}LO⟹RI, it would imply that both {a mathematical formula}LO and {a mathematical formula}OLR have to be accepted in order for {a mathematical formula}RI to be accepted. Then, if there was additional information indicating that the lamp was not the only lamp in the room (in which case argument {a mathematical formula}OLR would not be accepted), it would imply that {a mathematical formula}RI is not accepted either. Furthermore, that undesired outcome would be obtained even though it could be the case that there were other reasons for the room being illuminated (such as the fact that there is daylight coming from an open window in the room).
+     </paragraph>
+     <paragraph>
+      As a result, having a characterization of semantic notions directly on the ASAF (that is, not only the definition of acceptability semantics but also basic notions like defeat, conflict-freeness, and acceptability) helps to easily and rapidly identify undesired situations like the ones illustrated above. In contrast, upon the absence of such notions, the knowledge engineer would have to constantly translate the ASAF into its associated AFN and then into its associated AF to then be able to check the outcome against undesired results. Furthermore, the advantage becomes more evident at the level of basic notions, as undesired results can be detected at an early stage without requiring the computation of extensions, e.g., by detecting that a given set of arguments, attacks, and supports is not admissible when it was assumed to be.
+     </paragraph>
+     <paragraph>
+      It should be noted that, as mentioned in Section 5, the translation of an ASAF into its associated AFN given in Definition 23 differs from the one introduced in [29]. The difference relies on the way in which supports are encoded in the AFN associated with an ASAF. Given a scenario where a support {a mathematical formula}α=(A,B) holds but the chosen semantics σ cannot determine whether the positive or the negative constraint associated with α holds, the translation proposed in [29] is such that neither {a mathematical formula}α+ nor {a mathematical formula}α− would belong to the corresponding extension of the associated AF under the semantics σ. In contrast, the translation given in Definition 23 is such that, in cases like the one mentioned above, neither {a mathematical formula}α+ nor {a mathematical formula}α− would belong to the corresponding extension of the associated AF; notwithstanding this, argument α would belong to that extension. To illustrate this difference, let us consider the ASAF depicted in Fig. 4.
+     </paragraph>
+     <paragraph>
+      If we consider the ASAF from Fig. 4 and translation proposed in [29], the associated AFN and the associated AF would be as depicted below on the left and below on the right, respectively.{a mathematical formula} Then, under the grounded semantics, the only extension of the associated AF would be {a mathematical formula}{D,δ+}. Hence, by Definition 27, we would get the set {a mathematical formula}{D,δ} as the grounded extension of the ASAF. In contrast, if we consider the translation given in Definition 23, the associated AFN and the associated AF will be as depicted below on the left and below on the right, respectively.{a mathematical formula} Given this translation, the grounded extension of the associated AF is {a mathematical formula}{D,δ,δ+,β}; as a result, the mapped grounded extension of the ASAF is {a mathematical formula}{D,δ,β}. That is, differently from before, argument β belongs to the grounded extension meaning that, even though the attack cycle between arguments {a mathematical formula}A and {a mathematical formula}B is not resolved by the grounded semantics, the support β holds. Notwithstanding this, it should be remarked that we do not regard the translation given in [29] as incorrect; rather, we believe the translation given in Definition 23 is more fine-grained, allowing to explicitly distinguish between cases where a support β is not included in an extension of the ASAF because it does not hold, from cases where it was not included in the extension (using the translation of [29]) because the chosen semantics was not able to determine whether the positive or the negative constraint associated with β held. As a result, by incorporating this distinction into the translation given in Definition 23, as shown in Section 5, the two approaches for the acceptability calculus of the ASAF are equivalent.
+     </paragraph>
+     <paragraph>
+      As pointed out in [29], the ASAF relates to other approaches in abstract argumentation that account for the existence of a support relation, like the Bipolar Argumentation Framework (BAF) [23], the Evidential Argumentation System (EAS) [47], the meta-argumentation approach for representing deductive support proposed in [57] and the Argumentation Framework with Necessities (AFN) [46]. However, the main difference between the ASAF and all these approaches is that they do not account for recursive supports (i.e., supporting a support at any level), nor account for the possibility of supporting attacks. On the other hand, similarly to the ASAF, [57] defines a second-order attack relation which allows for attacks to the attack and support relations. Nevertheless, in contrast with the ASAF, the second-order attack relation proposed in [57] only allows for attacks to first-order supports and attacks.
+     </paragraph>
+     <paragraph>
+      From the above mentioned approaches, the one that most closely relates to the ASAF is the AFN[46]. This is mainly because both frameworks adopt a necessity interpretation for the support relation. Also, when identifying the defeats that may occur in the ASAF in Section 3, we accounted for the existence of extended defeats, like the AFN. Moreover, it can be shown that an ASAF without high level interactions (i.e., an ASAF where the targets of every attack and support are arguments) is compatible with an AFN having the same attack and support relations. In particular, since the ASAF also accounts for the acceptability of attacks and supports, the extensions of the ASAF and the corresponding AFN will not coincide. Rather, as shown by the following proposition, the extensions of the AFN are equivalent to the corresponding extensions of the ASAF after filtering out attacks and supports.
+     </paragraph>
+     <paragraph label="Proposition 7">
+      Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF s.t.{a mathematical formula}∀α∈(R∪S),{a mathematical formula}trg(α)∈A,{a mathematical formula}Φ=〈A,R,S+〉an AFN (where{a mathematical formula}S+is the transitive closure of{a mathematical formula}S) and a semantics{a mathematical formula}σ∈{complete, preferred, stable, grounded}. It holds that:
+     </paragraph>
+     <list>
+      <list-item label="(1)">
+       If{a mathematical formula}EΔis an extension of Δ under the semantics σ, then{a mathematical formula}EΦis an extension of Φ under the semantics σ, where{a mathematical formula}EΦ={A∈EΔ|A∈A}.
+      </list-item>
+      <list-item label="(2)">
+       If{a mathematical formula}EΦis an extension of Φ under the semantics σ, then there exists an extension{a mathematical formula}EΔof Δ under the semantics σ s.t.{a mathematical formula}EΦ={A∈EΔ|A∈A}.
+      </list-item>
+     </list>
+     <paragraph>
+      It could be noted that, according to Definition 8, the necessary support relation of an AFN should be irreflexive and transitive. In contrast, as stated by Definition 11, the ASAF requires the necessary support relation to be acyclic. On the one hand, by being acyclic, the support relation of the ASAF is also irreflexive. On the other hand, it could be noted that the transitive nature of necessary support (as required in the AFN) is captured in the ASAF by explicitly considering a sequence of supports in the characterization of extended and extended-indirect defeats (see Definition 16, Definition 17). Given a support sequence {a mathematical formula}[B,…,C], the AFN is such that there is also a necessary support from {a mathematical formula}B to every element in the sequence (in particular, to {a mathematical formula}C). In the ASAF, given the support sequence {a mathematical formula}[B,…,C], by Proposition 5 the acceptability constraints derived from each support link in the sequence are combined to establish the fact that the acceptability of {a mathematical formula}C implies the acceptability of {a mathematical formula}B (equivalently, the non-acceptability of {a mathematical formula}B implies the non-acceptability of {a mathematical formula}C), thus capturing the behavior of the necessary support link from {a mathematical formula}B to {a mathematical formula}C in the AFN.
+     </paragraph>
+     <paragraph>
+      Our work also relates to [10] in various aspects. On the one hand, the characterization of the semantic notions for the ASAF given in Section 4.1 and the characterization of extensions of the ASAF proposed in Section 4.2 follow the methodology adopted by the Argumentation Framework with Recursive Attacks (AFRA). On the other hand, a relationship between the ASAF and the AFRA can be observed in Section 3, where different kinds of defeat that may occur in the ASAF were identified. In particular, the characterization of direct and indirect defeats in the ASAF coincides with their characterization in the AFRA, as proposed in [10]. As a result, we can show that the ASAF is an extension of the AFRA in the sense that an ASAF with an empty support relation leads to obtaining the same extensions (under the complete, preferred, grounded, and stable semantics) as the resulting AFRA defined by the arguments and the attack relation of the ASAF. The relationship between the ASAF and the AFRA is formalized by the following proposition.
+     </paragraph>
+     <paragraph label="Proposition 8">
+      Let{a mathematical formula}Δ=〈A,R,∅〉be an ASAF,{a mathematical formula}Γ=〈A,R〉an AFRA and let σ be a semantics such that{a mathematical formula}σ∈{complete, preferred, stable, grounded}. It holds that E is an extension of Δ under the σ semantics iff E is an extension of Γ under the σ semantics.
+     </paragraph>
+     <paragraph>
+      Another formalism that can be used to model support in abstract argumentation is the Abstract Dialectical Framework (ADF) [18], [17]. An ADF is a directed graph, whose nodes represent arguments which can be accepted or not, and the links between the nodes represent dependencies. Each argument {a mathematical formula}A in the graph is associated with an acceptance condition {a mathematical formula}CA, which is some propositional function whose truth status is determined by the corresponding values of the acceptance conditions for those arguments {a mathematical formula}B such that {a mathematical formula}(B,A) is link in the ADF (i.e.,{a mathematical formula}B is a parent of {a mathematical formula}A). The revisited approach to ADFs proposed in [17] is such that the links between the nodes are not specified explicitly, but they are inferred from the acceptance conditions within the nodes. This implies that links between the nodes (namely, interactions between arguments) in the ADF are somehow represented by the acceptance conditions of the nodes involved in the corresponding interactions.
+     </paragraph>
+     <paragraph>
+      If we wanted to represent an ASAF using an ADF we would need to be able to determine the acceptance status of interactions, as well as the acceptance status of arguments. Therefore, we would need to come up with a way of determining the acceptance status of acceptance conditions, in addition to that of nodes in the ADF. Nevertheless, since acceptance conditions are defined only for nodes (arguments) in the ADF, we would need to model interactions as nodes. Moreover, this would be necessary in order to allow for interactions to target other interactions, as in the ASAF. As a result, in order to model an ASAF using an ADF, we could include additional nodes for representing the interactions similarly to the approach proposed in [29], where the AF associated with an ASAF was used in order to determine the acceptance status of arguments and interactions of an ASAF. Furthermore, in order to model an ASAF using an ADF one could start by obtaining the AF associated with the ASAF, and then model that AF using an ADF.
+     </paragraph>
+     <paragraph>
+      An alternative characterization of an ASAF as an ADF could be provided by making use of the results presented in [49]. There, the author presents several translations starting from different abstract argumentation frameworks that extend Dung's AF into ADFs. Among the frameworks studied in [49] is the extended version of the AFN proposed in [44], where the necessity support relation accounts for sets of arguments, with the requirement that an argument is accepted if at least one element in each of its supporting sets is accepted. Then, one could translate the ASAF into its associated AFN using the translation given in Definition 23 and then use the translation of an AFN into its associated ADF given in [49]. However, since, differently from [49], the AFN considered in Definition 23 is such that the necessary support relation is defined over pairs of arguments, in order to make use of the translation given in [49] an additional step is required: to characterize an AFN like the one in [44], where each set of supporting arguments contains just one argument (the argument being the source of the corresponding support link in the AFN obtained by Definition 23).
+     </paragraph>
+     <paragraph>
+      Although an ASAF could be represented as an ADF following any of the alternatives discussed above, the creation of new arguments and interactions is required in either case. Therefore, for each step of the chosen translation, the user would have to clearly understand the meaning of the new elements to be introduced, as well as the semantics of the underlying frameworks. As a result, one could consider a complementary approach using the ASAF and the ADF for modeling recursive interactions, in the following sense. The use of an ASAF, as well as the direct characterization of its semantics proposed in this paper provides an intuitive and natural representational tool for modeling recursive interactions. Then, in order to exploit the higher expressive power and the theoretical results associated with the use of ADFs and, for instance, its software support [32], [33], a translation of an ASAF into an ADF can be made. Finally, it is important to note that the translation of an AFN into an ADF proposed in [49] relies on two features of the AFN of [44]. On the one hand, it requires the AFN to be strongly consistent, meaning that no argument simultaneously attacks and supports another argument. On the other hand, as stated by the author in [49], the AFN semantics in [44] are built around the notion of coherence, which requires all relevant arguments to be (support-wise) derived in an acyclic manner. Thus, the AFN considered in the translation of [49] shares the constraints imposed on the support relation of an ASAF, as expressed in Definition 11; namely, that the attack and support relations are disjoint, and that the support relation is acyclic.
+     </paragraph>
+     <paragraph>
+      In [21] the authors propose an alternative approach for addressing the acceptability calculus in the context of an ASAF. In that work, an alternative translation of an ASAF into a Dung's AF by making use of an intermediate AFN is provided, drawing on [25] where a translation from an AFN into a Dung's AF was proposed. The translation given in [21] is driven by three features that can be identified in interactions involved in a recursion: groundness, validity, and activation, where interactions have to be active in order to be included in the extensions of an ASAF. In particular, as proposed in [21], an interaction is considered to be grounded if its source is accepted. The validity of an interaction is determined by looking at the interactions that may affect it, that is, interactions attacking and supporting it; for instance, an interaction that is attacked by another interaction that is active will not be considered as valid. Then, an interaction is considered to be active if it is grounded and valid.
+     </paragraph>
+     <paragraph>
+      It should be noted that the translation given in [21] is such that it might lead to obtaining different results (regarding acceptability) than both the translation proposed in [29] and the semantics proposed here (see Section 4). The fact that the activation of interactions is the feature determining their inclusion in the extensions of an ASAF is what makes the results from [21] differ from ours. Specifically, the difference relies on the acceptance of support relations. By requiring a support to be active in order to be accepted, [21] requires that support to be both grounded and valid. This implies that, in order to be accepted in [21], the constraints associated with a necessary support should be satisfied from a positive point of view.{sup:8} In contrast, the approach for calculating the acceptability of arguments and interactions of an ASAF proposed in this paper (as well as the one given in [29]) accounts for the possibility of satisfying the constraints of a necessary support either from a positive or a negative point of view. To relate this back to the features of interactions identified in [21], the approach to acceptability calculus proposed in Section 4 is such that an interaction will be part of an extension of an ASAF iff it is (at least) valid.
+     </paragraph>
+     <paragraph>
+      To illustrate the above mentioned difference, let us consider again the ASAF depicted in Fig. 4. Then, if we consider the translation given in [21], the associated AFN and the associated AF will be as depicted below on the left and below on the right, respectively.{sup:9}{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Given this translation, the grounded extension of the associated AF is {a mathematical formula}{D,δ}, meaning that the only active interaction is δ, leaving β outside because it is not grounded. In particular, argument {a mathematical formula}NBβ — which expresses “the support β is not grounded” — does not belong to the grounded extension either. This is because of the attack cycle between arguments {a mathematical formula}A and {a mathematical formula}B, which is not resolved by the grounded semantics. As a result, argument β — expressing that “the support β is active” — and argument {a mathematical formula}NβC — expressing that “the support β is valid but not grounded” — do not belong to the grounded extension either. In contrast, as shown before, the direct approach proposed in this paper (Section 4) and the translation given in Definition 23 are such that the grounded extension of the ASAF also includes β. It is important to note that, even though the approach from [21] leads to obtaining the same grounded extension as [29] when considering the ASAF illustrated in Fig. 4, this would not have been the case if argument {a mathematical formula}D was not “grounded” according to the terminology proposed in [21] (for instance, because {a mathematical formula}D was attacked by an unattacked argument {a mathematical formula}E).
+     </paragraph>
+     <paragraph>
+      There exists another difference between the approach from [21] and the one proposed here, as well as the one given in [29]. As it can be observed in the above example, the approach from [21] does not account for the acceptability of every interaction. That is, the authors in [21] distinguish between “labeled” and “unlabeled” interactions, where labeled interactions are those involved in a recursion (either as a target, or as targeting another interaction). Hence, the associated AFN is such that arguments for encoding the groundness, validity, and activation of interactions (e.g.,{a mathematical formula}NBβ,NβC and β) are only generated for labeled interactions. In contrast, interactions such as the attacks between {a mathematical formula}A and {a mathematical formula}B are encoded directly in [21], without introducing additional arguments. On the other hand, the approach from [29] and the one proposed in this paper are such that the acceptability status of every interaction is explicitly accounted for. As a result, interactions not involved in a recursion will always hold and thus, they will belong to the extensions of their corresponding ASAF.
+     </paragraph>
+     <paragraph>
+      To conclude the discussion, let us consider other works that shed light on practical applications of the ASAF. In [22] the authors proposed logical encodings of argumentation frameworks with attack and support relations. For that purpose, the authors considered existing logical encodings of metabolic networks[2], which may be graphically represented by Molecular Interaction Maps (MIMs). Briefly, a MIM is a graph whose nodes are proteins and edges are either relations involving those proteins (e.g., protein {a mathematical formula}p1 induces the production of — respectively, inhibits — protein {a mathematical formula}p2), or relations from a protein to another relation (e.g., protein {a mathematical formula}p3 activates — respectively, inhibits — the reaction relating proteins {a mathematical formula}p1 and {a mathematical formula}p2).
+     </paragraph>
+     <paragraph>
+      Given their characteristics, it is possible to draw a parallel between a MIM and an ASAF. Briefly, each protein in a MIM can be represented as an argument in an ASAF. Then, reactions involving two proteins can be modeled as attacks or supports between arguments in the ASAF, depending on their nature. Specifically, the notion of inhibition of a protein {a mathematical formula}p2 by another protein {a mathematical formula}p1 in a MIM has the following associated meaning: “if {a mathematical formula}p1 is present then {a mathematical formula}p2 is not present”; this can be represented by the existence of an attack {a mathematical formula}p1⟶p2 in the ASAF. The notion of production of a protein {a mathematical formula}p2 by another protein {a mathematical formula}p1 means that “if {a mathematical formula}p1 is present then {a mathematical formula}p2 is also present”. In this case, the relationship between {a mathematical formula}p1 and {a mathematical formula}p2 can be represented with a necessary support {a mathematical formula}p2⟹p1 in the ASAF.{sup:10}
+     </paragraph>
+     <paragraph>
+      The modeling of reactions that target other reactions in a MIM requires some additional considerations. On the one hand, the fact that a protein p inhibits the reaction r could be represented with a high-order attack {a mathematical formula}p⟶r, where r is an attack or a support in the ASAF, depending on its nature (respectively, an inhibition or a production reaction). On the other hand, a reaction expressing that a protein p activates the reaction r could be represented in the ASAF through a high-order support {a mathematical formula}p⟹r. Note that this representation would be accurate since, as pointed out in [22], the context associated with each reaction in a MIM is reduced to only one activation and one inhibition. Hence, since there would be at most one attack and, in particular, one support targeting each reaction, the activation of reactions can be encoded through the necessary support relation of the ASAF without problems. As a result, by modeling MIMs as ASAFs, we would be able to reason about the behavior of proteins and reactions in these networks. Specifically, this would be achieved by looking at the extensions of the corresponding ASAFs under different semantics to determine the accepted arguments and interactions.
+     </paragraph>
+     <paragraph>
+      Let us now consider [56] and [38], where different extensions of argumentation frameworks were used to reason about the trustworthiness of information sources. On the one hand, [56] proposes to model the sources of information and provide the means to attack untrustworthy sources. Also, the authors provide a representation of trust about those sources, which concerns not only the sources but also the information items and the relation with other information. The model they propose accounts for support relations, which are used to represent the links between an information source and the pieces of information it provides. In particular, it can be noted that this support links may target not only arguments but also interactions between them, meaning that the corresponding source of information provides evidence towards the existence of a given argument, attack, etc. On the other hand, [38] uses the AFRA[10] to address a trust model in a collaborative open multi-agent system. The proposed model is such that information sources (the agents in the system) share information about the trust they have assigned to their peers. Furthermore, this information is taken into consideration when evaluating the trust associated with a given piece of information. This leads to a recursive setting where the reliability of a certain credibility information depends on the credibility of other pieces of information that should be subject to the same analysis. In order to capture the recursion involved in this reasoning process, and the conflicts that may be derived from all the available information at different levels, the authors propose to use the AFRA.
+     </paragraph>
+     <paragraph>
+      The work of [56] and [38] suggests that the ASAF is suitable for modeling the dynamics associated with the consideration of trust relationships, and to reason with them accordingly. Furthermore, we could also take into consideration the notion of distrust, which can be associated with the notion of attacks. As a result, by using the ASAF, existing proposals could be extended to model and reason with trust and distrusts relationships at different levels, involving elements of different nature. Briefly, information sources and pieces of information may be represented as arguments in an ASAF. Then, for instance, the fact that agent {a mathematical formula}Agi distrusts the piece of information i could be modeled by the existence of an attack from {a mathematical formula}Agi to i. As another example, the trust agent {a mathematical formula}Agi has on another agent {a mathematical formula}Agj could be represented by a support link in the ASAF relating {a mathematical formula}Agi and {a mathematical formula}Agj. Furthermore, if an agent {a mathematical formula}Agk distrusts the fact that agent {a mathematical formula}Agi trusts agent {a mathematical formula}Agj, then the ASAF could include a high-order attack from {a mathematical formula}Agk to the support link relating {a mathematical formula}Agi and {a mathematical formula}Agj. Analogously, if an agent {a mathematical formula}Agm trusts the assessment of {a mathematical formula}Agk regarding the relationship between {a mathematical formula}Agi and {a mathematical formula}Agj, a support link from {a mathematical formula}Agm to the attack relating {a mathematical formula}Agk and the support between {a mathematical formula}Agi and {a mathematical formula}Agj could be included in the ASAF.
+     </paragraph>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     <paragraph label="Proposition 1">
+      Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF,{a mathematical formula}α∈R,{a mathematical formula}β∈Sand{a mathematical formula}S⊆S. If α{a mathematical formula}e-def{a mathematical formula}src(β)givenS, then α{a mathematical formula}e-def{a mathematical formula}trg(β)given{a mathematical formula}S∪{β}.
+     </paragraph>
+     <paragraph label="Proof">
+      If α{a mathematical formula}e-def{a mathematical formula}src(β)givenS, then, by Definition 16, there exists a support sequence {a mathematical formula}Σ=[A1,…,src(β)] for {a mathematical formula}src(β) s.t. S is the support set of Σ. Since by hyp. {a mathematical formula}β=(src(β),trg(β))∈S, by Definition 15, {a mathematical formula}Σ′=[A1,…,src(β),trg(β)] is a support sequence for {a mathematical formula}trg(β) and {a mathematical formula}S∪{β} is the support set of {a mathematical formula}Σ′. Thus, by Definition 16, α{a mathematical formula}e-def{a mathematical formula}trg(β)given{a mathematical formula}S∪{β}. □
+     </paragraph>
+     <paragraph label="Proposition 2">
+      Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF,{a mathematical formula}α∈R,{a mathematical formula}X∈(A∪R∪S)and{a mathematical formula}S⊆S. If α{a mathematical formula}e-defX givenS, then{a mathematical formula}∃β∈Ss.t. α{a mathematical formula}d-def{a mathematical formula}src(β).
+     </paragraph>
+     <paragraph label="Proof">
+      If α{a mathematical formula}e-defXgivenS, then, by Definition 16, there exists a support sequence {a mathematical formula}Σ=[A1,…,X] for X, where {a mathematical formula}trg(α)=A1 and S is the support set of Σ. Also, by Definition 16, {a mathematical formula}∃β∈S s.t. {a mathematical formula}src(β)=A1. Thus, by Definition 12, α{a mathematical formula}d-def{a mathematical formula}src(β). □
+     </paragraph>
+     <paragraph label="Proposition 3">
+      Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF,{a mathematical formula}α,γ∈Rand{a mathematical formula}S⊆S. If α{a mathematical formula}ei-defγ givenS, then{a mathematical formula}∃β∈Ss.t. α{a mathematical formula}d-def{a mathematical formula}src(β).
+     </paragraph>
+     <paragraph label="Proof">
+      It follows directly from Definition 17 and Proposition 2. □
+     </paragraph>
+     <paragraph label="Proposition 4">
+      Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF,{a mathematical formula}α∈Rand{a mathematical formula}S⊆(A∪R∪S). If α is acceptable w.r.t.S, then{a mathematical formula}src(α)is acceptable w.r.t.S.
+     </paragraph>
+     <paragraph label="Proof">
+      Suppose by contradiction that α is acceptable w.r.t. S and {a mathematical formula}A=src(α) is not acceptable w.r.t. S. Then, either (a) {a mathematical formula}∃β∈R s.t. β{a mathematical formula}u-defA, and {a mathematical formula}∄γ∈S, {a mathematical formula}∄S′⊆S s.t. γ{a mathematical formula}u-defβ or γ{a mathematical formula}c-defβgiven{a mathematical formula}S′; or (b) {a mathematical formula}∃β∈R, {a mathematical formula}∃T⊆S s.t. β{a mathematical formula}c-defAgivenT, and {a mathematical formula}∄γ∈S, {a mathematical formula}∄S′⊆S, {a mathematical formula}∄δ∈T s.t. γ{a mathematical formula}u-defβ, γ{a mathematical formula}c-defβgiven{a mathematical formula}S′, γ{a mathematical formula}u-defδ or γ{a mathematical formula}c-defδgiven{a mathematical formula}S′.
+     </paragraph>
+     <list>
+      <list-item>
+       By Definition 11, it holds that {a mathematical formula}A=src(α)∈A. Then, if β{a mathematical formula}u-defA, by Definition 14, Definition 12, it must be the case that β{a mathematical formula}d-defA. Therefore, by Definition 13, β{a mathematical formula}i-defα.
+      </list-item>
+      <list-item>
+       By Definition 11, it holds that {a mathematical formula}A=src(α)∈A. Then, if β{a mathematical formula}c-defAgivenT, by Definition 18, Definition 16, β{a mathematical formula}e-defAgivenT. Therefore, by Definition 17, β{a mathematical formula}ei-defαgivenT.
+      </list-item>
+     </list>
+     <paragraph label="Proposition 5">
+      Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF,{a mathematical formula}S⊆(A∪R∪S)a conflict-free set and{a mathematical formula}α∈Sacceptable w.r.t.S. If{a mathematical formula}trg(α)is acceptable w.r.t.S, then{a mathematical formula}src(α)is acceptable w.r.t.S; equivalently, if{a mathematical formula}src(α)is not acceptable w.r.t.S, then{a mathematical formula}trg(α)is not acceptable w.r.t.S.
+     </paragraph>
+     <paragraph label="Proof">
+      If {a mathematical formula}A=src(α) is not acceptable w.r.t. S, then it holds that either (a) {a mathematical formula}∃β∈R s.t. β{a mathematical formula}u-defA, and {a mathematical formula}∄γ∈S, {a mathematical formula}∄S′⊆S s.t. γ{a mathematical formula}u-defβ or γ{a mathematical formula}c-defβgiven{a mathematical formula}S′; or (b) {a mathematical formula}∃β∈R, {a mathematical formula}∃T⊆S s.t. β{a mathematical formula}c-defAgivenT, and {a mathematical formula}∄γ∈S, {a mathematical formula}∄S′⊆S, {a mathematical formula}∄δ∈T s.t. γ{a mathematical formula}u-defβ, γ{a mathematical formula}c-defβgiven{a mathematical formula}S′, γ{a mathematical formula}u-defδ or γ{a mathematical formula}c-defδgiven{a mathematical formula}S′.
+     </paragraph>
+     <list>
+      <list-item>
+       By Definition 11, it holds that {a mathematical formula}A=src(α)∈A. Then, if β{a mathematical formula}u-defA, by Definition 14, Definition 12, it must be the case that β{a mathematical formula}d-defA. Therefore, by Definition 16, β{a mathematical formula}e-def{a mathematical formula}trg(α)given{a mathematical formula}{α}.
+      </list-item>
+      <list-item>
+       By Definition 11, it holds that {a mathematical formula}A=src(α)∈A. Then, if β{a mathematical formula}c-defAgivenT, by Definition 18, Definition 16, it must be the case that β{a mathematical formula}e-defAgivenT. Therefore, by Proposition 1, β{a mathematical formula}e-def{a mathematical formula}trg(α)given{a mathematical formula}T∪{α}.
+      </list-item>
+     </list>
+     <paragraph label="Proposition 6">
+      Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF,{a mathematical formula}X∈(A∪R∪S)and{a mathematical formula}S⊆(A∪R∪S). If X is acceptable w.r.t.S, then{a mathematical formula}∀S′⊆(A∪R∪S)s.t.{a mathematical formula}S⊆S′:Xis acceptable w.r.t.{a mathematical formula}S′.
+     </paragraph>
+     <paragraph label="Proof">
+      Suppose by contradiction that X is acceptable w.r.t. S and {a mathematical formula}∃S′⊆(A∪R∪S) s.t. {a mathematical formula}S⊆S′ and X is not acceptable w.r.t. {a mathematical formula}S′. Then, it holds that either (a) {a mathematical formula}∃α∈R s.t. α{a mathematical formula}u-defX and {a mathematical formula}∄β∈S′, {a mathematical formula}∄S″⊆S′ s.t. β{a mathematical formula}u-defα or β{a mathematical formula}c-defαgiven{a mathematical formula}S″; or (b) {a mathematical formula}∃α∈R, {a mathematical formula}∃T⊆S s.t. α{a mathematical formula}c-defXgivenT and {a mathematical formula}∄β∈S′, {a mathematical formula}∄S″⊆S′, {a mathematical formula}∄γ∈T s.t. β{a mathematical formula}u-defα, β{a mathematical formula}c-defαgiven{a mathematical formula}S″, β{a mathematical formula}u-defγ or β{a mathematical formula}c-defγgiven{a mathematical formula}S″. Thus, since {a mathematical formula}S⊆S′, by Definition 20, X would not be acceptable w.r.t. S, contradicting the hypothesis. □
+     </paragraph>
+     <paragraph label="Lemma 1">
+      Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF,{a mathematical formula}S⊆(A∪R∪S)an admissible set of Δ, and{a mathematical formula}X,Y∈(A∪R∪S)s.t. X and Y are acceptable w.r.t.S. Then, it holds that (1) {a mathematical formula}S′=S∪{X}is admissible, and (2) Y is acceptable w.r.t.{a mathematical formula}S′.
+     </paragraph>
+     <paragraph label="Proof">
+      <list>
+       <list-item label="(1)">
+        To prove that {a mathematical formula}S′ is admissible we have to prove that X is acceptable w.r.t. {a mathematical formula}S′ and {a mathematical formula}S′ is conflict-free. Since {a mathematical formula}S⊆S′ and, by hypothesis, X is acceptable w.r.t. S, by Proposition 6, X is acceptable w.r.t. {a mathematical formula}S′. Now, suppose by contradiction that {a mathematical formula}S′ is not conflict-free. Then, since by hypothesis S is admissible, it must be the case that {a mathematical formula}∃W,Z∈S, {a mathematical formula}∃T⊆S s.t. either (a) X{a mathematical formula}u-defW; (b) W{a mathematical formula}u-defX; (c) X{a mathematical formula}c-defWgivenT; (d) W{a mathematical formula}c-defXgivenT; or (e) W{a mathematical formula}c-defZgiven{a mathematical formula}T∪{X}.
+       </list-item>
+       <list-item label="(2)">
+        Since {a mathematical formula}S⊆S′ and, by hypothesis, Y is acceptable w.r.t. S, by Proposition 6, Y is acceptable w.r.t. {a mathematical formula}S′.  □
+       </list-item>
+      </list>
+     </paragraph>
+     <paragraph label="Lemma 2">
+      Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF. Every preferred extension of Δ is also a complete extension of Δ, but not vice-versa.
+     </paragraph>
+     <paragraph label="Proof">
+      Suppose that {a mathematical formula}∃S⊆(A∪R∪S) s.t. S is a preferred extension of Δ but not a complete extension of Δ. Then, by Definition 22, it would be the case that {a mathematical formula}∃X∈(A∪R∪S) s.t. X is acceptable w.r.t. S and {a mathematical formula}X∉S. By Lemma 1, {a mathematical formula}S∪{X} is admissible. Therefore, S would not be a maximal admissible set, contradicting the assumption that S is a preferred extension of Δ. To show that the reverse does not hold let us consider the ASAF {a mathematical formula}Δ=〈A,R,∅〉, with {a mathematical formula}A={A,B} and {a mathematical formula}R={(A,B),(B,A)}. By Definition 22, ∅ is a complete extension of Δ, whereas the only preferred extensions of Δ are {a mathematical formula}{A} and {a mathematical formula}{B}. □
+     </paragraph>
+     <paragraph label="Lemma 3">
+      Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF. Every stable extension of Δ is also a preferred extension of Δ, but not vice-versa.
+     </paragraph>
+     <paragraph label="Proof">
+      It is clear that every stable extension of Δ is a maximal (w.r.t. ⊆) admissible set of Δ, hence a preferred extension of Δ. To show that the reverse does not hold, let us consider the ASAF {a mathematical formula}Δ=〈A,R,∅〉, with {a mathematical formula}A={A} and {a mathematical formula}R={(A,A)}. By Definition 22, ∅ is a preferred extension of Δ but not a stable extension of Δ. □
+     </paragraph>
+     <paragraph label="Corollary 1">
+      Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF. Every stable extension of Δ is also a complete extension of Δ, but not vice-versa.
+     </paragraph>
+     <paragraph label="Proof">
+      It follows directly from Lemma 2, Lemma 3. □
+     </paragraph>
+     <paragraph label="Lemma 4">
+      Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF and{a mathematical formula}ΔAF=〈AAF,RAF〉its associated AF. If{a mathematical formula}S⊆AAFis a D-complete extension of{a mathematical formula}ΔAF, then{a mathematical formula}D-Map(S)is a conflict-free set of Δ.
+     </paragraph>
+     <paragraph label="Proof">
+      Suppose S is a D-complete extension of {a mathematical formula}ΔAF and {a mathematical formula}D-Map(S) is not conflict-free. Then, it must be the case that {a mathematical formula}∃α,X∈D-Map(S),∃S′⊆D-Map(S) s.t. either (a) α{a mathematical formula}u-defX or (b) α{a mathematical formula}c-defXgiven{a mathematical formula}S′. Also, in both cases, by Definition 26, it holds that {a mathematical formula}α,X∈S.
+     </paragraph>
+     <list>
+      <list-item>
+       If α{a mathematical formula}u-defX, by Definition 14, either α{a mathematical formula}d-defX or α{a mathematical formula}i-defX. However, by Definition 24, in both cases {a mathematical formula}(α,X)∈RAF. Thus, S would not be D-conflict-free, contradicting the hypothesis that S is a D-complete extension of {a mathematical formula}ΔAF.
+      </list-item>
+      <list-item>
+       If α{a mathematical formula}c-defXgiven{a mathematical formula}S′, then by Definition 18, it must be the case that either (i) α{a mathematical formula}e-defXgiven{a mathematical formula}S′ or {a mathematical formula}(ii)α{a mathematical formula}ei-defXgiven{a mathematical formula}S′.
+      </list-item>
+     </list>
+     <paragraph label="Lemma 5">
+      Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF and{a mathematical formula}ΔAF=〈AAF,RAF〉its associated AF. If{a mathematical formula}S⊆A∪R∪Sis a complete extension of Δ, then{a mathematical formula}Map(S)is a D-conflict-free set of{a mathematical formula}ΔAF.
+     </paragraph>
+     <paragraph label="Proof">
+      Suppose S is a complete extension of Δ and {a mathematical formula}Map(S) is not D-conflict-free. Then, by Definition 2, it must be the case that {a mathematical formula}∃X,Y∈Map(S) s.t. {a mathematical formula}(X,Y)∈RAF. Then, by Definition 24 this leads to one of the following cases: (a) {a mathematical formula}X∈R and {a mathematical formula}Y=trg(X); (b) {a mathematical formula}X=src(α) and {a mathematical formula}Y=α−, with {a mathematical formula}α∈S; (c) {a mathematical formula}X=α− and {a mathematical formula}Y=trg(α), with {a mathematical formula}α∈S; (d) {a mathematical formula}X=α− and {a mathematical formula}Y=β+, with {a mathematical formula}α,β∈S and {a mathematical formula}trg(α)=β; (e) {a mathematical formula}X=α− and {a mathematical formula}Y=β−, with {a mathematical formula}α,β∈S and {a mathematical formula}trg(α)=β; (f) {a mathematical formula}X∈R and {a mathematical formula}Y=α+, with {a mathematical formula}α∈S and {a mathematical formula}trg(X)=α; (g) {a mathematical formula}X∈R and {a mathematical formula}Y=α−, with {a mathematical formula}α∈S and {a mathematical formula}trg(X)=α; (h) {a mathematical formula}X,Y∈R and {a mathematical formula}trg(X)=src(Y); (i) {a mathematical formula}X=α− and {a mathematical formula}Y=β+, with {a mathematical formula}α,β∈S and {a mathematical formula}trg(α)=src(β); (j) {a mathematical formula}X∈R and {a mathematical formula}Y=α+, with {a mathematical formula}α∈S and {a mathematical formula}trg(X)=src(α); or (k) {a mathematical formula}X=α− and {a mathematical formula}Y∈R, with {a mathematical formula}α∈S and {a mathematical formula}trg(α)=src(Y).
+     </paragraph>
+     <list>
+      <list-item>
+       If {a mathematical formula}X∈R and {a mathematical formula}Y=trg(X), then, by Definition 28, {a mathematical formula}X,Y∈S and, by Definition 12, X{a mathematical formula}d-defY. Therefore, S would not be conflict-free, contradicting the hypothesis that S is a complete extension of Δ.
+      </list-item>
+      <list-item>
+       If {a mathematical formula}Y=α−∈Map(S), with {a mathematical formula}α∈S, then, by Definition 28, it must be the case that {a mathematical formula}X=src(α)∉Map(S). Contradiction.
+      </list-item>
+      <list-item>
+       If {a mathematical formula}X=α−∈Map(S), with {a mathematical formula}α∈S, then, by Definition 28, it must be the case that {a mathematical formula}Y=trg(α)∉Map(S). Contradiction.
+      </list-item>
+      <list-item>
+       If {a mathematical formula}X=α−∈Map(S), then, by Definition 28, it must be the case that {a mathematical formula}trg(α)∉Map(S). Moreover, if {a mathematical formula}trg(α)=β, with {a mathematical formula}β∈S, it must be the case that {a mathematical formula}Y=β+∉Map(S). Contradiction.
+      </list-item>
+      <list-item>
+       Analogous to case (d).
+      </list-item>
+      <list-item>
+       If {a mathematical formula}X∈R and {a mathematical formula}Y=α+, with {a mathematical formula}α∈S, then, by Definition 28, {a mathematical formula}X,α∈S. Then, if {a mathematical formula}trg(X)=α, by Definition 12, X{a mathematical formula}d-defα. Therefore, S would not be conflict-free, contradicting the hypothesis that S is a complete extension of Δ.
+      </list-item>
+      <list-item>
+       Analogous to case (f).
+      </list-item>
+      <list-item>
+       {a mathematical formula}IfX,Y∈R, then, by Definition 28, {a mathematical formula}X,Y∈S. If {a mathematical formula}trg(X)=src(Y), by Definition 13, X{a mathematical formula}i-defY. Therefore, S would not be conflict-free, contradicting the hypothesis that S is a complete extension of Δ.
+      </list-item>
+      <list-item>
+       If {a mathematical formula}X=α−∈Map(S), with {a mathematical formula}α∈S, then, by Definition 28, it must be the case that {a mathematical formula}trg(α)∉Map(S). Moreover, if {a mathematical formula}trg(α)=src(β), with {a mathematical formula}β∈S, it must be the case that {a mathematical formula}Y=β+∉Map(S). Contradiction.
+      </list-item>
+      <list-item>
+       If {a mathematical formula}Y=α+∈Map(S), with {a mathematical formula}α∈S, then, by Definition 28, {a mathematical formula}src(α)∈S. Also, if {a mathematical formula}X∈R, by Definition 28, {a mathematical formula}X∈S. Then, if {a mathematical formula}trg(X)=src(α), by Definition 12, X{a mathematical formula}d-def{a mathematical formula}src(α). As a result, S would not be conflict-free, contradicting the hypothesis that S is a complete extension of Δ.
+      </list-item>
+      <list-item>
+       If {a mathematical formula}X=α−∈Map(S), with {a mathematical formula}α∈S, then, by Definition 28, {a mathematical formula}∃γ∈S, {a mathematical formula}∃S′⊆S s.t. γ{a mathematical formula}u-def{a mathematical formula}src(α) or γ{a mathematical formula}c-def{a mathematical formula}src(α)given{a mathematical formula}S′. Also, if {a mathematical formula}Y∈R, by Definition 28, it holds that {a mathematical formula}Y∈S. Hence, if {a mathematical formula}trg(α)=src(Y), by Definition 17, γ{a mathematical formula}ei-defYgiven{a mathematical formula}{α} or γ{a mathematical formula}ei-defYgiven{a mathematical formula}S′∪{α}. As a result, S would not be conflict-free, contradicting the hypothesis that S is a complete extension of Δ. □
+      </list-item>
+     </list>
+     <paragraph label="Lemma 6">
+      Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF and{a mathematical formula}ΔAF=〈AAF,RAF〉its associated AF.
+     </paragraph>
+     <list>
+      <list-item>
+       If{a mathematical formula}S⊆AAFis a D-complete extension of{a mathematical formula}ΔAFand{a mathematical formula}X∈AAFis D-acceptable w.r.t.S, then{a mathematical formula}D-IMap(X)is acceptable w.r.t.{a mathematical formula}D-Map(S).
+      </list-item>
+      <list-item>
+       If{a mathematical formula}S⊆A∪R∪Sis a complete extension of Δ and{a mathematical formula}X∈A∪R∪Sis acceptable w.r.t.S, then X is D-acceptable w.r.t.{a mathematical formula}Map(S).
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      <list>
+       <list-item>
+        Suppose that X is D-acceptable w.r.t. S. To prove that {a mathematical formula}D-IMap(X) is acceptable w.r.t. {a mathematical formula}D-Map(S) we have to prove: (1) if {a mathematical formula}∃α∈R s.t. α{a mathematical formula}d-def{a mathematical formula}D-IMap(X), then {a mathematical formula}∃β∈D-Map(S), {a mathematical formula}∃S′⊆D-Map(S) s.t. β{a mathematical formula}u-defα or β{a mathematical formula}c-defαgiven{a mathematical formula}S′; (2) if {a mathematical formula}∃α∈R s.t. α{a mathematical formula}i-def{a mathematical formula}D-IMap(X), then {a mathematical formula}∃β∈D-Map(S), {a mathematical formula}∃S′⊆D-Map(S) s.t. β{a mathematical formula}u-defα or β{a mathematical formula}c-defαgiven{a mathematical formula}S′; (3) if {a mathematical formula}∃α∈R, {a mathematical formula}∃T⊆S s.t. α{a mathematical formula}e-def{a mathematical formula}D-IMap(X)givenT, then {a mathematical formula}∃β∈D-Map(S), {a mathematical formula}∃S′⊆D-Map(S) s.t. β{a mathematical formula}u-defα, β{a mathematical formula}c-defαgiven{a mathematical formula}S′, β{a mathematical formula}u-defγ or β{a mathematical formula}c-defγgiven{a mathematical formula}S′, where {a mathematical formula}γ∈T; and (4) if {a mathematical formula}∃α∈R, {a mathematical formula}∃T⊆S s.t. α{a mathematical formula}ei-def{a mathematical formula}D-IMap(X)givenT, then {a mathematical formula}∃β∈D-Map(S), {a mathematical formula}∃S′⊆D-Map(S) s.t. β{a mathematical formula}u-defα, β{a mathematical formula}c-defαgiven{a mathematical formula}S′, β{a mathematical formula}u-defγ or β{a mathematical formula}c-defγgiven{a mathematical formula}S′, where {a mathematical formula}γ∈T.
+       </list-item>
+       <list-item>
+        If X is acceptable w.r.t. S, then by Definition 22 and Lemma 1 it holds that {a mathematical formula}X∈S. Suppose by contradiction that X is acceptable w.r.t. S and X is not D-acceptable w.r.t. {a mathematical formula}Map(S). Then, by Definition 2, it must be the case that {a mathematical formula}∃Y∈AAF s.t. {a mathematical formula}(Y,X)∈RAF and {a mathematical formula}∄Z∈Map(S) s.t. {a mathematical formula}(Z,Y)∈RAF. If {a mathematical formula}(Y,X)∈RAF, since {a mathematical formula}X∈A∪R∪S, by Definition 24 it must be the case that either: (a) {a mathematical formula}Y∈R and {a mathematical formula}X=trg(Y); (b) {a mathematical formula}Y=α− and {a mathematical formula}X=trg(α), with {a mathematical formula}α∈S; (c) {a mathematical formula}X,Y∈R and {a mathematical formula}trg(Y)=src(X); or (d) {a mathematical formula}Y=α− and {a mathematical formula}X∈R, with {a mathematical formula}α∈S and {a mathematical formula}trg(α)=src(X).
+       </list-item>
+      </list>
+     </paragraph>
+     <paragraph label="Lemma 7">
+      Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF,{a mathematical formula}ΔAF=〈AAF,RAF〉its associated AF,{a mathematical formula}X∈Sand{a mathematical formula}S⊆A∪R∪Sa complete extension of Δ.
+     </paragraph>
+     <list>
+      <list-item>
+       If X and{a mathematical formula}src(X)are acceptable w.r.t.S, then{a mathematical formula}X+is D-acceptable w.r.t.{a mathematical formula}Map(S).
+      </list-item>
+      <list-item>
+       If X is acceptable w.r.t.Sand{a mathematical formula}∃α∈R,{a mathematical formula}∃T⊆Ss.t. α is acceptable w.r.t.S,{a mathematical formula}∀Si∈Tit holds that{a mathematical formula}Siis acceptable w.r.t.S, and α{a mathematical formula}u-def{a mathematical formula}src(X)or α{a mathematical formula}c-def{a mathematical formula}src(X)givenT, then{a mathematical formula}X−is D-acceptable w.r.t.{a mathematical formula}Map(S).
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      <list>
+       <list-item>
+        If X and {a mathematical formula}src(X) are acceptable w.r.t. S, by Lemma 6 it holds that X and {a mathematical formula}src(X) are D-acceptable w.r.t. {a mathematical formula}Map(S). By Definition 24, if {a mathematical formula}∃Y∈AAF s.t. {a mathematical formula}(Y,X+)∈RAF, it must be the case that {a mathematical formula}(Y,X)∈RAF or {a mathematical formula}(Y,src(X))∈RAF. Then, since X and {a mathematical formula}src(X) are D-acceptable w.r.t. {a mathematical formula}Map(S), it must be the case that {a mathematical formula}∃Z∈Map(S) s.t. {a mathematical formula}(Z,Y)∈RAF. As a result, {a mathematical formula}X+ is D-acceptable w.r.t. {a mathematical formula}Map(S).
+       </list-item>
+       <list-item>
+        To prove that {a mathematical formula}X− is D-acceptable w.r.t. {a mathematical formula}Map(S), we need to prove that if {a mathematical formula}∃Y∈AAF s.t. {a mathematical formula}(Y,X−)∈RAF, then {a mathematical formula}∃Z∈Map(S) s.t. {a mathematical formula}(Z,Y)∈RAF. By Definition 24, if {a mathematical formula}∃Y∈AAF s.t. {a mathematical formula}(Y,X−)∈RAF, then it must be the case that either: (a) {a mathematical formula}(Y,X)∈RAF; or (b) {a mathematical formula}Y=src(X).
+       </list-item>
+      </list>
+     </paragraph>
+     <paragraph label="Lemma 8">
+      Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF and{a mathematical formula}ΔAF=〈AAF,RAF〉its associated AF.
+     </paragraph>
+     <list>
+      <list-item>
+       If{a mathematical formula}S⊆AAFis a D-complete extension of{a mathematical formula}ΔAF, then{a mathematical formula}D-Map(S)is admissible.
+      </list-item>
+      <list-item>
+       If{a mathematical formula}S⊆A∪R∪Sis a complete extension of Δ, then{a mathematical formula}Map(S)is D-admissible.
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      <list>
+       <list-item>
+        It follows directly from Definition 21 and Lemma 4, Lemma 6.
+       </list-item>
+       <list-item>
+        It follows directly from Definition 2 and Lemma 5, Lemma 6, Lemma 7. □
+       </list-item>
+      </list>
+     </paragraph>
+     <paragraph label="Theorem 1">
+      Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF and{a mathematical formula}ΔAF=〈AAF,RAF〉its associated AF.
+     </paragraph>
+     <list>
+      <list-item>
+       If{a mathematical formula}S⊆AAFis a D-complete extension of{a mathematical formula}ΔAF, then{a mathematical formula}D-Map(S)is a complete extension of Δ.
+      </list-item>
+      <list-item>
+       If{a mathematical formula}S⊆A∪R∪Sis a complete extension of Δ, then{a mathematical formula}Map(S)is a D-complete extension of{a mathematical formula}ΔAF.
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      <list>
+       <list-item>
+        It follows directly from Definition 22 and Lemma 6, Lemma 8.
+       </list-item>
+       <list-item>
+        It follows directly from Definition 3 and Lemma 6, Lemma 7, Lemma 8. □
+       </list-item>
+      </list>
+     </paragraph>
+     <paragraph label="Theorem 2">
+      Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF and{a mathematical formula}ΔAF=〈AAF,RAF〉its associated AF.
+     </paragraph>
+     <list>
+      <list-item>
+       If{a mathematical formula}S⊆AAFis a D-preferred extension of{a mathematical formula}ΔAF, then{a mathematical formula}D-Map(S)is a preferred extension of Δ.
+      </list-item>
+      <list-item>
+       If{a mathematical formula}S⊆A∪R∪Sis a preferred extension of Δ, then{a mathematical formula}Map(S)is a D-preferred extension of{a mathematical formula}ΔAF.
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      <list>
+       <list-item>
+        It follows directly from Definition 22, [30, Theorem 25] and Lemma 8.
+       </list-item>
+       <list-item>
+        It follows directly from Definition 3 and Lemma 2, Lemma 8. □
+       </list-item>
+      </list>
+     </paragraph>
+     <paragraph label="Theorem 3">
+      Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF and{a mathematical formula}ΔAF=〈AAF,RAF〉its associated AF.
+     </paragraph>
+     <list>
+      <list-item>
+       If{a mathematical formula}S⊆AAFis a D-stable extension of{a mathematical formula}ΔAF, then{a mathematical formula}D-Map(S)is a stable extension of Δ.
+      </list-item>
+      <list-item>
+       If{a mathematical formula}S⊆A∪R∪Sis a stable extension of Δ, then{a mathematical formula}Map(S)is a D-stable extension of{a mathematical formula}ΔAF.
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      <list>
+       <list-item>
+        Suppose by contradiction that S is a D-stable extension of {a mathematical formula}ΔAF and {a mathematical formula}D-Map(S) is not a stable extension of Δ. By [30, Lemma 15 and Theorem 25], S is a D-complete extension of {a mathematical formula}ΔAF. Thus, by Theorem 1, {a mathematical formula}D-Map(S) is a complete extension of Δ. Hence, by Definition 22, {a mathematical formula}D-Map(S) is conflict-free. As a result, it should be the case that {a mathematical formula}∃X∈AAF s.t. {a mathematical formula}X∉S and {a mathematical formula}∃Z∈S s.t. {a mathematical formula}(Z,X)∈RAF and {a mathematical formula}D-IMap(X)∉D-Map(S), but {a mathematical formula}∄α∈D-Map(S), {a mathematical formula}∄S′⊆D-Map(S) s.t. α{a mathematical formula}u-def{a mathematical formula}D-IMap(X) or α{a mathematical formula}c-def{a mathematical formula}D-IMap(X)given{a mathematical formula}S′. Now we have to consider the following cases: (1) {a mathematical formula}X∈R; (2) {a mathematical formula}X∈A; (3) {a mathematical formula}X=δ+, with {a mathematical formula}δ∈S; (4) {a mathematical formula}X=δ−, with {a mathematical formula}δ∈S; or (5) {a mathematical formula}X∈S.
+       </list-item>
+       <list-item>
+        If S is a stable extension of Δ, then, by Corollary 1, S is a complete extension of Δ. Moreover, by Theorem 1, {a mathematical formula}Map(S) is a D-complete extension of {a mathematical formula}ΔAF. Thus, to prove tat {a mathematical formula}Map(S) is a D-stable extension of {a mathematical formula}ΔAF we need to show that {a mathematical formula}∀X∉Map(S):∃Y∈Map(S) s.t. {a mathematical formula}(Y,X)∈RAF. Now we have to consider the following cases: (a) {a mathematical formula}X∈A∪R∪S; (b) {a mathematical formula}X=δ+, with {a mathematical formula}δ∈S; or (c) {a mathematical formula}X=δ−, with {a mathematical formula}δ∈S.
+       </list-item>
+      </list>
+     </paragraph>
+     <paragraph label="Theorem 4">
+      Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF and{a mathematical formula}ΔAF=〈AAF,RAF〉its associated AF.
+     </paragraph>
+     <list>
+      <list-item>
+       If{a mathematical formula}S⊆AAFis the D-grounded extension of{a mathematical formula}ΔAF, then{a mathematical formula}D-Map(S)is the grounded extension of Δ.
+      </list-item>
+      <list-item>
+       If{a mathematical formula}S⊆A∪R∪Sis the grounded extension of Δ, then{a mathematical formula}Map(S)is the D-grounded extension of{a mathematical formula}ΔAF.
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      <list>
+       <list-item>
+        It follows directly from Definition 3, Definition 22, and Theorem 1, since the grounded extension of Δ (respectively, of {a mathematical formula}ΔAF) corresponds to its smallest (w.r.t. ⊆) complete (respectively, D-complete) extension.
+       </list-item>
+       <list-item>
+        It follows directly from Definition 22, Definition 3, and Theorem 1, since the grounded extension of {a mathematical formula}ΔAF (respectively, of Δ) corresponds to its smallest (w.r.t. ⊆) D-complete (respectively, complete) extension. □
+       </list-item>
+      </list>
+     </paragraph>
+     <paragraph label="Lemma 9">
+      Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF and{a mathematical formula}ΔAF=〈AAF,RAF〉its associated AF.
+     </paragraph>
+     <list>
+      <list-item>
+       If{a mathematical formula}S⊆AAFis a D-complete extension of{a mathematical formula}ΔAF, then{a mathematical formula}Map(D-Map(S))=S.
+      </list-item>
+      <list-item>
+       If{a mathematical formula}S⊆A∪R∪Sis a complete extension of Δ, then{a mathematical formula}D-Map(Map(S))=S.
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      <list>
+       <list-item>
+        We need to prove the following: (1) {a mathematical formula}Map(D-Map(S))⊆S; and (2) {a mathematical formula}S⊆Map(D-Map(S)).
+       </list-item>
+       <list-item>
+        We need to prove the following: (1) {a mathematical formula}D-Map(Map(S))⊆S, and (2) {a mathematical formula}S⊆D-Map(Map(S)).
+       </list-item>
+      </list>
+     </paragraph>
+     <paragraph label="Theorem 5">
+      Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF,{a mathematical formula}ΔAF=〈AAF,RAF〉its associated AF and a semantics{a mathematical formula}σ∈{complete, preferred, stable, grounded}. It holds that E is an extension of Δ under the σ semantics iff{a mathematical formula}Map(E)is an extension of{a mathematical formula}ΔAFunder the D-σ semantics. Equivalently,{a mathematical formula}E′is an extension of{a mathematical formula}ΔAFunder the D-σ semantics iff{a mathematical formula}D-Map(E′)is an extension of Δ under the σ semantics.
+     </paragraph>
+     <paragraph label="Proof">
+      It follows directly from Theorem 1, Theorem 4 and Lemma 9. □
+     </paragraph>
+     <paragraph label="Proposition 7">
+      Let{a mathematical formula}Δ=〈A,R,S〉be an ASAF s.t.{a mathematical formula}∀α∈(R∪S),{a mathematical formula}trg(α)∈A,{a mathematical formula}Φ=〈A,R,S+〉an AFN (where{a mathematical formula}S+is the transitive closure of{a mathematical formula}S) and a semantics{a mathematical formula}σ∈{complete,preferred,stable,grounded}. It holds that:
+     </paragraph>
+     <list>
+      <list-item label="(1)">
+       If{a mathematical formula}EΔis an extension of Δ under the semantics σ, then{a mathematical formula}EΦis an extension of Φ under the semantics σ, where{a mathematical formula}EΦ={A∈EΔ|A∈A}.
+      </list-item>
+      <list-item label="(2)">
+       If{a mathematical formula}EΦis an extension of Φ under the semantics σ, then there exists an extension{a mathematical formula}EΔof Δ under the semantics σ s.t.{a mathematical formula}EΦ={A∈EΔ|A∈A}.
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      Let {a mathematical formula}ΦAF=〈A,RΦ〉 be the AF associated with Φ according to Definition 10. We prove the Lemma by showing that the defeats in Δ and the attacks in {a mathematical formula}ΦAF are equivalent in the sense that they lead to the same acceptability constraints on the arguments from Δ and Φ. Let us consider the following cases, which correspond to situations leading to defeats on arguments in Δ and attacks on arguments in {a mathematical formula}ΦAF:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Let {a mathematical formula}α=(A,B)∈R:
+      </list-item>
+      <list-item label="•">
+       Let {a mathematical formula}α=(A,B)∈R and a support sequence {a mathematical formula}Σ=[B,…,C]:
+      </list-item>
+     </list>
+     <paragraph label="Proposition 8">
+      Let{a mathematical formula}Δ=〈A,R,∅〉be an ASAF,{a mathematical formula}Γ=〈A,R〉an AFRA and a semantics{a mathematical formula}σ∈{complete, preferred, stable, grounded}. It holds that E is an extension of Δ under the σ semantics iff E is an extension of Γ under the σ semantics.
+     </paragraph>
+     <paragraph label="Proof">
+      Since the support relation of Δ is the empty set, by Definition 14, Definition 18, the only defeats that may occur in Δ are unconditional defeats, that is, direct defeats or indirect defeats. By Definition 12, Definition 13, Definition 5, direct and indirect defeats of Δ and Γ coincide. In the absence of conditional defeats, the notion of conflict-freeness characterized in Definition 19 and the notion of acceptability characterized in Definition 20 are equivalent to the ones given in Definition 6. Moreover, by Definition 21, Definition 6, the notions of admissibility in the ASAF and the AFRA coincide. As a result, by Definition 22, Definition 7, the extensions of Δ and Γ under the σ semantics coincide. □
+     </paragraph>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

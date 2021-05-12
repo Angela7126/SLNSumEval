@@ -1,0 +1,651 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Efficient algorithms for game-theoretic betweenness centrality.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Betweenness centrality is a measure introduced independently by Anthonisse [3] and by Freeman [31], based on which the importance (or “centrality”) of a node, v, is assumed to increase with the percentage of shortest paths (from all nodes to all other nodes) that pass through v. Everett and Borgatti [29] extended this measure to groups of nodes, whereby the importance of any such group increases with the percentage of shortest paths that pass through that group; this is called the group Betweenness centrality measure.
+     </paragraph>
+     <paragraph>
+      Several applications of betweenness centrality have been considered in the literature. Among others, Puzis et al. [55] studied how group betweenness centrality can guide the process of deploying intrusion-detection devices in a complex network. Dolev et al. [24] developed an extension of the standard measure, called routing betweenness centrality, to identify key routers in a communication network. Girvan and Newman [34] proposed a community-detection algorithm based on edge betweenness centrality. Furthermore, according to the European Central Bank [28], betweenness centrality is arguably the most suitable, simple measure of systemic importance of institutions in the financial system.
+     </paragraph>
+     <paragraph>
+      In this article, we propose a generalization of betweenness centrality based on solution concepts from cooperative game theory. Our work falls under a wider body of research in which networks are analyzed using the combinatorial structure of coalitional games (see the next section for more details). The key advantage of this approach is that nodes are ranked not only based on their individual roles in the network but also based on their contribution to the role played by all possible subsets (or groups) of nodes. This is particularly relevant to settings in which the role played by a group of nodes is not simply the sum of the individual roles played by the group members. Consider, for instance, an epidemiology application, where the aim is to contain the spread of a disease [25]. If we ask the question of whether the vaccination of any individual node is sufficient to stop the spread of the disease then the answer is most probably negative. A much more likely way to contain the disease is to simultaneously vaccinate a group of carefully-selected nodes. In such a scenario, to quantify the importance of a node, one needs to consider the potential gain of vaccinating that node as part of a group, rather than just considering the potential gain of vaccinating it alone.
+     </paragraph>
+     <paragraph>
+      Such an analysis of groups of nodes in the network directly corresponds to coalitional game theory, where the performance of players is studied in “coalitions” (i.e., subsets of players). By imposing the combinatorial structure of a coalitional game over a network, it becomes possible to analyze the performance of nodes using a plethora of game-theoretic solution concepts, developed over decades to analyze the performance of players in a cooperative game. Note that a cooperative game typically places no assumptions or restrictions on how the groups are evaluated. Thus, when using such a game to model the roles played by nodes in a network, the group-evaluation function can be tailored to best fit the centrality measure at hand. For instance, a group of nodes can be evaluated based on the average degree therein, or based on its closeness to other nodes, etc. (more on this in the next section). As such, several game-theoretic network centralities have been proposed in the literature to date, each based on a different group-evaluation function [62], [44], [48].
+     </paragraph>
+     <paragraph>
+      Compared to the standard centrality measures, a potential downside of game-theoretic centrality measures is that they are based on solution concepts that are themselves hard to compute. For instance, given a coalitional game defined over a network of {a mathematical formula}|V| nodes, a straight-forward computation of the Shapley value—a fundamental game-theoretic solution concept—requires considering all possible {a mathematical formula}2|V| coalitions (i.e., groups) of nodes. This is clearly prohibitive for networks with hundreds, or even tens, of nodes. Indeed, certain game-theoretic centrality measures have been proven impossible to compute in time polynomial in the size of the network [49]. On the other hand, some positive computational results have also been found. In particular, Michalak et al. [48] analyzed various Shapley value-based extensions of degree and closeness centrality and showed that it is possible to compute those in polynomial time. Nevertheless, these positive results were only for certain game-theoretic extensions of degree centralities, which are computationally less challenging than betweenness centrality. In fact, no game-theoretic extension of betweenness centrality has been developed to date.
+     </paragraph>
+     <paragraph>
+      Given this, our contributions in this article can be summarized as follows:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       We propose a game-theoretic extension of Betweenness centrality, based on a family of solution concepts from cooperative game theory known as Semivalues[50]. This family includes two of the most fundamental solution concepts in the literature, namely the Shapley value[56] and the Banzhaf Index[9]. To put it in the context of measuring the systemic importance of financial institutions, the standard betweenness centrality measure, suggested by the European Central Bank [28] as a simple index of systemic importance, assumes that any crisis is initiated by a single insolvent institution. On the other hand, our Semivalue-based betweenness centrality measure takes into consideration the fact that a crisis in the financial network can be initiated by a group of insolvent institutions, with varying probability depending on the size of the group.
+      </list-item>
+      <list-item label="•">
+       Our main technical contribution is to propose polynomial time algorithms to compute the Semivalue-based betweenness centrality measure, and an even faster algorithm to compute the Shapley value-based betweenness centrality measure, both for weighted and unweighted networks. Interestingly, as shown in Table 1, for the unweighted case our algorithm for computing the Shapley value-based centrality has the same complexity as the best known algorithm for computing the standard betweenness centrality, due to Brandes [15]. In particular, both algorithms run in {a mathematical formula}O(|V||E|) time, where V is the set of nodes and E is the set of edges in the network.
+      </list-item>
+      <list-item label="•">
+       Finally, we compare the performance of the new measures with that of the standard betweenness-centrality measure in a scenario of simultaneous node failures (in the spirit of Holme et al. [39]). To this end, we quantify the functionality of the resulting network based on four well-known measures, namely the Average Inverse Geodesic[39], the Average Clustering Coefficient[65], the Largest Component[1], and the Fragmentation Ratio[19].{sup:1} In a number of experiments that involve both real and synthetic networks, we show that the ranking obtained by our measures (compared to the one obtained by the standard measure) reflects more accurately the influence that different nodes have on the network functionality.
+      </list-item>
+     </list>
+     <paragraph>
+      The remainder of the article is organized as follows. Section 2 discusses the related work. Section 3 introduces the basic notation and definitions. Section 4 defines our centrality measure and discusses it properties. Section 5 described our polynomial time algorithms for computing the new centrality measures. Section 6 provides an empirical evaluation of our measure and our algorithms. Section 7 summarizes our results and presents some potential directions for future research. Finally, we provide more details on various game-theoretic centrality measures at: www.game-theoretic-centrality.com, and provide the implementations of all our algorithms at: www.network-centrality.com.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Related work
+     </section-title>
+     <paragraph>
+      One of the main research directions in network science is the analysis of centrality measures. In his seminal work, Freeman [31] proposed and formalized three different concepts of centrality: (i) degree centrality is based on being directly connected to other nodes; (ii) closeness centrality is based on being close to all other nodes; and (iii) betweenness centrality is based on lying between other nodes.{sup:2} Many authors have subsequently proposed new centrality measures, either by refining and extending the classical ones or by developing utterly novel approaches [17], [54].
+     </paragraph>
+     <paragraph>
+      Grofman and Owen [38] were the first to analyze the centrality of nodes using techniques from cooperative game theory. In particular, they considered all induced connected subgraphs of a directed graph, and defined a centrality measure whereby the more central a node is, the more often its removal breaks paths in such subgraphs. The subsequent literature on game-theoretic centrality can be divided into two main categories.
+     </paragraph>
+     <list>
+      <list-item label="•">
+       In the first category, the game-theoretic approach to centrality follows the well-known coalitional game model defined on graphs, due to Myerson [52]. Specifically, in this model, cooperation is restricted by an underlying communication graph: nodes are able to cooperate only if they can communicate directly along the edges of the graph or indirectly via intermediary nodes. Without either direct or indirect communication, cooperation is not feasible. In the context of game-theoretic centrality, this means that whether a group of nodes is connected (i.e., whether it induces a connected subgraph) has a significant influence on its value. Consequently, in this line of research, the central nodes are those that play pivotal roles in connecting various groups of nodes. This line includes the works of Gomez et al. [36], del Pozo et al. [23], Amer et al. [2], Narayanam et al. [53], and Skibski et al. [57], [58].
+      </list-item>
+      <list-item label="•">
+       In the second category, to which our article contributes, the value of a group of nodes does not depend directly on whether the subgraph induced by that group is connected or not. The origins of this approach can be traced back to the concept of group centrality, whereby centrality is computed not just for individual nodes, but also for groups of nodes [29]. By computing group centrality for every possible group of nodes (not just those that are connected), we obtain a well-defined coalitional game. One can then apply a solution concept, such as the Shapley value, on this game to quantify the role played by individual nodes in all possible groups of nodes (we will explain this approach in more detail in Section 4).
+      </list-item>
+     </list>
+     <paragraph>
+      The first work that belongs to the latter category is due to Suri [62] who applied a game-theoretic centrality to study influence propagation in networks. Specifically, the authors constructed a coalitional game by assigning to every coalition (i.e., every group of nodes) a payoff equal to its group degree. Then, the authors used the Shapley value to rank the nodes in the network, and proposed the top k nodes in this ranking as an approximate solution to the top-k-node problem, i.e., the problem of identifying the k most influential nodes in the network.
+     </paragraph>
+     <paragraph>
+      The next step in this line of research was taken by Michalak et al. [48], who mapped onto a network a number of coalitional games; in each such game, a coalition's value (i.e., payoff) was taken to be some function of group degree centrality. For most of these games, Michalak et al. proposed exact algorithms to compute the Shapley value in polynomial time.
+     </paragraph>
+     <paragraph>
+      Another step was taken by Szczepanski et al. [64], who developed the first measure of centrality that takes into account networks with predefined community structure (e.g., a social network in which nodes represent individuals and communities represent nationalities). Their measure is based on a generalization of the Owen value—a solution concept from cooperative game theory that focuses on games with a priori-given unions (i.e., cooperative arrangements) of players. The authors developed a polynomial-time algorithm to compute their measure in games where the value (i.e., payoff) of every coalition is equal to the coalition's group degree centrality.
+     </paragraph>
+     <paragraph>
+      Another line of research that combines network science and cooperative game theory is that of network flow games[40], [41] and threshold network flow games[4]. In the former games, players are edges, and the value of a coalition, C, is the maximum amount of flow that can be sent from the source, s, to the sink, t, via edges from C. In the latter games, the value of a coalition is 1 if the maximum flow going through it exceeds a certain threshold, and 0 otherwise. For such games, it was possible to identify certain subclasses in which the Shapley value and the Banzhaf index can be computed in polynomial time [5]. An overview of the literature on network flow games can be found in the book by Chalkiadakis et al. [18].
+     </paragraph>
+     <paragraph>
+      Next, we discuss the literature related to our simulation section, where the performance of our Semivalue-based betweenness centrality measure is compared to the performance of the standard betweenness centrality measure in a scenario of simultaneous node failures. In more detail, we design our experiments in the same spirit as that of Holme et al. [39], who examined how different strategies of attack on a network affect its performance. More specifically, the authors studied how removing the nodes with the highest betweenness centrality affects communication throughout the network. They found that, in random scale-free networks, removing such nodes causes an exponential decay in network performance. While Holme et al. [39] measured the performance of the network as the average distance between nodes, in our simulations we consider three other measures from the literature (see Section 6 for more details).
+     </paragraph>
+     <paragraph>
+      Naturally, the body of research on network vulnerability analysis reaches far beyond the work of Holme et al. [39]. Consider, for instance, the literature on three-stage Stackelberg games [61]. In a nutshell, two opponents, called the interdictor and the operator, try to maximize their gains in a game consisting of three stages. In the first stage, the operator fortifies the network by choosing the nodes that should be fully protected. In the second stage, the interdictor performs an attack that involves removing a limited number of unfortified nodes. Finally, in the third stage, the operator acts on the network in order to fulfill its objectives, e.g., he can travel between two nodes, or send some load between nodes. The interdictor can be thought of as a human, a natural disaster, or a random failure of nodes. Typically, the game is studied from the perspective of the operator, where the focus is either on the worst case as per Murphy's Law [59], or on the average case, where the interdictor's attacks are assumed to follow a certain stochastic model [22]. One variation of Stackelberg games is called Shortest Path Interdiction, where the interdictor attempts to remove k edges in order to maximize the distance between two nodes s and t. Here, although the problem faced by the operator was shown to be NP-hard [8], Malik et al. [45] proposed an effective approximation algorithm, and Corley and Sha [20] solved this problem in polynomial time for the special case where {a mathematical formula}k=1.
+     </paragraph>
+     <paragraph>
+      Finally, we mention the link to the literature on multiagent systems, where the failure of agents has been studied both in cooperative settings [6] as well as non-cooperative settings [47], and even in network games [7].
+     </paragraph>
+     <paragraph>
+      Having discussed the related work, in the next section we introduce the basic definitions and notation used throughout the article.
+     </paragraph>
+    </section>
+    <section label="3">
+     <section-title>
+      Basic definitions and notation
+     </section-title>
+     <paragraph>
+      Let us consider first the relevant notions from graph theory. A graph (or network) G is composed of vertices (or nodes) and edges. Their sets will be denoted by {a mathematical formula}V(G) and {a mathematical formula}E(G), respectively, or simply by V and E when there is no risk of confusion. An edge connecting nodes {a mathematical formula}u,v∈V(G) will be denoted by {a mathematical formula}(u,v). We will also consider weighted networks in which a weight (label) is associated with every edge in {a mathematical formula}E(G). A path is a sequence of connected edges in the network, whereas a shortest path between two nodes, u and v, is a path that ends with these nodes and minimizes the weights of the involved edges (or minimizes the number of edges, in the case of unweighted networks).
+     </paragraph>
+     <paragraph>
+      Now, we are ready to formally introduce betweenness centrality:
+     </paragraph>
+     <paragraph label="Definition 1">
+      Betweenness centrality of a node v is defined as a function {a mathematical formula}cb:V→R such that:{a mathematical formula} where {a mathematical formula}σst is the number of shortest paths from s to t (if {a mathematical formula}s=t then {a mathematical formula}σst=1), and {a mathematical formula}σst(v) is the number of shortest paths from s to t passing through node v (if {a mathematical formula}v∈{s,t} then {a mathematical formula}σst(v)=0).{sup:3}
+     </paragraph>
+     <paragraph>
+      Intuitively, the nodes with the highest betweenness centrality can be thought of as nodes that control more shortest paths in the network than others. Arguably, then, these are the most important nodes from the perspective of controlling the flow through the network.
+     </paragraph>
+     <paragraph>
+      Everett and Borgatti [29] introduced group betweenness centrality. Viewed from the perspective of network flow, a group of nodes controls a shortest path if this path includes at least one node from the group.
+     </paragraph>
+     <paragraph label="Definition 2">
+      The group betweenness centrality of a set of nodes {a mathematical formula}S⊆V is defined as a function {a mathematical formula}cgb:2V→R such that:{a mathematical formula} where {a mathematical formula}σst(S) is the number of shortest paths from s to t passing through at least one node in S (if {a mathematical formula}s∈S or {a mathematical formula}t∈S then {a mathematical formula}σst(S)=0).
+     </paragraph>
+     <paragraph>
+      We note that the group betweenness centrality of an arbitrary {a mathematical formula}S⊆V is not, in general, equal to the sum of betweenness centralities of the nodes in S (see Fig. 1 for an example). We also note that Kolaczyk et al. [42] proposed another way to extend the standard betweenness centrality to groups of nodes. In their centrality, called co-betweenness, a path is controlled by a set, S, if that path contains all the members of S. While one could also think of other ways of defining group betweenness centrality, in this article, we build upon Definition 2, since it is arguably the most established in the literature.
+     </paragraph>
+     <paragraph>
+      Next, we introduce some basic concepts from cooperative game theory. Let us denote by {a mathematical formula}A={1,…,|A|} the set of players that participate in a coalitional game. A characteristic function{a mathematical formula}ν:2A→R assigns to every coalition {a mathematical formula}C⊆A a numerical value representing its performance; this is referred to as the value, or the payoff, of the coalition. It is assumed that {a mathematical formula}ν(∅)=0. A coalitional game in characteristic function form is then a tuple {a mathematical formula}(A,ν).
+     </paragraph>
+     <paragraph>
+      It is usually assumed that the grand coalition, i.e., the coalition of all the players in the game, is formed. This happens, for example, in superadditive games, where the union of any two disjoint coalitions has a value greater than, or equal to, the sum of the values of those two coalitions. One of the fundamental problems in cooperative game theory is then to determine how to divide the payoff of the grand coalition among the players. Whereas, in principle, there are infinitely many solutions to this problem, we are interested in solution concepts that meet certain desirable criteria. In this context, Shapley [56] focused on analyzing the marginal contributions of players to coalitions, where the marginal contribution of player i to a coalition {a mathematical formula}C⊆A∖{i} is simply the difference in value that player i makes when joining C, i.e., it is equal to {a mathematical formula}ν(C∪{i})−ν(C). With this in mind, Shapley [56] proposed that the role of a player, i, is evaluated as a weighted average of the marginal contributions of i to all possible coalitions. Formally:
+     </paragraph>
+     <paragraph label="Definition 3">
+      In a coalitional game {a mathematical formula}(A,ν) the Shapley value for a player i is:{a mathematical formula} where {a mathematical formula}π∈Π(A) denotes a permutation of players in A, and {a mathematical formula}Pπ(i) denotes the coalition made of all predecessors of i in π, e.g., {a mathematical formula}P(2,4,1,3)(1)={2,4}. We will often write {a mathematical formula}SVi instead of {a mathematical formula}SVi(A,ν) for conciseness.
+     </paragraph>
+     <paragraph>
+      The intuition behind the above solution concept is as follows. Suppose that the players arrive at a certain meeting point in a random order. Furthermore, suppose that every player i who arrives receives the marginal contribution that his arrival brings to those already at the meeting point. Then, according to the Shapley value, the payoff of player i is his average marginal contribution, taken over all the possible orders of arrival.{sup:4}
+     </paragraph>
+     <paragraph>
+      The attractiveness of the Shapley value stems from the fact that it is the unique solution concept characterized by certain intuitive axioms. One such axiomatization was proposed by Young [68], who showed that the Shapley value is the only possible solution concept satisfying all of the following desirable properties: (i) Symmetry—players that are symmetric receive the same payoff; (ii) Efficiency—the entire payoff of the grand coalitions is distributed among the players; and (iii) Marginality—if a player contributes to each coalition in game {a mathematical formula}(A,ν) no less than what he contributes to the same coalition in game {a mathematical formula}(A,ν′) then his payoff in the former game should be no less than in the latter one. Many other axiomatizations of the Shapley value have been proposed to date, see the work by Winter [67] for an overview.
+     </paragraph>
+     <paragraph>
+      One can alternatively compute the Shapley value using the following formula:{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      This is more computationally efficient than Equation (3), as it iterates over all possible coalitions (which are {a mathematical formula}2|A| in total), instead of all permutations (which are {a mathematical formula}|A|! in total). Nevertheless, {a mathematical formula}2|A| is still a prohibitive number for large {a mathematical formula}|A|. As such, even with Equation (4), computing the Shapley value is challenging, unless we leverage any additional information that may be available on how coalitions are evaluated.
+     </paragraph>
+     <paragraph>
+      The Shapley value belongs to a family of solution concepts known as Semivalues[26], [66] whereby the payoff of a player is a weighted average of that player's marginal contributions to all coalitions. Formally:
+     </paragraph>
+     <paragraph label="Definition 4">
+      For any given game {a mathematical formula}(A,ν), a Semivalue{sup:5} is defined by a vector of weights {a mathematical formula}(p0,…,pn−1)∈Rn:∑k=0|A|−1pk(|A|−1k)=1, and is computed for every player {a mathematical formula}i∈A as follows:{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      One of the most prominent Semivalues is the Shapley value, defined by the weights {a mathematical formula}pk=1/(|A|(|A|−1k)),∀k∈{0,…,n−1}. Another prominent Semivalue is the Banzhaf Index [9], defined by the weights {a mathematical formula}pk=1/(2|A|−1),∀k∈{0,…,n−1}. All Semivalues satisfy Symmetry and Marginality. The Shapley value, however, is the unique Semivalue that also satisfies Efficiency.
+     </paragraph>
+     <paragraph>
+      In the following section, we will show how Semivalues in general, and the Shapley value in particular, can be used to generalize the concept of betweenness centrality.
+     </paragraph>
+    </section>
+    <section label="4">
+     <section-title>
+      The new centrality and its properties
+     </section-title>
+     <paragraph>
+      In this section we extend the standard betweenness centrality measure, and analyze the basic properties of our extension. We start in Section 4.1 with a few motivating scenarios that demonstrate the need for a more involved centrality measure than standard betweenness centrality. Sections 4.2 and 4.3 introduce our Shapley value-based and Semivalue-based betweenness centralities, respectively. Finally, Sections 4.4 and 4.5 analyze the marginal contributions of nodes, in the context of the Shapley value-based and Semivalue-based betweenness centralities, respectively.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Motivating scenarios
+      </section-title>
+      <paragraph>
+       We will consider two motivating scenarios: ranking institutions in a financial system according to their systemic importance (Section 4.1.1), and analyzing network vulnerability (Section 4.1.2).
+      </paragraph>
+      <section label="4.1.1">
+       <section-title>
+        Measuring systemic importance of financial institutions
+       </section-title>
+       <paragraph>
+        The financial crisis of 2007–2008 clearly highlighted the need for a more stringent supervision of financial systems. Consequently, a number of systemic risk monitoring and supervisory bodies have been created worldwide, namely the Financial Stability Oversight Council (USA), the European Systemic Risk Board and the Financial Stability Board. Furthermore, new prudential policies and regulations were laid out. Most notably, the Basel III accords aim at introducing micro- and macro-prudential regulations such as stricter capital reserve ratios, increased audit transparency and more thorough risk management by banks and other financial institutions.
+       </paragraph>
+       <paragraph>
+        At a discretion of supervising authorities, systemically important institutions may be asked to follow additional macro-prudential policies including a combination of capital surcharges, contingent capital and bail-in debt. As stated in the Financial Stability Board's interim report to G20 leaders, “Financial institutions should be subject to requirements commensurate with the risks they pose to the financial system”[30].
+       </paragraph>
+       <paragraph>
+        In this context, betweenness centrality is considered to be the most suitable simple centrality to measure systemic importance of institutions in the financial system [28].{sup:6} In more detail, “the betweenness centrality of a bank A connecting pairs of nodes in the network is a measure of the dependence of these other banks from A to transfer the loans.” [33]. As a result, the greater the betweenness centrality of an institution, the more attention and scrutiny it should receive.
+       </paragraph>
+       <paragraph>
+        However, imposing additional capital requirements on financial institutions according to their standard betweenness centrality ignores the fact that financial crises are often ignited not by factors pertaining to a single bank but rather by combinations of factors that affect several banks simultaneously. For instance, the infamous financial crises of 2009 started with the collapse of the subprime residential mortgage market in the United States and then spread to the rest of the world, due to the exposure to American real estate assets via a complex array of financial derivatives. As a result, many financial institutions in various countries have asked for urgent state interventions [43].
+       </paragraph>
+       <paragraph>
+        Against this background, it would be desirable to extend betweenness centrality so that it evaluates individual institutions while taking into account the role that each such institution plays in various groups of institutions, since any such group can be affected simultaneously. We formalize this problem as follows:
+       </paragraph>
+       <paragraph label="Problem 1">
+        Given a graph {a mathematical formula}G=(V,E) and a discrete probability distribution {a mathematical formula}PD:{1,⋯,n}→[0,1], identify the cardinal ranking of nodes that reflects the expected marginal contribution of each node to the group betweenness centrality of a random subset {a mathematical formula}S⊆V the size of which is drawn from PD and members of which are chosen uniformly at random from V.{sup:7}
+       </paragraph>
+       <paragraph>
+        Later on in this article, we will propose a polynomial-time exact algorithm to solve Problem 1.{sup:8}
+       </paragraph>
+      </section>
+      <section label="4.1.2">
+       <section-title>
+        Analysis of network vulnerability
+       </section-title>
+       <paragraph>
+        One of the extensive research directions on betweenness centrality involves the analysis of network vulnerability [13], [39]. The aim here is to identify (and possibly protect) the most critical nodes—those whose removal degrades the functionality of the network the most. In this context, the four standard measures for assessing the condition of a network are:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         Average Inverse Geodesic Measure (IGM), which is the sum of the inverse distances between any pair of nodes in the network [39], [1]. Formally, it is defined as follows:{a mathematical formula} where {a mathematical formula}d(v,u) is the distance between nodes v and u.
+        </list-item>
+        <list-item label="•">
+         Average Clustering Coefficient (CC), which measures the degree to which nodes tend to cluster together [65]. Formally:{a mathematical formula} where {a mathematical formula}deg(v) is the degree of node v and {a mathematical formula}N(v) is the set of neighbors of v.
+        </list-item>
+        <list-item label="•">
+         Largest Component (LC), which focuses on the size of the largest connected group of nodes in the network [1]. Formally:{a mathematical formula}
+        </list-item>
+        <list-item label="•">
+         Fragmentation Ratio (FR), which focuses on the number of connected groups of nodes in the network [19]. Formally:{a mathematical formula}
+        </list-item>
+       </list>
+       <paragraph>
+        We formalize the problem of network vulnerability as follows:
+       </paragraph>
+       <paragraph label="Problem 2">
+        Given a graph {a mathematical formula}G=(V,E) and a discrete probability distribution {a mathematical formula}PD:{1,⋯,n}→[0,1], identify a set of nodes {a mathematical formula}C⊆V that maximizes the expected value of the following expression:{a mathematical formula} where M is one of the aforementioned four measures of network condition, i.e., {a mathematical formula}M∈{IGM,CC,LC,FR}, and {a mathematical formula}S⊆V is a random subset whose size is drawn from PD and whose members are chosen uniformly at random from V.
+       </paragraph>
+       <paragraph>
+        In Section 6, we will empirically show that the Semivalue-based betweenness centrality measure achieves consistently better results in approximating Problem 2 than the standard betweenness centrality measure.
+       </paragraph>
+      </section>
+     </section>
+     <section label="4.2">
+      <section-title>
+       The Shapley value-based betweenness centrality measure
+      </section-title>
+      <paragraph>
+       In this subsection, we focus on the problem of measuring the importance of individual nodes based on the group centralities of different groups of nodes. Since a similar problem was studied by game theorists in the context of coalitional games, we can directly use their solution concepts, and the Shapley value in particular, to achieve our goal.
+      </paragraph>
+      <paragraph>
+       First, we cast the network {a mathematical formula}G(V,E) into the combinatorial structure of a coalitional game. That is, we consider all subsets of {a mathematical formula}V(G) and define a function that assigns to every such subset a numerical value; we set this value to be the subset's group betweenness centrality. Formally, borrowing notation from coalitional games, we define a game {a mathematical formula}(V(G),ν), where the characteristic function {a mathematical formula}ν:2V(G)→R assigns to each {a mathematical formula}S⊆V(G) the value {a mathematical formula}cgb(S), and {a mathematical formula}ν(∅)=0. Now since {a mathematical formula}(V(G),ν) has the same combinatorial structure as that of a coalitional game, we can use the Shapley value to quantify the importance of nodes based on the impact that their membership makes on group betweenness centrality. In other words, we obtain a measure of centrality of individual nodes which aggregates information about their role in group betweenness centrality across various groups. Formally, the Shapley value-based betweenness centrality measure is defined as follows:
+      </paragraph>
+      <paragraph label="Definition 5">
+       The Shapley value-based betweenness centrality measureGiven a network {a mathematical formula}G=(V,E), the Shapley value-based betweenness centrality of node {a mathematical formula}v∈V(G) is defined as the function {a mathematical formula}cSh:V→R such that:{a mathematical formula} where {a mathematical formula}ν:2V(G)→R is defined for every subset of nodes, {a mathematical formula}S⊆V(G), as follows:{a mathematical formula}
+      </paragraph>
+      <paragraph label="Example 1">
+       Consider again nodes {a mathematical formula}v1 and {a mathematical formula}v2 from Fig. 1. Here:{a mathematical formula} Unlike the standard betweenness centrality, the ranking produced by our Shapley-value based betweenness centrality reflects the fact that node {a mathematical formula}v2 has many common shortest paths with {a mathematical formula}v3, while {a mathematical formula}v1 does not.
+      </paragraph>
+      <paragraph>
+       Intuitively, the Shapley value-based betweenness centrality measure represents the load placed on a given node, taking into consideration the role it plays in all possible groups of nodes in the network. Note that this centrality measure has all the properties of the Shapley value, including Symmetry, Efficiency and Marginality (see Section 3); although not all of them (especially Efficiency) seem as appealing in the network context as they are in the game-theoretic context.
+      </paragraph>
+      <paragraph>
+       Naturally, it is possible to normalize the Shapley value-based betweenness centrality measure such that it ranges from 0 to 1. To do so, it suffices to replace {a mathematical formula}SVv(V(G),ν) in Definition 5 with {a mathematical formula}SVv(V(G),ν)2maxv∈V⁡cb(v)+12. This is because {a mathematical formula}SVv(V(G),ν) is a weighted average of the marginal contributions of v, and every such marginal contribution is not greater than the betweenness centrality of v. That is, {a mathematical formula}(ν(C∪{v})−ν(C))≤cb(v) for every {a mathematical formula}v∈V and every {a mathematical formula}C⊆V.
+      </paragraph>
+      <paragraph label="Proposition 1">
+       The Shapley value-based betweenness centrality is the exact solution toProblem 1when{a mathematical formula}PD(k)=1|V|,∀k∈{1,…,n}.
+      </paragraph>
+      <paragraph label="Proof">
+       To prove the proposition, it suffices to rewrite Equation (4) as follows:{a mathematical formula} In more detail, the inner sum in the above equation runs through all subsets of nodes containing v of a given size k, and {a mathematical formula}(|V|−1k−1) is the number of such subsets. Now, the fraction {a mathematical formula}1|V| implies that the size {a mathematical formula}k∈{1,…,n} is chosen uniformly at random, i.e., each with probability {a mathematical formula}1|V|. On the other hand, the fraction {a mathematical formula}1(|V|−1k−1) implies that out of all subsets of size k, one is chosen uniformly at random.  □
+      </paragraph>
+      <paragraph>
+       Equation (7) has the following interpretation in the context of measuring systemic importance of financial institutions:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        Fraction {a mathematical formula}1|V| means the probability that a financial crisis starts with a group of financial institutions of size {a mathematical formula}|S|=k is the same for any {a mathematical formula}k∈{1,…,|V|}.
+       </list-item>
+       <list-item label="2.">
+        Fraction {a mathematical formula}1(|V|−1k−1) means that all k-sized subsets of institutions containing v have the same probability of becoming bankrupt.
+       </list-item>
+      </list>
+      <paragraph>
+       While the latter implication seems somewhat natural, the former implication seems less so. For example, it seems unnatural to assume that the probability of a single institution becoming bankrupt is exactly the same as the probability of all institutions becoming bankrupt (especially if the network is very large). To relax this assumption, we need to change the fraction {a mathematical formula}1|V| in Equation (7). This is possible by replacing the Shapley value with Semivalues, as we will show in the following section.
+      </paragraph>
+     </section>
+     <section label="4.3">
+      <section-title>
+       The semivalue-based betweenness centrality measure
+      </section-title>
+      <paragraph>
+       Recall that Semivalues generalize the Shapley value by allowing for subsets of different sizes to have different weights (see the weighted sum in Equation (5), where every subset S is assigned a weight, that depends on {a mathematical formula}|S|, i.e., {a mathematical formula}p|S|). Building upon Semivalues, we will now introduce a centrality measure that generalizes the Shapley value-based betweenness centrality.
+      </paragraph>
+      <paragraph label="Definition 6">
+       Semivalue-based betweenness centrality measureGiven a network {a mathematical formula}G=(V,E), the Semivalue-based betweenness centrality of node {a mathematical formula}v∈V(G) is defined as the function {a mathematical formula}cS:V→R given by:{a mathematical formula} where {a mathematical formula}ν:2V(G)→R is the function defined for every {a mathematical formula}S⊆V(G) as follows: {a mathematical formula}ν(S)=∑s∈V∖St∈V∖Sσst(S)σst.
+      </paragraph>
+      <paragraph label="Proposition 2">
+       For any instance ofProblem 1defined by a graph{a mathematical formula}G=(V,E)and by a discrete probability distribution{a mathematical formula}PD(k), the exact solution to this problem is the Semivalue-based betweenness centrality defined by{a mathematical formula}pk−1=PD(V,k)(|V|−1k−1)for all{a mathematical formula}k∈{0,…,|V|−1}.
+      </paragraph>
+      <paragraph label="Proof">
+       To prove the proposition it suffices to transform Equation (5) to:{a mathematical formula}The above equation can be interpreted as follows. Each size {a mathematical formula}|S|=k is chosen with probability {a mathematical formula}PD(V,k), and each set {a mathematical formula}S⊆V such that {a mathematical formula}v∈S and {a mathematical formula}|S|=k is chosen with equal probability, i.e., {a mathematical formula}PD(V,k)×1(|V−1|k−1).  □
+      </paragraph>
+      <paragraph>
+       From the above proposition, it follows that the Semivalue-based betweenness centrality measure is a generalization of the standard betweenness centrality measure (to see how this is the case, observe that when {a mathematical formula}PD(1)=1 and {a mathematical formula}PD(k)=0,∀k∈{2,…,n}, the new measure coincides with the standard one). The above proposition also shows that the Semivalue-based betweenness centrality measure is much more flexible than the Shapley value-based measure as it allows for an arbitrary probability distribution on the sizes of subsets of nodes. This makes the measure applicable to a much wider spectrum of problems. For instance, in our motivating scenario of measuring systemic importance of financial institutions, with the Semivalue-based betweenness centrality we are able to assume an arbitrary probability distribution on the size of the bankrupting institution. Likewise, in the scenario of distributed network intrusion, we can choose an arbitrary probability distribution on the size of the infected hubs.
+      </paragraph>
+      <paragraph>
+       We note that the Semivalue-based between centrality can be normalized to the interval {a mathematical formula}[0,1] just like we did earlier with the Shapley value-based betweenness centrality. Specifically, it suffices to replace {a mathematical formula}cS(v) from Definition 6 with:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       In the following subsections, we analyze the Shapley value-based betweenness centrality and the more-general Semivalue-based betweenness centrality.
+      </paragraph>
+     </section>
+     <section label="4.4">
+      <section-title>
+       A look at marginal contribution for the Shapley value
+      </section-title>
+      <paragraph>
+       Recall that, as far as our measures are concerned, the centrality of a node is measured by computing a weighted average of the node's marginal contributions to the group-betweenness centrality of all subsets of nodes. In this subsection, we show how to compute this weighted average efficiently.
+      </paragraph>
+      <paragraph>
+       To this end, we will start from Definition 3—the definition of the Shapley value. In particular, given a graph G and some node {a mathematical formula}v∈V(G), we would like to compute the expected marginal contribution of this node to the set of nodes {a mathematical formula}Pπ(v) that precede v in a random permutation π consisting of all nodes of the graph. We will focus in our analysis on three exhaustive cases, where the marginal contribution is positive, negative, or neutral, respectively.
+      </paragraph>
+      <paragraph>
+       First, let us consider the positive contributions, focusing on some particular shortest path p that contains node v. Recall that {a mathematical formula}σst denotes the number of shortest paths between nodes s and t, whereas {a mathematical formula}σst(v) denotes the number of such paths that pass through v, where {a mathematical formula}t≠v≠s (each such path is said to be controlled by v). We say that node v makes a positive contribution to coalition {a mathematical formula}Pπ(v) through a path p if and only if that path is controlled by v and not controlled by any member of {a mathematical formula}Pπ(v); this way, once v joins {a mathematical formula}Pπ(v), the resulting coalition will be able to control p. This positive contribution equals {a mathematical formula}1σst, because out of all the shortest paths between s and t, one additional path, namely p, will be added to the list of paths controlled by the coalition. Formally, the necessary and sufficient condition for such a positive contribution to occur is to have: {a mathematical formula}v∈Ψ(p) and {a mathematical formula}Ψ(p)∩Pπ(v)=∅, where {a mathematical formula}Ψ(p) is the set of all nodes lying on the path p, including endpoints.
+      </paragraph>
+      <paragraph>
+       Now, let us introduce a Bernoulli random variable {a mathematical formula}Bv,p+ that indicates whether node v makes a positive contribution to the set {a mathematical formula}Pπ(v) through shortest path p. Thus, we have:{a mathematical formula} where {a mathematical formula}P[⋅] denotes probability, and {a mathematical formula}E[⋅] denotes expected value. In other words, we need to know the probability of v preceding all the members of {a mathematical formula}Ψ(p)∖{v} in a random permutation of all nodes in the graph.
+      </paragraph>
+      <paragraph label="Theorem 1">
+       Let K be a set of elements such that{a mathematical formula}|K|=k. Furthermore, let L and R be two disjoint subsets of K, and let{a mathematical formula}|L|=land{a mathematical formula}|R|=r. Now, given some element{a mathematical formula}x∈K, where{a mathematical formula}x∉L∪R, and given a random permutation{a mathematical formula}π∈Π(K), the probability of having every element in L before x, and every element in R after x, is:{a mathematical formula}
+      </paragraph>
+      <paragraph label="Proof">
+       Let us first count the number of ways in which a permutation {a mathematical formula}π∈Π(K) can be constructed such that the following condition holds:{a mathematical formula} To this end{sup:9}:
+       <list>
+        Let us choose {a mathematical formula}l+r+1 positions in the permutation. There are {a mathematical formula}(kl+r+1) such choices.Now, in the first l chosen positions, place all the elements of L. Directly after those, place the element x. Finally, in the remaining r positions, place all the elements of R. The number of such line-ups is: {a mathematical formula}l!r!.As for the remaining elements (i.e., the elements in {a mathematical formula}K∖(L∪{x}∪R)), they can be arranged in the permutation in {a mathematical formula}(k−(l+r+1))! different ways.Thus, the number of permutations satisfying our condition is:
+       </list>
+       <paragraph>
+        {a mathematical formula}Finally, since we have a total of k! permutations, the probability that one of them satisfies our condition is given by Equation (9).  □
+       </paragraph>
+      </paragraph>
+      <paragraph>
+       Based on Theorem 1, we can obtain the probability of an event in which the node v lies on the path p and precedes all the other nodes from this path in a random permutation of all nodes in the graph G. Now, by setting {a mathematical formula}K=V(G), {a mathematical formula}L=∅ and {a mathematical formula}R=Ψ(p)∖{v}, we obtain the desired probability: {a mathematical formula}1|Ψ(p)|. Thus:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Having discussed the first case, where marginal contributions are positive, let us now discuss the second case, where the marginal contribution of node v to set {a mathematical formula}Pπ(v) is negative. This happens when path p ends or starts with v. Without loss of generality, we focus on the case where v is the end point. Specifically, if coalition {a mathematical formula}Pπ(v) already controls path p (which includes node v), then not only is there no value added from v becoming a member of this coalition, but there is a negative effect of this move. In particular, since the group betweenness centrality assumes that a set of nodes S controls only those paths with both ends not belonging to S, then as soon as v joins {a mathematical formula}Pπ(v), the coalition will lose the ability to control p. In so doing, v makes a negative contribution that is equal to {a mathematical formula}−1σsv.
+      </paragraph>
+      <paragraph>
+       Next, we analyze the probability of such a negative contribution of node v. Observe that if the marginal contribution is negative, then p must end with v. However, the opposite does not necessarily hold, i.e., if p ends with v then the marginal contribution of v is not necessarily negative; it could also be neutral. Based on this, in order to compute the probability of a negative contribution, we will start by focusing on the complementary event where v makes a neutral contribution to the set {a mathematical formula}Pπ(v), as this simplifies the analysis. This complementary event happens if and only if either node s—the starting point of path p—belongs to set {a mathematical formula}Pπ(v), or the path p is not controlled by any of the nodes in {a mathematical formula}Pπ(v). Formally:{a mathematical formula} Based on this, we can introduce a Bernoulli random variable {a mathematical formula}Bv,p− indicating whether node v makes a negative contribution through path p to the set {a mathematical formula}Pπ(v) as follows:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Again, using the combinatorial arguments presented in Theorem 1, one can show that the probability {a mathematical formula}P[Ψ(p)∩Pπ(v)=∅] equals {a mathematical formula}1|Ψ(p)|. Furthermore, due to symmetry, we have: {a mathematical formula}P[s∈Pπ(v)]=12. Finally, from the disjointness of the aforementioned complementary events, we have:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Recall that our analysis was divided into three exhaustive cases, where the marginal contribution is positive, negative, or neutral. Having dealt with the first two cases, it remains to deal with the case of neutral marginal contribution. As a matter of fact, since this case does not affect the expected marginal contribution of v to {a mathematical formula}Pπ(v), we simply disregard it during the computation.
+      </paragraph>
+      <paragraph>
+       Next, let us compute the expected marginal contribution, by aggregating the cases of positive and negative contributions. To this end, let {a mathematical formula}∂st be the set of all shortest paths from s to t, and analogously let {a mathematical formula}∂st(v)⊆∂st be the set of shortest paths from s to t that pass through node v.{sup:10} Now, using the expected value of the Bernoulli random variables (10) and (11) we are able to compute the Shapley value of node v, which is the expected marginal contribution of v to {a mathematical formula}Pπ(v), as:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Interestingly, the above equation provides insight into the Shapley value-based betweenness centrality; it is a combination of two factors: Firstly, the summation on the left resembles the standard betweenness centrality, but scaled by the number of nodes that belong to each shortest path. Secondly, the summation on the right resembles the closeness centrality,{sup:11} but with distances measured as the number of nodes on the shortest paths.
+      </paragraph>
+     </section>
+     <section label="4.5">
+      <section-title>
+       A look at marginal contributions for the semivalue
+      </section-title>
+      <paragraph>
+       We start our analysis by rewriting Equation (8) as:{a mathematical formula} where {a mathematical formula}E[⋅] is the expected marginal contribution of node v to a random coalition {a mathematical formula}Sk−1 drawn uniformly at random from the set {a mathematical formula}{S⊆V∖{v}:|S|=k−1}. Now, analogously to the previous subsection, we need to analytically compute the probability that the node v contributes to a coalition through a shortest path p. Again, here we only focus on the cases of positive and negative contributions, since the neutral case has no impact on the expected marginal contribution.
+      </paragraph>
+      <paragraph>
+       Firstly, we consider the positive contributions, focusing on some particular shortest path p that contains v. Through this path, v makes a positive contribution to coalition {a mathematical formula}Sk−1 if and only if it is not controlled by (i.e., does not pass through) any node from set {a mathematical formula}Sk−1. In this case, the positive contribution equals {a mathematical formula}1σst. The necessary and sufficient condition for this to happen is: {a mathematical formula}Ψ(p)∩Sk−1=∅, where {a mathematical formula}Ψ(p) is the set of all nodes lying on the path p including endpoints.
+      </paragraph>
+      <paragraph>
+       Now, let us introduce a Bernoulli random variable {a mathematical formula}BSk−1,v,p+ which indicates whether v makes a positive contribution through path p to coalition {a mathematical formula}Sk−1. Note that, if {a mathematical formula}|V|−Ψ(p)&lt;k−1 then the probability of this event equals 0. Otherwise, we have:{a mathematical formula} where {a mathematical formula}P[⋅] denotes probability, and {a mathematical formula}E[⋅] denotes expected value. In other words, we need to know the probability that a random set {a mathematical formula}Sk−1 contains v and none of the nodes from {a mathematical formula}Ψ(p)∖{v}.
+      </paragraph>
+      <paragraph>
+       Having analyzed the case of positive contribution, we now move on to the case of negative contribution. This happens when the path p ends with v and is controlled by the set {a mathematical formula}Sk−1. As in the previous subsection, we will simplify the analysis by focusing on the complementary event in which the marginal contribution is neutral. Observe that v makes a neutral contribution to {a mathematical formula}Sk−1 through a path {a mathematical formula}p∈∂sv if and only if either node s—the end point of path p—belongs to {a mathematical formula}Sk−1, or the path is not controlled by {a mathematical formula}Sk−1. Formally:{a mathematical formula} Based on this, we can introduce a Bernoulli random variable {a mathematical formula}BSk−1,v,p− indicating whether node v makes a negative contribution to {a mathematical formula}Sk−1 through p. To this end, if {a mathematical formula}|V|−Ψ(p)≥k−1, we obtain the following expression:{a mathematical formula} On the other hand, if {a mathematical formula}|V|−Ψ(p)&lt;k−1, we obtain the following expression:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Now, let us compute the expected marginal contribution, by aggregating the cases of positive and negative contributions. To this end, recall that {a mathematical formula}∂st is the set of all shortest paths from s to t, whereas {a mathematical formula}∂st(v)⊆∂st is the set of shortest paths from s to t passing through v. Now, using the expected value of Bernoulli random variables (14), (15) and (16) we are able to compute the Semivalue of node v as per Equation (13) as follows:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Although equations (12) and (17) already allow us to efficiently compute in polynomial time the Shapley value-based and Semivalue-based betweenness centralities, respectively, in the following section we introduce algorithms that perform this computation even more efficiently.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Algorithms to compute the Shapley value and semivalue based betweenness centrality measures
+     </section-title>
+     <paragraph>
+      Generally speaking, given a graph G, computing the Shapley value takes {a mathematical formula}O(2|V(G)|) time (to consider all subsets of {a mathematical formula}V(G)). To circumvent this major obstacle, we proposed equations (12) and (17) to compute in polynomial time the Shapley Value and the Semivalue, respectively. To speed up the computation even further, we propose in this section four algorithms:
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       Algorithm SVB computes the Shapley value-based betweenness centrality measure given an unweighted graph;
+      </list-item>
+      <list-item label="2.">
+       Algorithm SB computes the Semivalue-based betweenness centrality measure given an unweighted graph;
+      </list-item>
+      <list-item label="3.">
+       Algorithm WSVB computes the Shapley value-based betweenness centrality measure given a weighted graph;
+      </list-item>
+      <list-item label="4.">
+       Algorithm WSB computes the Semivalue-based betweenness centrality measure given a weighted graph.
+      </list-item>
+     </list>
+     <paragraph>
+      We also show in this section how the above algorithms can be easily adapted to work on directed graphs. More important, we show that Algorithm SVB has the same complexity as the best known algorithm to compute the standard betweenness centrality measure (due to Brandes [15]). Our algorithms are based on a general framework proposed in this article, which generalizes the framework of Brandes [15].
+     </paragraph>
+     <paragraph>
+      This section is structured as follows. Section 5.1 introduces our generalization of Brandes' framework for unweighted graphs. Building upon it, Sections 5.2 and 5.3 introduce Algorithm SVB and Algorithm SB, respectively. After that, in Section 5.4, we introduce our generalization of Brandes' framework for weighted graphs. Finally, Sections 5.5 and 5.6 introduce Algorithm WSVB and Algorithm WSVB, respectively.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       The framework for unweighted graphs
+      </section-title>
+      <paragraph>
+       In order to compute the standard betweenness centrality measure for all nodes, a naïve algorithm would first compute the number of shortest paths between all pairs of nodes, and then for each node v sum up all pair-dependencies, which are defined as {a mathematical formula}σst(v)σst. This process takes {a mathematical formula}O(|V|3) time. Brandes [15] proposed an algorithm to improve this complexity by using some recursive relation. This algorithm runs in {a mathematical formula}O(|V|⋅|E|) time, and requires {a mathematical formula}O(|V|+|E|) space.
+      </paragraph>
+      <paragraph>
+       Next, we propose a framework that generalizes Brandes' algorithm. We start by defining pair-dependency as:{a mathematical formula} which is the positive contribution that all shortest paths between s and t make to the assessment of node v. The value of the function {a mathematical formula}fδ depends solely on the distance between s and t. For instance, if we set {a mathematical formula}fδ=1d(s,t) we obtain the distance-scaled betweenness centrality measure introduced by Borgatti and Everett [14].
+      </paragraph>
+      <paragraph>
+       Next, we define one-side dependency as:{a mathematical formula} which is the positive contribution that all shortest paths starting with node s make to the assessment of node v. Now, building upon the recursive equation proposed by Brandes [15], we obtain the following:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Using the above equation, we can compute what we call the parameterized betweenness centrality measure{a mathematical formula}cfg for a node v by iterating over all other nodes and summing their contributions as follows:{a mathematical formula} where the value of the function {a mathematical formula}gδ depends solely on the distance between s and v.
+      </paragraph>
+      <paragraph>
+       Now, we are ready to introduce our generalized framework, PBC (see Algorithm 1) for computing the parameterized betweenness centrality in unweighted graphs. More specifically, this framework modifies Brandes' approach and computes the betweenness centrality measure parameterized by two functions: {a mathematical formula}fδ and {a mathematical formula}gδ. All lines that differ from Brandes' original algorithm have been highlighted. In our algorithm we use two basic data structures: queue {a mathematical formula}Q and stack {a mathematical formula}S. The operations on these collections of nodes are as follows: push adds an element to the top of the stack, pull removes the element at the top of the stack, enqueue adds an element at the end of the queue, and dequeue removes the element at the beginning of the queue.
+      </paragraph>
+      <paragraph>
+       Firstly, in lines 5–11, the algorithm calculates both the distance and the number of shortest paths from a source s to each node. These lines are exactly the same as in the original algorithm introduced by Brandes. While executing these lines, for each node v, all directly preceding nodes occurring on shortest paths from s to v are stored in memory. This process uses Breadth-First Search [21] which takes {a mathematical formula}O(|V|+|E|) time and {a mathematical formula}O(|V|) space. In the second step (lines 15 and 17), the algorithm uses Equation (21) to calculate the contribution of the source s to the value of our betweenness centrality for each node that is reachable from the source. This step also takes {a mathematical formula}O(|V|) time and {a mathematical formula}O(|V|+|E|) space. Only lines 15 and 17 and additionally line 18 differ from Brandes' original algorithm.
+      </paragraph>
+      <paragraph>
+       As visible from Equation (21), in an undirected graph, each path is considered twice. Thus, at the end of the algorithm, in line 18, we halve the accumulated result. In line 17, we multiply the influence of the function {a mathematical formula}gδ by two, because the influence of each source even in undirected graphs is considered only once. Finally, we note that it is very easy to adopt Algorithm 1 to directed graphs. To this end, we remove the loop from line 18 and halve the contribution of the node s from line 17, which now should look as follows:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       So, for directed and undirected graphs, the algorithm runs in {a mathematical formula}O(|V|⋅|E|) time, and requires {a mathematical formula}O(|V|+|E|) space.
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       The algorithm for the Shapley value-based betweenness centrality measure for unweighted graphs
+      </section-title>
+      <paragraph>
+       In this subsection we will construct an efficient algorithm for computing the Shapley value-based betweenness centrality measure for unweighted graphs. Specifically, in such graphs, the number of nodes on the shortest path between s and t is equal to the distance between s and t, denoted by {a mathematical formula}d(s,t).{sup:12} In other words, we have: {a mathematical formula}|Ψ(p)|=d(s,t). Based on this, it is possible to simplify (12) as follows:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The above equation provides the same insight as Equation (12) but for specific unweighted graphs. By transforming the second element of the inner sum {a mathematical formula}2−d(s,v)2d(s,v)=1d(s,v)−12 we find the following: In unweighted graphs, the Shapley value of the corresponding game (whose characteristic function assigns to each coalition its group betweenness centrality) is in fact the sum of the distanced-scaled betweenness centrality measures (introduced by Borgatti and Everett [14]) and the closeness centrality, shifted by half. Additionally, the above equation allows us to compute the Shapley value-based betweenness centrality measure in {a mathematical formula}O(|V|3), but this result will be improved further.
+      </paragraph>
+      <paragraph>
+       Now, we adopt the framework presented in the previous subsection in order to accommodate Equation (22). We simply need to set {a mathematical formula}fδ=1d(s,t) and set {a mathematical formula}gδ=2−d(s,v)2d(s,v). This way, we can use our general framework—PBC, see Algorithm 1—to compute the Shapley value-based betweenness centrality measure in {a mathematical formula}O(|V||E|). This method is presented in Algorithm 2.
+      </paragraph>
+     </section>
+     <section label="5.3">
+      <section-title>
+       The algorithm for the semivalue-based betweenness centrality measure for unweighted graphs
+      </section-title>
+      <paragraph>
+       We will follow the same reasoning as in the previous subsection. Specifically, since in unweighted graphs it holds that {a mathematical formula}|Ψ(p)|=d(s,t), we can transform Equation (17) into:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Our framework can be easily adopted to deal with Semivalues; all we need to do is to set:{a mathematical formula} and set {a mathematical formula}gδ=fδ+k−|V||V|−1. This way, we can use Equation (23) along with our general framework, PBC, to compute the Semivalue-based betweenness centrality measure for unweighted graphs in {a mathematical formula}O(|V|2|E|) time. The pseudo-code is provided in Algorithm 3.
+      </paragraph>
+     </section>
+     <section label="5.4">
+      <section-title>
+       The framework for weighted graphs
+      </section-title>
+      <paragraph>
+       While the focus of the previous subsections was on unweighted graphs, in this subsection we show how to generalize our framework to deal with weighted graphs. In particular, we consider one of the most popular semantics of weighted graphs, where the weight {a mathematical formula}λ(v,u) of the edge between v and u is interpreted as the distance between v and u. Thus, unlike the case with unweighted graphs, where {a mathematical formula}|Ψ(p)|=d(s,t), in the case of weighted graphs this equality does not necessarily hold.
+      </paragraph>
+      <paragraph>
+       To introduce our generalized framework, we need additional notation. Let {a mathematical formula}Tst[i]:i∈{1,…,|V|} be the number of shortest paths between s and t that contain exactly i nodes. The array {a mathematical formula}Tst uniquely determines the polynomial {a mathematical formula}Wst with terms {a mathematical formula}Tst[i]xi. We define the following operations on {a mathematical formula}Tst:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Shifting: {a mathematical formula}Tst→ and {a mathematical formula}Tst← increase and decrease the indices of all values of the array by one, respectively. This takes {a mathematical formula}O(|V|) time.
+       </list-item>
+       <list-item label="•">
+        Adding: {a mathematical formula}Tsv⊕Tsu is the operation of adding two polynomials {a mathematical formula}Wsv and {a mathematical formula}Wsu; it takes {a mathematical formula}O(|V|) time. We will denote by ⨁ the sum of a series of polynomials.
+       </list-item>
+       <list-item label="•">
+        Multiplying: {a mathematical formula}Tsv⊗Tvt is the operation of multiplying two polynomials {a mathematical formula}Wsv and {a mathematical formula}Wvt. This takes {a mathematical formula}O(|V|log⁡|V|) time using the polynomial multiplying algorithm from Cormen [21].
+       </list-item>
+       <list-item label="•">
+        Resetting: {a mathematical formula}Tsv←0 is an operation that assigns 0 to each cell in {a mathematical formula}Tsv.
+       </list-item>
+      </list>
+      <paragraph>
+       Next, we will show how the above operations allow us to tackle two algorithmic problems: (i) how to count all shortest paths and (ii) how to derive the recursive relation in order to compute one-side dependency. We start by considering the first of those problems, i.e., counting the shortest paths. Here, we will use the following relation:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Using Dijkstra's algorithm [21], as well as Equation (24), we can compute {a mathematical formula}Tst for every pair of nodes s and t. If node u immediately precedes node v on some shortest path from source s, all shortest paths stored in {a mathematical formula}Tsu extended by node v are part of the set of shortest paths stored in {a mathematical formula}Tsv. This procedure takes {a mathematical formula}O(|V|2|E|+|V|2log⁡|V|) time.
+      </paragraph>
+      <paragraph>
+       In order to count all paths passing through a given node v, we will introduce the following relationship, where {a mathematical formula}Tst(v) is an array defined just like {a mathematical formula}Tst except that it only counts the shortest paths between nodes s and t that pass through v:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The above equation can be interpreted as follows. Every path stored in the array {a mathematical formula}Tsv can be extended by every path stored in the array {a mathematical formula}Tvt. The outcome of this operation, which is in fact the multiplication of the two polynomials {a mathematical formula}Wsv and {a mathematical formula}Wvt, gives us information about all shortest paths from s to t passing through v. Note that the node v is counted twice. To avoid such duplicate counting, we shift the result of multiplication to the left, which effectively reduces the number of nodes in each path by one.
+      </paragraph>
+      <paragraph>
+       In weighted graphs, the pair-dependency limited to the shortest paths consisting of i nodes is defined as follows:{a mathematical formula} This limited pair-dependency measures the influence of all shortest paths between s and t consisting of i nodes on the evaluation of node v. Note that the value of the function {a mathematical formula}fδ⁎ depends solely on the number of nodes lying on the shortest paths between s and t.
+      </paragraph>
+      <paragraph>
+       Taking all possible values of i into consideration, we obtain the pair-dependency in weighted graphs:{a mathematical formula} which is the positive contribution that all shortest paths between s and t make to the assessment of node v.
+      </paragraph>
+      <paragraph>
+       The definition of one-side dependency is similar to the one presented earlier in Subsection 5.1, except that we replace δ with {a mathematical formula}δ⁎:{a mathematical formula} This is the positive contribution that all shortest paths starting with node s make to the evaluation of node v. The version of Equation (28) that only considers the shortest paths containing exactly i nodes each is:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Now, we are able to infer the recursive relation for weighted graphs:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Using the above equation, we are able to compute a parameterized betweenness centrality for weighted graphs {a mathematical formula}cfg⁎. Specifically, for a node v, we compute {a mathematical formula}cfg⁎(v) by iterating over all other nodes and summing their contributions. More formally:{a mathematical formula} where the value of the function {a mathematical formula}gδ⁎ depends solely on the number of nodes lying on the shortest paths between s and v.
+      </paragraph>
+      <paragraph>
+       Now, we are ready to introduce our general framework, namely WPBC (see Algorithm 4) to compute the parametrized betweenness centrality measure in weighted graphs. All lines that differ from the original algorithm of Brandes have been highlighted. In lines 4–13, our algorithm uses Dijkstra's algorithm [21] to traverse the graph and count all shortest paths from the source s. In so doing, our algorithm differs from the algorithm of Brandes, because ours uses polynomial arithmetic to count paths and count the number of nodes lying on those paths. Next, in lines 18 and 20, which also differ from Brandes' framework, we implemented the recursive formula (30).
+      </paragraph>
+      <paragraph>
+       Algorithm 4 runs in {a mathematical formula}O(|V|2|E|+|V|2log⁡|V|) time and requires {a mathematical formula}O(|V|2) space. Furthermore, this algorithm (just like Algorithm 1) can be easily adapted to directed graphs.
+      </paragraph>
+     </section>
+     <section label="5.5">
+      <section-title>
+       The algorithm for Shapley value-based betweenness centrality measure in weighted graphs
+      </section-title>
+      <paragraph>
+       In this subsection we will construct an efficient algorithm for computing the Shapley Value-based betweenness centrality measure for weighted graphs. We will use the notation introduced in the previous subsection, and transform Equation (12) into:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The framework for weighted graphs (introduced in Section 5.4) can be used to compute (32). All we need is to define {a mathematical formula}fδ⁎(i)=1i and {a mathematical formula}gδ⁎(i)=2−i2i. By doing so, we can use our general framework—WPBC, see Algorithm 4—to compute the weighted Shapley value-based betweenness centrality measure for all nodes in {a mathematical formula}O(|V|2|E|+|V|2log⁡|V|). This method is presented in Algorithm 5.
+      </paragraph>
+     </section>
+     <section label="5.6">
+      <section-title>
+       The algorithm for semivalue-based betweenness centrality measure in weighted graphs
+      </section-title>
+      <paragraph>
+       In this subsection we use our framework for weighted graphs, namely WPBC (see Algorithm 4), to compute the Semivalue-based betweenness centrality measure for weighted graphs. To this end, we can transform Equation (17) into:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Our framework can be easily adopted to deal with Semivalues; all we need is to set:{a mathematical formula} and set {a mathematical formula}gδ⁎=fδ⁎+k−|V||V|−1. This way, we can use our general framework for weighted graphs, namely WPBC (see Algorithm 4) to compute the Semivalue-based betweenness centrality in {a mathematical formula}O(|V|3|E|+|V|3log⁡|V|) time. The pseudo-code is presented in Algorithm 6.
+      </paragraph>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Empirical evaluation
+     </section-title>
+     <paragraph>
+      So far, we argued that our extensions of betweenness centrality are better tools of network analysis than the standard betweenness centrality measure in situations in which one needs to consider centrality of various groups of nodes and not only individual nodes. Furthermore, we presented polynomial time algorithms to compute our centrality measures in weighted and unweighted graphs. This section provides an empirical evaluation of these contributions.
+     </paragraph>
+     <paragraph>
+      In more detail, we study the resilience of a network against random simultaneous node failures (see Problem 2 in Section 4.1.2), where the level of protection of each node is assumed to be determined by the node's ranking (i.e., nodes with greater ranking received a greater level of protection). In our simulations, we consider all four measures of network performance, i.e., IGM, CC, FR, and LC, outlined in Section 4.1.2. For each measure, we compare the node ranking obtained by our Semivalue-based betweenness centrality measure against the ranking obtained by the standard betweenness centrality measure. In so doing, we also implicitly evaluate our Shapley value-based betweenness centrality measure, since it is a special case of the Semivalue-based one.
+     </paragraph>
+     <paragraph>
+      We start by describing the simulation setup in Section 6.1. After that, in Section 6.2, we experiment with four unweighted real-life networks: (i) the karate-club network in [69], (ii) the proteins network in [12], (iii) the American football teams network in [34], and (iv) the jazz musicians network in [35]. In Section 6.3, we consider a subnetwork of the financial institution network studied by Soramaki and Cook [60]. Finally, in Section 6.4, we consider two types of random graphs: (i) unweighted random scale-free graphs, generated using the preferential attachment mechanism of Barabasi and Albert [10], and (ii) binomial random graphs generated using the model of Erdos and Renyi [27].
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       Simulation setup
+      </section-title>
+      <paragraph>
+       Each experiment consists of two phases. The first phase involves the following steps:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        Upload a real-life network, or generate an unweighted random scale-free network, or a binomial random network.
+       </list-item>
+       <list-item label="2.">
+        Set the interval {a mathematical formula}[a,b); this means that the number of nodes to be simultaneously exposed to failure is between a (inclusive) and b (exclusive).
+       </list-item>
+       <list-item label="3.">
+        For every node {a mathematical formula}v∈V, compute its normalized centrality, denoted {a mathematical formula}c(v).{sup:13} Depending on the experiment, this normalized centrality is computed either using the standard betweenness centrality measure, or using our Semivalue-based betweenness centrality measure with the following probability distribution:{a mathematical formula} The normalized centralities of all nodes can be interpreted as a ranking of nodes, where the greater the normalized centrality of a node, the greater its ranking.
+       </list-item>
+      </list>
+      <paragraph>
+       The second phase of the experiment is divided into the following steps:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        Protect the nodes in the network. Here, for each node, the level of protection is determined based on its ranking; the greater the ranking, the higher the probability of protecting the node. More specifically, node v is protected with probability {a mathematical formula}min(c(v)×pr,1), where pr is a constant that either increases or decreases the level of protection.{sup:14} In all our experiments, we assume that {a mathematical formula}pr=10%×|V|, which intuitively means we have limited resources that are sufficient to protect only {a mathematical formula}10% of the nodes. Note that we test the cardinal (instead of just the ordinal) ranking of nodes.
+       </list-item>
+       <list-item label="2.">
+        Choose randomly a set of nodes {a mathematical formula}S⊆V, which will be exposed to failure.{sup:15} In all our experiments, we choose 10,000 such random sets. The size of each such set is chosen uniformly at random from the range {a mathematical formula}[a,b), where we set {a mathematical formula}a=1 and {a mathematical formula}b=1,2,…,|V|. The members of the set are also chosen uniformly at random.
+       </list-item>
+       <list-item label="3.">
+        For every exposed node {a mathematical formula}v∈S, the probability of failure is assumed to be: {a mathematical formula}min(c(v)×pr,1).
+       </list-item>
+      </list>
+      <paragraph>
+       In the next section, we begin our experiments by considering four real-life networks.
+      </paragraph>
+     </section>
+     <section label="6.2">
+      <section-title>
+       Real-life networks
+      </section-title>
+      <paragraph>
+       The first experiment is performed on the well-known Zachary club network which involves 34 members of a karate club along with their social relations [69]. Each of the four measures of network performance, i.e., IGM, CC, FR, and LC, is presented on a separate figure (see Section 4.1.2 for a description of these measures). More specifically, Fig. 2 presents IGM, Fig. 3 presents CC, Fig. 4 presents FR, and Fig. 5 presents LC. In every such figure{sup:16}:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        The black line depicts the network-performance measure when the network protection is based on the standard betweenness centrality measure (we denote this by {a mathematical formula}MB);
+       </list-item>
+       <list-item label="•">
+        The red line depicts the network-performance measure when the network protection is based on the Semivalue-based centrality measure (we denote this by {a mathematical formula}MS);
+       </list-item>
+       <list-item label="•">
+        The blue line depicts the relative improvement, computed as: {a mathematical formula}(MS−MB)/MB.
+       </list-item>
+      </list>
+      <paragraph>
+       Note that the left vertical axis concerns both {a mathematical formula}MB and {a mathematical formula}MS, whereas the right one concerns the relative improvement.
+      </paragraph>
+      <paragraph>
+       As can be seen, when b is small, the performance of the Semivalue-based betweenness centrality measure is almost identical to the standard betweenness centrality. This is expected since our centrality measure, given the failure interval {a mathematical formula}[1,2), is exactly the same as the standard measure. However, as we increase b, more nodes can fail simultaneously, and so the difference between our measure and the standard one becomes more evident. As can be seen, in such cases, the new measure outperforms the standard one in terms of network protection under all four network performance measures, with the relative improvement reaching up to {a mathematical formula}45%, depending on the network-performance measure.
+      </paragraph>
+      <paragraph>
+       The second experiment is carried out on the proteins networks [12] (see Fig. 6, Fig. 7, Fig. 8, Fig. 9). This is a sparse network of 212 proteins and 244 relations between them. Again, our measure outperforms the standard betweenness centrality measure in terms of network protection, with the relative improvement reaching up to {a mathematical formula}300%.
+      </paragraph>
+      <paragraph>
+       The last two experiments in this subsection are performed on the American football teams network [34] and the jazz musicians network [35]. The first one consists of 115 nodes (football teams), where each edge represents a regular season game. In the second network, each of the 198 nodes corresponds to a jazz musician, and two artists are linked if they have played in the same band. For the American football network we achieve the following relative improvements{sup:17}: {a mathematical formula}3.6% for the CC measure, {a mathematical formula}11.9% for the FR measure, {a mathematical formula}4.5% for the IGM measure, and {a mathematical formula}2.5% for the LC measure. As for the jazz musicians network, we reach {a mathematical formula}3.1% for CC, {a mathematical formula}43.5% for FR, {a mathematical formula}3.8% for IGM, and {a mathematical formula}1.9% for LC.
+      </paragraph>
+      <paragraph>
+       Finally, note that in all our experiments we compared the performance of the Semivalue-based betweenness centrality with the standard betweenness centrality and showed that the former measure outperforms the latter one for all four performance measures. Naturally, one can try to develop dedicated methods to optimize each performance measure separately. Such an analysis is however well beyond the scope of this article.
+      </paragraph>
+     </section>
+     <section label="6.3">
+      <section-title>
+       A simulated network of inter-bank exposures
+      </section-title>
+      <paragraph>
+       Perhaps the most important challenge facing a supervisory authority such as the Financial Stability Board is to maintain post-crisis connectives of the financial system. With this in mind, the experiment in this subsection involves the 25-bank subnetwork of a simulated financial network from the work by Soramaki and Cook [60].{sup:18} This network was generated using a model similar to the preferential attachment model of Barabasi and Albert [10] except for some modifications that reproduce the main statistical properties of a real financial network, namely the Fedwire network in the USA. The resulting network is an undirected one, where a link between two banks indicates that the two are connected by significant capital flows.
+      </paragraph>
+      <paragraph>
+       The results of our experiments are depicted in Fig. 10, Fig. 11, Fig. 12, Fig. 13. As can be seen, the Semivalue-based betweenness centrality measure outperforms the standard betweenness centrality measure by about {a mathematical formula}16%, {a mathematical formula}25%, {a mathematical formula}55% and {a mathematical formula}35% in terms of the FR, LC, IGM, and CC network-performance measures, respectively.
+      </paragraph>
+     </section>
+     <section label="6.4">
+      <section-title>
+       Random networks
+      </section-title>
+      <paragraph>
+       The final experiment of this section is on the random scale-free networks of Barabasi and Albert [10] and the binomial networks of Erdos and Renyi [27]. The former ones were generated with an average node degree of {a mathematical formula}q=|V|, whereas the latter ones were generated with every possible edge having a probability {a mathematical formula}p=0.3 of being formed.{sup:19}
+      </paragraph>
+      <paragraph>
+       Fig. 14, Fig. 15, Fig. 16, Fig. 17 present the average results from 30 random scale-free networks, with the confidence intervals corresponding to {a mathematical formula}75%. As can be seen, the relative improvement is smaller than the improvement obtained with the real-life networks or the simulated financial network from the previous subsections. Specifically, in terms of IGM or CC, the improvement barely exceeds {a mathematical formula}2%, while for FR it reaches {a mathematical formula}5% and for LC it reaches about {a mathematical formula}1.5%.
+      </paragraph>
+      <paragraph>
+       The same trend is observed when the random networks are generated using the Erdös–Rényi model. In particular, the relative improvement only reaches {a mathematical formula}0.5% for the FR, LC, and CC measures, and only up to {a mathematical formula}1.5% for the IGM measure (see Fig. 18, Fig. 19, Fig. 20, Fig. 21).
+      </paragraph>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      Summary and future work
+     </section-title>
+     <paragraph>
+      In this article, we proposed an extension of betweenness centrality, which is based on Semivalues—a wide and flexible family of solution concepts from coalitional game theory. Our measure provides a ranking of nodes by considering the roles they each play in different groups of nodes, where a group is evaluated in terms of its group-betweenness centrality. Although Semivalues are, in general, computationally challenging, we showed that the new measure can be computed efficiently. More specifically, we proposed polynomial-time algorithms to compute all Semivalue-based betweenness centralities for weighted graphs as well as unweighted graphs. These include both the Shapley value-based and the Banzhaf Index-based betweenness centralities. Interestingly, our algorithm for computing the Shapley value-based centrality for unweighted networks has the same time complexity as the best known algorithm due to Brandes [15] for computing the standard betweenness centrality.
+     </paragraph>
+     <paragraph>
+      To compare our Semivalue-based betweenness centrality measure against the standard one, we considered scenarios in which simultaneous node failures occur. Here, the level of protection (against failure) for each node was set to be proportional to its centrality. This way, each centrality measure can be evaluated based on the quality of the corresponding node protection, which in turn is evaluated based on its ability to preserve as much as possible of the network's performance after the failure has occurred. This revealed that our measure outperforms the standard one in several real-life networks.
+     </paragraph>
+     <paragraph>
+      There are several potential directions for future work. Firstly, it would be interesting to extend the algorithms proposed in this article to streaming graphs [37]. The challenge here is to efficiently re-compute the centralities and update the ranking of nodes after each change in the structure of the network, i.e., after adding/removing some nodes and/or edges. Secondly, we are keen to develop polynomial-time algorithms for other versions of betweenness centrality, such as routing betweenness centrality [24]. Finally, we would like to identify various axiomatic systems that each uniquely characterize our centrality measure. Such an axiomatic approach is common in the literature on cooperative game theory, and we believe it would be interesting to follow a similar approach to analyze centrality measures in general, and ours in particular.
+     </paragraph>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

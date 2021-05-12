@@ -1,0 +1,696 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Two Knives Cut Better Than One: Chinese Word Segmentation with Dual Decomposition</title>
+<!--Generated on Wed Jun 11 17:41:57 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Two Knives Cut Better Than One: 
+<br class="ltx_break"/>Chinese Word Segmentation with Dual Decomposition</h1>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">There are two dominant approaches to Chinese word segmentation: word-based and character-based models, each with respective strengths. Prior work has shown that gains in segmentation performance can be achieved from combining these two types of models; however, past efforts have not provided a practical technique to allow mainstream adoption. We propose a method that effectively combines the strength of both segmentation schemes using an efficient dual-decomposition algorithm for joint inference. Our method is simple and easy to implement. Experiments on SIGHAN 2003 and 2005 evaluation datasets show that our method achieves the best reported results to date on 6 out of 7 datasets.</p>
+</div>
+
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Chinese text is written without delimiters between words; as a result, Chinese word segmentation (CWS) is an essential foundational step for many tasks in Chinese natural language processing. As demonstrated by <cite class="ltx_cite">[<a href="#bib.bib26" title="A dual-layer crfs based joint decoding method for cascaded segmentation and labeling tasks" class="ltx_ref">15</a>, <a href="#bib.bib5" title="Improving word alignment by adjusting chinese word segmentation" class="ltx_ref">2</a>, <a href="#bib.bib31" title="Optimizing chinese word segmentation for machine translation performance" class="ltx_ref">3</a>, <a href="#bib.bib25" title="An empirical examination of challenges in chinese parsing" class="ltx_ref">10</a>]</cite>, the quality and consistency of segmentation has important downstream impacts on system performance in machine translation, POS tagging and parsing.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">State-of-the-art performance in CWS is high, with F-scores in the upper 90s. Still, challenges remain. Unknown words, also known as out-of-vocabulary (<span class="ltx_text ltx_font_smallcaps">oov</span>) words, lead to difficulties for word- or dictionary-based approaches.
+Ambiguity can cause errors when the appropriate segmentation is determined contextually, such as æè½ (“talent”) and æ / è½ (“just able”) <cite class="ltx_cite">[<a href="#bib.bib21" title="Improved source-channel models for Chinese word segmentation" class="ltx_ref">8</a>]</cite>.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">There are two primary classes of models: character-based, where the foundational units for processing are individual Chinese characters <cite class="ltx_cite">[<a href="#bib.bib9" title="Chinese word segmentation as character tagging" class="ltx_ref">23</a>, <a href="#bib.bib15" title="A conditional random field word segmenter for sighan bakeoff 2005" class="ltx_ref">19</a>, <a href="#bib.bib6" title="Subword-based tagging by conditional random fields for Chinese word segmentation" class="ltx_ref">24</a>, <a href="#bib.bib11" title="A character-based joint model for chinese word segmentation" class="ltx_ref">20</a>]</cite>, and word-based, where the units are full words based on some dictionary or training lexicon <cite class="ltx_cite">[<a href="#bib.bib8" title="A hybrid Markov/semi-Markov conditional random field for sequence segmentation" class="ltx_ref">1</a>, <a href="#bib.bib1" title="Chinese segmentation with a word-based perceptron algorithm" class="ltx_ref">25</a>]</cite>. <span class="ltx_ERROR undefined">\newcite</span>Sun:2010:COLING details their respective theoretical strengths: character-based approaches better model the internal compositional structure of words and are therefore more effective at inducing new <span class="ltx_text ltx_font_smallcaps">oov</span> words; word-based approaches are better at reproducing the words of the training lexicon and can capture information from significantly larger contextual spans. Prior work has shown performance gains from combining these two types of models to exploit their respective strengths, but such approaches are often complex to implement and computationally expensive.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">In this work, we propose a simple and principled joint decoding method for combining character-based and word-based segmenters based on dual decomposition. This method has strong optimality guarantees and works very well empirically. It is easy to implement and does not require retraining of existing character- and word-based segmenters. Perhaps most importantly, this work presents a much more practical and usable form of classifier combination in the CWS context than existing methods offer.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">Experimental results on standard SIGHAN 2003 and 2005 bake-off evaluations show that our model outperforms the character and word baselines by a significant margin.
+In particular, out approach improves <span class="ltx_text ltx_font_smallcaps">oov</span> recall rates and segmentation consistency, and gives the best reported results to date on 6 out of 7 datasets.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Models for CWS</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">In this section, we describe the character-based and word-based models we use as baselines, review existing approaches to combination, and describe our algorithm for joint decoding with dual decomposition.</p>
+</div>
+<div id="S2.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.1 </span>Character-based Models</h3>
+
+<div id="S2.SS1.p1" class="ltx_para">
+<p class="ltx_p">In the most commonly used contemporary approach to character-based segmentation, first proposed by <cite class="ltx_cite">[<a href="#bib.bib9" title="Chinese word segmentation as character tagging" class="ltx_ref">23</a>]</cite>, CWS is seen as a character sequence tagging task, where each character is tagged on whether it is at the beginning, middle, or end of a word. Conditional random fields (CRF) <cite class="ltx_cite">[<a href="#bib.bib32" title="Conditional random fields: probabilistic models for segmenting and labeling sequence data" class="ltx_ref">11</a>]</cite> have been widely adopted for this task, and give state-of-the-art results <cite class="ltx_cite">[<a href="#bib.bib15" title="A conditional random field word segmenter for sighan bakeoff 2005" class="ltx_ref">19</a>]</cite>. In a first-order linear-chain CRF model, the conditional probability of a label sequence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m1" class="ltx_Math" alttext="\mathbf{y}" display="inline"><mi>𝐲</mi></math> given a word sequence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m2" class="ltx_Math" alttext="\mathbf{x}" display="inline"><mi>𝐱</mi></math> is defined as:</p>
+<table id="S6.EGx1" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S2.Ex1" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex1.m1" class="ltx_Math" alttext="\displaystyle\vspace{-10em}P(\mathbf{y}|\mathbf{x})=\frac{1}{Z}{\sum\limits_{t%&#10;=1}^{|\mathbf{y}|}{\exp\left(\theta\cdot{f}(x,y_{t},y_{t+1})\right)}}" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><mi>𝐲</mi><mo>|</mo><mi>𝐱</mi><mo>)</mo></mrow><mo>=</mo><mstyle displaystyle="true"><mfrac><mn>1</mn><mi>Z</mi></mfrac></mstyle><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>t</mi><mo>=</mo><mn>1</mn></mrow><mrow><mo fence="true">|</mo><mi>𝐲</mi><mo fence="true">|</mo></mrow></munderover></mstyle><mi>exp</mi><mrow><mo>(</mo><mi>θ</mi><mo>⋅</mo><mi>f</mi><mrow><mo>(</mo><mi>x</mi><mo>,</mo><msub><mi>y</mi><mi>t</mi></msub><mo>,</mo><msub><mi>y</mi><mrow><mi>t</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>)</mo></mrow><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p1.m3" class="ltx_Math" alttext="f(x,y_{t},y_{t-1})" display="inline"><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><msub><mi>y</mi><mi>t</mi></msub><mo>,</mo><msub><mi>y</mi><mrow><mi>t</mi><mo>-</mo><mn>1</mn></mrow></msub></mrow><mo>)</mo></mrow></mrow></math> are feature functions that typically include surrounding character n-gram and morphological suffix/prefix features. These types of features capture the compositional properties of characters and are likely to generalize well to unknown words.
+However, the Markov assumption in CRF limits the context of such features; it is difficult to capture long-range word features in this model.</p>
+</div>
+</div>
+<div id="S2.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.2 </span>Word-based Models</h3>
+
+<div id="S2.SS2.p1" class="ltx_para">
+<p class="ltx_p">Word-based models search through lists of word candidates using scoring functions that directly assign scores to each.
+Early word-based segmentation work employed simple heuristics like dictionary-lookup maximum matching <cite class="ltx_cite">[<a href="#bib.bib7" title="Word identification for mandarin chinese sentences" class="ltx_ref">4</a>]</cite>.
+More recently, <span class="ltx_ERROR undefined">\newcite</span>Zhang:2007:ACL reported success using a linear model trained with the average perceptron algorithm <cite class="ltx_cite">[<a href="#bib.bib4" title="Discriminative training methods for hidden markov models: theory and experiments with perceptron algorithms" class="ltx_ref">5</a>]</cite>.
+Formally, given input <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m1" class="ltx_Math" alttext="\mathbf{x}" display="inline"><mi>𝐱</mi></math>, their model seeks a segmentation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m2" class="ltx_Math" alttext="F(\mathbf{x})" display="inline"><mrow><mi>F</mi><mo>⁢</mo><mrow><mo>(</mo><mi>𝐱</mi><mo>)</mo></mrow></mrow></math> such that:</p>
+<table id="S6.EGx2" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S2.Ex2" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex2.m1" class="ltx_Math" alttext="\displaystyle F(\mathbf{y}|\mathbf{x})=\underset{\mathbf{y}\in\mathrm{GEN}(%&#10;\mathbf{x})}{\operatorname{argmax}}{\left(\alpha\cdot\phi(\mathbf{\mathbf{y}})%&#10;\right)}" display="inline"><mrow><mi>F</mi><mrow><mo>(</mo><mi>𝐲</mi><mo>|</mo><mi>𝐱</mi><mo>)</mo></mrow><mo>=</mo><munder accentunder="true"><mo>argmax</mo><mrow><mi>𝐲</mi><mo>∈</mo><mrow><mi>GEN</mi><mo>⁢</mo><mrow><mo>(</mo><mi>𝐱</mi><mo>)</mo></mrow></mrow></mrow></munder><mrow><mo>(</mo><mi>α</mi><mo>⋅</mo><mi>ϕ</mi><mrow><mo>(</mo><mi>𝐲</mi><mo>)</mo></mrow><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">Searching through the entire <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p1.m3" class="ltx_Math" alttext="\mathrm{GEN}(\mathbf{x})" display="inline"><mrow><mi>GEN</mi><mo>⁢</mo><mrow><mo>(</mo><mi>𝐱</mi><mo>)</mo></mrow></mrow></math> space is intractable even with a local model, so a beam-search algorithm is used. The search algorithm consumes one character input token at a time, and iterates through the existing beams to score two new alternative hypotheses by either appending the new character to the last word in the beam, or starting a new word at the current position.</p>
+</div><span class="ltx_ERROR undefined">{algorithm}</span>
+<div id="S2.SS2.p2" class="ltx_para">
+<p class="ltx_p">[!ht]
+<span class="ltx_text ltx_font_footnote">
+<span class="ltx_text ltx_caption">Dual decomposition inference algorithm, and modified Viterbi and beam-search algorithms.</span>
+<span class="ltx_ERROR undefined">{algorithmic}</span>
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m1" class="ltx_Math" alttext="\forall i\in\{1\;\mathrm{to}\;|\mathbf{x}|\}\colon\;\forall k\in\{0,1\}\colon u%&#10;_{i}(k)=0" display="inline"><mrow><mrow><mrow><mo mathsize="normal" stretchy="false">∀</mo><mi mathsize="normal" stretchy="false">i</mi></mrow><mo mathsize="normal" stretchy="false">∈</mo><mrow><mo mathsize="small" stretchy="false">{</mo><mrow><mpadded width="+2.8pt"><mn mathsize="normal" stretchy="false">1</mn></mpadded><mo mathsize="small" stretchy="false">⁢</mo><mpadded width="+2.8pt"><mi mathsize="normal" stretchy="false">to</mi></mpadded><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo fence="true" mathsize="small" stretchy="false">|</mo><mi mathsize="normal" stretchy="false">𝐱</mi><mo fence="true" mathsize="small" stretchy="false">|</mo></mrow></mrow><mo mathsize="small" stretchy="false">}</mo></mrow></mrow><mo mathsize="normal" rspace="5.3pt" stretchy="false">:</mo><mrow><mrow><mo mathsize="normal" stretchy="false">∀</mo><mi mathsize="normal" stretchy="false">k</mi></mrow><mo mathsize="normal" stretchy="false">∈</mo><mrow><mo mathsize="small" stretchy="false">{</mo><mrow><mn mathsize="normal" stretchy="false">0</mn><mo mathsize="small" stretchy="false">,</mo><mn mathsize="normal" stretchy="false">1</mn></mrow><mo mathsize="small" stretchy="false">}</mo></mrow></mrow><mo mathsize="normal" stretchy="false">:</mo><mrow><mrow><msub><mi mathsize="normal" stretchy="false">u</mi><mi mathsize="normal" stretchy="false">i</mi></msub><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo mathsize="small" stretchy="false">(</mo><mi mathsize="normal" stretchy="false">k</mi><mo mathsize="small" stretchy="false">)</mo></mrow></mrow><mo mathsize="normal" stretchy="false">=</mo><mn mathsize="normal" stretchy="false">0</mn></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\FOR</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m2" class="ltx_Math" alttext="t\leftarrow 1" display="inline"><mrow><mi mathsize="normal" stretchy="false">t</mi><mo mathsize="normal" stretchy="false">←</mo><mn mathsize="normal" stretchy="false">1</mn></mrow></math> <span class="ltx_text ltx_font_bold">to</span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m3" class="ltx_Math" alttext="T" display="inline"><mi mathsize="normal" stretchy="false">T</mi></math>
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m4" class="ltx_Math" alttext="\mathbf{y^{c*}}=\underset{\mathbf{y}}{\operatorname{argmax}}\;P(\mathbf{y^{%&#10;\textit{c}}}|\mathbf{x})+\sum\limits_{i\in|\mathbf{x}|}{u_{i}(y_{i}^{\textit{c%&#10;}})}" display="inline"><mrow><msup><mi mathsize="normal" stretchy="false">𝐲</mi><mrow><mi mathsize="normal" stretchy="false">𝐜</mi><mo mathsize="small" stretchy="false">⁣</mo><mo mathsize="normal" stretchy="false">*</mo></mrow></msup><mo mathsize="normal" stretchy="false">=</mo><mpadded width="+2.8pt"><munder accentunder="true"><mo mathsize="normal" stretchy="false">argmax</mo><mo mathsize="normal" stretchy="false">𝐲</mo></munder></mpadded><mi mathsize="normal" stretchy="false">P</mi><mrow><mo mathsize="normal" stretchy="false">(</mo><msup><mi mathsize="normal" stretchy="false">𝐲</mi><mtext mathsize="small" stretchy="false">𝑐</mtext></msup><mo mathsize="normal" stretchy="false">|</mo><mi mathsize="normal" stretchy="false">𝐱</mi><mo mathsize="normal" stretchy="false">)</mo></mrow><mo mathsize="normal" stretchy="false">+</mo><munder><mo largeop="true" mathsize="normal" movablelimits="false" stretchy="false" symmetric="true">∑</mo><mrow><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="normal" stretchy="false">∈</mo><mrow><mo fence="true" mathsize="small" stretchy="false">|</mo><mi mathsize="normal" stretchy="false">𝐱</mi><mo fence="true" mathsize="small" stretchy="false">|</mo></mrow></mrow></munder><msub><mi mathsize="normal" stretchy="false">u</mi><mi mathsize="normal" stretchy="false">i</mi></msub><mrow><mo mathsize="normal" stretchy="false">(</mo><msubsup><mi mathsize="normal" stretchy="false">y</mi><mi mathsize="normal" stretchy="false">i</mi><mtext mathsize="small" stretchy="false">𝑐</mtext></msubsup><mo mathsize="normal" stretchy="false">)</mo></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m5" class="ltx_Math" alttext="\mathbf{y^{w*}}=\underset{\mathbf{y}\in\mathrm{GEN}(\mathbf{x})}{\operatorname%&#10;{argmax}}\;F(\mathbf{y^{\textit{w}}}|\mathbf{x})-\sum\limits_{j\in|\mathbf{x}|%&#10;}{u_{j}(y_{j}^{\textit{w}})}" display="inline"><mrow><msup><mi mathsize="normal" stretchy="false">𝐲</mi><mrow><mi mathsize="normal" stretchy="false">𝐰</mi><mo mathsize="small" stretchy="false">⁣</mo><mo mathsize="normal" stretchy="false">*</mo></mrow></msup><mo mathsize="normal" stretchy="false">=</mo><mpadded width="+2.8pt"><munder accentunder="true"><mo mathsize="normal" stretchy="false">argmax</mo><mrow><mi mathsize="normal" stretchy="false">𝐲</mi><mo mathsize="normal" stretchy="false">∈</mo><mrow><mi mathsize="normal" stretchy="false">GEN</mi><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo mathsize="small" stretchy="false">(</mo><mi mathsize="normal" stretchy="false">𝐱</mi><mo mathsize="small" stretchy="false">)</mo></mrow></mrow></mrow></munder></mpadded><mi mathsize="normal" stretchy="false">F</mi><mrow><mo mathsize="normal" stretchy="false">(</mo><msup><mi mathsize="normal" stretchy="false">𝐲</mi><mtext mathsize="small" stretchy="false">𝑤</mtext></msup><mo mathsize="normal" stretchy="false">|</mo><mi mathsize="normal" stretchy="false">𝐱</mi><mo mathsize="normal" stretchy="false">)</mo></mrow><mo mathsize="normal" stretchy="false">-</mo><munder><mo largeop="true" mathsize="normal" movablelimits="false" stretchy="false" symmetric="true">∑</mo><mrow><mi mathsize="normal" stretchy="false">j</mi><mo mathsize="normal" stretchy="false">∈</mo><mrow><mo fence="true" mathsize="small" stretchy="false">|</mo><mi mathsize="normal" stretchy="false">𝐱</mi><mo fence="true" mathsize="small" stretchy="false">|</mo></mrow></mrow></munder><msub><mi mathsize="normal" stretchy="false">u</mi><mi mathsize="normal" stretchy="false">j</mi></msub><mrow><mo mathsize="normal" stretchy="false">(</mo><msubsup><mi mathsize="normal" stretchy="false">y</mi><mi mathsize="normal" stretchy="false">j</mi><mtext mathsize="small" stretchy="false">𝑤</mtext></msubsup><mo mathsize="normal" stretchy="false">)</mo></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\IF</span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m6" class="ltx_Math" alttext="\mathbf{y^{c*}}=\mathbf{y^{w*}}" display="inline"><mrow><msup><mi mathsize="normal" stretchy="false">𝐲</mi><mrow><mi mathsize="normal" stretchy="false">𝐜</mi><mo mathsize="small" stretchy="false">⁣</mo><mo mathsize="normal" stretchy="false">*</mo></mrow></msup><mo mathsize="normal" stretchy="false">=</mo><msup><mi mathsize="normal" stretchy="false">𝐲</mi><mrow><mi mathsize="normal" stretchy="false">𝐰</mi><mo mathsize="small" stretchy="false">⁣</mo><mo mathsize="normal" stretchy="false">*</mo></mrow></msup></mrow></math> 
+<span class="ltx_ERROR undefined">\RETURN</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m7" class="ltx_Math" alttext="\left(\mathbf{y^{\textit{c}*}},\mathbf{y^{\textit{w}*}}\right)" display="inline"><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><msup><mi mathsize="normal" stretchy="false">𝐲</mi><mrow><mtext mathsize="small" stretchy="false">𝑐</mtext><mo mathsize="small" stretchy="false">⁣</mo><mo mathsize="normal" stretchy="false">*</mo></mrow></msup><mo mathsize="small" stretchy="false">,</mo><msup><mi mathsize="normal" stretchy="false">𝐲</mi><mrow><mtext mathsize="small" stretchy="false">𝑤</mtext><mo mathsize="small" stretchy="false">⁣</mo><mo mathsize="normal" stretchy="false">*</mo></mrow></msup></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></math>
+<span class="ltx_ERROR undefined">\ENDIF</span><span class="ltx_ERROR undefined">\FORALL</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m8" class="ltx_Math" alttext="i\in\{1\;\mathrm{to}\;|\mathbf{x}|\}" display="inline"><mrow><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="normal" stretchy="false">∈</mo><mrow><mo mathsize="small" stretchy="false">{</mo><mrow><mpadded width="+2.8pt"><mn mathsize="normal" stretchy="false">1</mn></mpadded><mo mathsize="small" stretchy="false">⁢</mo><mpadded width="+2.8pt"><mi mathsize="normal" stretchy="false">to</mi></mpadded><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo fence="true" mathsize="small" stretchy="false">|</mo><mi mathsize="normal" stretchy="false">𝐱</mi><mo fence="true" mathsize="small" stretchy="false">|</mo></mrow></mrow><mo mathsize="small" stretchy="false">}</mo></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m9" class="ltx_Math" alttext="\forall k\in\{0,1\}:u_{i}(k)=u_{i}(k)+\alpha_{t}(2k-1)(y_{i}^{w*}-y_{i}^{c*})" display="inline"><mrow><mrow><mrow><mo mathsize="normal" stretchy="false">∀</mo><mi mathsize="normal" stretchy="false">k</mi></mrow><mo mathsize="normal" stretchy="false">∈</mo><mrow><mo mathsize="small" stretchy="false">{</mo><mrow><mn mathsize="normal" stretchy="false">0</mn><mo mathsize="small" stretchy="false">,</mo><mn mathsize="normal" stretchy="false">1</mn></mrow><mo mathsize="small" stretchy="false">}</mo></mrow></mrow><mo mathsize="normal" stretchy="false">:</mo><mrow><mrow><msub><mi mathsize="normal" stretchy="false">u</mi><mi mathsize="normal" stretchy="false">i</mi></msub><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo mathsize="small" stretchy="false">(</mo><mi mathsize="normal" stretchy="false">k</mi><mo mathsize="small" stretchy="false">)</mo></mrow></mrow><mo mathsize="normal" stretchy="false">=</mo><mrow><mrow><msub><mi mathsize="normal" stretchy="false">u</mi><mi mathsize="normal" stretchy="false">i</mi></msub><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo mathsize="small" stretchy="false">(</mo><mi mathsize="normal" stretchy="false">k</mi><mo mathsize="small" stretchy="false">)</mo></mrow></mrow><mo mathsize="normal" stretchy="false">+</mo><mrow><msub><mi mathsize="normal" stretchy="false">α</mi><mi mathsize="normal" stretchy="false">t</mi></msub><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><mrow><mn mathsize="normal" stretchy="false">2</mn><mo mathsize="small" stretchy="false">⁢</mo><mi mathsize="normal" stretchy="false">k</mi></mrow><mo mathsize="normal" stretchy="false">-</mo><mn mathsize="normal" stretchy="false">1</mn></mrow><mo mathsize="small" stretchy="false">)</mo></mrow><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><msubsup><mi mathsize="normal" stretchy="false">y</mi><mi mathsize="normal" stretchy="false">i</mi><mrow><mi mathsize="normal" stretchy="false">w</mi><mo mathsize="small" stretchy="false">⁣</mo><mo mathsize="normal" stretchy="false">*</mo></mrow></msubsup><mo mathsize="normal" stretchy="false">-</mo><msubsup><mi mathsize="normal" stretchy="false">y</mi><mi mathsize="normal" stretchy="false">i</mi><mrow><mi mathsize="normal" stretchy="false">c</mi><mo mathsize="small" stretchy="false">⁣</mo><mo mathsize="normal" stretchy="false">*</mo></mrow></msubsup></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></mrow></mrow></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\ENDFOR</span><span class="ltx_ERROR undefined">\ENDFOR</span><span class="ltx_ERROR undefined">\RETURN</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m10" class="ltx_Math" alttext="\left(\mathbf{y^{c*}},\mathbf{y^{w*}}\right)" display="inline"><mrow><mo mathsize="small" stretchy="false">(</mo><mrow><msup><mi mathsize="normal" stretchy="false">𝐲</mi><mrow><mi mathsize="normal" stretchy="false">𝐜</mi><mo mathsize="small" stretchy="false">⁣</mo><mo mathsize="normal" stretchy="false">*</mo></mrow></msup><mo mathsize="small" stretchy="false">,</mo><msup><mi mathsize="normal" stretchy="false">𝐲</mi><mrow><mi mathsize="normal" stretchy="false">𝐰</mi><mo mathsize="small" stretchy="false">⁣</mo><mo mathsize="normal" stretchy="false">*</mo></mrow></msup></mrow><mo mathsize="small" stretchy="false">)</mo></mrow></math>
+
+<br class="ltx_break"/><span class="ltx_ERROR undefined">\STATE</span>Viterbi:
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m11" class="ltx_Math" alttext="V_{1}(1)=1,V_{1}(0)=0" display="inline"><mrow><mrow><mrow><msub><mi mathsize="normal" stretchy="false">V</mi><mn mathsize="normal" stretchy="false">1</mn></msub><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo mathsize="small" stretchy="false">(</mo><mn mathsize="normal" stretchy="false">1</mn><mo mathsize="small" stretchy="false">)</mo></mrow></mrow><mo mathsize="normal" stretchy="false">=</mo><mn mathsize="normal" stretchy="false">1</mn></mrow><mo mathsize="small" stretchy="false">,</mo><mrow><mrow><msub><mi mathsize="normal" stretchy="false">V</mi><mn mathsize="normal" stretchy="false">1</mn></msub><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo mathsize="small" stretchy="false">(</mo><mn mathsize="normal" stretchy="false">0</mn><mo mathsize="small" stretchy="false">)</mo></mrow></mrow><mo mathsize="normal" stretchy="false">=</mo><mn mathsize="normal" stretchy="false">0</mn></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\FOR</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m12" class="ltx_Math" alttext="i=2\;\mathrm{to}\;|\mathbf{x}|" display="inline"><mrow><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="normal" stretchy="false">=</mo><mrow><mpadded width="+2.8pt"><mn mathsize="normal" stretchy="false">2</mn></mpadded><mo mathsize="small" stretchy="false">⁢</mo><mpadded width="+2.8pt"><mi mathsize="normal" stretchy="false">to</mi></mpadded><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo fence="true" mathsize="small" stretchy="false">|</mo><mi mathsize="normal" stretchy="false">𝐱</mi><mo fence="true" mathsize="small" stretchy="false">|</mo></mrow></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m13" class="ltx_Math" alttext="\forall k\in\{0,1\}:V_{i}(k)=\underset{\mathbf{k^{\prime}}}{\operatorname{%&#10;argmax}}P_{i}(k|k^{\prime})V_{i-1}{k^{\prime}}+u_{i}(k)" display="inline"><mrow><mo mathsize="normal" stretchy="false">∀</mo><mi mathsize="normal" stretchy="false">k</mi><mo mathsize="normal" stretchy="false">∈</mo><mrow><mo mathsize="normal" stretchy="false">{</mo><mn mathsize="normal" stretchy="false">0</mn><mo mathsize="normal" stretchy="false">,</mo><mn mathsize="normal" stretchy="false">1</mn><mo mathsize="normal" stretchy="false">}</mo></mrow><mo mathsize="normal" stretchy="false">:</mo><msub><mi mathsize="normal" stretchy="false">V</mi><mi mathsize="normal" stretchy="false">i</mi></msub><mrow><mo mathsize="normal" stretchy="false">(</mo><mi mathsize="normal" stretchy="false">k</mi><mo mathsize="normal" stretchy="false">)</mo></mrow><mo mathsize="normal" stretchy="false">=</mo><munder accentunder="true"><mo mathsize="normal" stretchy="false">argmax</mo><msup><mi mathsize="normal" stretchy="false">𝐤</mi><mo mathsize="normal" stretchy="false">′</mo></msup></munder><msub><mi mathsize="normal" stretchy="false">P</mi><mi mathsize="normal" stretchy="false">i</mi></msub><mrow><mo mathsize="normal" stretchy="false">(</mo><mi mathsize="normal" stretchy="false">k</mi><mo mathsize="normal" stretchy="false">|</mo><msup><mi mathsize="normal" stretchy="false">k</mi><mo mathsize="normal" stretchy="false">′</mo></msup><mo mathsize="normal" stretchy="false">)</mo></mrow><msub><mi mathsize="normal" stretchy="false">V</mi><mrow><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="normal" stretchy="false">-</mo><mn mathsize="normal" stretchy="false">1</mn></mrow></msub><msup><mi mathsize="normal" stretchy="false">k</mi><mo mathsize="normal" stretchy="false">′</mo></msup><mo mathsize="normal" stretchy="false">+</mo><msub><mi mathsize="normal" stretchy="false">u</mi><mi mathsize="normal" stretchy="false">i</mi></msub><mrow><mo mathsize="normal" stretchy="false">(</mo><mi mathsize="normal" stretchy="false">k</mi><mo mathsize="normal" stretchy="false">)</mo></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\ENDFOR</span>
+<br class="ltx_break"/><span class="ltx_ERROR undefined">\STATE</span>Beam-Search:
+<span class="ltx_ERROR undefined">\FOR</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m14" class="ltx_Math" alttext="i=1\;\mathrm{to}\;|\mathbf{x}|" display="inline"><mrow><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="normal" stretchy="false">=</mo><mrow><mpadded width="+2.8pt"><mn mathsize="normal" stretchy="false">1</mn></mpadded><mo mathsize="small" stretchy="false">⁢</mo><mpadded width="+2.8pt"><mi mathsize="normal" stretchy="false">to</mi></mpadded><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo fence="true" mathsize="small" stretchy="false">|</mo><mi mathsize="normal" stretchy="false">𝐱</mi><mo fence="true" mathsize="small" stretchy="false">|</mo></mrow></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\FOR</span> item <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m15" class="ltx_Math" alttext="v=\{w_{0},\cdots,w_{j}\}" display="inline"><mrow><mi mathsize="normal" stretchy="false">v</mi><mo mathsize="normal" stretchy="false">=</mo><mrow><mo mathsize="small" stretchy="false">{</mo><mrow><msub><mi mathsize="normal" stretchy="false">w</mi><mn mathsize="normal" stretchy="false">0</mn></msub><mo mathsize="small" stretchy="false">,</mo><mi mathsize="normal" mathvariant="normal" stretchy="false">⋯</mi><mo mathsize="small" stretchy="false">,</mo><msub><mi mathsize="normal" stretchy="false">w</mi><mi mathsize="normal" stretchy="false">j</mi></msub></mrow><mo mathsize="small" stretchy="false">}</mo></mrow></mrow></math> in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m16" class="ltx_Math" alttext="\mathrm{beam}(i)" display="inline"><mrow><mi mathsize="normal" stretchy="false">beam</mi><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo mathsize="small" stretchy="false">(</mo><mi mathsize="normal" stretchy="false">i</mi><mo mathsize="small" stretchy="false">)</mo></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\STATE</span>append <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m17" class="ltx_Math" alttext="x_{i}" display="inline"><msub><mi mathsize="normal" stretchy="false">x</mi><mi mathsize="normal" stretchy="false">i</mi></msub></math> to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m18" class="ltx_Math" alttext="w_{j}" display="inline"><msub><mi mathsize="normal" stretchy="false">w</mi><mi mathsize="normal" stretchy="false">j</mi></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m19" class="ltx_Math" alttext="\mathrm{score}(v)\stackrel{+}{=}u_{i}(0)" display="inline"><mrow><mrow><mi mathsize="normal" stretchy="false">score</mi><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo mathsize="small" stretchy="false">(</mo><mi mathsize="normal" stretchy="false">v</mi><mo mathsize="small" stretchy="false">)</mo></mrow></mrow><mover><mo mathsize="normal" movablelimits="false" stretchy="false">=</mo><mo mathsize="normal" stretchy="false">+</mo></mover><mrow><msub><mi mathsize="normal" stretchy="false">u</mi><mi mathsize="normal" stretchy="false">i</mi></msub><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo mathsize="small" stretchy="false">(</mo><mn mathsize="normal" stretchy="false">0</mn><mo mathsize="small" stretchy="false">)</mo></mrow></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\STATE</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m20" class="ltx_Math" alttext="v=\{w_{0},\cdots,w_{j},x_{i}\}" display="inline"><mrow><mi mathsize="normal" stretchy="false">v</mi><mo mathsize="normal" stretchy="false">=</mo><mrow><mo mathsize="small" stretchy="false">{</mo><mrow><msub><mi mathsize="normal" stretchy="false">w</mi><mn mathsize="normal" stretchy="false">0</mn></msub><mo mathsize="small" stretchy="false">,</mo><mi mathsize="normal" mathvariant="normal" stretchy="false">⋯</mi><mo mathsize="small" stretchy="false">,</mo><msub><mi mathsize="normal" stretchy="false">w</mi><mi mathsize="normal" stretchy="false">j</mi></msub><mo mathsize="small" stretchy="false">,</mo><msub><mi mathsize="normal" stretchy="false">x</mi><mi mathsize="normal" stretchy="false">i</mi></msub></mrow><mo mathsize="small" stretchy="false">}</mo></mrow></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m21" class="ltx_Math" alttext="\mathrm{score}(v)\stackrel{+}{=}u_{i}(1)" display="inline"><mrow><mrow><mi mathsize="normal" stretchy="false">score</mi><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo mathsize="small" stretchy="false">(</mo><mi mathsize="normal" stretchy="false">v</mi><mo mathsize="small" stretchy="false">)</mo></mrow></mrow><mover><mo mathsize="normal" movablelimits="false" stretchy="false">=</mo><mo mathsize="normal" stretchy="false">+</mo></mover><mrow><msub><mi mathsize="normal" stretchy="false">u</mi><mi mathsize="normal" stretchy="false">i</mi></msub><mo mathsize="small" stretchy="false">⁢</mo><mrow><mo mathsize="small" stretchy="false">(</mo><mn mathsize="normal" stretchy="false">1</mn><mo mathsize="small" stretchy="false">)</mo></mrow></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\ENDFOR</span><span class="ltx_ERROR undefined">\ENDFOR</span>
+
+</span></p>
+</div>
+<div id="S2.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_r" colspan="5"><span class="ltx_text ltx_font_small">Academia Sinica</span></td>
+<td class="ltx_td ltx_align_center" colspan="5"><span class="ltx_text ltx_font_small">Peking Univ.</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">R</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">P</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">F</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m1" class="ltx_Math" alttext="{}_{1}" display="inline"><msub><mi/><mn>1</mn></msub></math></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">R</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m2" class="ltx_Math" alttext="{}_{\mathrm{oov}}" display="inline"><msub><mi/><mi>oov</mi></msub></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">C</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">R</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">P</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">F</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m3" class="ltx_Math" alttext="{}_{1}" display="inline"><msub><mi/><mn>1</mn></msub></math></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">R</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m4" class="ltx_Math" alttext="{}_{\mathrm{oov}}" display="inline"><msub><mi/><mi>oov</mi></msub></math></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">C</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">Char-based CRF</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">95.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">93.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">94.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">58.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.064</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">94.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">95.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">94.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">77.8</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.089</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">Word-based Perceptron</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">95.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">95.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">95.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">69.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.060</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">94.1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">95.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">94.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">76.7</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.099</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">Dual-decomp</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">95.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">94.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">95.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">67.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">0.055</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">94.8</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">95.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">95.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">78.7</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_small">0.086</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_border_r" colspan="5"/>
+<td class="ltx_td" colspan="5"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r"/>
+<td class="ltx_td ltx_align_center ltx_border_r" colspan="5"><span class="ltx_text ltx_font_small">City Univ. of Hong Kong</span></td>
+<td class="ltx_td ltx_align_center" colspan="5"><span class="ltx_text ltx_font_small">Microsoft Research</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">R</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">P</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">F</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m5" class="ltx_Math" alttext="{}_{1}" display="inline"><msub><mi/><mn>1</mn></msub></math></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">R</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m6" class="ltx_Math" alttext="{}_{\mathrm{oov}}" display="inline"><msub><mi/><mi>oov</mi></msub></math></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">C</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">R</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">P</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">F</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m7" class="ltx_Math" alttext="{}_{1}" display="inline"><msub><mi/><mn>1</mn></msub></math></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">R</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m8" class="ltx_Math" alttext="{}_{\mathrm{oov}}" display="inline"><msub><mi/><mi>oov</mi></msub></math></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">C</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">Char-based CRF</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">94.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">94.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">94.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">76.1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.065</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">96.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">96.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">96.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">71.3</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.074</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">Word-based Perceptron</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">94.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">94.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">94.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">71.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.073</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">97.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">97.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">97.1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">74.6</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.063</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_right ltx_border_r"><span class="ltx_text ltx_font_small">Dual-decomp</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">95.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">94.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">94.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">75.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">0.062</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">97.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">97.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">97.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">76.0</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_small">0.055</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 1: </span>Results on SIGHAN 2005 datasets. <span class="ltx_text ltx_font_italic">R<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m10" class="ltx_Math" alttext="{}_{\mathrm{oov}}" display="inline"><msub><mi/><mi mathsize="normal" mathvariant="normal" stretchy="false">oov</mi></msub></math></span> denotes <span class="ltx_text ltx_font_smallcaps">oov</span> recall, and <span class="ltx_text ltx_font_italic">C</span> denotes segmentation consistency. Best number in each column is highlighted in bold.
+</div>
+</div>
+</div>
+<div id="S2.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.3 </span>Combining Models with Dual Decomposition</h3>
+
+<div id="S2.SS3.p1" class="ltx_para">
+<p class="ltx_p">Various mixing approaches have been proposed to combine the above two approaches <cite class="ltx_cite">[<a href="#bib.bib13" title="Chinese word segmentation with maximum entropy and n-gram language model" class="ltx_ref">22</a>, <a href="#bib.bib17" title="Combining language modeling and discriminative classification for word segmentation" class="ltx_ref">12</a>, <a href="#bib.bib24" title="A discriminative latent variable chinese segmenter with hybrid word/character information" class="ltx_ref">18</a>, <a href="#bib.bib10" title="Word-based and character-basedword segmentation models: comparison and combination" class="ltx_ref">17</a>, <a href="#bib.bib11" title="A character-based joint model for chinese word segmentation" class="ltx_ref">20</a>]</cite>.
+These mixing models perform well on standard datasets, but are not in wide use because of their high computational costs and difficulty of implementation.</p>
+</div>
+<div id="S2.SS3.p2" class="ltx_para">
+<p class="ltx_p">Dual decomposition (DD) <cite class="ltx_cite">[<a href="#bib.bib33" title="On dual decomposition and linear programming relaxations for natural language processing" class="ltx_ref">14</a>]</cite> offers an attractive framework for combining these two types of models without incurring high costs in model complexity (in contrast to <cite class="ltx_cite">[<a href="#bib.bib24" title="A discriminative latent variable chinese segmenter with hybrid word/character information" class="ltx_ref">18</a>]</cite>) or decoding efficiency (in contrast to bagging in <cite class="ltx_cite">[<a href="#bib.bib13" title="Chinese word segmentation with maximum entropy and n-gram language model" class="ltx_ref">22</a>, <a href="#bib.bib10" title="Word-based and character-basedword segmentation models: comparison and combination" class="ltx_ref">17</a>]</cite>). DD has been successfully applied to similar situations for combining local with global models; for example, in dependency parsing <cite class="ltx_cite">[<a href="#bib.bib34" title="Dual decomposition for parsing with non-projective head automata" class="ltx_ref">9</a>]</cite>, bilingual sequence tagging <cite class="ltx_cite">[<a href="#bib.bib27" title="Joint word alignment and bilingual named entity recognition using dual decomposition" class="ltx_ref">21</a>]</cite> and word alignment <cite class="ltx_cite">[<a href="#bib.bib28" title="Model-based aligner combination using dual decomposition" class="ltx_ref">6</a>]</cite>.</p>
+</div>
+<div id="S2.SS3.p3" class="ltx_para">
+<p class="ltx_p">The idea is that jointly modelling both character-sequence and word information can be computationally challenging, so instead we can try to find outputs that the two models are most likely to agree on.
+Formally, the objective of DD is:</p>
+<table id="S6.EGx3" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S2.E1" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E1.m1" class="ltx_Math" alttext="\displaystyle\max_{\mathbf{y^{\textit{c}}},\mathbf{y^{\textit{w}}}}\;P(\mathbf%&#10;{y^{\textit{c}}}|\mathbf{x})+F(\mathbf{y^{\textit{w}}}|\mathbf{x})\;s.t.\;%&#10;\mathbf{y^{\textit{c}}}=\mathbf{y^{\textit{w}}}" display="inline"><mrow><mpadded width="+2.8pt"><munder><mo movablelimits="false">max</mo><mrow><msup><mi>𝐲</mi><mtext>𝑐</mtext></msup><mo>,</mo><msup><mi>𝐲</mi><mtext>𝑤</mtext></msup></mrow></munder></mpadded><mi>P</mi><mrow><mo>(</mo><msup><mi>𝐲</mi><mtext>𝑐</mtext></msup><mo>|</mo><mi>𝐱</mi><mo>)</mo></mrow><mo>+</mo><mi>F</mi><mrow><mo>(</mo><msup><mi>𝐲</mi><mtext>𝑤</mtext></msup><mo>|</mo><mi>𝐱</mi><mo rspace="5.3pt">)</mo></mrow><mi>s</mi><mo>.</mo><mi>t</mi><mo rspace="5.3pt">.</mo><msup><mi>𝐲</mi><mtext>𝑐</mtext></msup><mo>=</mo><msup><mi>𝐲</mi><mtext>𝑤</mtext></msup></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p3.m1" class="ltx_Math" alttext="\mathbf{y^{\textit{c}}}" display="inline"><msup><mi>𝐲</mi><mtext>𝑐</mtext></msup></math> is the output of character-based CRF, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p3.m2" class="ltx_Math" alttext="\mathbf{y^{\textit{w}}}" display="inline"><msup><mi>𝐲</mi><mtext>𝑤</mtext></msup></math> is the output of word-based perceptron,
+and the agreements are expressed as constraints. <span class="ltx_text ltx_font_italic">s.t.</span> is a shorthand for “such that”.</p>
+</div>
+<div id="S2.SS3.p4" class="ltx_para">
+<p class="ltx_p">Solving this constrained optimization problem directly is difficult.
+Instead, we take the Lagrangian relaxation of this term as:</p>
+<table id="S6.EGx4" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S2.E2" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E2.m2" class="ltx_Math" alttext="\displaystyle L\left(\mathbf{y^{\textit{c}}},\mathbf{y^{\textit{w}}},\mathbf{U%&#10;}\right)=" display="inline"><mrow><mrow><mi>L</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi>𝐲</mi><mtext>𝑐</mtext></msup><mo>,</mo><msup><mi>𝐲</mi><mtext>𝑤</mtext></msup><mo>,</mo><mi>𝐔</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mi/></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+<tr id="S2.Ex3" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex3.m2" class="ltx_Math" alttext="\displaystyle P(\mathbf{y^{\textit{c}}}|\mathbf{x})+F(\mathbf{y^{\textit{w}}}|%&#10;\mathbf{x})+\sum\limits_{i\in|\mathbf{x}|}{u_{i}(y_{i}^{\textit{c}}-y_{i}^{%&#10;\textit{w}})}" display="inline"><mrow><mi>P</mi><mrow><mo>(</mo><msup><mi>𝐲</mi><mtext>𝑐</mtext></msup><mo>|</mo><mi>𝐱</mi><mo>)</mo></mrow><mo>+</mo><mi>F</mi><mrow><mo>(</mo><msup><mi>𝐲</mi><mtext>𝑤</mtext></msup><mo>|</mo><mi>𝐱</mi><mo>)</mo></mrow><mo>+</mo><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>∈</mo><mrow><mo fence="true">|</mo><mi>𝐱</mi><mo fence="true">|</mo></mrow></mrow></munder></mstyle><msub><mi>u</mi><mi>i</mi></msub><mrow><mo>(</mo><msubsup><mi>y</mi><mi>i</mi><mtext>𝑐</mtext></msubsup><mo>-</mo><msubsup><mi>y</mi><mi>i</mi><mtext>𝑤</mtext></msubsup><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p4.m1" class="ltx_Math" alttext="\mathbf{U}" display="inline"><mi>𝐔</mi></math> is the set of Lagrangian multipliers that consists of a multiplier <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p4.m2" class="ltx_Math" alttext="u_{i}" display="inline"><msub><mi>u</mi><mi>i</mi></msub></math> at each word position <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p4.m3" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math>.</p>
+</div>
+<div id="S2.SS3.p5" class="ltx_para">
+<p class="ltx_p">We can rewrite the original objective with the Lagrangian relaxation as:</p>
+<table id="S6.EGx5" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S2.E3" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E3.m1" class="ltx_Math" alttext="\displaystyle\max_{\mathbf{y^{\textit{c}}},\mathbf{y^{\textit{w}}}}\min_{%&#10;\mathbf{U}}\;L\left(\mathbf{y^{\textit{c}}},\mathbf{y^{\textit{w}}},\mathbf{U}\right)" display="inline"><mrow><munder><mo movablelimits="false">max</mo><mrow><msup><mi>𝐲</mi><mtext>𝑐</mtext></msup><mo>,</mo><msup><mi>𝐲</mi><mtext>𝑤</mtext></msup></mrow></munder><mo>⁡</mo><mrow><mpadded width="+2.8pt"><munder><mo movablelimits="false">min</mo><mi>𝐔</mi></munder></mpadded><mo>⁡</mo><mrow><mi>L</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mi>𝐲</mi><mtext>𝑐</mtext></msup><mo>,</mo><msup><mi>𝐲</mi><mtext>𝑤</mtext></msup><mo>,</mo><mi>𝐔</mi></mrow><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+</table>
+</div>
+<div id="S2.SS3.p6" class="ltx_para">
+<p class="ltx_p">We can then form the dual of this problem by taking the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p6.m1" class="ltx_Math" alttext="\min" display="inline"><mo>min</mo></math> outside of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p6.m2" class="ltx_Math" alttext="\max" display="inline"><mo>max</mo></math>, which is an upper bound on the original problem.
+The dual form can then be decomposed into two sub-components (the two <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p6.m3" class="ltx_Math" alttext="\max" display="inline"><mo>max</mo></math> problems in Eq. <a href="#S2.E4" title="(4) ‣ 2.3 Combining Models with Dual Decomposition ‣ 2 Models for CWS ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>), each of which is local with respect to the set of Lagrangian multipliers:</p>
+<table id="S6.EGx6" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S2.E4" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E4.m1" class="ltx_Math" alttext="\displaystyle\min_{\mathbf{U}}\Biggl(" display="inline"><mrow><munder><mo movablelimits="false">min</mo><mi>𝐔</mi></munder><mo mathsize="2.5em" stretchy="false">(</mo></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E4.m2" class="ltx_Math" alttext="\displaystyle\max_{y^{\textit{c}}}\left[P(\mathbf{y^{\textit{c}}}|\mathbf{x})+%&#10;\sum\limits_{i\in|\mathbf{x}|}{u_{i}(y_{i}^{\textit{c}}})\right]" display="inline"><mrow><munder><mo movablelimits="false">max</mo><msup><mi>y</mi><mtext>𝑐</mtext></msup></munder><mrow><mo>[</mo><mi>P</mi><mrow><mo>(</mo><msup><mi>𝐲</mi><mtext>𝑐</mtext></msup><mo>|</mo><mi>𝐱</mi><mo>)</mo></mrow><mo>+</mo><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>∈</mo><mrow><mo fence="true">|</mo><mi>𝐱</mi><mo fence="true">|</mo></mrow></mrow></munder></mstyle><msub><mi>u</mi><mi>i</mi></msub><mrow><mo>(</mo><msubsup><mi>y</mi><mi>i</mi><mtext>𝑐</mtext></msubsup><mo>)</mo></mrow><mo>]</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(4)</span></td></tr>
+<tr id="S2.Ex4" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex4.m1" class="ltx_Math" alttext="\displaystyle+" display="inline"><mo>+</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex4.m2" class="ltx_Math" alttext="\displaystyle\max_{y^{\textit{w}}}\left[F(\mathbf{y^{\textit{w}}}|\mathbf{x})-%&#10;\sum\limits_{j\in|\mathbf{x}|}{u_{j}(y_{j}^{\textit{w}})}\right]\Biggr)" display="inline"><mrow><munder><mo movablelimits="false">max</mo><msup><mi>y</mi><mtext>𝑤</mtext></msup></munder><mrow><mo>[</mo><mi>F</mi><mrow><mo>(</mo><msup><mi>𝐲</mi><mtext>𝑤</mtext></msup><mo>|</mo><mi>𝐱</mi><mo>)</mo></mrow><mo>-</mo><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>j</mi><mo>∈</mo><mrow><mo fence="true">|</mo><mi>𝐱</mi><mo fence="true">|</mo></mrow></mrow></munder></mstyle><msub><mi>u</mi><mi>j</mi></msub><mrow><mo>(</mo><msubsup><mi>y</mi><mi>j</mi><mtext>𝑤</mtext></msubsup><mo>)</mo></mrow><mo>]</mo></mrow><mo mathsize="2.5em" stretchy="false">)</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">This method is called dual decomposition (DD) <cite class="ltx_cite">[<a href="#bib.bib33" title="On dual decomposition and linear programming relaxations for natural language processing" class="ltx_ref">14</a>]</cite>.
+Similar to previous work <cite class="ltx_cite">[<a href="#bib.bib35" title="A tutorial on dual decomposition and Lagrangian relaxation for inference in natural language processing" class="ltx_ref">13</a>]</cite>, we solve this DD problem by iteratively updating the sub-gradient as depicted in Algorithm <a href="#S2.SS2" title="2.2 Word-based Models ‣ 2 Models for CWS ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>See <span class="ltx_ERROR undefined">\newcite</span>Rush:2012:JAIR for a full introduction to DD.</span></span></span>
+In each iteration, if the best segmentations provided by the two models do not agree, then the two models will receive penalties for the decisions they made that differ from the other. This penalty exchange is similar to message passing, and as the penalty accumulates over iterations, the two models are pushed towards agreeing with each other.
+We also give an updated Viterbi decoding algorithm for CRF and a modified beam-search algorithm for perceptron in Algorithm <a href="#S2.SS2" title="2.2 Word-based Models ‣ 2 Models for CWS ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p6.m4" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math> is the maximum number of iterations before early stopping, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p6.m5" class="ltx_Math" alttext="\alpha_{t}" display="inline"><msub><mi>α</mi><mi>t</mi></msub></math> is the learning rate at time <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p6.m6" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math>. We adopt a learning rate update rule from <span class="ltx_ERROR undefined">\newcite</span>Koo:2010:EMNLP where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p6.m7" class="ltx_Math" alttext="\alpha_{t}" display="inline"><msub><mi>α</mi><mi>t</mi></msub></math> is defined as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p6.m8" class="ltx_Math" alttext="{\frac{1}{N}}" display="inline"><mfrac><mn>1</mn><mi>N</mi></mfrac></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p6.m9" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math> is the number of times we observed a consecutive dual value increase from iteration <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p6.m10" class="ltx_Math" alttext="1" display="inline"><mn>1</mn></math> to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS3.p6.m11" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math>.</p>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Experiments</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">We conduct experiments on the SIGHAN 2003 <cite class="ltx_cite">[<a href="#bib.bib19" title="The first international Chinese word segmentation bakeoff" class="ltx_ref">16</a>]</cite> and 2005 <cite class="ltx_cite">[<a href="#bib.bib20" title="The second international Chinese word segmentation bakeoff" class="ltx_ref">7</a>]</cite> bake-off datasets to evaluate the effectiveness of the proposed dual decomposition algorithm. We use the publicly available Stanford CRF segmenter <cite class="ltx_cite">[<a href="#bib.bib15" title="A conditional random field word segmenter for sighan bakeoff 2005" class="ltx_ref">19</a>]</cite><span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>http://nlp.stanford.edu/software/segmenter.shtml</span></span></span> as our character-based baseline model, and reproduce the perceptron-based segmenter from <span class="ltx_ERROR undefined">\newcite</span>Zhang:2007:ACL as our word-based baseline model.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">We adopted the development setting from <cite class="ltx_cite">[<a href="#bib.bib1" title="Chinese segmentation with a word-based perceptron algorithm" class="ltx_ref">25</a>]</cite>, and used CTB sections 1-270 for training and sections 400-931 for development in hyper-parameter setting; for all results given in tables, the models are trained and evaluated on the standard train/test split for the given dataset. The optimized hyper-parameters used are: <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m1" class="ltx_Math" alttext="\ell_{2}" display="inline"><msub><mi mathvariant="normal">ℓ</mi><mn>2</mn></msub></math> regularization parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m2" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math> in CRF is set to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m3" class="ltx_Math" alttext="3" display="inline"><mn>3</mn></math>; the perceptron is trained for 10 iterations with beam size 200; dual decomposition is run to max iteration of 100 (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m4" class="ltx_Math" alttext="T" display="inline"><mi>T</mi></math> in Algo. <a href="#S2.SS2" title="2.2 Word-based Models ‣ 2 Models for CWS ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>) with step size 0.1 (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m5" class="ltx_Math" alttext="\alpha_{t}" display="inline"><msub><mi>α</mi><mi>t</mi></msub></math> in Algo. <a href="#S2.SS2" title="2.2 Word-based Models ‣ 2 Models for CWS ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>).</p>
+</div>
+<div id="S3.p3" class="ltx_para">
+<p class="ltx_p">Beyond standard precision (P), recall (R) and F<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m1" class="ltx_Math" alttext="{}_{1}" display="inline"><msub><mi/><mn>1</mn></msub></math> scores, we also evaluate segmentation consistency as proposed by <cite class="ltx_cite">[<a href="#bib.bib31" title="Optimizing chinese word segmentation for machine translation performance" class="ltx_ref">3</a>]</cite>, who have shown that increased segmentation consistency is correlated with better machine translation performance. The consistency measure calculates the entropy of segmentation variations — the lower the score the better. We also report out-of-vocabulary recall (R<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m2" class="ltx_Math" alttext="{}_{\mathrm{oov}}" display="inline"><msub><mi/><mi>oov</mi></msub></math>) as an estimation of the model’s generalizability to previously unseen words.</p>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Results</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">Table <a href="#S2.T1" title="Table 1 ‣ 2.2 Word-based Models ‣ 2 Models for CWS ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> shows our empirical results on SIGHAN 2005 dataset. Our dual decomposition method outperforms both the word-based and character-based baselines consistently across all four subsets in both F<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m1" class="ltx_Math" alttext="{}_{1}" display="inline"><msub><mi/><mn>1</mn></msub></math> and <span class="ltx_text ltx_font_smallcaps">oov</span> recall (R<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m2" class="ltx_Math" alttext="{}_{\mathrm{oov}}" display="inline"><msub><mi/><mi>oov</mi></msub></math>). Our method demonstrates a robustness across domains and segmentation standards regardless of which baseline model was stronger. Of particular note is DD’s is much more robust in R<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m3" class="ltx_Math" alttext="{}_{\mathrm{oov}}" display="inline"><msub><mi/><mi>oov</mi></msub></math>, where the two baselines swing a lot. This is an important property for downstream applications such as entity recognition. The DD algorithm is also more consistent, which would likely lead to improvements in applications such as machine translation <cite class="ltx_cite">[<a href="#bib.bib31" title="Optimizing chinese word segmentation for machine translation performance" class="ltx_ref">3</a>]</cite>.</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">The improvement over our word- and character-based baselines is also seen in our results on the earlier SIGHAN 2003 dataset.
+Table <a href="#S4.T2" title="Table 2 ‣ 4 Results ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> puts our method in the context of earlier systems for CWS. Our method achieves the best reported score on 6 out of 7 datasets.</p>
+</div>
+<div id="S4.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center" colspan="5"><span class="ltx_text ltx_font_footnote">SIGHAN 2005</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">AS</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">PU</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">CU</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_footnote">MSR</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_footnote">Best 05</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">95.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">95.0</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">94.3</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">96.4</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_footnote">Zhang et al. 06</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">94.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">94.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">94.6</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">96.4</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_footnote">Z&amp;C 07</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">94.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">94.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">95.1</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">97.2</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_footnote">Sun et al. 09</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">-</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">95.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">94.6</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">97.3</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_footnote">Sun 10</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">95.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">95.2</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_footnote">95.6</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">96.9</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">Dual-decomp</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_footnote">95.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_footnote">95.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">94.7</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_footnote">97.4</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_t" colspan="5"><span class="ltx_text ltx_font_footnote">SIGHAN 2003</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_italic ltx_font_footnote">Best 03</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">96.1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">95.1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_footnote">94.0</span></td>
+<td class="ltx_td ltx_border_t"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_footnote">Peng et al. 04</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">95.6</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">94.1</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">92.8</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_italic ltx_font_footnote">Z&amp;C 07</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">96.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_footnote">94.0</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_footnote">94.6</span></td>
+<td class="ltx_td"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">Dual-decomp</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_footnote">97.1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_footnote">95.4</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_footnote">94.9</span></td>
+<td class="ltx_td"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_footnote"><span class="ltx_tag ltx_tag_table">Table 2: </span>Performance of dual decomposition in comparison to past published results on SIGHAN 2003 and 2005 datasets. Best reported F<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m2" class="ltx_Math" alttext="{}_{1}" display="inline"><msub><mi/><mn mathsize="normal" stretchy="false">1</mn></msub></math> score for each dataset is highlighted in bold. <span class="ltx_text ltx_font_italic">Z&amp;C 07</span> refers to <span class="ltx_ERROR undefined">\newcite</span>Zhang:2007:ACL. <span class="ltx_text ltx_font_italic">Best 03, 05</span> are results of the winning systems for each dataset in the respective shared tasks.</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Discussion and Error Analysis</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">On the whole, dual decomposition produces state-of-the-art segmentations that are more accurate, more consistent, and more successful at inducing <span class="ltx_text ltx_font_smallcaps">oov</span> words than the baseline systems that it combines.
+On the SIGHAN 2005 test set, in over 99.1% of cases the DD algorithm converged within 100 iterations, which gives an optimality guarantee.
+In 77.4% of the cases, DD converged in the first iteration. The number of iterations to convergence histogram is plotted in Figure <a href="#S5.F1" title="Figure 1 ‣ Error analysis ‣ 5 Discussion and Error Analysis ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.</p>
+</div>
+<div id="S5.SS3.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Error analysis</h4>
+
+<div id="S5.SS3.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">In many cases the relative confidence of each model means that dual decomposition is capable of using information from both sources to generate a series of correct segmentations better than either baseline model alone. The example below shows a difficult-to-segment proper name comprised of common characters, which results in undersegmentation by the character-based CRF and oversegmentation by the word-based perceptron, but our method achieves the correct middle ground.</p>
+</div>
+<div id="S5.SS3.SSS0.P1.p2" class="ltx_para">
+<table class="ltx_tabular">
+<tr class="ltx_tr">
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_left"><em class="ltx_emph ltx_font_footnote">Gloss</em></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">Tian Yage / ’s / creations</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">.</span></td>
+<td class="ltx_td ltx_align_left"><em class="ltx_emph ltx_font_footnote">Gold</em><span class="ltx_text ltx_font_footnote"> .</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">ç°éå / ç / åä½</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">.</span></td>
+<td class="ltx_td ltx_align_left"><em class="ltx_emph ltx_font_footnote">CRF</em><span class="ltx_text ltx_font_footnote"> .</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">ç°éåç / åä½</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">.</span></td>
+<td class="ltx_td ltx_align_left"><em class="ltx_emph ltx_font_footnote">PCPT</em><span class="ltx_text ltx_font_footnote"> .</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">ç°é / å / ç / åä½</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_footnote">.</span></td>
+<td class="ltx_td ltx_align_left"><em class="ltx_emph ltx_font_footnote">DD</em><span class="ltx_text ltx_font_footnote"> .</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_footnote">ç°éå / ç / åä½</span></td></tr>
+</table>
+</div>
+<div id="S5.SS3.SSS0.P1.p3" class="ltx_para">
+<p class="ltx_p">A powerful feature of the dual decomposition approach is that it can generate correct segmentation decisions in cases where a voting or product-of-experts model could not, since joint decoding allows the sharing of information at decoding time. In the following example, both baseline models miss the contextually clear use of the word ç¹å¿ (“sweets / snack food”) and instead attach ç¹ to the prior word to produce the otherwise common compound ä¸ç¹ç¹ (“a little bit”); dual decomposition allows the model to generate the correct segmentation.
+<span class="ltx_text ltx_font_footnote">
+
+<table class="ltx_tabular">
+<tr class="ltx_tr">
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_left"><em class="ltx_emph">Gloss</em></td>
+<td class="ltx_td ltx_align_left">Enjoy / a bit of / snack food / , …</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right">.</td>
+<td class="ltx_td ltx_align_left"><em class="ltx_emph">Gold</em> .</td>
+<td class="ltx_td ltx_align_left">äº«å / ä¸ç¹ / ç¹å¿ / ï¼</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right">.</td>
+<td class="ltx_td ltx_align_left"><em class="ltx_emph">CRF</em> .</td>
+<td class="ltx_td ltx_align_left">äº«å / ä¸ç¹ç¹ / å¿ / ï¼</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right">.</td>
+<td class="ltx_td ltx_align_left"><em class="ltx_emph">PCPT</em> .</td>
+<td class="ltx_td ltx_align_left">äº«å / ä¸ç¹ç¹ / å¿ / ï¼</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_right">.</td>
+<td class="ltx_td ltx_align_left"><em class="ltx_emph">DD</em> .</td>
+<td class="ltx_td ltx_align_left">äº«å / ä¸ç¹ / ç¹å¿ / ï¼</td></tr>
+</table>
+</span>
+We found more than 400 such surprisingly accurate instances in our dual decomposition output.</p>
+</div>
+<div id="S5.SS3.SSS0.P1.p4" class="ltx_para">
+<p class="ltx_p">Finally, since dual decomposition is a method of joint decoding, it is still liable to reproduce errors made by the constituent systems.</p>
+</div>
+<div id="S5.F1" class="ltx_figure"><img src="P14-2032/image001.png" id="S5.F1.g1" class="ltx_graphics ltx_centering" width="541" height="406" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>No. of iterations till DD convergence.</div>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Conclusion</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">In this paper we presented an approach to Chinese word segmentation using dual decomposition for system combination. We demonstrated that this method allows for joint decoding of existing CWS systems that is more accurate and consistent than either system alone, and further achieves the best performance reported to date on standard datasets for the task.
+Perhaps most importantly, our approach is straightforward to implement and does not require retraining of the underlying segmentation models used. This suggests its potential for broader applicability in real-world settings than existing approaches to combining character-based and word-based models for Chinese word segmentation.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. Andrew</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A hybrid Markov/semi-Markov conditional random field for sequence segmentation</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Bai, K. Chen and J. S. Chang</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Improving word alignment by adjusting chinese word segmentation</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib31" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Chang, M. Galley and C. Manning</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Optimizing chinese word segmentation for machine translation performance</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.p3" title="3 Experiments ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>,
+<a href="#S4.p1" title="4 Results ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Chen and S. Liu</span><span class="ltx_text ltx_bib_year">(1992)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Word identification for mandarin chinese sentences</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p1" title="2.2 Word-based Models ‣ 2 Models for CWS ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Collins</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Discriminative training methods for hidden markov models: theory and experiments with perceptron algorithms</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS2.p1" title="2.2 Word-based Models ‣ 2 Models for CWS ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib28" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. DeNero and K. Macherey</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Model-based aligner combination using dual decomposition</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS3.p2" title="2.3 Combining Models with Dual Decomposition ‣ 2 Models for CWS ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Emerson</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The second international Chinese word segmentation bakeoff</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p1" title="3 Experiments ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib21" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Gao, M. Li and C. Huang</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Improved source-channel models for Chinese word segmentation</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib34" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Koo, A. M. Rush, M. Collins, T. Jaakkola and D. Sontag</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Dual decomposition for parsing with non-projective head automata</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS3.p2" title="2.3 Combining Models with Dual Decomposition ‣ 2 Models for CWS ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>.
+</span></li>
+<li id="bib.bib25" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. K. Kummerfeld, D. Tse, J. R. Curran and D. Klein</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">An empirical examination of challenges in chinese parsing</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib32" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Lafferty, A. McCallum and F. Pereira</span><span class="ltx_text ltx_bib_year">(2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Conditional random fields: probabilistic models for segmenting and labeling sequence data</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS1.p1" title="2.1 Character-based Models ‣ 2 Models for CWS ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib17" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Lin</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Combining language modeling and discriminative classification for word segmentation</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS3.p1" title="2.3 Combining Models with Dual Decomposition ‣ 2 Models for CWS ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>.
+</span></li>
+<li id="bib.bib35" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. M. Rush and M. Collins</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A tutorial on dual decomposition and Lagrangian relaxation for inference in natural language processing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">JAIR</span> <span class="ltx_text ltx_bib_volume">45</span>, <span class="ltx_text ltx_bib_pages"> pp. 305–362</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS3.p6" title="2.3 Combining Models with Dual Decomposition ‣ 2 Models for CWS ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>.
+</span></li>
+<li id="bib.bib33" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. M. Rush, D. Sontag, M. Collins and T. Jaakkola</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">On dual decomposition and linear programming relaxations for natural language processing</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS3.p2" title="2.3 Combining Models with Dual Decomposition ‣ 2 Models for CWS ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>,
+<a href="#S2.SS3.p6" title="2.3 Combining Models with Dual Decomposition ‣ 2 Models for CWS ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>.
+</span></li>
+<li id="bib.bib26" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Shi and M. Wang</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A dual-layer crfs based joint decoding method for cascaded segmentation and labeling tasks</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib19" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Sproat and T. Emerson</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The first international Chinese word segmentation bakeoff</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p1" title="3 Experiments ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">W. Sun</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Word-based and character-basedword segmentation models: comparison and combination</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS3.p1" title="2.3 Combining Models with Dual Decomposition ‣ 2 Models for CWS ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>,
+<a href="#S2.SS3.p2" title="2.3 Combining Models with Dual Decomposition ‣ 2 Models for CWS ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">X. Sun, Y. Zhang, T. Matsuzaki, Y. Tsuruoka and J. Tsujii</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A discriminative latent variable chinese segmenter with hybrid word/character information</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS3.p1" title="2.3 Combining Models with Dual Decomposition ‣ 2 Models for CWS ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>,
+<a href="#S2.SS3.p2" title="2.3 Combining Models with Dual Decomposition ‣ 2 Models for CWS ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>.
+</span></li>
+<li id="bib.bib15" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Tseng, P. Chang, G. Andrew, D. Jurasfky and C. Manning</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A conditional random field word segmenter for sighan bakeoff 2005</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS1.p1" title="2.1 Character-based Models ‣ 2 Models for CWS ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>,
+<a href="#S3.p1" title="3 Experiments ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Wang, C. Zong and K. Su</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A character-based joint model for chinese word segmentation</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS3.p1" title="2.3 Combining Models with Dual Decomposition ‣ 2 Models for CWS ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>.
+</span></li>
+<li id="bib.bib27" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Wang, W. Che and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Joint word alignment and bilingual named entity recognition using dual decomposition</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS3.p2" title="2.3 Combining Models with Dual Decomposition ‣ 2 Models for CWS ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">X. Wang, X. Lin, D. Yu, H. Tian and X. Wu</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Chinese word segmentation with maximum entropy and n-gram language model</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS3.p1" title="2.3 Combining Models with Dual Decomposition ‣ 2 Models for CWS ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>,
+<a href="#S2.SS3.p2" title="2.3 Combining Models with Dual Decomposition ‣ 2 Models for CWS ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.3</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Xue</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Chinese word segmentation as character tagging</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">International Journal of Computational Linguistics and Chinese Language Processing</span>, <span class="ltx_text ltx_bib_pages"> pp. 29–48</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS1.p1" title="2.1 Character-based Models ‣ 2 Models for CWS ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Zhang, G. Kikui and E. Sumita</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Subword-based tagging by conditional random fields for Chinese word segmentation</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib1" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Zhang and S. Clark</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Chinese segmentation with a word-based perceptron algorithm</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S3.p2" title="3 Experiments ‣ Two Knives Cut Better Than One:  Chinese Word Segmentation with Dual Decomposition" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 17:41:57 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

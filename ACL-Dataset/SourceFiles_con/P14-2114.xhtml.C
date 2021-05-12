@@ -1,0 +1,635 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   A Simple Bayesian Modelling Approach to Event Extraction from Twitter.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_abstract">
+      <h6 class="ltx_title ltx_title_abstract">
+       Abstract
+      </h6>
+      <p class="ltx_p">
+       With the proliferation of social media sites, social streams have proven to contain the most up-to-date information on current events. Therefore, it is crucial to extract events from the social streams such as tweets. However, it is not straightforward to adapt the existing event extraction systems since texts in social media are fragmented and noisy. In this paper we propose a simple and yet effective Bayesian model, called Latent Event Model (LEM), to extract structured representation of events from social media. LEM is fully unsupervised and does not require annotated data for training. We evaluate LEM on a Twitter corpus. Experimental results show that the proposed model achieves 83% in F-measure, and outperforms the state-of-the-art baseline by over 7%.
+      </p>
+     </div>
+     <div class="ltx_para" id="p1">
+      <p class="ltx_p">
+       [itemize]itemsep=0cm
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Event extraction is to automatically identify events from text with information about
+        what
+        happened,
+        when
+        ,
+        where
+        , to
+        whom
+        , and
+        why
+        . Previous work in event extraction has focused largely on news articles, as the newswire texts have been the best source of information on current events
+        [6]
+        . Approaches for event extraction include knowledge-based
+        [12, 15]
+        , data-driven
+        [11]
+        and a combination of the above two categories
+        [5]
+        . Knowledge-based approaches often rely on linguistic and lexicographic patterns which represent expert domain knowledge for particular event types. They lack the flexibility of porting to new domains since extraction patterns often need to be re-defined. Data-driven approaches require large annotated data to train statistical models that approximate linguistic phenomena. Nevertheless, it is expensive to obtain annotated data in practice.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        With the increasing popularity of social media, social networking sites such as Twitter have become an important source of event information. As reported in
+        [10]
+        , even 1% of the public stream of Twitter contains around 95% of all the events reported in the newswire. Nevertheless, the social stream data such as Twitter data pose new challenges. Social media messages are often short and evolve rapidly over time. As such, it is not possible to know the event types a priori and hence violates the use of existing event extraction approaches.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        Approaches to event extraction from Twitter make use of a graphical model to extract canonical entertainment events from tweets by aggregating information across multiple messages
+        [1]
+        . In
+        [7]
+        , social events involving two persons are extracted from multiple similar tweets using a factor graph by harvesting the redundancy in tweets. Ritter et al.
+        [14]
+        presented a system called TwiCal which extracts an open-domain calendar of significant events represented by a 4-tuple set including a named entity, event phrase, calendar date, and event type from Twitter.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        In our work here, we notice a very important property in social media data that the same event could be referenced by high volume messages. This property allows us resort to statistical models that can group similar events based on the co-occurrence patterns of their event elements. Here, event elements include named entities such as person, company, organization, date/time, location, and the relations among them. We can treat an event as a latent variable and model the generation of an event as a joint distribution of its individual event elements. We thus propose a Latent Event Model (LEM) which can automatically detect events from social media without the use of labeled data.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p5">
+       <p class="ltx_p">
+        Our work is similar to TwiCal in the sense that we also focus on the extraction of structured representation of events from Twitter. However, TwiCal relies on a supervised sequence labeler trained on tweets annotated with event mentions for the identification of event-related phrases. We propose a simple Bayesian modelling approach which is able to directly extract event-related keywords from tweets without supervised learning. Also, TwiCal uses
+        G2
+        test to choose an entity
+        y
+        with the strongest association with a date
+        d
+        to form a binary tuple
+        ⟨y,d⟩
+        to represent an event. On the contrary, the structured representation of events can be directly extracted from the output of our LEM model. We have conducted experiments on a Twitter corpus and the results show that our proposed approach outperforms TwiCal, the state-of-the-art open event extraction system, by 7.7% in F-measure.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Methodology
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        Events extracted in our proposed framework are represented as a 4-tuple
+        ⟨y,d,l,k⟩
+        , where
+        y
+        stands for a non-location named entity,
+        d
+        for a date,
+        l
+        for a location, and
+        k
+        for an event-related keyword. Each event mentioned in tweets can be closely depicted by this representation. It should be noted that for some events, one or more elements in their corresponding tuples might be absent as their related information is not available in tweets. As illustrated in Figure
+        1
+        , our proposed framework consists of three main steps, pre-processing, event extraction based on the LEM model and post-processing. The details of our proposed framework are described below.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S2.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.1
+        </span>
+        Pre-processing
+       </h3>
+       <div class="ltx_para" id="S2.SS1.p1">
+        <p class="ltx_p">
+         Tweets are pre-processed by time expression recognition, named entity recognition, POS tagging and stemming.
+        </p>
+       </div>
+       <div class="ltx_paragraph" id="S2.SS1.SSS0.P1">
+        <h4 class="ltx_title ltx_title_paragraph">
+         Time Expression Recognition.
+        </h4>
+        <div class="ltx_para" id="S2.SS1.SSS0.P1.p1">
+         <p class="ltx_p">
+          Twitter users might represent the same date in various forms. For example, “tomorrow”, “next Monday”, “ August 23th” in tweets might all refer to the same day, depending on the date that users wrote the tweets. To resolve the ambiguity of the time expressions, SUTime
+          [2]
+          is employed, which takes text and a reference date as input and outputs a more accurate date which the time expression refers to.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_paragraph" id="S2.SS1.SSS0.P2">
+        <h4 class="ltx_title ltx_title_paragraph">
+         Named Entity Recognition.
+        </h4>
+        <div class="ltx_para" id="S2.SS1.SSS0.P2.p1">
+         <p class="ltx_p">
+          Named entity recognition (NER) is a crucial step since the results would directly impact the final extracted 4-tuple
+          ⟨y,d,l,k⟩
+          . It is not easy to accurately identify named entities in the Twitter data since tweets contain a lot of misspellings and abbreviations. However, it is often observed that events mentioned in tweets are also reported in news articles in the same period
+          [10]
+          . Therefore, named entities mentioned in tweets are likely to appear in news articles as well. We thus perform named entity recognition in the following way. First, a traditional NER tool such as the Stanford Named Entity Recognizer
+          is used to identify named entities from the news articles crawled from BBC and CNN during the same period that the tweets were published. The recognised named entities from news are then used to build a dictionary. Named entities from tweets are extracted by looking up the dictionary through fuzzy matching. We have also used a named entity tagger trained specifically on the Twitter data
+          [13]
+          to directly extract named entities from tweets. However, as will be shown in Section
+          3
+          that using our constructed dictionary for named entity extraction gives better results. We distinguish between location entities, denoted as
+          l
+          , and non-location entities such as person or organization, denoted as
+          y
+          .
+         </p>
+        </div>
+        <div class="ltx_para" id="S2.SS1.SSS0.P2.p2">
+         <p class="ltx_p">
+          Finally, we use a POS tagger
+          trained on tweets
+          [3]
+          to perform POS tagging on the tweets data and apart from the previously recognised named entities, only words tagged with nouns, verbs or adjectives are kept. These remaining words are subsequently stemmed and words occurred less than 3 times are filtered.
+         </p>
+        </div>
+        <div class="ltx_para" id="S2.SS1.SSS0.P2.p3">
+         <p class="ltx_p">
+          After the pre-processing step, non-location entities
+          y
+          , locations
+          l
+          , dates
+          d
+          and candidate keywords of the tweets are collected as the input to the LEM model for event extraction.
+         </p>
+        </div>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S2.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.2
+        </span>
+        Event Extraction using the Latent Event Model (LEM)
+       </h3>
+       <div class="ltx_para" id="S2.SS2.p1">
+        <p class="ltx_p">
+         We propose an unsupervised latent variable model, called the Latent
+Event Model (LEM), to extract events from tweets. The graphical model of LEM is shown in Figure
+         2
+         .
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p2">
+        <p class="ltx_p">
+         In this model, we assume that each tweet message
+         m∈{1..⁢M}
+         is assigned to one event instance
+         e
+         , while
+         e
+         is modeled as a joint distribution over
+the named entities
+         y
+         , the date/time
+         d
+         when the event occurred, the location
+         l
+         where the event occurred and the event-related keywords
+         k
+         . This assumption essentially encourages events that involve the same named entities, occur at the same time and in the same
+location and have similar keyword to be assigned with the same event.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p3">
+        <p class="ltx_p">
+         The generative process of LEM is shown below.
+        </p>
+        <ul class="ltx_itemize" id="I1">
+         <li class="ltx_item" id="I1.i1" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I1.i1.p1">
+           <p class="ltx_p">
+            Draw the event distribution
+            𝝅e∼Dirichlet(α)
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I1.i2" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I1.i2.p1">
+           <p class="ltx_p">
+            For each event
+            e∈{1..⁢E}
+            , draw multinomial distributions
+            𝜽e∼Dirichlet(β),𝝋e∼Dirichlet(γ),𝝍e∼Dirichlet(η),𝝎e∼Dirichlet(λ)
+            .
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I1.i3" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_itemize">
+           •
+          </span>
+          <div class="ltx_para" id="I1.i3.p1">
+           <p class="ltx_p">
+            For each tweet
+            𝒘
+           </p>
+           <ul class="ltx_itemize" id="I1.I1">
+            <li class="ltx_item" id="I1.I1.i1" style="list-style-type:none;">
+             <span class="ltx_tag ltx_tag_itemize">
+              –
+             </span>
+             <div class="ltx_para" id="I1.I1.i1.p1">
+              <p class="ltx_p">
+               Choose an event
+               e∼Multinomial(𝝅)
+               ,
+              </p>
+             </div>
+            </li>
+            <li class="ltx_item" id="I1.I1.i2" style="list-style-type:none;">
+             <span class="ltx_tag ltx_tag_itemize">
+              –
+             </span>
+             <div class="ltx_para" id="I1.I1.i2.p1">
+              <p class="ltx_p">
+               For each named entity occur in tweet
+               𝒘
+               , choose a named entity
+               y∼Multinomial(𝜽e)
+               ,
+              </p>
+             </div>
+            </li>
+            <li class="ltx_item" id="I1.I1.i3" style="list-style-type:none;">
+             <span class="ltx_tag ltx_tag_itemize">
+              –
+             </span>
+             <div class="ltx_para" id="I1.I1.i3.p1">
+              <p class="ltx_p">
+               For each date occur in tweet
+               𝒘
+               , choose a date
+               d∼Multinomial(𝝋e)
+               ,
+              </p>
+             </div>
+            </li>
+            <li class="ltx_item" id="I1.I1.i4" style="list-style-type:none;">
+             <span class="ltx_tag ltx_tag_itemize">
+              –
+             </span>
+             <div class="ltx_para" id="I1.I1.i4.p1">
+              <p class="ltx_p">
+               For each location occur in tweet
+               𝒘
+               , choose a location
+               l∼Multinomial(𝝍e)
+               ,
+              </p>
+             </div>
+            </li>
+            <li class="ltx_item" id="I1.I1.i5" style="list-style-type:none;">
+             <span class="ltx_tag ltx_tag_itemize">
+              –
+             </span>
+             <div class="ltx_para" id="I1.I1.i5.p1">
+              <p class="ltx_p">
+               For other words in tweet
+               𝒘
+               , choose a word
+               k∼Multinomial(𝝎e)
+               .
+              </p>
+             </div>
+            </li>
+           </ul>
+          </div>
+         </li>
+        </ul>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p4">
+        <p class="ltx_p">
+         We use Collapsed Gibbs Sampling
+         [4]
+         to infer the parameters of the model and the latent class assignments for events, given observed data
+         𝒟
+         and the total likelihood. Gibbs sampling allows us repeatedly sample from a Markov chain whose stationary distribution is the posterior of
+         em
+         from the distribution over that variable given the current values of all other variables and the data. Such samples can be used to empirically estimate the target distribution. Letting the subscript
+         -m
+         denote a quantity that excludes data from
+         m
+         th tweet , the conditional posterior for
+         em
+         is:
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p5">
+        P(em=t|𝒆-m,𝒚,𝒅,𝒍,𝒛,Λ)∝nt-m+αM+E⁢α×∏y=1Y∏b=1nt,y(m)(nt,y-b+β)∏b=1nt(m)(nt-b+Y⁢β)×∏d=1D∏b=1nt,d(m)(nt,d-b+γ)∏b=1nt(m)(nt-b+D⁢γ)×∏l=1L∏b=1nt,l(m)(nt,l-b+η)∏b=1nt(m)(nt-b+L⁢η)×∏k=1V∏b=1nt,k(m)(nt,k-b+λ)∏b=1nt(m)(nt-b+V⁢λ)
+
+(1)
+        <p class="ltx_p">
+         where
+         nt
+         is the number of tweets that have been assigned to the event
+         t
+         ;
+         M
+         is the total number of tweets,
+         nt,y
+         is the number of times named entity
+         y
+         has been associated with event
+         t
+         ;
+         nt,d
+         is the number of times dates
+         d
+         has been associated with event
+         t
+         ;
+         nt,l
+         is the number of times locations
+         l
+         has been assigned with event
+         t
+         ;
+         nt,k
+         is the number of times keyword
+         k
+         has associated with event
+         t
+         , counts with
+         (m)
+         notation denote the counts relating to tweet
+         m
+         only.
+         Y,D,L,V
+         are the total numbers of distinct named entities, dates, locations, and words appeared in the whole Twitter corpus respectively.
+         E
+         is the total number of events which needs to be set.
+        </p>
+       </div>
+       <div class="ltx_para" id="S2.SS2.p6">
+        <p class="ltx_p">
+         Once the class assignments for all events are known, we can easily
+estimate the model parameters
+         {𝝅,𝜽,𝝋,𝝍,𝝎}
+         . We set the hyperparameters
+         α=β=γ=η=λ=0.5
+         and run Gibbs sampler for
+10,000 iterations and stop the iteration once the log-likelihood of
+the training data converges under the learned model.
+Finally we select an entity, a date, a location, and the top 2 keywords of the highest probability of every event to form a 4-tuple as the representation of that event.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S2.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         2.3
+        </span>
+        Post-processing
+       </h3>
+       <div class="ltx_para" id="S2.SS3.p1">
+        <p class="ltx_p">
+         To improve the precision of event extraction, we remove the least confident event element from the 4-tuples using the following rule. If
+         P(
+         element) is less than
+         1ξ⁢P⁢(S)
+         , where
+         P⁢(S)
+         is the sum of probabilities of the other three elements and
+         ξ
+         is a threshold value and is set to 5 empirically, the element will be removed from the extracted results.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Experiments
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        In this section, we first describe the Twitter corpus used in our experiments and then present how we build a baseline based on the previously proposed TwiCal system
+        [14]
+        , the state-of-the-art open event extraction system on tweets. Finally, we present our experimental results.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S3.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.1
+        </span>
+        Dataset
+       </h3>
+       <div class="ltx_para" id="S3.SS1.p1">
+        <p class="ltx_p">
+         We use the First Story Detection (FSD) dataset
+         [10]
+         in our experiment. It consists of 2,499 tweets which are manually annotated with the corresponding event instances resulting in a total of 27 events. The tweets were published between 7th July and 12th September 2011. These events cover a range of categories, from celebrity news to accidents, and from natural disasters to science discoveries. It should be noted here that some event elements such as location is not always available in the tweets. Automatically inferring geolocation of the tweets is a challenging task and will be considered in our future work. For the tweets without time expressions, we used the tweets’ publication dates as a default.
+The number of tweets for each event ranges from 2 to around 1000. We believe that in reality, events which are mentioned in very few tweets are less likely to be significant. Therefore, the dataset was filtered by removing the events which are mentioned in less than 10 tweets. This results in a final dataset containing 2468 tweets annotated with 21 events.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.2
+        </span>
+        Baseline construction
+       </h3>
+       <div class="ltx_para" id="S3.SS2.p1">
+        <p class="ltx_p">
+         The baseline we chose is TwiCal
+         [14]
+         . The events extracted in the baseline are represented as a 3-tuple
+         ⟨y,d,k⟩
+         , where
+         y
+         stands for a non-location named entity,
+         d
+         for a date and
+         k
+         for an event phrase. We re-implemented the system and evaluate the performance of the baseline on the correctness of the exacted three elements excluding the location element.
+In the baseline approach, the tuple
+         ⟨y,d,k⟩
+         are extracted in the following ways.
+Firstly, a named entity recognizer
+         [13]
+         is employed to identify named entities. The TempEx
+         [9]
+         is used to resolve temporal expressions. For each date, the baseline approach chose the entity
+         y
+         with the strongest association with the date and form the binary tuple
+         ⟨y,d⟩
+         to represent an event. An event phrase extractor trained on annotated tweets is required to extract event-related phrases. Due to the difficulties of re-implementing the sequence labeler without knowing the actual features set and the annotated training data, we assume all the event-related phrases are identified correctly and simply use the event trigger words annotated in the FSD corpus as
+         k
+         to form the event 3-tuples. It is worth noting that the F-measure reported for the event phrase extraction is only 64% in the baseline approach
+         [14]
+         .
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.3
+        </span>
+        Evaluation Metric
+       </h3>
+       <div class="ltx_para" id="S3.SS3.p1">
+        <p class="ltx_p">
+         To evaluate the performance of the propose approach, we use
+         p⁢r⁢e⁢c⁢i⁢s⁢o⁢n
+         ,
+         r⁢e⁢c⁢a⁢l⁢l
+         , and
+         F-m⁢e⁢a⁢s⁢u⁢r⁢e
+         as in general information extraction systems
+         [8]
+         . For the 4-tuple
+         ⟨y,d,l,k⟩
+         , the precision is calculated based on the following criteria:
+        </p>
+        <ol class="ltx_enumerate" id="I2">
+         <li class="ltx_item" id="I2.i1" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_enumerate">
+           1.
+          </span>
+          <div class="ltx_para" id="I2.i1.p1">
+           <p class="ltx_p">
+            Do the entity
+            y
+            , location
+            l
+            and date
+            d
+            that we have extracted refer to the same event?
+           </p>
+          </div>
+         </li>
+         <li class="ltx_item" id="I2.i2" style="list-style-type:none;">
+          <span class="ltx_tag ltx_tag_enumerate">
+           2.
+          </span>
+          <div class="ltx_para" id="I2.i2.p1">
+           <p class="ltx_p">
+            Are the keywords
+            k
+            in accord with the event that other extracted elements
+            y,l,d
+            refer to and are they informative enough to tell us what happened?
+           </p>
+          </div>
+         </li>
+        </ol>
+        <p class="ltx_p">
+         If the extracted representation does not contain keywords, its precision is calculated by checking the criteria 1. If the extracted representation contains keywords, its precision is calculated by checking both criteria 1 and 2.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS4">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.4
+        </span>
+        Experimental Results
+       </h3>
+       <div class="ltx_para" id="S3.SS4.p1">
+        <p class="ltx_p">
+         The number of events,
+         E
+         , in the LEM model is set to
+         25
+         . The performance of the proposed framework is presented in Table
+         1
+         . The baseline re-implemented here can only output 3-tuples
+         ⟨y,d,k⟩
+         and we simply use the gold standard event trigger words to assign to
+         k
+         . Still, we observe that compared to the baseline approach, the performance of our proposed framework evaluated on the 4-tuple achieves nearly 17% improvement on precision. The overall improvement on F-measure is around 7.76%.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS5">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.5
+        </span>
+        Impact of Named Entity Recognition
+       </h3>
+       <div class="ltx_para" id="S3.SS5.p1">
+        <p class="ltx_p">
+         We experimented with two approaches for named entity recognition (NER) in preprocessing. One is to use the NER tool trained specifically on the Twitter data
+         [13]
+         , denoted as “TW-NER” in Table
+         2
+         . The other uses the traditional Stanford NER to extract named entities from news articles published in the same period and then perform fuzzy matching to identify named entities from tweets. The latter method is denoted as “NW-NER” in Table
+         2
+         . It can be observed from Table
+         2
+         that by using NW-NER, the performance of event extraction system is improved significantly by 7.5% and 3% respectively on F-measure when evaluated on 3-tuples (without keywords) or 4-tuples (with keywords).
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS6">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.6
+        </span>
+        Impact of the Number of Events
+        E
+       </h3>
+       <div class="ltx_para" id="S3.SS6.p1">
+        <p class="ltx_p">
+         We need to set the number of events
+         E
+         in the LEM model. Figure
+         3
+         shows the performance of event extraction versus different value of
+         E
+         . It can be observed that the performance of the proposed framework improves with the increase of the value of
+         E
+         until it reaches 25, which is close to the actual number of events in our data. If further increasing
+         E
+         , we notice more balanced precision/recall values and a relatively stable F-measure. This shows that our LEM model is less sensitive to the number of events
+         E
+         so long as
+         E
+         is set to a relatively larger value.
+        </p>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

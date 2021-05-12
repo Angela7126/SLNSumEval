@@ -1,0 +1,846 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    e-NSP: Efficient negative sequential pattern mining.
+   </title>
+   <abstract>
+    As an important tool for behavior informatics, negative sequential patterns (NSP) (such as missing medical treatments) are critical and sometimes much more informative than positive sequential patterns (PSP) (e.g. using a medical service) in many intelligent systems and applications such as intelligent transport systems, healthcare and risk management, as they often involve non-occurring but interesting behaviors. However, discovering NSP is much more difficult than identifying PSP due to the significant problem complexity caused by non-occurring elements, high computational cost and huge search space in calculating negative sequential candidates (NSC). So far, the problem has not been formalized well, and very few approaches have been proposed to mine for specific types of NSP, which rely on database re-scans after identifying PSP in order to calculate the NSC supports. This has been shown to be very inefficient or even impractical, since the NSC search space is usually huge. This paper proposes a very innovative and efficient theoretical framework: set theory-based NSP mining (ST-NSP), and a corresponding algorithm, e-NSP, to efficiently identify NSP by involving only the identified PSP, without re-scanning the database. Accordingly, negative containment is first defined to determine whether a data sequence contains a negative sequence based on set theory. Second, an efficient approach is proposed to convert the negative containment problem to a positive containment problem. The NSC supports are then calculated based only on the corresponding PSP. This not only avoids the need for additional database scans, but also enables the use of existing PSP mining algorithms to mine for NSP. Finally, a simple but efficient strategy is proposed to generate NSC. Theoretical analyses show that e-NSP performs particularly well on datasets with a small number of elements in a sequence, a large number of itemsets and low minimum support. e-NSP is compared with two currently available NSP mining algorithms via intensive experiments on three synthetic and six real-life datasets from aspects including data characteristics, computational costs and scalability. e-NSP is tens to thousands of times faster than baseline approaches, and offers a sound and effective approach for efficient mining of NSP in large scale datasets by directly using existing PSP mining algorithms.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Behavior is widely seen in our daily study, work, living and entertainment [7]. A critical issue in understanding behavior from the informatics perspective, namely behavior informatics [6], [9], is to understand the complexities, dynamics and impact of non-occurring behaviors (NOB) [8]. Mining Negative sequential patterns (NSP) [43] is one of few approaches available for understanding NOB. NSP refer to frequent sequences with non-occurring and occurring behaviors (also called negative and positive behaviors in behavior and sequence analysis), such as a driver failing to stop before driving through an intersection with a stop sign or a missing treatment in medical service.
+     </paragraph>
+     <paragraph>
+      Discovering NSP is becoming increasingly important, and sometimes play a role that cannot be replaced by analyzing occurring behaviors alone in many intelligent systems and applications, such as intelligent transport systems (ITS), health and medical management systems, bioinformatics, biomedical systems, risk management, counter-terrorism, and security. For example, in ITS, negative driving behavior patterns result in drivers failing to follow certain traffic rules could cause serious traffic problems or even disasters. In healthcare, a patient missing an important medical appointment might result in serious health issues. In gene sequencing, the non-occurrence of certain genes may be associated with particular diseases. Such problems cannot be handled by the identification of occurring behavior patterns alone.
+     </paragraph>
+     <paragraph>
+      Formally, a NSP in healthcare may appear as follows. Assume {a mathematical formula}p1=&lt;abcX&gt; is a positive sequential pattern (PSP); {a mathematical formula}p2=&lt;ab¬cY&gt; is a NSP, where a, b and c stand for medical service codes indicating the services a patient has received in health care, and X and Y stand for disease status. {a mathematical formula}p1 shows that patients who usually receive medical services a, b and then c are likely to have disease status X, whereas {a mathematical formula}p2 indicates that patients receiving treatments of a and b but NOT c have a high probability of having disease status Y.
+     </paragraph>
+     <paragraph>
+      Although intensive efforts have been made to develop PSP (such as {a mathematical formula}p1) mining algorithms such as GSP [32], FreeSpan [15], SPADE [34], PrefixSpan [30], and SPAM [4], NSP (such as {a mathematical formula}p2) cannot be described or discovered by these algorithms. This is because mining NSP is much more difficult than mining PSP [8], particularly due to the following three intrinsic complexities.
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Problem complexity. The hidden nature of non-occurring items makes definition of the NSP mining problem complicated, particularly the NSP format and negative containment. This is why researchers present different and even inconsistent definitions and constraints in their identification of NSP. As research into NSP is at a very early stage, it is important to formalize the problem properly and comprehensively.
+      </list-item>
+      <list-item label="•">
+       High computational complexity. Existing methods calculate the support of negative sequential candidates (NSC) by additionally scanning the database after identifying PSP. This leads to additional costs and low efficiency in mining NSP. It is thus essential to develop efficient NSP mining methods without database re-scanning.
+      </list-item>
+      <list-item label="•">
+       Large NSC search space. The existing approaches generate k-size NSC by conducting a joining operation on (k-1)-size NSP. This results in a huge number of NSC [11], [24], [26], [38], which makes it difficult to search for meaningful outputs. Further, NSC does not satisfy the Apriori principle [38]. It is a challenge to prune the large proportion of meaningless NSC, and it is thus important to develop efficient approaches for generating a limited number of truly useful NSC.
+      </list-item>
+     </list>
+     <paragraph>
+      NSP mining is at an early stage, and has seen only very limited progress in recent years [3], [11], [12], [14], [16], [17], [18], [20], [21], [38], [39], [40], [43]. All existing methods are very inefficient and are too specific for mining NSP. As NSP analysis is very complex, challenging and immature, the addition of appropriate constraints makes the problem solvable to some degree. All the reported work in NSP analysis therefore incorporates constraints on format, frequency and/or negative elements from respective aspects (see more discussion in Section 3.2.1) to reduce the number of NSC, discover specific NSP of particular interest, and enhance computational efficiency. More importantly, there are different definitions of the most important concept in NSP mining – negative containment – which defines whether a data sequence contains a negative sequence (see more details in Section 4.2). Some definitions are more generic and typical [11], [12], [38], [39] than others which either incorporate additional constraints on negation format and containment [21], [22], [23], [25], [26], [27], [28], [29] or offer no clear definition [18], [31].
+     </paragraph>
+     <paragraph>
+      To address the above intrinsic complexities in NSP mining and make it efficient for real-life applications, this paper proposes an innovative, flexible and efficient framework: the set theory-based NSP mining framework (ST-NSP) and a comprehensive algorithm called e-NSP to instantiate the ST-NSP framework. We first formalize the NSP mining problem by defining some important concepts in NSP, including negative containment. The formalization draws a clear boundary between whether a data sequence set contains a NSC or not. Building on the set theory, e-NSP then calculates the support of NSC based on the support of the corresponding PSP, without additional database scans. We convert the negative containment problem to a positive containment problem. The NSC supports are then calculated by only using a NSC's corresponding PSP information. In this way, there is no need to re-scan the database after discovering PSP. More importantly, any existing PSP algorithms can then be directly used or slightly changed to discover NSP.
+     </paragraph>
+     <paragraph>
+      We specify the frequency, format and negative element constraints in e-NSP to make the problem consistent with set theory (frequency constraint), reduce confusion, ambiguity and uncertainty (format constraint), and to control computational complexity (negative element constraint). Our definitions and specifications of such constraints and negative containment form the ST-NSP framework and make e-NSP consistent with set theory which thus enables e-NSP to be much more efficient and flexible than existing methods.
+     </paragraph>
+     <paragraph>
+      Below, we summarize the main differences between our work and the related works in terms of the constraints imposed on NSP, key definitions and concepts, as well as the significant contributions made in this work:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       An innovative and very efficient framework ST-NSP and its corresponding theoretical design and algorithm e-NSP are proposed to discover NSP within one database scan; e-NSP is built on set theory and is the only work reported so far that uses set theory for sequence analysis, which opens a new paradigm for NSP analysis.
+      </list-item>
+      <list-item label="•">
+       e-NSP is built on a systematic and comprehensive statement and formalization of the NSP problem, and incorporates new concepts, specifications on constraints and effective technical design that make it efficient and flexible, in addition to offering substantial theoretical analysis in terms of data characteristics represented by data factors and computational costs.
+      </list-item>
+      <list-item label="•">
+       e-NSP introduces three constraints on frequency, format and negative elements respectively, which not only make e-NSP consistent with typical existing work but also support the proposed framework of set theory-based NSP study.
+      </list-item>
+      <list-item label="•">
+       Theoretical analysis shows that e-NSP is much less sensitive to data factors and is much more efficient on datasets that have a small number of elements in a sequence and a large number of itemsets, compared to available baseline algorithms we can find. This advantage of e-NSP is especially clear when minimum support is low. It is thus very suitable for large scale data.
+      </list-item>
+     </list>
+     <paragraph>
+      Unfortunately, it is not easy to find baseline datasets and NSP algorithms that satisfy similar NSP settings. We compare e-NSP with two modified NSP algorithms in the literature using intensive experiments on three synthetic and six real-world datasets from many perspectives, including computational complexity against different minimum supports on 8 distinct datasets, data characteristics analysis on 48 combinations of various data factors on 16 subsets, and scalability tests on two scalable datasets with low minimum support. The experimental results verify the theoretical analyses, showing that e-NSP is much more flexible and efficient and is tens to thousands of times faster than the baseline methods, thus highly suitable for large scale datasets. To the best of our knowledge, this is the first approach that efficiently discovers NSP by involving PSP only without rescanning databases, directly applies existing PSP discovery algorithms, and is particularly effective for very large datasets. This demonstrates the significant value of the proposed ST-NSP framework.
+     </paragraph>
+     <paragraph>
+      The remainder of the paper is organized as follows. Section 2 discusses the related work and gaps in the current knowledge. In Section 3, we formalize the problem of mining PSP and NSP, providing corresponding definitions and constraints. The ST-NSP framework and the e-NSP algorithm are detailed in Section 4. The theoretical analyses of e-NSP compared to baseline are presented in Section 5 from the perspective of data factors. Section 6 presents substantial experimental results and a real-life case study. Discussions on several critical issues are offered in Section 7, followed by conclusions and future work in Section 8.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Related work
+     </section-title>
+     <paragraph>
+      In this section, we first discuss the related work on a fundamental concept in NSP; that is, negative containment. Different researchers present inconsistent definitions and explanations of negative containment for respective interests and purposes. In [11], a data sequence {a mathematical formula}ds=&lt;dc&gt; cannot contain negative sequence {a mathematical formula}ns=&lt;¬(ab)c¬d&gt; since {a mathematical formula}size(ns)&gt;size(ds); while the work in [38] allows that ds contains ns. Another critical issue is how to deal with a non-occurring element. Chen et al. [11] argued that {a mathematical formula}ds=&lt;dc&gt; cannot contain {a mathematical formula}&lt;¬cd&gt; because &lt;d&gt; in ds has no antecedent itemset; ds cannot contain {a mathematical formula}&lt;c¬d&gt; because &lt;c&gt; in ds has no successor. However, Zheng et al. [38] allowed that ds contains {a mathematical formula}&lt;c¬d&gt;. Furthermore, the containment position of each element is very tricky. Chen et al. [11] proposed that a data sequence {a mathematical formula}ds=&lt;aacbc&gt; does not contain a negative sequence {a mathematical formula}ns=&lt;a¬bc&gt;, since opposite evidence of {a mathematical formula}&lt;abc&gt; can be found in ds. However, Zheng et al. [38] presented a divided opinion since {a mathematical formula}ds=&lt;aacbc&gt; matches a and c; his algorithm finds the corresponding positive element in ds for each negative element of ns, such as the second a for ¬b. According to our understanding, since &lt;e&gt; means that e occurs, no element (including element e) occurs before or after e. Accordingly, &lt;e&gt; contains {a mathematical formula}&lt;e¬?&gt;, {a mathematical formula}&lt;¬?e&gt;, {a mathematical formula}&lt;¬?e¬?&gt;, where “?” represents any element.
+     </paragraph>
+     <paragraph>
+      Second, we summarize the status of the NSP research. Unlike PSP mining, which has been widely explored, very limited research outcomes are available in the literature on mining NSP. We briefly introduce what we have been able to find. Zheng et al. [38] proposed a negative version of the GSP algorithm, i.e. NegGSP, to mine for NSP. This algorithm first discovers PSP by GSP, then generates and prunes NSC. It then counts the support of NSC by re-scanning the database to generate negative patterns. Chen et al. [11] proposed a PNSP approach for mining positive and negative sequential patterns in the form of {a mathematical formula}&lt;(abc)¬(de)(ijk)&gt;. This approach is broken into three stages. PSP are mined by traditional algorithms and all positive itemsets are derived from these PSP. All negative itemsets are then derived from these positive itemsets. Lastly, both positive and negative itemsets are joined to generate NSC, which are in turn joined iteratively to generate longer NSC in an Apriori-like way. This approach calculates the support of NSC by re-scanning the database. In [22], [23], [24], the authors only handled NSP in which the last element was negative. An algorithm NSPM in [24] mines such NSP. The extended versions of [24] are in [22], [23], which add fuzzy and strong constraints respectively to NSPM. In [39], a genetic algorithm is proposed to mine NSP. It generates candidates by crossover and mutation by involving a dynamic fitness function to generate as many candidates as possible and avoid population stagnation. In [26], only NSP are identified in the form of {a mathematical formula}(¬A,B), {a mathematical formula}(A,¬B) and {a mathematical formula}(¬A,¬B), which is similar to mining negative association rules [13], [33]. The work in [26] requires {a mathematical formula}A⋂B=∅, which is a usual constraint in association rule mining but is a very strict constraint in sequential pattern mining. It generates frequent itemsets first, then generates frequent and infrequent sequences, and lastly derives NSP from the infrequent sequences. Three extended versions of [26] can be found in [27], [28], [29] in which conditions are added to fuzzy, multiple level and multiple minimum supports, respectively. Although the authors of [31] mentioned the question of mining NSP, they did not propose how to mine them. In [20], NSP are mined in the same form as [26] in incremental transaction databases.
+     </paragraph>
+     <paragraph>
+      Zhao et al. [35] proposed an approach to mining event-oriented negative sequential rules from infrequent sequences in the form of {a mathematical formula}&lt;A&gt;⇒&lt;¬B&gt;, {a mathematical formula}&lt;¬A&gt;⇒&lt;B&gt;, {a mathematical formula}&lt;¬A&gt;⇒&lt;¬B&gt;. Based on the work in [35], Zhao et al. [36] also presented an approach for discovering both positive and negative impact-oriented sequential rules. Issues about sequence classification using positive and negative patterns were discussed in [25], [37]. Positive and negative usage patterns are used in [19] to filter Web recommendation lists. None of these papers involve NSP mining directly.
+     </paragraph>
+     <paragraph>
+      The above discussions about negative containment and existing NSP research involve the key issue of various constraints applied to NSP mining. As detailed in Section 3.2.1, constraints are generally empowered according to the frequency of elements, patterns or positive partners, the format of continuous negative elements, and the negation of elements or items.
+     </paragraph>
+     <paragraph>
+      Another relevant research topic is negative association rule mining [5], [33]. However, as the ordering relationship between items and elements in a sequence is inbuilt in NSP, it is much more challenging to discover NSP than negative associations and patterns. In fact, the ordinal nature of NSP means that algorithms for negative association rule mining and negative pattern mining cannot be directly used to mine NSP.
+     </paragraph>
+     <paragraph>
+      In summary, the above discussions show that NSP research presents the following strong early-stage characteristics:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       Significant inconsistency in key concepts and settings. In particular, there is no consolidated concept of negative containment in the literature. In Section 4.2, we will present a generic definition of negative containment and formalize the issue.
+      </list-item>
+      <list-item label="•">
+       Different constraints are incorporated into NSP, leading to varied settings and even divided assumptions about NSP. In Section 3.2.1, we will provide formal and generic definitions of frequency constraint, format constraint, and negative element constraint.
+      </list-item>
+      <list-item label="•">
+       NSP mining is embedded with specific constraints and requires rescanning databases.
+      </list-item>
+      <list-item label="•">
+       Existing NSP approaches either re-scan a database as a result of inefficient computational design or do not directly address the problem of NSP mining. In Section 4, e-NSP is introduced which scans a database only once.
+      </list-item>
+     </list>
+     <paragraph>
+      Our proposed ST-NSP (see Section 4.1) and e-NSP (more details in Section 4) directly address the above fundamental issues and the substantial complexities of NSP mining by building an innovative, formal, comprehensive and generic design, together with theoretical analysis, and experiment evaluation.
+     </paragraph>
+    </section>
+    <section label="3">
+     <section-title>
+      Problem statement
+     </section-title>
+     <paragraph>
+      In a sequence, a non-occurring item is called a negative item and an occurring item is called a positive item. Sequences that consist of at least one negative item are called negative sequences. The sequences in source data are called data sequences[32]. Classic sequential pattern mining handles occurring items only, and generates frequent positive sequences[11], [24], [26], [38]. Below, we formally define PSP and NSP. The main symbols used in this paper are listed in Table 1.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Positive Sequential Patterns – PSP
+      </section-title>
+      <paragraph>
+       Let {a mathematical formula}I={x1,x2,…,xn} be a set of items. An itemset is a subset of I. A sequence is an ordered list of itemsets. A sequence s is denoted by {a mathematical formula}&lt;s1s2…sl&gt;, where {a mathematical formula}sj⊆I(1⩽j⩽l). {a mathematical formula}sj is also called an element of the sequence, and denoted as {a mathematical formula}(x1x2…xm), where {a mathematical formula}xk is an item, {a mathematical formula}xk∈I ({a mathematical formula}1⩽k⩽m). For simplicity, the brackets are omitted if an element only has one item, i.e., element (x) is coded x. To reduce complexity, we assume that an item occurs at most once in an element, but can appear multiple times in different elements of a sequence.
+      </paragraph>
+      <paragraph>
+       The length of sequence s, denoted as {a mathematical formula}length(s), is the total number of items in all elements in s. s is a k-length sequence if {a mathematical formula}length(s)=k. The size of sequence s, denoted as {a mathematical formula}size(s), is the total number of elements in s. s is a k-size sequence if {a mathematical formula}size(s)=k. For example, a given sequence {a mathematical formula}s=&lt;(ab)cd&gt; is composed of 3 elements {a mathematical formula}(ab), c and d, or 4 items a, b, c and d. Therefore s is a 4-length and 3-size sequence.
+      </paragraph>
+      <paragraph>
+       Sequence {a mathematical formula}sα=&lt;α1α2…αn&gt; is called a sub-sequence of sequence {a mathematical formula}sβ=&lt;β1β2…βm&gt; and {a mathematical formula}sβ is a super-sequence of {a mathematical formula}sα, denoted as {a mathematical formula}sα⊆sβ, if there exists {a mathematical formula}1⩽j1&lt;j2&lt;…&lt;jn⩽m such that {a mathematical formula}α1⊆βj1,α2⊆βj2,…,αn⊆βjn. We also say that {a mathematical formula}sβ contains {a mathematical formula}sα. For example, &lt;a&gt;, &lt;d&gt; and {a mathematical formula}&lt;(ab)d&gt; are all sub-sequences of {a mathematical formula}&lt;(ab)cd&gt;.
+      </paragraph>
+      <paragraph>
+       A sequence database D is a set of tuples {a mathematical formula}&lt;sid,ds&gt;, where sid is the {a mathematical formula}sequence_id and ds is the data sequence. The number of tuples in D is denoted as {a mathematical formula}|D|. The set of tuples containing sequence s is denoted as {a mathematical formula}{&lt;s&gt;}. The support of s, denoted as {a mathematical formula}sup(s), is the number of {a mathematical formula}{&lt;s&gt;}, i.e., {a mathematical formula}sup(s)=|{&lt;s&gt;}|=|{&lt;sid,ds&gt;,&lt;sid,ds&gt;∈D∧(s⊆ds)}|. min_sup is a minimum support threshold predefined by users. Sequence s is called a frequent (positive) sequential pattern if {a mathematical formula}sup(s)⩾min_sup. By contrast, s is infrequent if {a mathematical formula}sup(s)&lt;min_sup.
+      </paragraph>
+      <paragraph>
+       PSP mining aims to discover all positive sequences that satisfy a given minimum support. For simplicity, we often omit “positive” when discussing positive items, positive elements and positive sequences in mining PSP.
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Negative Sequential Patterns – NSP
+      </section-title>
+      <section label="3.2.1">
+       <section-title>
+        Constraints on NSP
+       </section-title>
+       <paragraph>
+        In real applications such as health and medical business, the number of NSC and the identified negative sequences are often large, but many of them are not actionable [10]. The number of NSC may be huge or even infinite if no constraints are added. This makes NSP mining very challenging. For example, for dataset with 10 distinct items, the total number of potential itemsets is 1023 ({a mathematical formula}=C(10,1)+C(10,2)+…+C(10,10)), where {a mathematical formula}C(m,n) represents the number of combinations created by choosing n items from m distinct items. Assuming that 10 of the 1023 are frequent, if the maximum size of data sequences in DB is 3, the total number of NSC could be {a mathematical formula}10331+10332+10333. Many of the combinations are uninteresting or meaningless in reality.
+       </paragraph>
+       <paragraph>
+        Various constraints have been added to existing NSP mining, such as those detailed in [11], [38], [39] and [24], to deal with the fundamental challenges embedded in NSP mining and the current immature situation in NSP study. Although they are not consistent nor generic, these constraints aim to reduce problem complexity and the number of NSC, and to efficiently discover actionable NSP. For example, in health insurance, a common business rule says if a prosthesis (a) has been charged for, there should be a charge for a prior corresponding procedure (b). Accordingly, if a customer claims a but does not claim b, which is represented as a NSP: {a mathematical formula}&lt;¬ba&gt;, then the claim behavior could be potentially suspicious. More complicated NSP may be found, which contain more negative items, such as {a mathematical formula}&lt;a¬ba¬c&gt; (c is another procedure).
+       </paragraph>
+       <paragraph>
+        In this work, we incorporate three constraints in e-NSP: frequency constraint, format constraint, and negative element constraint. The reasons for introducing these three constraints are as follows. First, as explained above, NSP mining is at an early stage and is too complicated to conduct without the imposition of specific constraints. Second, we specify constraints on frequency, format and negative elements in order to reduce problem complexity, and in particular, to build a framework of NSP mining on set theory to extract negative sequential patterns from identified positive patterns (frequency constraint), reduce the number of NSC (format constraint), and substantially reduce the complexity in handling partially negative elements (negative element constraint).
+       </paragraph>
+       <paragraph>
+        Below, we define key concepts for these three constraints for mining NSP, and further explain why each of them is introduced.
+       </paragraph>
+       <paragraph label="Definition 1">
+        Positive PartnerThe positive partner of a negative element ¬e is e, denoted as {a mathematical formula}p(¬e), i.e., {a mathematical formula}p(¬e)=e. The positive partner of positive element e is e itself, i.e., {a mathematical formula}p(e)=e. The positive partner of a negative sequence {a mathematical formula}ns=&lt;s1…sk&gt; changes all negative elements in ns to their positive partners, denoted as {a mathematical formula}p(ns), i.e., {a mathematical formula}p(ns)={&lt;s1′…sk′&gt;|si′=p(si),si∈ns}. For example, {a mathematical formula}p(&lt;¬(ab)c¬d&gt;)=&lt;(ab)cd&gt;.
+       </paragraph>
+       <paragraph label="Constraint 1">
+        Frequency constraintFor simplicity, this paper only focuses on the negative sequences ns whose positive partners are frequent, i.e., {a mathematical formula}sup(p(ns))≥min_sup. In contrast, the authors in [11] and [38] only require that the positive partner of each element in ns is frequent.
+       </paragraph>
+       <paragraph>
+        Although there may be many negative sequences that can be mined from infrequent positive partner sequences (just as many useful negative association rules can be mined from infrequent itemsets [33]), requiring positive partners to be frequent serves multiple purposes: (1) users are often interested in the absence of certain “frequent” (positive) itemsets; the positive partners of those negative itemsets appearing in negative sequential patterns should therefore satisfy a certain frequency. (2) If we do not enforce this constraint, the number of NSC may be huge or even infinite, which would lead to very low efficiency NSP mining.
+       </paragraph>
+       <paragraph>
+        A similar constraint has been adopted by other researchers, although it is specified differently for particular purposes. For example, in [11], only the positive partner of each element in negative sequences ns is required to be frequent. In our work, we require that the positive partner, not only each element, of ns should be frequent, i.e., {a mathematical formula}sup(p(ns))≥min_sup. This is because in this work we build a new framework that allows to only negative sequential patterns to be minded from positive sequential patterns by using the set theory to rapidly “calculate” the support of NSC based only on the support of their corresponding PSP without additional database scans.
+       </paragraph>
+       <paragraph label="Constraint 2">
+        Continuous negative elements in a NSC are not allowed.
+       </paragraph>
+       <paragraph label="Example 1">
+        {a mathematical formula}&lt;¬(ab)c¬d&gt; satisfies Constraint 2, but {a mathematical formula}&lt;¬(ab)¬cd&gt; does not.
+       </paragraph>
+       <paragraph>
+        This is similar to the settings in [11], [38].
+       </paragraph>
+       <paragraph>
+        This constraint is introduced for three reasons. (1) If two or more continuous negative elements are allowed, more and more negative sequential candidates can be generated, which would result in a very challenging and sophisticated task. (2) In practice, it would be difficult to ascertain the correct order of two continuous negative elements if there were no positive elements between them. (3) As argued in [11], the order of consecutive negative itemsets is trifling for many applications. As a result, adding this constraint will substantially reduce the number of NSC.
+       </paragraph>
+       <paragraph label="Constraint 3">
+        The smallest negative unit in a NSC is an element. If an element consists of more than one item, either all or none of the items are allowed to be negative.
+       </paragraph>
+       <paragraph label="Example 2">
+        In practice, with the development of more efficient learning frameworks, data structures, and NSP mining algorithms, these constraints may be progressively relaxed. Given the current stage of maturity of NSP mining, we only work on those negative sequences that satisfy the above three constraints in this work.
+       </paragraph>
+      </section>
+      <section label="3.2.2">
+       <section-title>
+        NSP concepts
+       </section-title>
+       <paragraph>
+        According to Constraint 3, the definition of sub-sequences in a positive sequence is not applicable to negative sequences. Below, we define sub-sequence and super-sequence for negative sequences, in addition to the concepts of element-id set and order-preserving sequence.
+       </paragraph>
+       <paragraph label="Definition 2">
+        Positive/Negative Element-id SetElement-id is the order number of an element in a sequence. Given a sequence {a mathematical formula}s=&lt;s1s2…sm&gt;, {a mathematical formula}id(si)=i is the element identifier of element {a mathematical formula}si. Element-id set {a mathematical formula}EidSs of s is the set that includes all elements and their ids in s, i.e., {a mathematical formula}EidSs={(si,id(si))|si∈s=(s1,1),(s2,2),…,(sm,m)} ({a mathematical formula}1⩽i⩽m).
+       </paragraph>
+       <paragraph>
+        The set including all positive and negative element-ids of a sequence s is called positive and negative element-id set of s, denoted as {a mathematical formula}EidSs+, {a mathematical formula}EidSs−, respectively. For example, {a mathematical formula}s=&lt;¬(ab)c¬d&gt;, {a mathematical formula}EidSs+={(c,2)}, {a mathematical formula}EidSs−={(¬(ab),1),(¬d,3)}.
+       </paragraph>
+       <paragraph label="Definition 3">
+        Order-preserving SequenceFor any subset {a mathematical formula}EidSs′={(α1,id1),(α2,id2),…,(αp,idp)} ({a mathematical formula}1&lt;p⩽m) of {a mathematical formula}EidSs, {a mathematical formula}α=&lt;α1α2…αp&gt;, if {a mathematical formula}∀αi,αi+1∈α(1⩽i&lt;p), there exists {a mathematical formula}idi&lt;idi+1, then α is called an order-preserving sequence of {a mathematical formula}EidSs′, denoted as {a mathematical formula}α=OPS(EidSs′).
+       </paragraph>
+       <paragraph label="Example 3">
+        Given {a mathematical formula}s=&lt;¬(ab)c¬d&gt;, its {a mathematical formula}EidSs={(¬(ab),1),(c,2),(¬d,3)}, {a mathematical formula}EidSs+={(c,2)}, {a mathematical formula}EidSs−={(¬(ab),1),(¬d,3)}. We can obtain {a mathematical formula}OPS(EidSs+)=&lt;c&gt;. Also, if {a mathematical formula}EidSs′={(¬(ab),1),(c,2)}, we can create a sequence {a mathematical formula}OPS(EidSs′)=&lt;¬(ab)c&gt;.
+       </paragraph>
+       <paragraph label="Definition 4">
+        Sub-sequence and Super-sequence of a Negative SequenceSequence {a mathematical formula}sα is called a sub-sequence of a negative sequence {a mathematical formula}sβ, and {a mathematical formula}sβ is a super-sequence of {a mathematical formula}sα, if {a mathematical formula}∀EidSsβ′, {a mathematical formula}EidSsβ′ is a subset of {a mathematical formula}EidSsβ,sα=OPS(EidSsβ′), denoted as {a mathematical formula}sα⊆sβ. If {a mathematical formula}sα is a negative sequence, it is required to satisfy Constraint 2, which means that there must not be continuous negative elements in {a mathematical formula}sα.
+       </paragraph>
+       <paragraph label="Example 4">
+        Given {a mathematical formula}sβ=&lt;¬(ab)cd&gt; and {a mathematical formula}sα=&lt;¬(ab)d&gt;, {a mathematical formula}EidSsβ={(¬(ab),1),(c,2),(d,3)}, {a mathematical formula}EidSsβ′={(¬(ab),1),(d,3)} is a subset of {a mathematical formula}EidSsβ.sα is a sub-sequence of {a mathematical formula}sβ since {a mathematical formula}sα=OPS(EidSsβ′).
+       </paragraph>
+       <paragraph label="Definition 5">
+        Maximum Positive Sub-sequenceLet {a mathematical formula}ns=&lt;s1s2…sm&gt; be a m-size and n-neg-size negative sequence {a mathematical formula}(m−n&gt;0), {a mathematical formula}OPS(EidSns+) is called the maximum positive sub-sequence of ns, denoted as {a mathematical formula}MPS(ns).
+       </paragraph>
+       <paragraph label="Example 5">
+        Given a negative sequence {a mathematical formula}s=&lt;¬(ab)cd&gt;, {a mathematical formula}EidS+={(c,2),(d,3)}, its maximum positive sub-sequence is {a mathematical formula}MPS(s)=&lt;cd&gt;.
+       </paragraph>
+       <paragraph label="Definition 6">
+        Negative Sequential PatternA negative sequence s is a negative sequential pattern (NSP) if its support is not less than the threshold min_sup.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      The set theory-based NSP framework and e-NSP algorithm
+     </section-title>
+     <section label="4.1">
+      <section-title>
+       The set theory-based NSP mining framework
+      </section-title>
+      <paragraph>
+       Here we propose an innovative NSP mining framework, based on set theory. The framework and working mechanism of the proposed set theory-based NSP mining framework (ST-NSP for short) is illustrated in Fig. 1. We also propose an efficient NSP mining algorithm, called e-NSP, to instantiate the ST-NSP framework. The e-NSP algorithm is summarized in Section 4.7, and an example is given in Section 4.8.
+      </paragraph>
+      <paragraph>
+       A NSP algorithm instantiating the ST-NSP framework consists of several components:
+      </paragraph>
+      <list>
+       <list-item label="(1)">
+        negative containment to define how a data sequence contains a negative sequence, which will be discussed in Section 4.2;
+       </list-item>
+       <list-item label="(2)">
+        a negative conversion strategy to convert the negative containment to positive containment, and then use the information of corresponding PSP to calculate the support of a NSC, which will be discussed in Section 4.3;
+       </list-item>
+       <list-item label="(3)">
+        NSC support calculation to calculate the support of NSC, which will be discussed in Section 4.4;
+       </list-item>
+       <list-item label="(4)">
+        NSC generation to generate NSC, which will be discussed in Section 4.5; and
+       </list-item>
+       <list-item label="(5)">
+        an e-NSP data structure and optimization strategy to calculate the union set, which will be discussed in Section 4.6.
+       </list-item>
+      </list>
+      <paragraph>
+       Given a sequence database, algorithms like e-NSP built on the ST-NSP framework work on the following process to discover NSP, in which steps (2) to (4) rely on the set theory.
+      </paragraph>
+      <list>
+       <list-item label="(1)">
+        All PSP are mined by a traditional PSP algorithm (with slight changes if necessary) or new PSP mining algorithm;
+       </list-item>
+       <list-item label="(2)">
+        NSC are generated based on the identified PSP in terms of the three constraints proposed in Section 3.2.1;
+       </list-item>
+       <list-item label="(3)">
+        The generated NSC are converted to their corresponding PSP in terms of the negative conversion strategy;
+       </list-item>
+       <list-item label="(4)">
+        The NSC support is calculated based on the corresponding PSP support in terms of negative containment, relevant constraints and the proposed e-NSP data structure and optimization strategy;
+       </list-item>
+       <list-item label="(5)">
+        Lastly, NSP are identified from the NSC to satisfy certain support criteria.
+       </list-item>
+      </list>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Negative containment
+      </section-title>
+      <paragraph>
+       As a sub-sequence (e.g., {a mathematical formula}s1=&lt;d&gt;) may occur more than once in its super-sequence (e.g., {a mathematical formula}s2=&lt;a(bc)d(cde)&gt;), we need to know the exact positions of {a mathematical formula}s2 containing {a mathematical formula}s1 from the left and right sides of {a mathematical formula}s2. We therefore define the fundamental concept of negative containment below.
+      </paragraph>
+      <paragraph label="Definition 7">
+       First Sub-sequence Ending Position/Last Sub-sequence Beginning PositionGiven a data sequence {a mathematical formula}ds=&lt;d1d2…dt&gt; and a positive sequence α,
+      </paragraph>
+      <list>
+       <list-item label="(1)">
+        if {a mathematical formula}∃p(1&lt;p⩽t), {a mathematical formula}α⊆&lt;d1…dp&gt;∧α⊈&lt;d1…dp−1&gt;, then p is called the First Sub-sequence Ending Position, denoted as {a mathematical formula}FSE(α,ds); if {a mathematical formula}α⊆&lt;d1&gt; then {a mathematical formula}FSE(α,ds)=1;
+       </list-item>
+       <list-item label="(2)">
+        if {a mathematical formula}∃q(1⩽q&lt;t), {a mathematical formula}α⊆&lt;dq…dt&gt;∧α⊈&lt;dq+1…dt&gt;, then q is called the Last Sub-sequence Beginning Position, denoted as {a mathematical formula}LSB(α,ds); if {a mathematical formula}α⊆&lt;dt&gt; then {a mathematical formula}LSB(α,ds)=t;
+       </list-item>
+       <list-item label="(3)">
+        if {a mathematical formula}α⊈ds, then {a mathematical formula}FSE(α,ds)=0, {a mathematical formula}LSB(α,ds)=0.
+       </list-item>
+      </list>
+      <paragraph label="Example 6">
+       Given {a mathematical formula}ds=&lt;a(bc)d(cde)&gt;. {a mathematical formula}FSE(&lt;a&gt;,ds)=1, {a mathematical formula}FSE(&lt;c&gt;,ds)=2, {a mathematical formula}FSE(&lt;cd&gt;,ds)=3, {a mathematical formula}LSB(&lt;a&gt;,ds)=1, {a mathematical formula}LSB(&lt;c&gt;,ds)=4, {a mathematical formula}LSB(&lt;cd&gt;,ds)=2, {a mathematical formula}LSB(&lt;(cd)&gt;,ds)=4.Our definition of a data sequence containing a negative sequence is as follows. We use {a mathematical formula}n−neg−size to denote a negative sequence containing n negative elements.
+      </paragraph>
+      <paragraph label="Definition 8">
+       Negative ContainmentLet {a mathematical formula}ds=&lt;d1d2…dt&gt; be a data sequence, {a mathematical formula}ns=&lt;s1s2…sm&gt; be an {a mathematical formula}m−size and n-neg-size negative sequence, (1) if {a mathematical formula}m&gt;2t+1, then ds does not contain ns; (2) if {a mathematical formula}m=1 and {a mathematical formula}n=1, then ds contains ns when {a mathematical formula}p(ns)⊈ds; (3) otherwise, ds contains ns if, {a mathematical formula}∀(si,id(si))∈EidSns−(1⩽i⩽m), one of the following three cases holds:
+      </paragraph>
+      <list>
+       <list-item label="(a)">
+        {a mathematical formula}(lsb=1) or {a mathematical formula}(lsb&gt;1)∧p(s1)⊈&lt;d1…dlsb−1&gt;, when {a mathematical formula}i=1;
+       </list-item>
+       <list-item label="(b)">
+        {a mathematical formula}(fse=t) or {a mathematical formula}(0&lt;fse&lt;t)∧p(sm)⊈&lt;dfse+1…dt&gt;, when {a mathematical formula}i=m;
+       </list-item>
+       <list-item label="(c)">
+        {a mathematical formula}(fse&gt;0∧lsb=fse+1) or {a mathematical formula}(fse&gt;0∧lsb&gt;fse+1)∧p(si)⊈&lt;dfse+1…dlsb−1&gt;, when {a mathematical formula}1&lt;i&lt;m, where {a mathematical formula}fse=FSE(MPS(&lt;s1s2…si−1&gt;),ds), {a mathematical formula}lsb=LSB(MPS(&lt;si+1…sm&gt;),ds).
+       </list-item>
+      </list>
+      <paragraph>
+       In the above definition, Case (a) indicates that the first element in ns is negative. “{a mathematical formula}(lsb&gt;1)∧p(s1)⊈&lt;d1…dlsb−1&gt;” means that {a mathematical formula}&lt;dlsb…dt&gt; contains {a mathematical formula}MPS(&lt;s2…sm&gt;) but {a mathematical formula}&lt;d1…dlsb−1&gt; does not contain {a mathematical formula}p(s1). “{a mathematical formula}lsb=1” means that the last sub-sequence's beginning position is 1, so {a mathematical formula}p(s1) cannot be contained by ds. Case (b) indicates that the last element in ns is negative. Case (c) indicates that the negative element is between the first and last element in ns. “{a mathematical formula}lsb&gt;fse+1” ensures there is at least one element in “{a mathematical formula}&lt;dfse+1…dlsb−1&gt;”. “{a mathematical formula}fse&gt;0∧lsb=fse+1” means that {a mathematical formula}dfse and {a mathematical formula}dlsb are contiguous elements, so {a mathematical formula}p(si) cannot be contained within them.
+      </paragraph>
+      <paragraph label="Example 7">
+       Given {a mathematical formula}ds=&lt;a(bc)d(cde)&gt;, we have
+      </paragraph>
+      <list>
+       <list-item label="(1)">
+        {a mathematical formula}ns=&lt;¬ac&gt;. {a mathematical formula}EidSns−={(¬a,1)}. ds does not contain ns. {a mathematical formula}lsb=4&gt;0, but {a mathematical formula}p(s1)=&lt;a&gt;⊆&lt;d1…d3&gt;=&lt;a(bc)d&gt; (Case (a)).
+       </list-item>
+       <list-item label="(2)">
+        {a mathematical formula}ns=&lt;¬aac&gt;. {a mathematical formula}EidSns−={(¬a,1)}. ds contains ns because {a mathematical formula}lsb=1 (Case (a)).
+       </list-item>
+       <list-item label="(3)">
+        {a mathematical formula}ns=&lt;(ab)¬(cd)&gt;. {a mathematical formula}EidSns−={(¬(cd),2)}. ds does not contain ns because {a mathematical formula}fse=0 (Case (b)).
+       </list-item>
+       <list-item label="(4)">
+        {a mathematical formula}ns=&lt;(de)¬(cd)&gt;. {a mathematical formula}EidSns−={(¬(cd),2)}. ds contains ns because {a mathematical formula}fse=4(t=4) (Case (b)).
+       </list-item>
+       <list-item label="(5)">
+        {a mathematical formula}ns=&lt;a¬dd¬d&gt;. {a mathematical formula}EidSns−={(¬d,2),(¬d,4)}. ds does not contain ns. For {a mathematical formula}(¬d,2), {a mathematical formula}fse=1, {a mathematical formula}lsb=4, but {a mathematical formula}p(¬d)⊆&lt;d2…d3&gt;=&lt;(bc)d&gt; (Case (c)). If one negative element does not satisfy the condition, we do not need to consider other negative elements.
+       </list-item>
+       <list-item label="(6)">
+        {a mathematical formula}ns=&lt;a¬bb¬a(cde)&gt;. {a mathematical formula}EidSns−={(¬b,2),(¬a,4)}. ds contains ns. For {a mathematical formula}(¬b,1), {a mathematical formula}fse=1, {a mathematical formula}lsb=2, {a mathematical formula}fse&gt;0∧lsb=fse+1 (Case (c)); For {a mathematical formula}(¬a,4), {a mathematical formula}fse=2, {a mathematical formula}lsb=4, {a mathematical formula}p(¬a)⊈&lt;d3&gt;=&lt;d&gt; (Case (c)).
+       </list-item>
+      </list>
+      <paragraph>
+       Note that negative sequences do not satisfy the Apriori property. As shown in Example 7, {a mathematical formula}sup(&lt;¬ac&gt;)=0, {a mathematical formula}sup(&lt;¬aac&gt;)=1, {a mathematical formula}sup(&lt;¬ac&gt;)&lt;sup(&lt;¬aac&gt;), though {a mathematical formula}&lt;ac&gt;⊆&lt;¬aac&gt;. Accordingly, we cannot simply apply or change the pattern pruning strategies available in PSP mining to NSP mining, and new NSP filtering methods need to be developed.
+      </paragraph>
+     </section>
+     <section label="4.3">
+      <section-title>
+       Negative conversion
+      </section-title>
+      <paragraph>
+       e-NSP is built on the strategy of converting negative containment to positive containment; PSP mining can then be used to mine NSP. For this, we define a special subsequence: 1-neg-size Maximum Sub-sequence.
+      </paragraph>
+      <paragraph label="Definition 9">
+       1-neg-size Maximum Sub-sequenceFor a negative sequence ns, its sub-sequences that include {a mathematical formula}MPS(ns) and one negative element e are called {a mathematical formula}1−neg−size maximum sub-sequences, denoted as {a mathematical formula}1−negMS=OPS(EidSns+,e), where {a mathematical formula}e∈EidSns−. The sub-sequence set including all 1-neg-size maximum sub-sequences of ns is called 1-neg-size maximum sub-sequence set, denoted as {a mathematical formula}1−negMSSns, {a mathematical formula}1−negMSSns={OPS(EidSns+,e)|∀e∈EidSns−}.
+      </paragraph>
+      <paragraph label="Example 8">
+       1) {a mathematical formula}ns=&lt;¬(ab)c¬d&gt;, {a mathematical formula}1−negMSSns={&lt;¬(ab)c&gt;,&lt;c¬d&gt;}; 2) {a mathematical formula}ns′=&lt;¬a(bc)d¬(cde)&gt;, {a mathematical formula}1−negMSSns′={&lt;¬a(bc)d&gt;,&lt;(bc)d¬(cde)&gt;}.
+      </paragraph>
+      <paragraph label="Corollary 1">
+       Negative Conversion StrategyGiven a data sequence{a mathematical formula}ds=&lt;d1d2…dt&gt;, and{a mathematical formula}ns=&lt;s1s2…sm&gt;, which is an m-size and n-neg-size negative sequence, the negative containment problem can be converted to the following problem: data sequence ds contains negative sequence ns if and only if the two conditions hold: (1){a mathematical formula}MPS(ns)⊆ds; and (2){a mathematical formula}∀1−negMS∈1−negMSSns,{a mathematical formula}p(1−negMS)⊈ds.
+      </paragraph>
+      <paragraph label="Example 9">
+       Given {a mathematical formula}ds=&lt;a(bc)d(cde)&gt;, 1) if {a mathematical formula}ns=&lt;a¬dd¬d&gt;, {a mathematical formula}1−negMSSns={&lt;a¬dd&gt;,&lt;ad¬d&gt;}, then ds does not contain ns because {a mathematical formula}p(&lt;a¬dd&gt;)=&lt;add&gt;⊆ds; 2) if {a mathematical formula}ns′=&lt;a¬bb¬a(cde)&gt;,1−negMSSns′={&lt;a¬bb(cde)&gt;,&lt;ab¬a(cde)&gt;}, then ds contains ns because {a mathematical formula}MPS(ns)=&lt;ab(cde)&gt;⊆ds∧p(&lt;a¬bb(cde)&gt;⊈ds∧p(&lt;ab¬a(cde)&gt;)⊈ds.
+      </paragraph>
+      <paragraph>
+       Corollary 1 proves that the problem whether a data sequence contains a negative sequence can be converted to the problem whether a data sequence does not contain other positive sequences. This lays a foundation for calculating the support of negative sequences by using only the information of corresponding positive sequences. Its proof is given below.
+      </paragraph>
+      <paragraph label="Proof of Corollary 1">
+       Here we only prove that Case (c) in the negative containment definition is equivalent to the negative converting strategy, because Cases (a) and (b) can be proved in the same way. In Case (c), condition “{a mathematical formula}(fse&gt;0∧lsb=fse+1)” indicates that {a mathematical formula}dfse and {a mathematical formula}dlsb−1 are contiguous elements, so {a mathematical formula}p(si) cannot be contained within them. It is a special case of another condition “{a mathematical formula}(fse&gt;0∧lsb&gt;fse+1)∧p(si)⊈&lt;dfse+1…dlsb−1&gt;”. Hence, we only need to prove that “{a mathematical formula}(fse&gt;0∧lsb&gt;fse+1)∧p(si)⊈&lt;dfse+1…dlsb−1&gt;” is equivalent to negative conversion strategy.For {a mathematical formula}(si,id(si))∈EidSns−(1⩽i⩽m), “{a mathematical formula}0&lt;fse” means {a mathematical formula}MPS(&lt;s1s2…si−1&gt;)⊆&lt;d1…dfse&gt;, and “{a mathematical formula}0&lt;lsb” means {a mathematical formula}MPS(&lt;si+1…sm&gt;)⊆&lt;dlsb…dt&gt;. Since {a mathematical formula}fse&lt;lsb, {a mathematical formula}MPS(&lt;s1s2…si−1si+1…sm&gt;)⊆&lt;d1…dfsedlsb…dt&gt;, i.e., {a mathematical formula}MPS(ns)⊆ds. On the other hand, if {a mathematical formula}MPS(ns)⊆ds, for {a mathematical formula}∀(si,id(si))∈EidSns−, there must exist {a mathematical formula}0&lt;fse&lt;lsb s.t. {a mathematical formula}MPS(&lt;s1s2…si−1&gt;)⊆&lt;d1…dfse&gt; and {a mathematical formula}MPS(&lt;si+1…sm&gt;)⊆&lt;dlsb…dt&gt;.In addition, according to the definition of 1-neg-size maximum sub-sequence, {a mathematical formula}MPS(&lt;s1s2…si−1&gt;), {a mathematical formula}MPS(&lt;si+1…sm&gt;) and {a mathematical formula}si only construct a 1-neg-size maximum sub-sequence 1-negMS of {a mathematical formula}si, so “{a mathematical formula}(fse&gt;0∧lsb&gt;fse+1)∧p(si)⊈&lt;dfse+1…dlsb−1&gt;” also means {a mathematical formula}p(1−negMS)⊈ds. For {a mathematical formula}∀(si,id(si))∈EidSns−, “{a mathematical formula}(fse&gt;0∧lsb&gt;fse+1)∧p(si)⊈&lt;dfse+1…dlsb−1&gt;” can be converted to: {a mathematical formula}∀1−negMS∈1−negMSSns,p(1−negMS)⊈ds, and vice versa.  □
+      </paragraph>
+     </section>
+     <section label="4.4">
+      <section-title>
+       Supports of negative sequences
+      </section-title>
+      <paragraph>
+       To calculate the support of negative sequences, we first present Corollary 2.
+      </paragraph>
+      <paragraph label="Corollary 2">
+       Support of negative sequencesGiven a m-size and n-neg-size negative sequence ns, for{a mathematical formula}∀1−negMSi∈1−negMSSns(1⩽i⩽n), the support of ns in sequence database D is:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       This can be easily derived from Corollary 1. Because {a mathematical formula}∪i=1n{p(1−negMSi)}⊆{MPS(ns)}, Equation (1) can be rewritten as:{a mathematical formula}
+      </paragraph>
+      <paragraph label="Example 10">
+       {a mathematical formula}sup(&lt;¬a(bc)d¬(cde)&gt;)=sup(&lt;(bc)d&gt;)−|{&lt;a(bc)d&gt;}∪{&lt;(bc)d(cde)&gt;}|; {a mathematical formula}sup(&lt;¬(ab)c¬d&gt;)=sup(&lt;c&gt;)−|{&lt;(ab)c&gt;}∪{&lt;cd&gt;}|.If ns only contains a negative element, the support of ns is:{a mathematical formula}
+      </paragraph>
+      <paragraph label="Example 11">
+       {a mathematical formula}sup(&lt;(ab)¬cd&gt;)=sup(&lt;(ab)d&gt;)−sup(&lt;(ab)cd&gt;).In particular, for negative sequence {a mathematical formula}&lt;¬e&gt;,{a mathematical formula}In the following, we illustrate negative containment in terms of set theory. Fig. 2 shows the intersection of sequences &lt;a&gt; and &lt;b&gt;. {a mathematical formula}{&lt;a&gt;}, {a mathematical formula}{&lt;b&gt;} mean the set of tuples that respectively contain sequences &lt;a&gt;,&lt;b&gt; in a sequence database. There are three 2-length sequences: {a mathematical formula}&lt;ab&gt;, {a mathematical formula}&lt;ba&gt; and {a mathematical formula}&lt;(ab)&gt;, and four disjointed sets: {a mathematical formula}{&lt;(ab)&gt;only}, {a mathematical formula}{&lt;ab&gt;only}, {a mathematical formula}{&lt;ba&gt;only} and {a mathematical formula}{&lt;ab&gt;}∩{&lt;ba&gt;}, which are the sets of tuples that contain sequences {a mathematical formula}&lt;(ab)&gt; only, {a mathematical formula}&lt;ab&gt; only, {a mathematical formula}&lt;ba&gt; only, and both {a mathematical formula}&lt;ab&gt; and {a mathematical formula}&lt;ba&gt; respectively.Taking {a mathematical formula}{&lt;a¬b&gt;} as an example, as seen in Fig. 2, we have:{a mathematical formula}This result is consistent with the negative containment definition, by which data sequences containing {a mathematical formula}{&lt;a¬b&gt;} are the same sequences that contain {a mathematical formula}{&lt;a&gt;} but do not contain {a mathematical formula}{&lt;ab&gt;}.Subsequently, we obtain:{a mathematical formula} Similarly,{a mathematical formula}Fig. 3 illustrates the meaning of {a mathematical formula}sup(ns) in terms of set theory. Given {a mathematical formula}ns=&lt;a¬bc¬def&gt;, {a mathematical formula}1−negMSSns={&lt;a¬bce&gt;,&lt;ac¬de&gt;,&lt;ace¬f&gt;}, {a mathematical formula}sup(ns)=|{&lt;ace&gt;}|−|&lt;abce&gt;∪&lt;acde&gt;∪&lt;acef&gt;|.The above examples show that our proposed negative containment definition is consistent with set theory. Therefore, set properties are applicable for calculating {a mathematical formula}sup(ns). From Equation (2), we can see that {a mathematical formula}sup(ns) can be easily calculated if we know {a mathematical formula}sup(MPS(ns)) and {a mathematical formula}|∪i=1n{p(1−negMSi)}|. According to Constraint 3 and the negative candidate generation approach discussed in Section 4.5, {a mathematical formula}MPS(ns) and {a mathematical formula}p(1−negMSi) are frequent. {a mathematical formula}sup(MPS(ns)) can be directly obtained by applying traditional PSP mining algorithms.We further explain why the positive partners {a mathematical formula}p(1−negMSi) are frequent. Constraint 3 ensures that the smallest negative unit in a NSC is an element. Hence, the positive partner of each NSC generated from a PSP is the PSP itself. {a mathematical formula}p(1−negMSi) is a sub-sequence of the PSP. Both {a mathematical formula}p(1−negMSi) and the PSP are positive sequences and meet the downward closure property, therefore {a mathematical formula}p(1−negMSi) are frequent.Now the problem is how to calculate {a mathematical formula}|∪i=1n{p(1−negMSi)}|. Our approach is as follows. We store the sid of the tuples containing {a mathematical formula}p(1−negMSi) into set {a mathematical formula}{p(1−negMSi)}, then calculate the union set of {a mathematical formula}{p(1−negMSi)}. Because {a mathematical formula}p(1−negMSi) are frequent, the sid of the tuples containing {a mathematical formula}p(1−negMSi) can be easily obtained by those well-known algorithms with minor modifications. For instance, we store the sid of the tuples containing {a mathematical formula}p(1−negMSi) to {a mathematical formula}{p(1−negMSi)}.
+      </paragraph>
+     </section>
+     <section label="4.5">
+      <section-title>
+       Negative sequential candidate generation
+      </section-title>
+      <paragraph>
+       With the above proposed components, the way to generate the negative sequential candidates (NSC) is to change any non-contiguous elements (note: not items) in a PSP to their corresponding negative elements.
+      </paragraph>
+      <paragraph label="Definition 10">
+       e-NSP Candidate GenerationFor a k-size PSP, its NSC are generated by changing any m non-contiguous elements to their negative elements, {a mathematical formula}m=1,2,…,⌜k/2⌝, where {a mathematical formula}⌜k/2⌝ is a minimum integer that is not less than {a mathematical formula}k/2.
+      </paragraph>
+      <paragraph label="Example 12">
+       The NSC based on {a mathematical formula}&lt;(ab)cd&gt; include:{a mathematical formula}{a mathematical formula}Clearly, we can generate all NSC that satisfy the three constraints for all PSP in a sequence database, as described in Section 3.2.1.
+      </paragraph>
+     </section>
+     <section label="4.6">
+      <section-title>
+       e-NSP data structure and optimization
+      </section-title>
+      <paragraph>
+       To efficiently calculate the union set, we design a data structure to store the e-NSP related data. The data structure is shown in Table 2. Column one stores positive sequential patterns, column two holds their support values, and column three encloses {a mathematical formula}{sid} which forms the set of the tuples that contain the corresponding PSP.
+      </paragraph>
+      <paragraph>
+       The e-NSP data is stored in a hash table to identify PSP efficiently, as shown in the following pseudocode.
+      </paragraph>
+      <paragraph>
+       {a mathematical formula}
+      </paragraph>
+      <paragraph>
+       To calculate the union set efficiently, we propose two optimization methods.
+      </paragraph>
+      <paragraph>
+       (1) When we calculate the support of a NSC, we also utilize a hash table to accelerate the search speed. For example, given a NSC {a mathematical formula}ns=&lt;a¬bc¬de¬f&gt;, {a mathematical formula}1-negMSSns={&lt;a¬bce&gt;,&lt;ac¬de&gt;,&lt;ace¬f&gt;}, for each sequence {a mathematical formula}1-negMSi in {a mathematical formula}1-negMSSns, it is easy to obtain its corresponding positive partner {a mathematical formula}P(1-negMSi). Then we search all {a mathematical formula}{sid} of {a mathematical formula}P(1-negMSi) and add each sid to the hash table if sid is not available in the hash table. Lastly, ns's support can be easily calculated by {a mathematical formula}sup(MPS(ns)) minus the size of the new sid set, according to Equation (2). Compared with the performance achieved using a common array, our tests show that the search speed with hash table is far more efficient.
+      </paragraph>
+      <paragraph>
+       (2) We assume that all data in the e-NSP data structure is stored in the main memory. We do not record the {a mathematical formula}{sid} of 1-size PSP because the equations do not need to calculate the union set of those {a mathematical formula}{sid} of 1-size PSP. Even in the worst situation in which the data is too big to fit completely into the main memory, by using the e-NSP candidate generation method for k-size positive sequential patterns, the size range of negative elements in the corresponding NSC is {a mathematical formula}1→⌜k/2⌝. The size range of PSP used to calculate the support of these candidates is {a mathematical formula}(⌞k/2⌟+1)→(k−1), where {a mathematical formula}⌞k/2⌟ is a maximum integer that is not larger than {a mathematical formula}k/2. Therefore, it is necessary to put only {a mathematical formula}{sid} of {a mathematical formula}(⌞k/2⌟+1)→(k−1) size PSP into the main memory.
+      </paragraph>
+      <paragraph label="Example 13">
+       Continuation of Example 12Given a PSP s, {a mathematical formula}size(s)=5, the neg-size range of NSC based on the PSP is {a mathematical formula}1→3, and the size range of PSP used is {a mathematical formula}3→4. When neg-size(NSC) = 1, the support of NSC can be calculated by Equation (2). When neg-size(NSC) = 2, we need to calculate the union set of 4-size PSP because size(1-{a mathematical formula}negMSnsc) = 4. When neg-size(NSC) = 3, we need to calculate the union set of 3-size PSP since size(1-{a mathematical formula}negMSnsc) = 3.
+      </paragraph>
+     </section>
+     <section label="4.7">
+      <section-title>
+       The e-NSP algorithm
+      </section-title>
+      <paragraph>
+       In this section, we introduce an efficient NSP (e-NSP for short) mining algorithm to instantiate the proposed ST-NSP framework. The e-NSP, as described in Algorithm 2, is proposed for mining NSP based only on identifying PSP.
+      </paragraph>
+      <paragraph>
+       e-NSP consists of three key steps: (1) All PSP are identified from the sequence database by using a PSP mining algorithm, such as GSP, PrefixSpan, and SPADE. All PSP and their sid sets are saved in a hash table PSPHash, in which the PSP hash codes are treated as ID codes. (2) For each PSP, NSC are generated by the approach presented in Section 4.5. (3) The support for each NSC ns is calculated by Equations (2), (3), (4).
+      </paragraph>
+     </section>
+     <section label="4.8">
+      <section-title>
+       An example
+      </section-title>
+      <paragraph>
+       The above sections introduced the key concepts and components as well as the e-NSP algorithm for NSP mining. This section illustrates how these concepts and components are applied for mining NSP. The sequence database is shown in Table 3. Here we set {a mathematical formula}min_sup=2.
+      </paragraph>
+      <paragraph>
+       The process is as follows.
+      </paragraph>
+      <paragraph>
+       (1) Positive sequential patterns are mining by using any existing algorithm, such as GSP, and filling in the e-NSP data structures, which are shown in Table 4.
+      </paragraph>
+      <paragraph>
+       (2) The e-NSP Candidate Generation method is applied to generate all NSC.
+      </paragraph>
+      <paragraph>
+       (3) Equations (2), (3), (4) are used to calculate the support of these NSC. The results are shown in Table 5, and the resulting NSP are marked in bold.
+      </paragraph>
+      <paragraph>
+       From this example, we can see that {a mathematical formula}&lt;ac&gt; and {a mathematical formula}&lt;a¬c&gt;, {a mathematical formula}&lt;a(ab)&gt; and {a mathematical formula}&lt;a¬(ab)&gt; are frequent patterns. In practice, not all of them are useful for business purposes as some of the non-occurring patterns may be misleading. How to select meaningful and actionable patterns has been one of our ongoing tasks [10].
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Theoretical analysis
+     </section-title>
+     <paragraph>
+      In this section, we briefly analyze the performance of e-NSP and compare it with two baseline algorithms PNSP [11] and NegGSP [38]. We select PNSP and NegGSP because they are the only available algorithms comparable to e-NSP. As the three algorithms hold different definitions of negative containment, we adjust PNSP and NegGSP to follow the same definitions and constraints presented in Section 3.
+     </paragraph>
+     <paragraph>
+      By scrutinizing the three algorithms, we find that the runtime is mainly consumed by the calculation of the support of NSC, {a mathematical formula}sup(NSC). In PNSP and NegGSP, {a mathematical formula}sup(NSC) is obtained by comparing NSC with database sequences, requiring multiple instances of database re-scanning. In e-NSP, {a mathematical formula}sup(NSC) is obtained by calculating the union set of {a mathematical formula}{p(1−negMSi)}, i.e., by comparing the Sids stored in hash tables. The number of comparison times determines the algorithm's runtime, and the arithmetic operation time in the algorithms is negligible. Therefore, the runtime analysis of these algorithms is converted to an analysis of their comparison times. As PNSP and NegGSP use a similar means to obtain {a mathematical formula}sup(NSC) and have similar time efficiency [38], we only compare e-NSP with PNSP here for simplicity, although we still compare the three algorithms in the experiments.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Runtime analysis of e-NSP
+      </section-title>
+      <paragraph>
+       In e-NSP, {a mathematical formula}sup(NSC) is calculated by Equations (2), (3), (4), where Equations (3), (4) calculate {a mathematical formula}sup(NSC) when NSC only contains a negative element, and Equation (2) calculates {a mathematical formula}sup(NSC) when NSC contains more than one negative element. As mentioned before, the runtime of obtaining {a mathematical formula}sup(NSC) by Equation (2) is mainly consumed by the calculation of the number of elements in the union set of {a mathematical formula}{p(1−negMSi)}, i.e., by comparing the sids stored in hash tables. We do not consider the time consumed in processing hash table conflict (which will be discussed later). The comparison times for calculating a {a mathematical formula}k−size and {a mathematical formula}m−neg−sizeNSC, denoted by {a mathematical formula}CTk,m, is no more than {a mathematical formula}∑i=1m|{p(1−negMSi)}|, where {a mathematical formula}|{p(1−negMSi)}| is the number of sids in {a mathematical formula}{p(1−negMSi)}, i.e., the support of {a mathematical formula}p(1−negMSi)sup(p(1−negMSi)).{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Now we discuss the generalized representation of Equation (5), because the discussions later are all based on the generalized representation and {a mathematical formula}p(1−negMSi) in Equation (5) is the support of a very detailed set {a mathematical formula}{p(1−negMSi)}. We use the average support of {a mathematical formula}{p(1−negMSi)}, {a mathematical formula}sup‾(p(1−negMSi)), instead of {a mathematical formula}sup(p(1−negMSi)). {a mathematical formula}sup‾(p(1−negMSi)) indicates the degree of sparsity of the items in a database and it meets the need of generalization. For a {a mathematical formula}k−size and {a mathematical formula}m−neg−size NSC, the size of the PSP of its corresponding {a mathematical formula}p(1−negMSi) is {a mathematical formula}k−m+1. Hence Equation (5) can be rewritten as:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Equation (6) is used to calculate the comparison times of a NSC. If we know the total number of NSCs in e-NSP, then we can obtain the total comparison times of e-NSP. According to the definition of e-NSP candidate generation, NSC is generated from PSP. For a given database and a min_sup, the total number of its PSPs is a constant. If we know the number of NSCs generated from a PSP, then we can obtain the total number of NSCs easily by a summation operation. Below we calculate the number of NSC generated from a PSP.
+      </paragraph>
+      <section label="5.1.1">
+       <section-title>
+        The number of NSC generated from a PSP
+       </section-title>
+       <paragraph>
+        Let {a mathematical formula}|NSCk,m| denote the number of {a mathematical formula}m−neg−size NSCs generated from a {a mathematical formula}k−size PSP. According to the definition of e-NSP candidate generation and related properties of permutations and combinations, {a mathematical formula}|NSCk,m| can be recognized as the combinations of taking m elements from ({a mathematical formula}k−m+1) elements and can be calculated by Equation (7).{a mathematical formula}
+       </paragraph>
+       <paragraph label="Example 14">
+        Let {a mathematical formula}|NSCk,∀m| denote the number of NSCs generated from a {a mathematical formula}k−size PSP, then {a mathematical formula}|NSCk,∀m| can be calculated by Equation (8).{a mathematical formula}Get {a mathematical formula}|NSCk,m| and NSCs of {a mathematical formula}&lt;abc&gt;.The size k of {a mathematical formula}&lt;abc&gt; is 3 and {a mathematical formula}m=1,2. Therefore, {a mathematical formula}|NSC3,1|=3 and the corresponding NSCs are {a mathematical formula}&lt;¬abc&gt;, {a mathematical formula}&lt;a¬bc&gt; and {a mathematical formula}&lt;ab¬c&gt;; {a mathematical formula}|NSC3,2|=1 and the corresponding NSC is {a mathematical formula}&lt;¬ab¬c&gt;.More values of {a mathematical formula}|NSCk,m| at different k and m are shown in Table 6.
+       </paragraph>
+      </section>
+      <section label="5.1.2">
+       <section-title>
+        The total number of comparison times to calculate all union sets in e-NSP
+       </section-title>
+       <paragraph>
+        Let {a mathematical formula}|PSPk| denote the number of all {a mathematical formula}k−size PSPs in database D and the maximum size of PSPs be k. The number of NSCs generated from all {a mathematical formula}k−size PSPs is {a mathematical formula}|PSPk|⁎|NSCk,∀m|. The total number of NSCs generated from all PSPs by e-NSP, {a mathematical formula}|NSC|e−NSP, is{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        According to the above discussions, the union set operation is only needed when {a mathematical formula}k≥3 and {a mathematical formula}m≥2. Hence the comparison times of all union set operations in e-NSP, {a mathematical formula}CTe−NSP, is{a mathematical formula}
+       </paragraph>
+       <paragraph label="Example 15">
+        Let the maximum size of PSPs in database D be 8, the comparison times of all union set operation in e-NSP are as follows.{a mathematical formula}
+       </paragraph>
+      </section>
+      <section label="5.1.3">
+       <section-title>
+        Time for processing hash table conflict
+       </section-title>
+       <paragraph>
+        The discussion above does not consider the time consumed in processing the hash table conflict. As the time consumed is considerable, it is necessary to consider resolutions for the hash table conflict. Although methods of resolving the hash table conflict in different operating systems and software setting may vary, our analysis shows that this does not affect the analysis. Here we use the secondary re-hashing detection to resolve the hash table conflict. In a hash table, the average search times are {a mathematical formula}1αln⁡(1−α) when a search is successful, and are {a mathematical formula}11−α when the search is not successful, where α is the load factor and{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        Because {a mathematical formula}11−α&gt;1αln⁡(1−α), we use {a mathematical formula}11−α as the average search time. Let {a mathematical formula}te−NSP denote the time of a search in the hash table, then the total time for calculating all the union sets in e-NSP, {a mathematical formula}Te−NSP is calculated as{a mathematical formula}
+       </paragraph>
+      </section>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Runtime analysis of PNSP
+      </section-title>
+      <paragraph>
+       Here we illustrate how to analyze the runtime of a NSP algorithm in terms of PNSP, which shares some similarity with ours. PNSP works in three phases. 1) PSPs are mined by GSP algorithms and from these PSPs, all positive itemsets are derived as {a mathematical formula}1−size PSP. 2) {a mathematical formula}1−size NSP are derived from these {a mathematical formula}1−size PSP, where the support of {a mathematical formula}1−size NSP is more than or equal to min_sup but less than or equal to a user specified missing frequency threshold miss_feq. 3) Both positive and negative itemsets are joined to generate NSC. Generally speaking, {a mathematical formula}k−size NSC are generated by appending a {a mathematical formula}(k−1)−size NSP and PSP with a {a mathematical formula}1−size PSP or a {a mathematical formula}1−size NSP. If the last element of a {a mathematical formula}(k−1)−size NSP is a negative itemset, a {a mathematical formula}1−size PSP is appended to form a NSC; otherwise, {a mathematical formula}1−size PSP or {a mathematical formula}1−size NSP is appended to form two NSCs. The supports of these candidates are then counted by scanning the database. The support of a negative sequence {a mathematical formula}&lt;¬e&gt; is calculated by Equation (4), as in e-NSP.
+      </paragraph>
+      <paragraph>
+       Now we analyze the comparison times in PNSP. PNSP calculates the support of a NSC, {a mathematical formula}sup(NSC), by comparing a NSC with every data sequence in database D. The maximum comparison times of a NSC and a data sequence ds is the length of ds. Suppose the average length of data sequence in database D is denoted by {a mathematical formula}lengthds‾ and the number of data sequences in D is denoted by {a mathematical formula}|D|, then the comparison times for obtaining a NSC, denoted by CT, is {a mathematical formula}lengthds‾⁎|D|. Suppose the total number of NSCs by PNSP is {a mathematical formula}|NSC|PNSP, then the total comparison time for all NSCs, {a mathematical formula}CTPNSP, is{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Next we analyze {a mathematical formula}CTPNSP. Because the generation method of NSC in PNSP is different from that in e-NSP, {a mathematical formula}|NSC|PNSP is also different from {a mathematical formula}|NSC|e−NSP. Let {a mathematical formula}|NSCkPNSP| denote the number of all {a mathematical formula}k−size NSCs, {a mathematical formula}|PNSPk| denote the number of all {a mathematical formula}k−size PSP and {a mathematical formula}k−size NSP in D. According to the generation method of NSC in PNSP,{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Suppose the maximum size of PSP in D is k, then the number of NSCs in D by PNSP is{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Accordingly, the total comparison times by PNSP, i.e., {a mathematical formula}CTPNSP, is{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Clearly, {a mathematical formula}|NSC|PNSP is significantly larger than {a mathematical formula}|NSC|e−NSP. It is rather unfair if we directly use Equation (15) to derive all the comparison times of PNSP to compare with Equation (9). This is because the definition of negative containment in PNSP is different from that in e-NSP, as discussed earlier in this section. PNSP cannot generate NSC in the same way as e-NSP because of the constraints of its original definition. Since we change PSNP to follow the same definitions and constraints as in e-NSP, and adopt the same method of generating NSC as in e-NSP, we use Equation (9) instead of Equation (15) as the whole number of NSC in PNSP. Equation (16) is thus rewritten as Equation (17) below.{a mathematical formula}
+      </paragraph>
+      <paragraph label="Example 16">
+       Let the maximum size of PSPs in database D be 8, we calculate {a mathematical formula}CTPNSP as:{a mathematical formula}Let {a mathematical formula}tPNSP denote the time an item in NSC is compared with an item in a data sequence, then the total time for calculating the supports of all NSC, i.e., {a mathematical formula}TPNSP, is{a mathematical formula}
+      </paragraph>
+     </section>
+     <section label="5.3">
+      <section-title>
+       Runtime comparison between e-NSP and PNSP against data factors
+      </section-title>
+      <paragraph>
+       The runtime ratio between e-NSP and PNSP is the ratio of Equation (12) to Equation (18):{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Although {a mathematical formula}te−NSP, {a mathematical formula}tPNSP and α are different for different experimental environments (hardware and software), {a mathematical formula}11−α⁎te−NSPtPNSP is a constant for the same experimental environment. Accordingly, the runtime comparison between e-NSP and PNSP becomes a comparison of the time taken by each to generate NSC.
+      </paragraph>
+      <section label="5.3.1">
+       <section-title>
+        Runtime in terms of data factors
+       </section-title>
+       <paragraph>
+        We further assess the runtime of e-NSP {a mathematical formula}Te−NSP and PNSP {a mathematical formula}TPNSP in terms of the data factors describing the characteristics of a dataset. First, we define the concept “data factor” below.
+       </paragraph>
+       <paragraph label="Definition 11">
+        Data FactorA data factor describes the characteristic of underlying data from a particular perspective. We specify the following data factors: {a mathematical formula}C,T,S,I,DB and N to describe the characteristics of sequential data [2].
+       </paragraph>
+       <list>
+        <list-item label="•">
+         C: Average number of elements per sequence;
+        </list-item>
+        <list-item label="•">
+         T: Average number of items per element;
+        </list-item>
+        <list-item label="•">
+         S: Average length of potentially maximal sequences;
+        </list-item>
+        <list-item label="•">
+         I: Average size of items per element in potentially maximal large sequences;
+        </list-item>
+        <list-item label="•">
+         DB: Number of sequences in a database; and
+        </list-item>
+        <list-item label="•">
+         N: Number of items.
+        </list-item>
+       </list>
+       <paragraph>
+        We derive {a mathematical formula}Te−NSP in Equation (10) and {a mathematical formula}TPNSP in Equation (17) in terms of the above data factors. {a mathematical formula}lengthds‾ can be represented by {a mathematical formula}C⁎T and the size of sequence k can be represented by {a mathematical formula}S/I. Accordingly, {a mathematical formula}Te−NSP in Equation (10) and {a mathematical formula}TPNSP in Equation (17) are converted to:{a mathematical formula}{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        We observe the complexity by tuning one data factor while the others are fixed.
+       </paragraph>
+      </section>
+      <section label="5.3.2">
+       Effect of C on runtime
+       <paragraph>
+        Here we analyze the impact of tuning data factor C on the runtime of e-NSP and PNSP while fixing other factors T, S, I, DB and N. The increase of C directly causes the increase of {a mathematical formula}CTPNSP. For e-NSP, although C does not directly appear in Equation (20), increasing C will result in the increase of m and {a mathematical formula}sup‾(PSPi−m+1) to some degree. Hence, {a mathematical formula}CTe−NSP will also increase. Since the increasing speed of {a mathematical formula}m⁎sup‾(PSPi−m+1) is slower than that of C, {a mathematical formula}CTPNSP−CTe−NSP will become greater when C increases.
+       </paragraph>
+      </section>
+      <section label="5.3.3">
+       Effect of T on runtime
+       <paragraph>
+        Here we analyze the impact of tuning data factor T on the runtime of e-NSP and PNSP while fixing other factors C, S, I, DB and N. The effect of changing T is similar to that of adjusting C. The increase of T directly causes the increase of {a mathematical formula}CTPNSP. For e-NSP, although T does not directly appear in Equation (20), increasing T will result in the increase of m and {a mathematical formula}sup‾(PSPi−m+1) to some degree. Hence, {a mathematical formula}CTe−NSP will also increase. Since the increasing speed of {a mathematical formula}sup‾(PSPi−m+1) is slower than that of T, {a mathematical formula}CTPNSP−CTe−NSP will become greater when T increases.
+       </paragraph>
+      </section>
+      <section label="5.3.4">
+       Effect of S on runtime
+       <paragraph>
+        This is to adjust data factor S while fixing others to observe its impact on the runtime. As shown in Equations (20) and (21), it will affect both e-NSP and PNSP in a complicated way since it will affect m. The trend of {a mathematical formula}CTPNSP decrease will be proportionally less than that of {a mathematical formula}CTe−NSP, and thus the overall gap may increase.
+       </paragraph>
+      </section>
+      <section label="5.3.5">
+       Effect of I on runtime
+       <paragraph>
+        This is to tune the factor I to observe its impact on the runtime. As shown in Equations (20) and (21), it will affect both e-NSP and PNSP. Both will increase, while PNSP will increase proportionally faster than e-NSP when I increases, and the gap will thus also increase.
+       </paragraph>
+      </section>
+      <section label="5.3.6">
+       Effect of DB on runtime
+       <paragraph>
+        Here we adjust DB to see its impact on the runtime while other factors are fixed. Increasing DB will directly increase {a mathematical formula}CTPNSP, but {a mathematical formula}CTe−NSP has nothing to do with DB. Therefore, the gap {a mathematical formula}CTPNSP−CTe−NSP will become greater when DB increases. We will further analyze scalability in Section 6.4.
+       </paragraph>
+      </section>
+      <section label="5.3.7">
+       Effect of N on runtime
+       <paragraph>
+        Similarly, we adjust N while fixing all other data factors. Increasing N will decrease {a mathematical formula}sup‾(PSPi−m+1) and thus decrease {a mathematical formula}CTe−NSP. However, {a mathematical formula}CTPNSP is not sensitive to N. Therefore, {a mathematical formula}CTPNSP−CTe−NSP will become smaller when N increases.
+       </paragraph>
+       <paragraph>
+        In summary, e-NSP performs generally more efficiently than PNSP from the various data factors perspective. e-NSP is particularly suitable for datasets with a smaller number of elements in a sequence (indicating that m is small) but a larger number of itemsets ({a mathematical formula}|DB| is large). In Sections 6.3 and 6.4, the above empirical theoretical analysis from the data factor perspective is further verified by the corresponding experiments.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Experiments and evaluation
+     </section-title>
+     <paragraph>
+      We conduct substantial experiments on three synthetic datasets and six real-life datasets to compare the efficiency and scalability of e-NSP with two comparable baseline approaches PNSP [11] and NegGSP [38]. Existing positive sequential pattern mining algorithm GSP is used to discover positive patterns first, then e-NSP, PNSP and NegGSP are applied to separately mine for NSP.
+     </paragraph>
+     <paragraph>
+      All algorithms are implemented in Java. e-NSP is specifically developed on the SPMF framework [42]. All the experiments are run on a virtual machine with 12 CPUs and 128 GB memory on the UTS High Performance Computing Linux Cluster. We compare their computational costs on different data sizes, data characteristics, and scalability. e-NSP is also used to detect fraudulent claims in health insurance data. In the experiments, all supports (and minimum supports) are calculated in terms of the percentage of the frequency {a mathematical formula}|&lt;s&gt;| of a pattern s compared to the number of sequences {a mathematical formula}|D| in the database.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       Datasets
+      </section-title>
+      <paragraph>
+       In total, nine source datasets are used for the experiments. They comprise six real datasets and three synthetic datasets generated by IBM data generator [2]. To describe and observe the impact of data characteristics on algorithm performance, we use the concept of data factors defined in the above section to summarize the data characteristics.
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Dataset 1 (DS1), C8_T4_S6_I6_DB100k_N100.
+       </list-item>
+       <list-item label="•">
+        Dataset 2 (DS2), C10_T8_S20_I10_DB10k_N0.2k.
+       </list-item>
+       <list-item label="•">
+        Dataset 3 (DS3) is from UCI and consists of MSNBC.com anonymous web data about web page visits. Visits were recorded at the page category and in a temporal order.
+       </list-item>
+       <list-item label="•">
+        Dataset 4 (DS4) is a real application dataset of health insurance claim sequences. The dataset contains 5269 customers/sequences. The average number of elements in a sequence is 21. The minimum number of elements in a sequence is 1, and the maximum number is 144. The file size is around 5M.
+       </list-item>
+       <list-item label="•">
+        Dataset 5 (DS5) is a Chain-Store real-life dataset containing 46,086 distinct items and 1,112,949 transactions [41], and is frequently used for testing utility-based sequential pattern mining.
+       </list-item>
+       <list-item label="•">
+        Dataset 6 (DS6) is a KDD-CUP 2000 dataset which contains 59,601 sequences of e-commerce clickstreams. It contains 497 distinct items. The average length of each sequence is 2.42 items with a standard deviation of 3.22. The dataset contains a number of long sequences. For example, 318 sequences contain more than 20 items.
+       </list-item>
+       <list-item label="•">
+        Dataset 7 (DS7) is another dataset used in the KDD-CUP 2000 competition. It contains 77,512 sequences of click-stream data with 3340 distinct items. The average length of a sequence is 4.62 items with a standard deviation of 6.07 items.
+       </list-item>
+       <list-item label="•">
+        Dataset 8 (DS8) is a dataset of 20,450 sequences of click stream data from the website of FIFA World Cup 98. It has 2990 distinct items (webpages). The average sequence length is 34.74 items with a standard deviation of 24.08 items. This dataset was created by processing a section of the World Cup web log.
+       </list-item>
+       <list-item label="•">
+        Dataset 9 (DS9) (C8_T4_S6_I6_DB10k_N100), was generated to test how different factors affect the performance of e-NSP, PNSP and NegGSP. The DS9 dataset was extended to 16 additional sub-datasets, labeled as {a mathematical formula}DS9.1.X, {a mathematical formula}DS9.2.X, {a mathematical formula}DS9.3.X, {a mathematical formula}DS9.4.X ({a mathematical formula}X=1,2,3) and {a mathematical formula}DS9.5.Y ({a mathematical formula}Y=1,…,4), to embed different data distributions in terms of data factors.
+       </list-item>
+      </list>
+      <paragraph>
+       Table 7 summarizes the characteristics of all the above datasets.
+      </paragraph>
+     </section>
+     <section label="6.2">
+      <section-title>
+       Computational cost
+      </section-title>
+      <paragraph>
+       The execution time of mining NSP by the three algorithms is shown in Fig. 4, Fig. 5. e-NSP always takes much less time than PNSP and NegGSP on all datasets. When the minimum support is set very low, e-NSP only uses a small percentage of the execution time of the other two algorithms. For example, e-NSP spends 0.5% to 0.3% of PNSP runtime on DS3 when min_sup decreases from 0.012 to 0.008. When min_sup reduces to 0.008, PNSP and NegGSP take around one hour, but e-NSP takes only 10 seconds. This is because e-NSP only needs to “calculate” the NSP supports based on the sid sets of corresponding positive patterns, while PNSP and NegGSP have to re-scan the whole dataset. In general, e-NSP only takes 0.1–2% of the runtime of PNSP or NegGSP on all datasets DS1 to DS8.
+      </paragraph>
+      <paragraph>
+       While all three algorithms suffer from data complexities, as shown in Fig. 4(b), (c) and (d) and in Fig. 5(a) and (b), PNSP and NegGSP are sometimes unable to generate outcomes when the minimum support is very low, whereas e-NSP works well. The trend observation shows that irrespective of whether or not the data is complex, e-NSP works in a near linear way, while both PNSP and NegGSP suffer substantially from the exponential increase of computational time.
+      </paragraph>
+      <paragraph>
+       When we scrutinize the performance dynamics of e-NSP and its baselines on eight datasets, it is challenging to draw a clear conclusion as to which data factors most affect performance. For this reason, we analyze the performance in terms of data characteristics in the section that follows.
+      </paragraph>
+      <paragraph>
+       We also show the maximum length and number of negative patterns on the eight datasets (see the outcomes in Fig. 6, Fig. 7). When the minimum support is substantially reduced, more patterns are exponentially generated. e-NSP is robust to the maximum length of negative patterns, since the runtime for e-NSP increases more slowly than the runtime for the other two algorithms when the maximum length increases.
+      </paragraph>
+     </section>
+     <section label="6.3">
+      <section-title>
+       Analysis of data characteristics
+      </section-title>
+      <paragraph>
+       In this section, we explore the impact of data characteristics in terms of the data factors specified in Section 5.3 on the performance of e-NSP, compared to PNSP and NegGSP, as well as the sensitivity of e-NSP on particular data factors.
+      </paragraph>
+      <paragraph>
+       We generate various types of synthetic datasets with different distributions to evaluate the impact of data factors in dataset DS9 on algorithm performance. DS9 is extended to 16 different subsets by tuning each factor, as shown in Table 8, Table 9. For example, dataset DS9.1.1(C4T4S6I6.DB10k.N100) is different from DS9(C8T4S6I6.DB10k.N100) on C factor, which means each dataset has a different average number of elements in a sequence. We mark the differentiators by underlining the respective distinct factor for each dataset in Table 8, Table 9.
+      </paragraph>
+      <paragraph>
+       In Table 8, Table 9, {a mathematical formula}tNegGSP(s), {a mathematical formula}tPNSP(s) and {a mathematical formula}te−NSP(s) represent the runtime of NegGSP, PNSP and e-NSP in terms of seconds (s) respectively. Overall, e-NSP is much more efficient than NegGSP and PNSP under different combinations of data factors and with various minimum supports.
+      </paragraph>
+      <paragraph>
+       We use {a mathematical formula}te−NSP/tPNSP to show the proportion of e-NSP's performance compared to that of PNSP. It shows that e-NSP only spends about {a mathematical formula}0.5% to {a mathematical formula}3.6% of {a mathematical formula}tPNSP on all combinations of different data factors, in terms of factors C, T and S and I and N. In addition, with various minimum supports, e-NSP always shows outstanding performance compared to the other two algorithms. This observation is consistent with our theoretical analysis in Section 5.3. In most cases, e-NSP demonstrates better performance when min_sup gets lower, and the value of {a mathematical formula}te−NSP/tPNSP decreases slightly.
+      </paragraph>
+      <paragraph>
+       According to the results shown in Table 8, Table 9 and Fig. 8, Fig. 9, Fig. 10, factors C, T, I and N seriously affect the performance of the three algorithms. There is not much change in runtime when S increases from 2 to 8, which is slightly different from our theoretical analysis. Note that in the synthetic data generator, factor S is constrained and affected by factors C, I and T, so purely changing S would not affect the real data distribution. It is reasonable to suppose that factor S does not greatly affect algorithm performance.
+      </paragraph>
+      <paragraph>
+       As discussed in Section 5.3, the impact of data factors on computational performance of NSP mining is very complicated. Fig. 8, Fig. 9, Fig. 10 compare the different data combinations of e-NSP, PNSP and NegGSP in terms of various minimum supports. The figures show that e-NSP substantially beats PNSP on all datasets for any minimum support by spending only {a mathematical formula}0.5% to {a mathematical formula}3.6% of PNSP runtime. In particular, when minimum support decreases, the advantage of e-NSP remains relatively consistent. This shows the strong potential of e-NSP against different data characteristics.
+      </paragraph>
+     </section>
+     <section label="6.4">
+      <section-title>
+       Scalability test
+      </section-title>
+      <paragraph>
+       e-NSP calculates supports based on the sid sets of corresponding positive patterns, thus its performance is sensitive to the size of sid sets. If a dataset is huge, it produces large sid sets. The scalability test is conducted to evaluate the e-NSP performance on large datasets. Fig. 11 shows the results of e-NSP on datasets DS6 and DS8, in terms of different data sizes: from 10 (i.e., 8M) to 50 (40M and 2,980,050 sequences) times of DS6, and from 5 (13M) to 25 (65M and 511,250 sequences) times of DS8, with various low minimum supports min_sup 0.0007, 0.0008, 0.0009 and 0.001 on DS6, and 0.12, 0.14, 0.16 and 0.18 on DS8, respectively.
+      </paragraph>
+      <paragraph>
+       On DS6, for example, when the sampled data size increases to 50 times its original size (see the results corresponding to label ‘X50’) and {a mathematical formula}min_sup=0.001, e-NSP takes 140 seconds to obtain the results. This is around seven times of the runtime on the 10 times (X10) data size. This indicates that the increase of five times the data size leads to about seven times runtime growth.
+      </paragraph>
+      <paragraph>
+       Both results on DS6 and DS8 in Fig. 11 show that the growth of runtime of e-NSP on large scale data follows a roughly linear relationship with the data size increase on different minimum supports. The results in this scalability test show that e-NSP works particularly well on very large datasets.
+      </paragraph>
+     </section>
+     <section label="6.5">
+      <section-title>
+       Experimental summary
+      </section-title>
+      <paragraph>
+       In summary, the above substantial experiments result in the following observations on e-NSP:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        e-NSP is highly efficient, performing tens to hundreds of times faster than the two baseline algorithms, and is applicable for mining NSP from very large scale data.
+       </list-item>
+       <list-item label="•">
+        e-NSP works extremely well for such scenarios as having a small number of elements in a sequence, a small number of items in an element, and a large number of itemsets. The length of patterns and the average number of items in an element of patterns are not sensitive to e-NSP.
+       </list-item>
+       <list-item label="•">
+        The scalability test shows that the runtime of e-NSP has a near linear relationship with the number of data sequences. It shows that e-NSP performs well on large scale datasets.
+       </list-item>
+       <list-item label="•">
+        The advantage of e-NSP remains well on both very low and high minimum supports, while the baselines work better on high minimum support and sometimes they cannot produce outcomes on low minimum supports.
+       </list-item>
+      </list>
+      <paragraph>
+       The above experiment observations are supported by the theoretical design of e-NSP, and the results are consistent with the theoretical analysis.
+      </paragraph>
+      <list>
+       <list-item label="•">
+        The proposed set theory-based NSP mining framework, namely ST-NSP framework, lays a solid theoretical foundation for the outstanding performance of e-NSP. The ST-NSP framework presents an innovative and efficient learning framework for handling not only NSP mining but also the general non-occurring behavior analytics problems [8] in large scale data and applications.
+       </list-item>
+       <list-item label="•">
+        The proposed constraints on frequency, format and negative elements make the ST-NSP framework and its instantiated algorithm e-NSP workable. The e-NSP data structure and optimization strategy also contribute to the performance of e-NSP.
+       </list-item>
+       <list-item label="•">
+        The theoretical analysis of the computational complexity of e-NSP and other NSP algorithms in terms of data factors provides solid argument for the soundness of e-NSP. The data factors-based analysis provides a valuable path for understanding why e-NSP works better and when e-NSP works better in terms of data characteristics and their matching to the theoretical design.
+       </list-item>
+      </list>
+     </section>
+     <section label="6.6">
+      <section-title>
+       Case study: fraudulent claim detection
+      </section-title>
+      <paragraph>
+       In the health insurance industry, medical treatments often follow certain rules. The non-occurrence of some medical service codes in claim transactions may indicate problems (such as fraud) in service procedures, protheses or specific diseases. For certain patients, for example, the medical service code a should always occur after another code b in their claim history. If a customer claims a but has not made a prior claim for b, which is represented as a NSP {a mathematical formula}&lt;¬ba&gt;, the claim might be treated as potentially suspicious. NSP mining can be applied here to identify non-occurring services in health insurance claims.
+      </paragraph>
+      <paragraph>
+       We applied e-NSP for more than one non-occurring medical service code (that is, more than one negative item) in insurance claims to detect claim fraud. We assume a fraud may exist if a customer's medical claim sequence s satisfies the following conditions:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}s=&lt;i1i2…in&gt;, {a mathematical formula}ix ({a mathematical formula}1⩽x⩽n) is a positive item and represents one medical service code;
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}s′ is m-neg-size negative sequence, and the positive parter of {a mathematical formula}s′ is {a mathematical formula}p(s′)=s;For example, when {a mathematical formula}m=1, {a mathematical formula}s′=&lt;i1…¬ix…in&gt;(1⩽x⩽n); when {a mathematical formula}m=2, {a mathematical formula}s′=&lt;i1…¬ixix+1…iy−1¬iy…in&gt;(1⩽x&lt;y⩽n);
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}sup(s′)/sup(s)&lt;min_ratio or {a mathematical formula}sup(s)/sup(s′)&lt;min_ratio (i.e. {a mathematical formula}min_ratio=0.02)
+       </list-item>
+      </list>
+      <paragraph>
+       since medical codes that should occur together do not appear together in the claims.
+      </paragraph>
+      <paragraph>
+       We identified the above negative claim patterns, which have been converted into business rules for health insurance fraud detection. For example, if a patient claimed item CMBS [1] code 45530 for a rectus abdominis flap, item 45569 should also be claimed for the closure of the abdomen and reconstruction of the umbilicus. CMBS code 45530 represents breast reconstruction using a latissimus dorsi or other large muscle or myocutaneous flap, including repair of secondary skin defects; 45569 represents closure of the abdomen with reconstruction of the umbilicus, with or without lipectomy. That is to say, 45569 should be claimed with 45530; if the patient claim history shows {a mathematical formula}&lt;45530¬45569&gt; then it is suspicious and should be reviewed. Similar examples can be identified in healthcare data by e-NSP to detect abnormal services that are unlikely to occur together in medical treatments.
+      </paragraph>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      Discussions
+     </section-title>
+     <paragraph>
+      As the incorporation of various constraints into NSP mining shows, the study of NSP is at a very early stage. There are many problems that cannot be addressed by existing NSP methods. In fact, non-occurring behavior analytics (NBA) is a critical new area as discussed in [8]. We especially highlight the following important aspects in NBA, particularly in relation to NSP mining.
+     </paragraph>
+     <list>
+      <list-item label="•">
+       ST-NSP framework: e-NSP successfully demonstrates the effectiveness of the ST-NSP framework, which requires more theoretical analysis to make it more effective for NSP mining with relaxed constraints, and more efficient for data with different data characteristics and complexities.
+      </list-item>
+      <list-item label="•">
+       Constraints: The format constraint restricts those NSP with continuous negative elements, e.g., {a mathematical formula}&lt;¬a¬bc&gt;, to be identified by existing NSP algorithms. The negative element constraint filters those patterns mixing non-occurring and occurring items in one element. Innovative and efficient frameworks and algorithms need to be developed in the future.
+      </list-item>
+      <list-item label="•">
+       Scalability: While e-NSP demonstrates great potential in discovering NSP in large scale data, the number of NSC increases exponentially when the length and size of a positive pattern increase. New design is needed to reduce the number of NSC while releasing the constraint on negative elements.
+      </list-item>
+      <list-item label="•">
+       Data characteristics: Limited research outcomes can be found in the literature concerning the theoretical analysis of the impact of data characteristics on learning performance and the incorporation into technical design in terms of data factors. As shown in e-NSP, this serves as the driving force for designing an effective and efficient learning framework and algorithms.
+      </list-item>
+     </list>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     <section-title>
+      Supplementary material
+     </section-title>
+     <paragraph>
+      The following is the Supplementary material related to this article.{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}
+     </paragraph>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

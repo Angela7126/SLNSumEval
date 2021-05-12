@@ -1,0 +1,1456 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Low-Rank Tensors for Scoring Dependency Structures</title>
+<!--Generated on Wed Jun 11 19:03:26 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Low-Rank Tensors for Scoring Dependency Structures</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Tao Lei, Yu Xin, Yuan Zhang, Regina Barzilay, and Tommi Jaakkola
+<br class="ltx_break"/>Computer Science and Artificial Intelligence Laboratory 
+<br class="ltx_break"/>Massachusetts Institute of Technology 
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">taolei, yuxin, yuanzh, regina, tommi</span>}<span class="ltx_text ltx_font_typewriter">@csail.mit.edu</span> 
+<br class="ltx_break"/>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Accurate scoring of syntactic structures such as head-modifier arcs in dependency parsing typically requires rich, high-dimensional feature representations. A small subset of such features is often selected manually. This is problematic when features lack clear linguistic meaning as in embeddings or when the information is blended across features. In this paper, we use tensors to map high-dimensional feature vectors into low dimensional representations. We explicitly
+maintain the parameters as a low-rank tensor to obtain low dimensional representations of words in their syntactic roles, and to leverage modularity in the tensor for easy training with online algorithms.
+Our parser consistently outperforms the Turbo and MST
+parsers across 14 different languages. We also obtain the best published UAS results on 5
+languages.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>Our code is available at <a href="https://github.com/taolei87/RBGParser" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter">https://github.com/taolei87/RBGParser</span></a>.</span></span></span></p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Finding an expressive representation of input sentences is crucial for accurate parsing. Syntactic relations manifest themselves in a broad range of surface indicators, ranging from morphological to lexical, including positional and part-of-speech (POS) tagging features. Traditionally, parsing research has focused on modeling the direct connection between the features and the predicted syntactic relations such as head-modifier (arc) relations in dependency parsing. Even in the
+case of first-order parsers, this results in a high-dimensional vector representation of each arc. Discrete features, and their cross products, can be further complemented with auxiliary information about words participating in an arc, such as continuous vector representations of words. The exploding dimensionality of rich feature vectors must then be balanced with the difficulty of effectively learning the associated parameters from limited training data.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">A predominant way to counter the high dimensionality of features
+is to manually design or select a meaningful set of feature
+templates, which are used to generate different types of
+features <cite class="ltx_cite">[<a href="#bib.bib3" title="Online large-margin training of dependency parsers" class="ltx_ref">27</a>, <a href="#bib.bib24" title="Efficient third-order dependency parsers" class="ltx_ref">16</a>, <a href="#bib.bib12" title="Turning on the turbo: fast third-order non-projective turbo parsers" class="ltx_ref">22</a>]</cite>.
+Direct manual selection may be problematic for two reasons. First,
+features may lack clear linguistic interpretation as in distributional
+features or continuous vector embeddings of words. Second,
+designing a small subset of templates (and features) is
+challenging when the relevant linguistic information is distributed
+across the features. For instance, morphological properties are
+closely tied to part-of-speech tags, which in turn relate to
+positional features. These features are not redundant. Therefore, we
+may suffer a performance loss if we select only a small subset of the
+features. On the other hand, by including all the rich features, we
+face over-fitting problems.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">We depart from this view and leverage high-dimensional feature vectors
+by mapping them into low dimensional representations. We begin by
+representing high-dimensional feature vectors as multi-way
+cross-products of smaller feature vectors that represent words and
+their syntactic relations (arcs). The associated parameters are viewed
+as a tensor (multi-way array) of low rank, and optimized for parsing
+performance. By explicitly representing the tensor in a low-rank form,
+we have direct control over the effective dimensionality of the set of
+parameters. We obtain role-dependent low-dimensional representations
+for words (head, modifier) that are specifically tailored for parsing
+accuracy, and use standard online algorithms for optimizing
+the low-rank tensor components.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">The overall approach has clear linguistic and computational advantages:</p>
+<ul id="I1" class="ltx_itemize">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p">Our low dimensional embeddings are tailored to the syntactic
+context of words (head, modifier). This low dimensional syntactic abstraction
+can be thought of as a proxy to manually constructed POS tags.</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p">By automatically selecting a small number of dimensions useful
+for parsing, we can leverage a wide array of (correlated)
+features. Unlike parsers such as MST, we can easily benefit from
+auxiliary information (e.g., word vectors) appended as features.</p>
+</div></li>
+</ul>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">We implement the low-rank factorization model in the context of
+first- and third-order dependency parsing. The model was
+evaluated on 14 languages, using dependency data from CoNLL 2008 and
+CoNLL 2006. We compare our results against the
+MST <cite class="ltx_cite">[<a href="#bib.bib3" title="Online large-margin training of dependency parsers" class="ltx_ref">27</a>]</cite> and
+Turbo <cite class="ltx_cite">[<a href="#bib.bib12" title="Turning on the turbo: fast third-order non-projective turbo parsers" class="ltx_ref">22</a>]</cite> parsers. The low-rank parser achieves
+average performance of 89.08% across 14 languages, compared to
+88.73% for the Turbo parser, and 87.19% for MST. The power of
+the low-rank model becomes evident in the absence of any
+part-of-speech tags. For instance, on the English dataset, the
+low-rank model trained without POS tags achieves 90.49% on
+first-order parsing, while the baseline gets 86.70% if trained under
+the same conditions, and 90.58% if trained with 12 core POS tags.
+Finally, we demonstrate that the model can successfully leverage word
+vector representations, in contrast to the baselines.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related Work</h2>
+
+<div id="S2.SS0.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Selecting Features for Dependency Parsing</h4>
+
+<div id="S2.SS0.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">A great deal of parsing research has been dedicated to feature engineering <cite class="ltx_cite">[<a href="#bib.bib32" title="Fish transporters and miracle homes: how compositional distributional semantics can help NP parsing" class="ltx_ref">18</a>, <a href="#bib.bib33" title="Improving arabic dependency parsing with lexical and inflectional morphological features" class="ltx_ref">25</a>, <a href="#bib.bib34" title="Improving arabic dependency parsing with form-based and functional morphological features" class="ltx_ref">26</a>]</cite>. While in most state-of-the-art parsers, features are selected manually <cite class="ltx_cite">[<a href="#bib.bib3" title="Online large-margin training of dependency parsers" class="ltx_ref">27</a>, <a href="#bib.bib48" title="Non-projective dependency parsing using spanning tree algorithms" class="ltx_ref">29</a>, <a href="#bib.bib24" title="Efficient third-order dependency parsers" class="ltx_ref">16</a>, <a href="#bib.bib12" title="Turning on the turbo: fast third-order non-projective turbo parsers" class="ltx_ref">22</a>, <a href="#bib.bib37" title="Generalized higher-order dependency parsing with cube pruning" class="ltx_ref">44</a>, <a href="#bib.bib38" title="Vine pruning for efficient multi-pass dependency parsing" class="ltx_ref">35</a>]</cite>, automatic feature selection methods are gaining
+popularity <cite class="ltx_cite">[<a href="#bib.bib49" title="Structured sparsity in structured prediction" class="ltx_ref">23</a>, <a href="#bib.bib25" title="MaltOptimizer: an optimization tool for MaltParser." class="ltx_ref">1</a>, <a href="#bib.bib26" title="Automatic discovery of feature sets for dependency parsing" class="ltx_ref">31</a>, <a href="#bib.bib27" title="Effective morphological feature selection with MaltOptimizer at the SPMRL 2013 shared task" class="ltx_ref">2</a>]</cite>. Following standard machine learning practices, these algorithms iteratively select a subset of features by optimizing parsing performance on a development set. These feature selection methods are particularly promising in parsing scenarios where the optimal feature set is likely to be a small subset of the original set of candidate features. Our technique, in contrast, is suitable for cases where the relevant information is distributed across a larger set of related features.</p>
+</div>
+</div>
+<div id="S2.SS0.SSS0.P2" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Embedding for Dependency Parsing</h4>
+
+<div id="S2.SS0.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">A lot of recent work has been done on mapping words into vector spaces <cite class="ltx_cite">[<a href="#bib.bib22" title="A unified architecture for natural language processing: deep neural networks with multitask learning" class="ltx_ref">8</a>, <a href="#bib.bib21" title="Word representations: a simple and general method for semi-supervised learning" class="ltx_ref">41</a>, <a href="#bib.bib23" title="Multiview learning of word embeddings via CCA" class="ltx_ref">11</a>, <a href="#bib.bib30" title="Efficient estimation of word representations in vector space" class="ltx_ref">30</a>]</cite>. Traditionally, these vector representations have been derived primarily from co-occurrences of words within sentences, ignoring syntactic roles of the co-occurring words. Nevertheless, any such word-level representation can be used to offset inherent sparsity problems associated with full
+lexicalization <cite class="ltx_cite">[<a href="#bib.bib19" title="The AI-KU system at the SPMRL 2013 shared task : unsupervised features for dependency parsing" class="ltx_ref">5</a>]</cite>. In this sense they perform a role similar to POS tags.</p>
+</div>
+<div id="S2.SS0.SSS0.P2.p2" class="ltx_para">
+<p class="ltx_p">Word-level vector space embeddings have so far had limited impact on parsing performance. From a computational perspective, adding non-sparse vectors directly as features, including their combinations, can significantly increase the number of active features for scoring syntactic structures (e.g., dependency arc). Because of this issue, <cite class="ltx_cite">Cirik and Şensoy (<a href="#bib.bib19" title="The AI-KU system at the SPMRL 2013 shared task : unsupervised features for dependency parsing" class="ltx_ref">2013</a>)</cite> used word vectors only as unigram features (without combinations) as part of a shift reduce
+parser <cite class="ltx_cite">[<a href="#bib.bib28" title="MaltParser: a language-independent system for data-driven dependency parsing" class="ltx_ref">32</a>]</cite>. The improvement on the overall parsing performance was marginal. Another application of word vectors is
+compositional vector grammar <cite class="ltx_cite">[<a href="#bib.bib20" title="Parsing with compositional vector grammars" class="ltx_ref">36</a>]</cite>. While this method learns to map word combinations into vectors, it builds on existing word-level vector representations. In contrast, we represent words as vectors in a manner that is directly optimized for parsing. This framework enables us to learn new syntactically guided embeddings while also leveraging separately estimated word vectors as starting features, leading to improved parsing performance.</p>
+</div>
+</div>
+<div id="S2.SS0.SSS0.P3" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Dimensionality Reduction</h4>
+
+<div id="S2.SS0.SSS0.P3.p1" class="ltx_para">
+<p class="ltx_p">Many machine learning problems can be cast as matrix problems where the matrix represents a set of co-varying parameters. Such problems include, for example, multi-task learning and collaborative filtering. Rather than assuming that each parameter can be set independently of others, it is helpful to assume that the parameters vary in a low dimensional subspace that has to be estimated together with the parameters. In terms of the parameter
+matrix, this corresponds to a low-rank assumption. Low-rank constraints are commonly used for improving generalization <cite class="ltx_cite">[<a href="#bib.bib8" title="Learning the parts of objects by non-negative matrix factorization" class="ltx_ref">19</a>, <a href="#bib.bib6" title="Weighted low-rank approximations" class="ltx_ref">37</a>, <a href="#bib.bib7" title="Maximum-margin matrix factorization" class="ltx_ref">38</a>, <a href="#bib.bib35" title="Multi-task feature learning" class="ltx_ref">12</a>]</cite></p>
+</div>
+<div id="S2.SS0.SSS0.P3.p2" class="ltx_para">
+<p class="ltx_p">A strict low-rank assumption can be restrictive. Indeed, recent approaches to matrix problems decompose the parameter matrix as a sum of low-rank and sparse matrices <cite class="ltx_cite">[<a href="#bib.bib5" title="Recovering low-rank and sparse components of matrices from incomplete and noisy observations" class="ltx_ref">40</a>, <a href="#bib.bib4" title="Godec: randomized low-rank &amp; sparse matrix decomposition in noisy case" class="ltx_ref">47</a>]</cite>. The sparse matrix is used to highlight a small number of parameters that should vary independently even if most of them lie on a low-dimensional subspace <cite class="ltx_cite">[<a href="#bib.bib13" title="SpaRCS: recovering low-rank and sparse matrices from compressive measurements" class="ltx_ref">42</a>, <a href="#bib.bib36" title="Rank-sparsity incoherence for matrix decomposition" class="ltx_ref">4</a>]</cite>. We follow this decomposition while extending the parameter matrix into a tensor.</p>
+</div>
+<div id="S2.SS0.SSS0.P3.p3" class="ltx_para">
+<p class="ltx_p">Tensors are multi-way generalizations of matrices and possess an analogous notion of rank. Tensors are increasingly used as tools in spectral estimation <cite class="ltx_cite">[<a href="#bib.bib16" title="Learning mixtures of spherical gaussians: moment methods and spectral decompositions" class="ltx_ref">15</a>]</cite>, including in parsing <cite class="ltx_cite">[<a href="#bib.bib14" title="Spectral learning of latent-variable PCFGs" class="ltx_ref">6</a>]</cite> and other NLP problems <cite class="ltx_cite">[<a href="#bib.bib39" title="A tensor-based factorization model of semantic compositionality." class="ltx_ref">10</a>]</cite>, where the goal is to avoid local optima in maximum likelihood estimation. In contrast, we expand features for parsing into a multi-way tensor, and operate with an explicit low-rank representation of the associated parameter tensor. The explicit
+representation sidesteps inherent complexity problems associated with the tensor rank <cite class="ltx_cite">[<a href="#bib.bib9" title="Most tensor problems are NP-hard" class="ltx_ref">14</a>]</cite>. Our parameters are divided into a sparse set corresponding to manually chosen MST or Turbo parser features and a larger set governed by a low-rank tensor.</p>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Problem Formulation</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">We will commence here by casting first-order dependency parsing as a tensor estimation problem. We will start by introducing the notation used in the paper, followed by a more formal description of our dependency parsing task.</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Basic Notations</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m1" class="ltx_Math" alttext="A\in\mathbb{R}^{n\times n\times d}" display="inline"><mrow><mi>A</mi><mo>∈</mo><msup><mi>ℝ</mi><mrow><mi>n</mi><mo>×</mo><mi>n</mi><mo>×</mo><mi>d</mi></mrow></msup></mrow></math> be a 3-dimensional tensor (a 3-way array). We denote each element of the tensor as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m2" class="ltx_Math" alttext="A_{i,j,k}" display="inline"><msub><mi>A</mi><mrow><mi>i</mi><mo>,</mo><mi>j</mi><mo>,</mo><mi>k</mi></mrow></msub></math>
+where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m3" class="ltx_Math" alttext="i\in[n],j\in[n],k\in[d]" display="inline"><mrow><mrow><mi>i</mi><mo>∈</mo><mrow><mo>[</mo><mi>n</mi><mo>]</mo></mrow></mrow><mo>,</mo><mrow><mrow><mi>j</mi><mo>∈</mo><mrow><mo>[</mo><mi>n</mi><mo>]</mo></mrow></mrow><mo>,</mo><mrow><mi>k</mi><mo>∈</mo><mrow><mo>[</mo><mi>d</mi><mo>]</mo></mrow></mrow></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m4" class="ltx_Math" alttext="[n]" display="inline"><mrow><mo>[</mo><mi>n</mi><mo>]</mo></mrow></math> is a shorthand for the set of integers <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m5" class="ltx_Math" alttext="\{1,2,\cdots,n\}" display="inline"><mrow><mo>{</mo><mrow><mn>1</mn><mo>,</mo><mn>2</mn><mo>,</mo><mi mathvariant="normal">⋯</mi><mo>,</mo><mi>n</mi></mrow><mo>}</mo></mrow></math>. Similarly, we use <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m6" class="ltx_Math" alttext="M_{i,j}" display="inline"><msub><mi>M</mi><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow></msub></math> and
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m7" class="ltx_Math" alttext="u_{i}" display="inline"><msub><mi>u</mi><mi>i</mi></msub></math> to represent the elements of matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m8" class="ltx_Math" alttext="M" display="inline"><mi>M</mi></math> and vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m9" class="ltx_Math" alttext="u" display="inline"><mi>u</mi></math>, respectively.</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">We define the <span class="ltx_text ltx_font_italic">inner product</span> of two tensors (or matrices) as
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m1" class="ltx_Math" alttext="\left&lt;A,B\right&gt;=\text{vec}(A)^{T}\text{vec}(B)" display="inline"><mrow><mrow><mo>⟨</mo><mrow><mi>A</mi><mo>,</mo><mi>B</mi></mrow><mo>⟩</mo></mrow><mo>=</mo><mrow><mtext>vec</mtext><mo>⁢</mo><msup><mrow><mo>(</mo><mi>A</mi><mo>)</mo></mrow><mi>T</mi></msup><mo>⁢</mo><mtext>vec</mtext><mo>⁢</mo><mrow><mo>(</mo><mi>B</mi><mo>)</mo></mrow></mrow></mrow></math>, where
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m2" class="ltx_Math" alttext="\text{vec}(\cdot)" display="inline"><mrow><mtext>vec</mtext><mo>⁢</mo><mrow><mo>(</mo><mo>⋅</mo><mo>)</mo></mrow></mrow></math> concatenates the tensor (or
+matrix) elements into a column vector. The <span class="ltx_text ltx_font_italic">squared norm</span> of a tensor/matrix is denoted by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m3" class="ltx_Math" alttext="\|A\|^{2}=\left&lt;A,A\right&gt;" display="inline"><mrow><msup><mrow><mo fence="true">∥</mo><mi>A</mi><mo fence="true">∥</mo></mrow><mn>2</mn></msup><mo>=</mo><mrow><mo>⟨</mo><mrow><mi>A</mi><mo>,</mo><mi>A</mi></mrow><mo>⟩</mo></mrow></mrow></math>.</p>
+</div>
+<div id="S3.SS1.p3" class="ltx_para">
+<p class="ltx_p">The <span class="ltx_text ltx_font_italic">Kronecker product</span> of three vectors is denoted by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m1" class="ltx_Math" alttext="u\otimes v\otimes w" display="inline"><mrow><mi>u</mi><mo>⊗</mo><mi>v</mi><mo>⊗</mo><mi>w</mi></mrow></math> and forms a rank-1 tensor such that</p>
+<table id="S3.Ex1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex1.m1" class="ltx_Math" alttext="(u\otimes v\otimes w)_{i,j,k}=u_{i}v_{j}w_{k}." display="block"><mrow><mrow><msub><mrow><mo>(</mo><mrow><mi>u</mi><mo>⊗</mo><mi>v</mi><mo>⊗</mo><mi>w</mi></mrow><mo>)</mo></mrow><mrow><mi>i</mi><mo>,</mo><mi>j</mi><mo>,</mo><mi>k</mi></mrow></msub><mo>=</mo><mrow><msub><mi>u</mi><mi>i</mi></msub><mo>⁢</mo><msub><mi>v</mi><mi>j</mi></msub><mo>⁢</mo><msub><mi>w</mi><mi>k</mi></msub></mrow></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">Note that the vectors <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m2" class="ltx_Math" alttext="u" display="inline"><mi>u</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m3" class="ltx_Math" alttext="v" display="inline"><mi>v</mi></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m4" class="ltx_Math" alttext="w" display="inline"><mi>w</mi></math> may be column or row vectors. Their orientation is defined based on usage. For example, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m5" class="ltx_Math" alttext="u\otimes v" display="inline"><mrow><mi>u</mi><mo>⊗</mo><mi>v</mi></mrow></math> is a rank-1 matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m6" class="ltx_Math" alttext="uv^{T}" display="inline"><mrow><mi>u</mi><mo>⁢</mo><msup><mi>v</mi><mi>T</mi></msup></mrow></math> when <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m7" class="ltx_Math" alttext="u" display="inline"><mi>u</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m8" class="ltx_Math" alttext="v" display="inline"><mi>v</mi></math> are column vectors (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m9" class="ltx_Math" alttext="u^{T}v" display="inline"><mrow><msup><mi>u</mi><mi>T</mi></msup><mo>⁢</mo><mi>v</mi></mrow></math> if they are row vectors).</p>
+</div>
+<div id="S3.SS1.p4" class="ltx_para">
+<p class="ltx_p">We say that tensor <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m1" class="ltx_Math" alttext="A" display="inline"><mi>A</mi></math> is in Kruskal form if</p>
+<table id="S8.EGx1" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S3.E1" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E1.m1" class="ltx_Math" alttext="\displaystyle A" display="inline"><mi>A</mi></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E1.m2" class="ltx_Math" alttext="\displaystyle=\sum_{i=1}^{r}U(i,:)\otimes V(i,:)\otimes W(i,:)" display="inline"><mrow><mi/><mo>=</mo><mrow><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>r</mi></munderover></mstyle><mrow><mrow><mrow><mrow><mrow><mi>U</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>i</mi><mo separator="true">, </mo><mo>:</mo></mrow><mo>)</mo></mrow></mrow><mo>⊗</mo><mi>V</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>i</mi><mo separator="true">, </mo><mo>:</mo></mrow><mo>)</mo></mrow></mrow><mo>⊗</mo><mi>W</mi></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>i</mi><mo separator="true">, </mo><mo>:</mo></mrow><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m2" class="ltx_Math" alttext="U,V\in\mathbb{R}^{r\times n}" display="inline"><mrow><mrow><mi>U</mi><mo>,</mo><mi>V</mi></mrow><mo>∈</mo><msup><mi>ℝ</mi><mrow><mi>r</mi><mo>×</mo><mi>n</mi></mrow></msup></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m3" class="ltx_Math" alttext="W\in\mathbb{R}^{r\times d}" display="inline"><mrow><mi>W</mi><mo>∈</mo><msup><mi>ℝ</mi><mrow><mi>r</mi><mo>×</mo><mi>d</mi></mrow></msup></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m4" class="ltx_Math" alttext="U(i,:)" display="inline"><mrow><mi>U</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>i</mi><mo separator="true">, </mo><mo>:</mo></mrow><mo>)</mo></mrow></mrow></math> is the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m5" class="ltx_Math" alttext="i^{th}" display="inline"><msup><mi>i</mi><mrow><mi>t</mi><mo>⁢</mo><mi>h</mi></mrow></msup></math> row of matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m6" class="ltx_Math" alttext="U" display="inline"><mi>U</mi></math>. We will directly learn a low-rank tensor <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m7" class="ltx_Math" alttext="A" display="inline"><mi>A</mi></math> (because <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m8" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math> is small) in this form as one of our model parameters.</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Dependency Parsing</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m1" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> be a sentence and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m2" class="ltx_Math" alttext="\mathcal{Y}(x)" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒴</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></math> the set of possible dependency trees over the words in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m3" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math>. We assume that the score <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m4" class="ltx_Math" alttext="S(x,y)" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow></math> of each candidate dependency tree <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m5" class="ltx_Math" alttext="y\in\mathcal{Y}(x)" display="inline"><mrow><mi>y</mi><mo>∈</mo><mrow><mi class="ltx_font_mathcaligraphic">𝒴</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow></math> decomposes into a sum of “local” scores for arcs. Specifically:</p>
+<table id="S8.EGx2" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S3.Ex2" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex2.m1" class="ltx_Math" alttext="\displaystyle S(x,y)=\sum_{h\rightarrow m\ \in\ y}s(h\rightarrow m)\quad\quad%&#10;\forall y\in\mathcal{Y}(x)" display="inline"><mrow><mi>S</mi><mrow><mo>(</mo><mi>x</mi><mo>,</mo><mi>y</mi><mo>)</mo></mrow><mo>=</mo><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>h</mi><mo>→</mo><mpadded width="+5.0pt"><mi>m</mi></mpadded><mo rspace="7.5pt">∈</mo><mi>y</mi></mrow></munder></mstyle><mi>s</mi><mrow><mo>(</mo><mi>h</mi><mo>→</mo><mi>m</mi><mo>)</mo></mrow><mo mathvariant="italic" separator="true">  </mo><mo>∀</mo><mi>y</mi><mo>∈</mo><mi class="ltx_font_mathcaligraphic">𝒴</mi><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m6" class="ltx_Math" alttext="h\rightarrow m" display="inline"><mrow><mi>h</mi><mo>→</mo><mi>m</mi></mrow></math> is the head-modifier dependency arc in the
+tree <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m7" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math>. Each <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m8" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math> is understood as a collection of arcs <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m9" class="ltx_Math" alttext="h\rightarrow m" display="inline"><mrow><mi>h</mi><mo>→</mo><mi>m</mi></mrow></math> where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m10" class="ltx_Math" alttext="h" display="inline"><mi>h</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m11" class="ltx_Math" alttext="m" display="inline"><mi>m</mi></math> index words in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m12" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math>.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>Note that in the case of high-order parsing, the sum <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m13" class="ltx_Math" alttext="S(x,y)" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow></math> may also include local scores for other syntactic structures, such as grandhead-head-modifier score <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m14" class="ltx_Math" alttext="s(g\rightarrow h\rightarrow m)" display="inline"><mrow><mi>s</mi><mrow><mo>(</mo><mi>g</mi><mo>→</mo><mi>h</mi><mo>→</mo><mi>m</mi><mo>)</mo></mrow></mrow></math>. See <cite class="ltx_cite">[<a href="#bib.bib12" title="Turning on the turbo: fast third-order non-projective turbo parsers" class="ltx_ref">22</a>]</cite> for a complete list of these structures.</span></span></span> For example, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m15" class="ltx_Math" alttext="x(h)" display="inline"><mrow><mi>x</mi><mo>⁢</mo><mrow><mo>(</mo><mi>h</mi><mo>)</mo></mrow></mrow></math> is the word corresponding to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m16" class="ltx_Math" alttext="h" display="inline"><mi>h</mi></math>. We suppress the dependence on <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m17" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> whenever it is clear from context. For example, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m18" class="ltx_Math" alttext="s(h\rightarrow m)" display="inline"><mrow><mi>s</mi><mrow><mo>(</mo><mi>h</mi><mo>→</mo><mi>m</mi><mo>)</mo></mrow></mrow></math> can depend on <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m19" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> in complicated ways as discussed below. The predicted parse is obtained as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m20" class="ltx_Math" alttext="\hat{y}=\mbox{arg}\max_{y\in\mathcal{Y}(x)}S(x,y)" display="inline"><mrow><mover accent="true"><mi>y</mi><mo stretchy="false">^</mo></mover><mo>=</mo><mrow><mtext>arg</mtext><mo>⁢</mo><mrow><msub><mo>max</mo><mrow><mi>y</mi><mo>∈</mo><mrow><mi class="ltx_font_mathcaligraphic">𝒴</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow></msub><mo>⁡</mo><mrow><mi>S</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow></mrow></mrow></mrow></math>.</p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p">A key problem is how we parameterize the arc scores <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m1" class="ltx_Math" alttext="s(h\rightarrow m)" display="inline"><mrow><mi>s</mi><mrow><mo>(</mo><mi>h</mi><mo>→</mo><mi>m</mi><mo>)</mo></mrow></mrow></math>. Following the MST parser <cite class="ltx_cite">[<a href="#bib.bib3" title="Online large-margin training of dependency parsers" class="ltx_ref">27</a>]</cite> we
+can define rich features characterizing each head-modifier arc, compiled into a sparse binary vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m2" class="ltx_Math" alttext="\phi_{h\rightarrow m}\in\mathbb{R}^{L}" display="inline"><mrow><msub><mi>ϕ</mi><mrow><mi>h</mi><mo>→</mo><mi>m</mi></mrow></msub><mo>∈</mo><msup><mi>ℝ</mi><mi>L</mi></msup></mrow></math> that depends on the sentence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m3" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math> as well as the chosen arc <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m4" class="ltx_Math" alttext="h\rightarrow m" display="inline"><mrow><mi>h</mi><mo>→</mo><mi>m</mi></mrow></math> (again, we suppress the dependence on <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m5" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math>). Based on this feature representation, we define the score of each arc as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m6" class="ltx_Math" alttext="s_{\theta}(h\rightarrow m)=\langle\theta,\phi_{h\rightarrow m}\rangle" display="inline"><mrow><msub><mi>s</mi><mi>θ</mi></msub><mrow><mo>(</mo><mi>h</mi><mo>→</mo><mi>m</mi><mo>)</mo></mrow><mo>=</mo><mrow><mo>⟨</mo><mi>θ</mi><mo>,</mo><msub><mi>ϕ</mi><mrow><mi>h</mi><mo>→</mo><mi>m</mi></mrow></msub><mo>⟩</mo></mrow></mrow></math> where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m7" class="ltx_Math" alttext="\theta\in\mathbb{R}^{L}" display="inline"><mrow><mi>θ</mi><mo>∈</mo><msup><mi>ℝ</mi><mi>L</mi></msup></mrow></math> represent adjustable parameters to be learned,
+and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m8" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math> is the number of parameters (and possible features in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m9" class="ltx_Math" alttext="\phi_{h\rightarrow m}" display="inline"><msub><mi>ϕ</mi><mrow><mi>h</mi><mo>→</mo><mi>m</mi></mrow></msub></math>).</p>
+</div>
+<div id="S3.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t" colspan="3"><span class="ltx_text ltx_font_bold">Unigram features:</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">form</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">form-p</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">form-n</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">lemma</td>
+<td class="ltx_td ltx_align_left ltx_border_r">lemma-p</td>
+<td class="ltx_td ltx_align_left ltx_border_r">lemma-n</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">pos</td>
+<td class="ltx_td ltx_align_left ltx_border_r">pos-p</td>
+<td class="ltx_td ltx_align_left ltx_border_r">pos-n</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">morph</td>
+<td class="ltx_td ltx_align_left ltx_border_r">bias</td>
+<td class="ltx_td ltx_border_r"/></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t" colspan="3"><span class="ltx_text ltx_font_bold">Bigram features:</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t" colspan="3">pos-p, pos</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r" colspan="3">pos, pos-n</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r" colspan="3">pos, lemma</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r" colspan="3">morph, lemma</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t" colspan="3"><span class="ltx_text ltx_font_bold">Trigram features:</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r ltx_border_t" colspan="3">pos-p, pos, pos-n</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 1: </span>Word feature templates used by our model. pos, form, lemma
+and morph stand for the fine POS tag, word form, word lemma and
+the morphology feature (provided in CoNLL format file) of the
+current word. There is a bias term that is always active for any
+word. The suffixes -p and -n refer to the left and right of the
+current word respectively. For example, pos-p means the POS tag to
+the left of the current word in the sentence.
+</div>
+</div>
+<div id="S3.SS2.p3" class="ltx_para">
+<p class="ltx_p">We can alternatively specify arc features in terms of rank-1 tensors by taking the Kronecker product of simpler feature vectors associated with the head (vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m1" class="ltx_Math" alttext="\phi_{h}\in\mathbb{R}^{n}" display="inline"><mrow><msub><mi>ϕ</mi><mi>h</mi></msub><mo>∈</mo><msup><mi>ℝ</mi><mi>n</mi></msup></mrow></math>), and modifier (vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m2" class="ltx_Math" alttext="\phi_{m}\in\mathbb{R}^{n}" display="inline"><mrow><msub><mi>ϕ</mi><mi>m</mi></msub><mo>∈</mo><msup><mi>ℝ</mi><mi>n</mi></msup></mrow></math>), as well as the arc itself (vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m3" class="ltx_Math" alttext="\phi_{h,m}\in\mathbb{R}^{d}" display="inline"><mrow><msub><mi>ϕ</mi><mrow><mi>h</mi><mo>,</mo><mi>m</mi></mrow></msub><mo>∈</mo><msup><mi>ℝ</mi><mi>d</mi></msup></mrow></math>). Here <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m4" class="ltx_Math" alttext="\phi_{h,m}" display="inline"><msub><mi>ϕ</mi><mrow><mi>h</mi><mo>,</mo><mi>m</mi></mrow></msub></math> is much lower dimensional than the MST arc feature vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m5" class="ltx_Math" alttext="\phi_{h\rightarrow m}" display="inline"><msub><mi>ϕ</mi><mrow><mi>h</mi><mo>→</mo><mi>m</mi></mrow></msub></math> discussed earlier. For example, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m6" class="ltx_Math" alttext="\phi_{h,m}" display="inline"><msub><mi>ϕ</mi><mrow><mi>h</mi><mo>,</mo><mi>m</mi></mrow></msub></math> may be composed of only
+indicators for binned arc lengths<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>In our current version, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m7" class="ltx_Math" alttext="\phi_{h,m}" display="inline"><msub><mi>ϕ</mi><mrow><mi>h</mi><mo>,</mo><mi>m</mi></mrow></msub></math> only contains the binned arc length. Other possible features include, for example, the label of the arc <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m8" class="ltx_Math" alttext="h\rightarrow m" display="inline"><mrow><mi>h</mi><mo>→</mo><mi>m</mi></mrow></math>, the POS tags between the head and the modifier, boolean flags which indicate the occurence of in-between punctutations or conjunctions, etc.</span></span></span>. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m9" class="ltx_Math" alttext="\phi_{h}" display="inline"><msub><mi>ϕ</mi><mi>h</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m10" class="ltx_Math" alttext="\phi_{m}" display="inline"><msub><mi>ϕ</mi><mi>m</mi></msub></math>, on the other hand, are built from features shown in Table <a href="#S3.T1" title="Table 1 ‣ 3.2 Dependency Parsing ‣ 3 Problem Formulation ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>. By taking the cross-product of all these component feature vectors, we obtain the full feature representation for arc <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m11" class="ltx_Math" alttext="h\rightarrow m" display="inline"><mrow><mi>h</mi><mo>→</mo><mi>m</mi></mrow></math> as a rank-1 tensor</p>
+<table id="S3.Ex3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex3.m1" class="ltx_Math" alttext="\phi_{h}\otimes\phi_{m}\otimes\phi_{h,m}\ \in\ \mathbb{R}^{n\times n\times d}" display="block"><mrow><mrow><msub><mi>ϕ</mi><mi>h</mi></msub><mo>⊗</mo><msub><mi>ϕ</mi><mi>m</mi></msub><mo>⊗</mo><mpadded width="+5.0pt"><msub><mi>ϕ</mi><mrow><mi>h</mi><mo>,</mo><mi>m</mi></mrow></msub></mpadded></mrow><mo rspace="7.5pt">∈</mo><msup><mi>ℝ</mi><mrow><mi>n</mi><mo>×</mo><mi>n</mi><mo>×</mo><mi>d</mi></mrow></msup></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">Note that elements of this rank-1 tensor include feature combinations that are not part of the feature crossings in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m12" class="ltx_Math" alttext="\phi_{h\rightarrow m}" display="inline"><msub><mi>ϕ</mi><mrow><mi>h</mi><mo>→</mo><mi>m</mi></mrow></msub></math>. In this sense, the rank-1 tensor represents a substantial feature expansion. The arc score <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m13" class="ltx_Math" alttext="s_{tensor}(h\rightarrow m)" display="inline"><mrow><msub><mi>s</mi><mrow><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi></mrow></msub><mrow><mo>(</mo><mi>h</mi><mo>→</mo><mi>m</mi><mo>)</mo></mrow></mrow></math> associated with the tensor representation is defined analogously as</p>
+<table id="S3.Ex4" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex4.m1" class="ltx_Math" alttext="s_{tensor}(h\rightarrow m)=\left&lt;A,\phi_{h}\otimes\phi_{m}\otimes\phi_{h,m}\right&gt;" display="block"><mrow><msub><mi>s</mi><mrow><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi></mrow></msub><mrow><mo>(</mo><mi>h</mi><mo>→</mo><mi>m</mi><mo>)</mo></mrow><mo>=</mo><mrow><mo>⟨</mo><mi>A</mi><mo>,</mo><msub><mi>ϕ</mi><mi>h</mi></msub><mo>⊗</mo><msub><mi>ϕ</mi><mi>m</mi></msub><mo>⊗</mo><msub><mi>ϕ</mi><mrow><mi>h</mi><mo>,</mo><mi>m</mi></mrow></msub><mo>⟩</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where the adjustable parameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m14" class="ltx_Math" alttext="A" display="inline"><mi>A</mi></math> also form a tensor. Given the typical dimensions of the component feature vectors, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m15" class="ltx_Math" alttext="\phi_{h}" display="inline"><msub><mi>ϕ</mi><mi>h</mi></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m16" class="ltx_Math" alttext="\phi_{m}" display="inline"><msub><mi>ϕ</mi><mi>m</mi></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m17" class="ltx_Math" alttext="\phi_{h,m}" display="inline"><msub><mi>ϕ</mi><mrow><mi>h</mi><mo>,</mo><mi>m</mi></mrow></msub></math>, it is not even possible to store all the parameters in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m18" class="ltx_Math" alttext="A" display="inline"><mi>A</mi></math>. Indeed, in the full English training set of CoNLL-2008, the tensor involves around <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m19" class="ltx_Math" alttext="8\times 10^{11}" display="inline"><mrow><mn>8</mn><mo>×</mo><msup><mn>10</mn><mn>11</mn></msup></mrow></math> entries while the MST feature vector has approximately <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m20" class="ltx_Math" alttext="1.5\times 10^{7}" display="inline"><mrow><mn>1.5</mn><mo>×</mo><msup><mn>10</mn><mn>7</mn></msup></mrow></math> features. To counter this feature explosion, we restrict the parameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m21" class="ltx_Math" alttext="A" display="inline"><mi>A</mi></math> to have low rank.</p>
+</div>
+<div id="S3.SS2.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Low-Rank Dependency Scoring</h4>
+
+<div id="S3.SS2.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">We can represent a rank-r tensor <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m1" class="ltx_Math" alttext="A" display="inline"><mi>A</mi></math> explicitly in terms of parameter matrices <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m2" class="ltx_Math" alttext="U" display="inline"><mi>U</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m3" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m4" class="ltx_Math" alttext="W" display="inline"><mi>W</mi></math> as shown in Eq. <a href="#S3.E1" title="(1) ‣ 3.1 Basic Notations ‣ 3 Problem Formulation ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>. As a result, the arc score for the tensor reduces to evaluating <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m5" class="ltx_Math" alttext="U\phi_{h}" display="inline"><mrow><mi>U</mi><mo>⁢</mo><msub><mi>ϕ</mi><mi>h</mi></msub></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m6" class="ltx_Math" alttext="V\phi_{m}" display="inline"><mrow><mi>V</mi><mo>⁢</mo><msub><mi>ϕ</mi><mi>m</mi></msub></mrow></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m7" class="ltx_Math" alttext="W\phi_{h,m}" display="inline"><mrow><mi>W</mi><mo>⁢</mo><msub><mi>ϕ</mi><mrow><mi>h</mi><mo>,</mo><mi>m</mi></mrow></msub></mrow></math> which are all <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m8" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math> dimensional vectors and can be computed efficiently based on any sparse vectors <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m9" class="ltx_Math" alttext="\phi_{h}" display="inline"><msub><mi>ϕ</mi><mi>h</mi></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m10" class="ltx_Math" alttext="\phi_{m}" display="inline"><msub><mi>ϕ</mi><mi>m</mi></msub></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m11" class="ltx_Math" alttext="\phi_{h,m}" display="inline"><msub><mi>ϕ</mi><mrow><mi>h</mi><mo>,</mo><mi>m</mi></mrow></msub></math>. The resulting arc score <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m12" class="ltx_Math" alttext="s_{tensor}(h\rightarrow m)" display="inline"><mrow><msub><mi>s</mi><mrow><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi></mrow></msub><mrow><mo>(</mo><mi>h</mi><mo>→</mo><mi>m</mi><mo>)</mo></mrow></mrow></math> is then</p>
+<table id="S8.EGx3" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S3.E2" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E2.m1" class="ltx_Math" alttext="\displaystyle\sum_{i=1}^{r}[U\phi_{h}]_{i}[V\phi_{m}]_{i}[W\phi_{h,m}]_{i}" display="inline"><mrow><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>r</mi></munderover></mstyle><mrow><msub><mrow><mo>[</mo><mrow><mi>U</mi><mo>⁢</mo><msub><mi>ϕ</mi><mi>h</mi></msub></mrow><mo>]</mo></mrow><mi>i</mi></msub><mo>⁢</mo><msub><mrow><mo>[</mo><mrow><mi>V</mi><mo>⁢</mo><msub><mi>ϕ</mi><mi>m</mi></msub></mrow><mo>]</mo></mrow><mi>i</mi></msub><mo>⁢</mo><msub><mrow><mo>[</mo><mrow><mi>W</mi><mo>⁢</mo><msub><mi>ϕ</mi><mrow><mi>h</mi><mo>,</mo><mi>m</mi></mrow></msub></mrow><mo>]</mo></mrow><mi>i</mi></msub></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+<p class="ltx_p">By learning parameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m13" class="ltx_Math" alttext="U" display="inline"><mi>U</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m14" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m15" class="ltx_Math" alttext="W" display="inline"><mi>W</mi></math> that function well in dependency parsing, we also learn context-dependent embeddings for words and arcs. Specifically, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m16" class="ltx_Math" alttext="U\phi_{h}" display="inline"><mrow><mi>U</mi><mo>⁢</mo><msub><mi>ϕ</mi><mi>h</mi></msub></mrow></math> (for a given sentence, suppressed) is an <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m17" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math> dimensional vector representation of the word corresponding to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m18" class="ltx_Math" alttext="h" display="inline"><mi>h</mi></math> as a head word. Similarly, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m19" class="ltx_Math" alttext="V\phi_{m}" display="inline"><mrow><mi>V</mi><mo>⁢</mo><msub><mi>ϕ</mi><mi>m</mi></msub></mrow></math> provides an analogous representation for a modifier <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m20" class="ltx_Math" alttext="m" display="inline"><mi>m</mi></math>. Finally, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p1.m21" class="ltx_Math" alttext="W\phi_{h,m}" display="inline"><mrow><mi>W</mi><mo>⁢</mo><msub><mi>ϕ</mi><mrow><mi>h</mi><mo>,</mo><mi>m</mi></mrow></msub></mrow></math> is a vector embedding of the supplemental arc-dependent information. The
+resulting embedding is therefore tied to the syntactic roles of the words (and arcs), and learned in order to perform well in parsing.</p>
+</div>
+<div id="S3.SS2.SSS0.P1.p2" class="ltx_para">
+<p class="ltx_p">We expect a dependency parsing model to benefit from several aspects of the low-rank tensor scoring. For example, we can easily incorporate additional useful features in the feature vectors <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p2.m1" class="ltx_Math" alttext="\phi_{h}" display="inline"><msub><mi>ϕ</mi><mi>h</mi></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p2.m2" class="ltx_Math" alttext="\phi_{m}" display="inline"><msub><mi>ϕ</mi><mi>m</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p2.m3" class="ltx_Math" alttext="\phi_{h,m}" display="inline"><msub><mi>ϕ</mi><mrow><mi>h</mi><mo>,</mo><mi>m</mi></mrow></msub></math>, since the low-rank assumption (for small enough <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p2.m4" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math>) effectively counters the otherwise uncontrolled feature expansion. Moreover, by controlling the amount of information we can extract from each of the component feature vectors (via rank <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p2.m5" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math>), the statistical
+estimation problem does not scale dramatically with the dimensions of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p2.m6" class="ltx_Math" alttext="\phi_{h}" display="inline"><msub><mi>ϕ</mi><mi>h</mi></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p2.m7" class="ltx_Math" alttext="\phi_{m}" display="inline"><msub><mi>ϕ</mi><mi>m</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p2.m8" class="ltx_Math" alttext="\phi_{h,m}" display="inline"><msub><mi>ϕ</mi><mrow><mi>h</mi><mo>,</mo><mi>m</mi></mrow></msub></math>. In particular, the low-rank constraint can help generalize to unseen arcs. Consider a feature <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p2.m9" class="ltx_Math" alttext="\delta(x(h)=a)\cdot\delta(x(m)=b)\cdot\delta(dis(x,h,m)=c)" display="inline"><mrow><mi>δ</mi><mrow><mo>(</mo><mi>x</mi><mrow><mo>(</mo><mi>h</mi><mo>)</mo></mrow><mo>=</mo><mi>a</mi><mo>)</mo></mrow><mo>⋅</mo><mi>δ</mi><mrow><mo>(</mo><mi>x</mi><mrow><mo>(</mo><mi>m</mi><mo>)</mo></mrow><mo>=</mo><mi>b</mi><mo>)</mo></mrow><mo>⋅</mo><mi>δ</mi><mrow><mo>(</mo><mi>d</mi><mi>i</mi><mi>s</mi><mrow><mo>(</mo><mi>x</mi><mo>,</mo><mi>h</mi><mo>,</mo><mi>m</mi><mo>)</mo></mrow><mo>=</mo><mi>c</mi><mo>)</mo></mrow></mrow></math> which is non-zero only for an arc <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p2.m10" class="ltx_Math" alttext="a\rightarrow b" display="inline"><mrow><mi>a</mi><mo>→</mo><mi>b</mi></mrow></math> with distance <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p2.m11" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math> in sentence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p2.m12" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math>. If the arc has not been seen in the available training data, it does not contribute to the traditional arc score <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P1.p2.m13" class="ltx_Math" alttext="s_{\theta}(\cdot)" display="inline"><mrow><msub><mi>s</mi><mi>θ</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mo>⋅</mo><mo>)</mo></mrow></mrow></math>. In contrast, with the low-rank constraint, the arc score in Eq. <a href="#S3.E2" title="(2) ‣ Low-Rank Dependency Scoring ‣ 3.2 Dependency Parsing ‣ 3 Problem Formulation ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> would typically be non-zero.</p>
+</div>
+</div>
+<div id="S3.SS2.SSS0.P2" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Combined Scoring</h4>
+
+<div id="S3.SS2.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">Our parsing model aims to combine the strengths of both traditional features from the MST/Turbo parser as well as the new low-rank tensor features. In this way, our model is able to capture a wide range of information including the auxiliary features without having uncontrolled feature explosion, while still having the full accessibility to the manually engineered features that are proven useful. Specifically, we define the arc score <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p1.m1" class="ltx_Math" alttext="s_{\gamma}(h\rightarrow m)" display="inline"><mrow><msub><mi>s</mi><mi>γ</mi></msub><mrow><mo>(</mo><mi>h</mi><mo>→</mo><mi>m</mi><mo>)</mo></mrow></mrow></math> as the combination</p>
+<table id="S8.EGx4" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S3.Ex5" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex5.m2" class="ltx_Math" alttext="\displaystyle(1-\gamma)s_{tensor}(h\rightarrow m)+\gamma s_{\theta}(h%&#10;\rightarrow m)" display="inline"><mrow><mrow><mo>(</mo><mn>1</mn><mo>-</mo><mi>γ</mi><mo>)</mo></mrow><msub><mi>s</mi><mrow><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>r</mi></mrow></msub><mrow><mo>(</mo><mi>h</mi><mo>→</mo><mi>m</mi><mo>)</mo></mrow><mo>+</mo><mi>γ</mi><msub><mi>s</mi><mi>θ</mi></msub><mrow><mo>(</mo><mi>h</mi><mo>→</mo><mi>m</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S3.Ex6" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex6.m2" class="ltx_Math" alttext="\displaystyle=(1-\gamma)\sum_{i=1}^{r}[U\phi_{h}]_{i}[V\phi_{m}]_{i}[W\phi_{h,%&#10;m}]_{i}" display="inline"><mrow><mi/><mo>=</mo><mrow><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><mi>γ</mi></mrow><mo>)</mo></mrow><mo>⁢</mo><mrow><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>r</mi></munderover></mstyle><mrow><msub><mrow><mo>[</mo><mrow><mi>U</mi><mo>⁢</mo><msub><mi>ϕ</mi><mi>h</mi></msub></mrow><mo>]</mo></mrow><mi>i</mi></msub><mo>⁢</mo><msub><mrow><mo>[</mo><mrow><mi>V</mi><mo>⁢</mo><msub><mi>ϕ</mi><mi>m</mi></msub></mrow><mo>]</mo></mrow><mi>i</mi></msub><mo>⁢</mo><msub><mrow><mo>[</mo><mrow><mi>W</mi><mo>⁢</mo><msub><mi>ϕ</mi><mrow><mi>h</mi><mo>,</mo><mi>m</mi></mrow></msub></mrow><mo>]</mo></mrow><mi>i</mi></msub></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S3.E3" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E3.m2" class="ltx_Math" alttext="\displaystyle+\ \gamma\left&lt;\theta,\phi_{h\rightarrow m}\right&gt;" display="inline"><mrow><mo rspace="7.5pt">+</mo><mrow><mi>γ</mi><mo>⁢</mo><mrow><mo>⟨</mo><mrow><mi>θ</mi><mo>,</mo><msub><mi>ϕ</mi><mrow><mi>h</mi><mo>→</mo><mi>m</mi></mrow></msub></mrow><mo>⟩</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p1.m2" class="ltx_Math" alttext="\theta\in\mathbb{R}^{L}" display="inline"><mrow><mi>θ</mi><mo>∈</mo><msup><mi>ℝ</mi><mi>L</mi></msup></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p1.m3" class="ltx_Math" alttext="U\in\mathbb{R}^{r\times n}" display="inline"><mrow><mi>U</mi><mo>∈</mo><msup><mi>ℝ</mi><mrow><mi>r</mi><mo>×</mo><mi>n</mi></mrow></msup></mrow></math>,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p1.m4" class="ltx_Math" alttext="V\in\mathbb{R}^{r\times n}" display="inline"><mrow><mi>V</mi><mo>∈</mo><msup><mi>ℝ</mi><mrow><mi>r</mi><mo>×</mo><mi>n</mi></mrow></msup></mrow></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p1.m5" class="ltx_Math" alttext="W\in\mathbb{R}^{r\times d}" display="inline"><mrow><mi>W</mi><mo>∈</mo><msup><mi>ℝ</mi><mrow><mi>r</mi><mo>×</mo><mi>d</mi></mrow></msup></mrow></math> are the model parameters to be learned. The rank <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p1.m6" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.SSS0.P2.p1.m7" class="ltx_Math" alttext="\gamma\in[0,1]" display="inline"><mrow><mi>γ</mi><mo>∈</mo><mrow><mo>[</mo><mrow><mn>0</mn><mo>,</mo><mn>1</mn></mrow><mo>]</mo></mrow></mrow></math> (balancing the two scores) represent hyper-parameters in our model.</p>
+</div>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Learning</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">The training set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m1" class="ltx_Math" alttext="\mathit{D}=\{(\hat{x}_{i},\hat{y}_{i})\}_{i=1}^{N}" display="inline"><mrow><mi>D</mi><mo>=</mo><msubsup><mrow><mo>{</mo><mrow><mo>(</mo><mrow><msub><mover accent="true"><mi>x</mi><mo stretchy="false">^</mo></mover><mi>i</mi></msub><mo>,</mo><msub><mover accent="true"><mi>y</mi><mo stretchy="false">^</mo></mover><mi>i</mi></msub></mrow><mo>)</mo></mrow><mo>}</mo></mrow><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>N</mi></msubsup></mrow></math> consists of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m2" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math> pairs, where each pair consists of a sentence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m3" class="ltx_Math" alttext="x_{i}" display="inline"><msub><mi>x</mi><mi>i</mi></msub></math> and the corresponding gold (target) parse <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m4" class="ltx_Math" alttext="y_{i}" display="inline"><msub><mi>y</mi><mi>i</mi></msub></math>. The goal is to learn values for the parameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m5" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m6" class="ltx_Math" alttext="U" display="inline"><mi>U</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m7" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m8" class="ltx_Math" alttext="W" display="inline"><mi>W</mi></math> that optimize the combined scoring function <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m9" class="ltx_Math" alttext="S_{\gamma}(x,y)=\sum_{h\rightarrow m\in y}s_{\gamma}(h\rightarrow m)" display="inline"><mrow><msub><mi>S</mi><mi>γ</mi></msub><mrow><mo>(</mo><mi>x</mi><mo>,</mo><mi>y</mi><mo>)</mo></mrow><mo>=</mo><msub><mo largeop="true" symmetric="true">∑</mo><mrow><mi>h</mi><mo>→</mo><mi>m</mi><mo>∈</mo><mi>y</mi></mrow></msub><msub><mi>s</mi><mi>γ</mi></msub><mrow><mo>(</mo><mi>h</mi><mo>→</mo><mi>m</mi><mo>)</mo></mrow></mrow></math>, defined in Eq. <a href="#S3.E3" title="(3) ‣ Combined Scoring ‣ 3.2 Dependency Parsing ‣ 3 Problem Formulation ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>, for parsing performance. We adopt a maximum soft-margin framework for this learning problem. Specifically, we find parameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m10" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m11" class="ltx_Math" alttext="U" display="inline"><mi>U</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m12" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m13" class="ltx_Math" alttext="W" display="inline"><mi>W</mi></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m14" class="ltx_Math" alttext="\{\xi_{i}\}" display="inline"><mrow><mo>{</mo><msub><mi>ξ</mi><mi>i</mi></msub><mo>}</mo></mrow></math> that
+minimize</p>
+<table id="S8.EGx5" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S4.Ex7" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex7.m2" class="ltx_Math" alttext="\displaystyle C\sum_{i}\xi_{i}+\|\theta\|^{2}+\|U\|^{2}+\|V\|^{2}+\|W\|^{2}" display="inline"><mrow><mrow><mi>C</mi><mo>⁢</mo><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>i</mi></munder></mstyle><msub><mi>ξ</mi><mi>i</mi></msub></mrow></mrow><mo>+</mo><msup><mrow><mo fence="true">∥</mo><mi>θ</mi><mo fence="true">∥</mo></mrow><mn>2</mn></msup><mo>+</mo><msup><mrow><mo fence="true">∥</mo><mi>U</mi><mo fence="true">∥</mo></mrow><mn>2</mn></msup><mo>+</mo><msup><mrow><mo fence="true">∥</mo><mi>V</mi><mo fence="true">∥</mo></mrow><mn>2</mn></msup><mo>+</mo><msup><mrow><mo fence="true">∥</mo><mi>W</mi><mo fence="true">∥</mo></mrow><mn>2</mn></msup></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S4.Ex8" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex8.m2" class="ltx_Math" alttext="\displaystyle\;\text{s.t.}\;\;\;S_{\gamma}(\hat{x}_{i},\hat{y}_{i})\geq S_{%&#10;\gamma}(\hat{x}_{i},y_{i})+\|\hat{y}_{i}-y_{i}\|_{1}-\xi_{i}" display="inline"><mrow><mrow><mi mathvariant="normal"> </mi><mo>⁢</mo><mpadded width="+8.4pt"><mtext>s.t.</mtext></mpadded><mo>⁢</mo><msub><mi>S</mi><mi>γ</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mover accent="true"><mi>x</mi><mo stretchy="false">^</mo></mover><mi>i</mi></msub><mo>,</mo><msub><mover accent="true"><mi>y</mi><mo stretchy="false">^</mo></mover><mi>i</mi></msub></mrow><mo>)</mo></mrow></mrow><mo>≥</mo><mrow><mrow><msub><mi>S</mi><mi>γ</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mover accent="true"><mi>x</mi><mo stretchy="false">^</mo></mover><mi>i</mi></msub><mo>,</mo><msub><mi>y</mi><mi>i</mi></msub></mrow><mo>)</mo></mrow></mrow><mo>+</mo><msub><mrow><mo fence="true">∥</mo><mrow><msub><mover accent="true"><mi>y</mi><mo stretchy="false">^</mo></mover><mi>i</mi></msub><mo>-</mo><msub><mi>y</mi><mi>i</mi></msub></mrow><mo fence="true">∥</mo></mrow><mn>1</mn></msub><mo>-</mo><msub><mi>ξ</mi><mi>i</mi></msub></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S4.E4" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E4.m2" class="ltx_Math" alttext="\displaystyle\;\;\;\;\;\;\;\;\forall y_{i}\in\mathcal{Y}(\hat{x}_{i}),\;%&#10;\forall i." display="inline"><mrow><mrow><mrow><mrow><mi mathvariant="normal"> </mi><mo separator="true">   </mo><mrow><mo>∀</mo><msub><mi>y</mi><mi>i</mi></msub></mrow></mrow><mo>∈</mo><mrow><mi class="ltx_font_mathcaligraphic">𝒴</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mover accent="true"><mi>x</mi><mo stretchy="false">^</mo></mover><mi>i</mi></msub><mo>)</mo></mrow></mrow></mrow><mo separator="true">, </mo><mrow><mo>∀</mo><mi>i</mi></mrow></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(4)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m15" class="ltx_Math" alttext="\|\hat{y}_{i}-y_{i}\|_{1}" display="inline"><msub><mrow><mo fence="true">∥</mo><mrow><msub><mover accent="true"><mi>y</mi><mo stretchy="false">^</mo></mover><mi>i</mi></msub><mo>-</mo><msub><mi>y</mi><mi>i</mi></msub></mrow><mo fence="true">∥</mo></mrow><mn>1</mn></msub></math> is the number of mismatched arcs between the two trees, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m16" class="ltx_Math" alttext="\xi_{i}" display="inline"><msub><mi>ξ</mi><mi>i</mi></msub></math> is a non-negative slack variable. The constraints serve to separate the gold tree from other alternatives in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m17" class="ltx_Math" alttext="\mathcal{Y}(\hat{x}_{i})" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">𝒴</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mover accent="true"><mi>x</mi><mo stretchy="false">^</mo></mover><mi>i</mi></msub><mo>)</mo></mrow></mrow></math> with a margin that increases with distance.</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">The objective as stated is not jointly convex with respect to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m1" class="ltx_Math" alttext="U" display="inline"><mi>U</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m2" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m3" class="ltx_Math" alttext="W" display="inline"><mi>W</mi></math> due to our explicit representation of the low-rank tensor. However, if we fix any two sets of parameters, for example, if we fix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m4" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m5" class="ltx_Math" alttext="W" display="inline"><mi>W</mi></math>, then the combined score <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m6" class="ltx_Math" alttext="S_{\gamma}(x,y)" display="inline"><mrow><msub><mi>S</mi><mi>γ</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow></math> will be a linear function of both <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m7" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m8" class="ltx_Math" alttext="U" display="inline"><mi>U</mi></math>. As a result, the objective will be jointly convex with respect to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m9" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m10" class="ltx_Math" alttext="U" display="inline"><mi>U</mi></math> and could be optimized using standard tools. However, to accelerate learning, we adopt an
+online learning setup. Specifically, we use the passive-aggressive learning algorithm <cite class="ltx_cite">[<a href="#bib.bib11" title="Online passive-aggressive algorithms" class="ltx_ref">9</a>]</cite> tailored to our setting, updating pairs of parameter sets, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m11" class="ltx_Math" alttext="(\theta,U)" display="inline"><mrow><mo>(</mo><mrow><mi>θ</mi><mo>,</mo><mi>U</mi></mrow><mo>)</mo></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m12" class="ltx_Math" alttext="(\theta,V)" display="inline"><mrow><mo>(</mo><mrow><mi>θ</mi><mo>,</mo><mi>V</mi></mrow><mo>)</mo></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p2.m13" class="ltx_Math" alttext="(\theta,W)" display="inline"><mrow><mo>(</mo><mrow><mi>θ</mi><mo>,</mo><mi>W</mi></mrow><mo>)</mo></mrow></math> in an alternating manner. This method is described below.</p>
+</div>
+<div id="S4.SS2.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Online Learning</h4>
+
+<div id="S4.SS2.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">In an online learning setup, we update parameters successively based on each sentence. In order to apply the passive-aggressive algorithm, we fix two of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P1.p1.m1" class="ltx_Math" alttext="U" display="inline"><mi>U</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P1.p1.m2" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P1.p1.m3" class="ltx_Math" alttext="W" display="inline"><mi>W</mi></math> (say, for example, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P1.p1.m4" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P1.p1.m5" class="ltx_Math" alttext="W" display="inline"><mi>W</mi></math>) in an alternating manner, and apply a closed-form update to the remaining parameters (here <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P1.p1.m6" class="ltx_Math" alttext="U" display="inline"><mi>U</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P1.p1.m7" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math>). This is possible since the objective function with respect to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P1.p1.m8" class="ltx_Math" alttext="(\theta,U)" display="inline"><mrow><mo>(</mo><mrow><mi>θ</mi><mo>,</mo><mi>U</mi></mrow><mo>)</mo></mrow></math> has a similar form as in the original passive-aggressive algorithm. To illustrate this, consider a training sentence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P1.p1.m9" class="ltx_Math" alttext="x_{i}" display="inline"><msub><mi>x</mi><mi>i</mi></msub></math>. The update involves finding first the best competing tree,</p>
+<table id="S8.EGx6" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S4.E5" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E5.m1" class="ltx_Math" alttext="\displaystyle\tilde{y}_{i}=\operatorname*{arg\,max}_{y_{i}\in\mathcal{Y}(\hat{%&#10;x}_{i})}S_{\gamma}(\hat{x}_{i},y_{i})+\|\hat{y}_{i}-y_{i}\|_{1}" display="inline"><mrow><msub><mover accent="true"><mi>y</mi><mo stretchy="false">~</mo></mover><mi>i</mi></msub><mo>=</mo><mrow><mrow><mrow><msub><mrow><mpadded width="+1.7pt"><mi>arg</mi></mpadded><mo>⁢</mo><mi>max</mi></mrow><mrow><msub><mi>y</mi><mi>i</mi></msub><mo>∈</mo><mrow><mi class="ltx_font_mathcaligraphic">𝒴</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mover accent="true"><mi>x</mi><mo stretchy="false">^</mo></mover><mi>i</mi></msub><mo>)</mo></mrow></mrow></mrow></msub><mo>⁡</mo><msub><mi>S</mi><mi>γ</mi></msub></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mover accent="true"><mi>x</mi><mo stretchy="false">^</mo></mover><mi>i</mi></msub><mo>,</mo><msub><mi>y</mi><mi>i</mi></msub></mrow><mo>)</mo></mrow></mrow><mo>+</mo><msub><mrow><mo fence="true">∥</mo><mrow><msub><mover accent="true"><mi>y</mi><mo stretchy="false">^</mo></mover><mi>i</mi></msub><mo>-</mo><msub><mi>y</mi><mi>i</mi></msub></mrow><mo fence="true">∥</mo></mrow><mn>1</mn></msub></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(5)</span></td></tr>
+</table>
+<p class="ltx_p">which is the tree that violates the constraint in Eq. <a href="#S4.E4" title="(4) ‣ 4 Learning ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a> most (i.e. maximizes the loss <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P1.p1.m10" class="ltx_Math" alttext="\xi_{i}" display="inline"><msub><mi>ξ</mi><mi>i</mi></msub></math>). We then obtain parameter increments <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P1.p1.m11" class="ltx_Math" alttext="\Delta\theta" display="inline"><mrow><mi mathvariant="normal">Δ</mi><mo>⁢</mo><mi>θ</mi></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P1.p1.m12" class="ltx_Math" alttext="\Delta U" display="inline"><mrow><mi mathvariant="normal">Δ</mi><mo>⁢</mo><mi>U</mi></mrow></math> by solving</p>
+<table id="S8.EGx7" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S4.Ex9" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex9.m2" class="ltx_Math" alttext="\displaystyle\min_{\Delta{\theta},\ \Delta{U},\ \xi\geq 0}\quad\frac{1}{2}\|%&#10;\Delta{\theta}\|^{2}+\frac{1}{2}\|\Delta{U}\|^{2}+C\xi" display="inline"><mrow><munder><mo movablelimits="false">min</mo><mrow><mrow><mrow><mi mathvariant="normal">Δ</mi><mo>⁢</mo><mi>θ</mi></mrow><mo separator="true">,  </mo><mrow><mi mathvariant="normal">Δ</mi><mo>⁢</mo><mi>U</mi></mrow><mo separator="true">,  </mo><mi>ξ</mi></mrow><mo>≥</mo><mn>0</mn></mrow></munder><mo separator="true"> </mo><mrow><mrow><mstyle displaystyle="true"><mfrac><mn>1</mn><mn>2</mn></mfrac></mstyle><mo>⁢</mo><msup><mrow><mo fence="true">∥</mo><mrow><mi mathvariant="normal">Δ</mi><mo>⁢</mo><mi>θ</mi></mrow><mo fence="true">∥</mo></mrow><mn>2</mn></msup></mrow><mo>+</mo><mrow><mstyle displaystyle="true"><mfrac><mn>1</mn><mn>2</mn></mfrac></mstyle><mo>⁢</mo><msup><mrow><mo fence="true">∥</mo><mrow><mi mathvariant="normal">Δ</mi><mo>⁢</mo><mi>U</mi></mrow><mo fence="true">∥</mo></mrow><mn>2</mn></msup></mrow><mo>+</mo><mrow><mi>C</mi><mo>⁢</mo><mi>ξ</mi></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S4.Ex10" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex10.m2" class="ltx_Math" alttext="\displaystyle\text{s.t.}\quad S_{\gamma}(\hat{x}_{i},\hat{y}_{i})\geq S_{%&#10;\gamma}(\hat{x}_{i},\tilde{y}_{i})+\|\hat{y}_{i}-\tilde{y}_{i}\|_{1}-\xi" display="inline"><mrow><mrow><mtext>s.t.</mtext><mo separator="true"> </mo><mrow><msub><mi>S</mi><mi>γ</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mover accent="true"><mi>x</mi><mo stretchy="false">^</mo></mover><mi>i</mi></msub><mo>,</mo><msub><mover accent="true"><mi>y</mi><mo stretchy="false">^</mo></mover><mi>i</mi></msub></mrow><mo>)</mo></mrow></mrow></mrow><mo>≥</mo><mrow><mrow><msub><mi>S</mi><mi>γ</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mover accent="true"><mi>x</mi><mo stretchy="false">^</mo></mover><mi>i</mi></msub><mo>,</mo><msub><mover accent="true"><mi>y</mi><mo stretchy="false">~</mo></mover><mi>i</mi></msub></mrow><mo>)</mo></mrow></mrow><mo>+</mo><msub><mrow><mo fence="true">∥</mo><mrow><msub><mover accent="true"><mi>y</mi><mo stretchy="false">^</mo></mover><mi>i</mi></msub><mo>-</mo><msub><mover accent="true"><mi>y</mi><mo stretchy="false">~</mo></mover><mi>i</mi></msub></mrow><mo fence="true">∥</mo></mrow><mn>1</mn></msub><mo>-</mo><mi>ξ</mi></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">In this way, the optimization problem attempts to keep the parameter change as small as possible, while forcing it to achieve mostly zero loss on this single instance. This problem has a closed form solution</p>
+</div>
+<div id="S4.SS2.SSS0.P1.p2" class="ltx_para">
+<table id="S8.EGx8" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S4.Ex11" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex11.m2" class="ltx_Math" alttext="\displaystyle\Delta{\theta}=\min\left\{C,\frac{\text{loss}}{\gamma^{2}\|d%&#10;\theta\|^{2}+(1-\gamma)^{2}\|du\|^{2}}\right\}\gamma d\theta" display="inline"><mrow><mrow><mi mathvariant="normal">Δ</mi><mo>⁢</mo><mi>θ</mi></mrow><mo>=</mo><mrow><mo movablelimits="false">min</mo><mo>⁡</mo><mrow><mrow><mo>{</mo><mrow><mi>C</mi><mo>,</mo><mstyle displaystyle="true"><mfrac><mtext mathsize="small" stretchy="false">loss</mtext><mrow><mrow><msup><mi>γ</mi><mn>2</mn></msup><mo>⁢</mo><msup><mrow><mo fence="true">∥</mo><mrow><mi>d</mi><mo>⁢</mo><mi>θ</mi></mrow><mo fence="true">∥</mo></mrow><mn>2</mn></msup></mrow><mo>+</mo><mrow><msup><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><mi>γ</mi></mrow><mo>)</mo></mrow><mn>2</mn></msup><mo>⁢</mo><msup><mrow><mo fence="true">∥</mo><mrow><mi>d</mi><mo>⁢</mo><mi>u</mi></mrow><mo fence="true">∥</mo></mrow><mn>2</mn></msup></mrow></mrow></mfrac></mstyle></mrow><mo>}</mo></mrow><mo>⁢</mo><mi>γ</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mi>θ</mi></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S4.Ex12" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex12.m2" class="ltx_Math" alttext="\displaystyle\Delta{U}=\min\left\{C,\frac{\text{loss}}{\gamma^{2}\|d\theta\|^{%&#10;2}+(1-\gamma)^{2}\|du\|^{2}}\right\}(1-\gamma)du" display="inline"><mrow><mrow><mi mathvariant="normal">Δ</mi><mo>⁢</mo><mi>U</mi></mrow><mo>=</mo><mrow><mo movablelimits="false">min</mo><mo>⁡</mo><mrow><mrow><mo>{</mo><mrow><mi>C</mi><mo>,</mo><mstyle displaystyle="true"><mfrac><mtext mathsize="small" stretchy="false">loss</mtext><mrow><mrow><msup><mi>γ</mi><mn>2</mn></msup><mo>⁢</mo><msup><mrow><mo fence="true">∥</mo><mrow><mi>d</mi><mo>⁢</mo><mi>θ</mi></mrow><mo fence="true">∥</mo></mrow><mn>2</mn></msup></mrow><mo>+</mo><mrow><msup><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><mi>γ</mi></mrow><mo>)</mo></mrow><mn>2</mn></msup><mo>⁢</mo><msup><mrow><mo fence="true">∥</mo><mrow><mi>d</mi><mo>⁢</mo><mi>u</mi></mrow><mo fence="true">∥</mo></mrow><mn>2</mn></msup></mrow></mrow></mfrac></mstyle></mrow><mo>}</mo></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><mn>1</mn><mo>-</mo><mi>γ</mi></mrow><mo>)</mo></mrow><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mi>u</mi></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where</p>
+<table id="S8.EGx9" class="ltx_equationgroup ltx_eqn_eqnarray">
+
+<tr id="S4.Ex13" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_markedasmath">loss</span></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex13.m2" class="ltx_Math" alttext="\displaystyle=" display="inline"><mo>=</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex13.m3" class="ltx_Math" alttext="\displaystyle S_{\gamma}(\hat{x}_{i},\tilde{y}_{i})+\|\hat{y}_{i}-\tilde{y}_{i%&#10;}\|_{1}-S_{\gamma}(\hat{x}_{i},\hat{y}_{i})" display="inline"><mrow><mrow><msub><mi>S</mi><mi>γ</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mover accent="true"><mi>x</mi><mo stretchy="false">^</mo></mover><mi>i</mi></msub><mo>,</mo><msub><mover accent="true"><mi>y</mi><mo stretchy="false">~</mo></mover><mi>i</mi></msub></mrow><mo>)</mo></mrow></mrow><mo>+</mo><msub><mrow><mo fence="true">∥</mo><mrow><msub><mover accent="true"><mi>y</mi><mo stretchy="false">^</mo></mover><mi>i</mi></msub><mo>-</mo><msub><mover accent="true"><mi>y</mi><mo stretchy="false">~</mo></mover><mi>i</mi></msub></mrow><mo fence="true">∥</mo></mrow><mn>1</mn></msub><mo>-</mo><mrow><msub><mi>S</mi><mi>γ</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mover accent="true"><mi>x</mi><mo stretchy="false">^</mo></mover><mi>i</mi></msub><mo>,</mo><msub><mover accent="true"><mi>y</mi><mo stretchy="false">^</mo></mover><mi>i</mi></msub></mrow><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S4.Ex14" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex14.m1" class="ltx_Math" alttext="\displaystyle d\theta" display="inline"><mrow><mi>d</mi><mo>⁢</mo><mi>θ</mi></mrow></math></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex14.m2" class="ltx_Math" alttext="\displaystyle=" display="inline"><mo>=</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex14.m3" class="ltx_Math" alttext="\displaystyle\sum_{h\rightarrow m\ \in\ \hat{y}_{i}}\phi_{h\rightarrow m}-\sum%&#10;_{h\rightarrow m\ \in\ \tilde{y}_{i}}\phi_{h\rightarrow m}" display="inline"><mrow><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>h</mi><mo>→</mo><mpadded width="+5.0pt"><mi>m</mi></mpadded><mo rspace="7.5pt">∈</mo><msub><mover accent="true"><mi>y</mi><mo stretchy="false">^</mo></mover><mi>i</mi></msub></mrow></munder></mstyle><msub><mi>ϕ</mi><mrow><mi>h</mi><mo>→</mo><mi>m</mi></mrow></msub></mrow><mo>-</mo><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>h</mi><mo>→</mo><mpadded width="+5.0pt"><mi>m</mi></mpadded><mo rspace="7.5pt">∈</mo><msub><mover accent="true"><mi>y</mi><mo stretchy="false">~</mo></mover><mi>i</mi></msub></mrow></munder></mstyle><msub><mi>ϕ</mi><mrow><mi>h</mi><mo>→</mo><mi>m</mi></mrow></msub></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S4.Ex16" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex15.m1" class="ltx_Math" alttext="\displaystyle du" display="inline"><mrow><mi>d</mi><mo>⁢</mo><mi>u</mi></mrow></math></td>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex15.m2" class="ltx_Math" alttext="\displaystyle=" display="inline"><mo>=</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex15.m3" class="ltx_Math" alttext="\displaystyle\sum_{h\rightarrow m\ \in\ \hat{y}_{i}}\left[(V\phi_{m})\odot(W%&#10;\phi_{h,m})\right]\otimes\phi_{h}" display="inline"><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>h</mi><mo>→</mo><mpadded width="+5.0pt"><mi>m</mi></mpadded><mo rspace="7.5pt">∈</mo><msub><mover accent="true"><mi>y</mi><mo stretchy="false">^</mo></mover><mi>i</mi></msub></mrow></munder></mstyle><mrow><mrow><mo>[</mo><mrow><mrow><mo>(</mo><mrow><mi>V</mi><mo>⁢</mo><msub><mi>ϕ</mi><mi>m</mi></msub></mrow><mo>)</mo></mrow><mo>⊙</mo><mrow><mo>(</mo><mrow><mi>W</mi><mo>⁢</mo><msub><mi>ϕ</mi><mrow><mi>h</mi><mo>,</mo><mi>m</mi></mrow></msub></mrow><mo>)</mo></mrow></mrow><mo>]</mo></mrow><mo>⊗</mo><msub><mi>ϕ</mi><mi>h</mi></msub></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr class="ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex16.m2" class="ltx_Math" alttext="\displaystyle-" display="inline"><mo>-</mo></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex16.m3" class="ltx_Math" alttext="\displaystyle\sum_{h\rightarrow m\ \in\ \tilde{y}_{i}}\left[(V\phi_{m})\odot(W%&#10;\phi_{h,m})\right]\otimes\phi_{h}" display="inline"><mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>h</mi><mo>→</mo><mpadded width="+5.0pt"><mi>m</mi></mpadded><mo rspace="7.5pt">∈</mo><msub><mover accent="true"><mi>y</mi><mo stretchy="false">~</mo></mover><mi>i</mi></msub></mrow></munder></mstyle><mrow><mrow><mo>[</mo><mrow><mrow><mo>(</mo><mrow><mi>V</mi><mo>⁢</mo><msub><mi>ϕ</mi><mi>m</mi></msub></mrow><mo>)</mo></mrow><mo>⊙</mo><mrow><mo>(</mo><mrow><mi>W</mi><mo>⁢</mo><msub><mi>ϕ</mi><mrow><mi>h</mi><mo>,</mo><mi>m</mi></mrow></msub></mrow><mo>)</mo></mrow></mrow><mo>]</mo></mrow><mo>⊗</mo><msub><mi>ϕ</mi><mi>h</mi></msub></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P1.p2.m1" class="ltx_Math" alttext="(u\odot v)_{i}=u_{i}v_{i}" display="inline"><mrow><msub><mrow><mo>(</mo><mrow><mi>u</mi><mo>⊙</mo><mi>v</mi></mrow><mo>)</mo></mrow><mi>i</mi></msub><mo>=</mo><mrow><msub><mi>u</mi><mi>i</mi></msub><mo>⁢</mo><msub><mi>v</mi><mi>i</mi></msub></mrow></mrow></math> is the Hadamard (element-wise) product. The magnitude of change of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P1.p2.m2" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P1.p2.m3" class="ltx_Math" alttext="U" display="inline"><mi>U</mi></math> is controlled by the parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P1.p2.m4" class="ltx_Math" alttext="C" display="inline"><mi>C</mi></math>.
+By varying <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P1.p2.m5" class="ltx_Math" alttext="C" display="inline"><mi>C</mi></math>, we can determine an appropriate step size for the online updates. The updates also illustrate how <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P1.p2.m6" class="ltx_Math" alttext="\gamma" display="inline"><mi>γ</mi></math> balances the effect of the MST component of the score relative to the low-rank tensor score. When <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P1.p2.m7" class="ltx_Math" alttext="\gamma=0" display="inline"><mrow><mi>γ</mi><mo>=</mo><mn>0</mn></mrow></math>, the arc scores are entirely based on the low-rank tensor and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P1.p2.m8" class="ltx_Math" alttext="\Delta\theta=0" display="inline"><mrow><mrow><mi mathvariant="normal">Δ</mi><mo>⁢</mo><mi>θ</mi></mrow><mo>=</mo><mn>0</mn></mrow></math>. Note that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P1.p2.m9" class="ltx_Math" alttext="\phi_{h}" display="inline"><msub><mi>ϕ</mi><mi>h</mi></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P1.p2.m10" class="ltx_Math" alttext="\phi_{m}" display="inline"><msub><mi>ϕ</mi><mi>m</mi></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P1.p2.m11" class="ltx_Math" alttext="\phi_{h,m}" display="inline"><msub><mi>ϕ</mi><mrow><mi>h</mi><mo>,</mo><mi>m</mi></mrow></msub></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P1.p2.m12" class="ltx_Math" alttext="\phi_{h\rightarrow m}" display="inline"><msub><mi>ϕ</mi><mrow><mi>h</mi><mo>→</mo><mi>m</mi></mrow></msub></math> are typically very sparse for each word or arc. Therefore <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P1.p2.m13" class="ltx_Math" alttext="du" display="inline"><mrow><mi>d</mi><mo>⁢</mo><mi>u</mi></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P1.p2.m14" class="ltx_Math" alttext="d\theta" display="inline"><mrow><mi>d</mi><mo>⁢</mo><mi>θ</mi></mrow></math> are also sparse and can be computed efficiently.</p>
+</div>
+</div>
+<div id="S4.SS2.SSS0.P2" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Initialization</h4>
+
+<div id="S4.SS2.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">The alternating online algorithm relies on how we initialize <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P2.p1.m1" class="ltx_Math" alttext="U" display="inline"><mi>U</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P2.p1.m2" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P2.p1.m3" class="ltx_Math" alttext="W" display="inline"><mi>W</mi></math> since each update is carried out in the context of the other two. A random initialization of these parameters is unlikely to work well, both due to the dimensions involved, and the nature of the alternating updates. We consider here instead a reasonable deterministic “guess” as the initialization method.</p>
+</div>
+<div id="S4.SS2.SSS0.P2.p2" class="ltx_para">
+<p class="ltx_p">We begin by training our model without any low-rank parameters, and obtain parameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P2.p2.m1" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math>. The majority of features in this MST component can be expressed as elements of the feature tensor, i.e., as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P2.p2.m2" class="ltx_Math" alttext="[\phi_{h}\otimes\phi_{m}\otimes\phi_{h,m}]_{i,j,k}" display="inline"><msub><mrow><mo>[</mo><mrow><msub><mi>ϕ</mi><mi>h</mi></msub><mo>⊗</mo><msub><mi>ϕ</mi><mi>m</mi></msub><mo>⊗</mo><msub><mi>ϕ</mi><mrow><mi>h</mi><mo>,</mo><mi>m</mi></mrow></msub></mrow><mo>]</mo></mrow><mrow><mi>i</mi><mo>,</mo><mi>j</mi><mo>,</mo><mi>k</mi></mrow></msub></math>. We can therefore create a tensor representation of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P2.p2.m3" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math> such that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P2.p2.m4" class="ltx_Math" alttext="B_{i,j,k}" display="inline"><msub><mi>B</mi><mrow><mi>i</mi><mo>,</mo><mi>j</mi><mo>,</mo><mi>k</mi></mrow></msub></math> equals the corresponding parameter value in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P2.p2.m5" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math>. We use a low-rank version of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P2.p2.m6" class="ltx_Math" alttext="B" display="inline"><mi>B</mi></math> as the initialization. Specifically, we unfold
+the tensor B into a matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P2.p2.m7" class="ltx_Math" alttext="B^{(h)}" display="inline"><msup><mi>B</mi><mrow><mo>(</mo><mi>h</mi><mo>)</mo></mrow></msup></math> of dimensions <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P2.p2.m8" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P2.p2.m9" class="ltx_Math" alttext="nd" display="inline"><mrow><mi>n</mi><mo>⁢</mo><mi>d</mi></mrow></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P2.p2.m10" class="ltx_Math" alttext="n=dim(\phi_{h})=dim(\phi_{m})" display="inline"><mrow><mi>n</mi><mo>=</mo><mrow><mi>d</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>ϕ</mi><mi>h</mi></msub><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mi>d</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>ϕ</mi><mi>m</mi></msub><mo>)</mo></mrow></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P2.p2.m11" class="ltx_Math" alttext="d=dim(\phi_{h,m})" display="inline"><mrow><mi>d</mi><mo>=</mo><mrow><mi>d</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>ϕ</mi><mrow><mi>h</mi><mo>,</mo><mi>m</mi></mrow></msub><mo>)</mo></mrow></mrow></mrow></math>. For instance, a rank-1 tensor can be unfolded as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P2.p2.m12" class="ltx_Math" alttext="u\otimes v\otimes w=u\otimes\text{vec}(v\otimes w)" display="inline"><mrow><mrow><mi>u</mi><mo>⊗</mo><mi>v</mi><mo>⊗</mo><mi>w</mi></mrow><mo>=</mo><mrow><mrow><mi>u</mi><mo>⊗</mo><mtext>vec</mtext></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>v</mi><mo>⊗</mo><mi>w</mi></mrow><mo>)</mo></mrow></mrow></mrow></math>. We compute the top-r SVD of the resulting unfolded matrix such that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P2.p2.m13" class="ltx_Math" alttext="B^{(h)}=P^{T}SQ" display="inline"><mrow><msup><mi>B</mi><mrow><mo>(</mo><mi>h</mi><mo>)</mo></mrow></msup><mo>=</mo><mrow><msup><mi>P</mi><mi>T</mi></msup><mo>⁢</mo><mi>S</mi><mo>⁢</mo><mi>Q</mi></mrow></mrow></math>. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P2.p2.m14" class="ltx_Math" alttext="U" display="inline"><mi>U</mi></math> is initialized as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P2.p2.m15" class="ltx_Math" alttext="P" display="inline"><mi>P</mi></math>. Each right singular vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P2.p2.m16" class="ltx_Math" alttext="S_{i}Q(i,:)" display="inline"><mrow><msub><mi>S</mi><mi>i</mi></msub><mo>⁢</mo><mi>Q</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>i</mi><mo separator="true">, </mo><mo>:</mo></mrow><mo>)</mo></mrow></mrow></math> is also a matrix in <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P2.p2.m17" class="ltx_Math" alttext="\mathbb{R}^{n\times d}" display="inline"><msup><mi>ℝ</mi><mrow><mi>n</mi><mo>×</mo><mi>d</mi></mrow></msup></math>. The leading left and right singular vectors of
+this matrix are assigned to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P2.p2.m18" class="ltx_Math" alttext="V(i,:)" display="inline"><mrow><mi>V</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>i</mi><mo separator="true">, </mo><mo>:</mo></mrow><mo>)</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P2.p2.m19" class="ltx_Math" alttext="W(i,:)" display="inline"><mrow><mi>W</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>i</mi><mo separator="true">, </mo><mo>:</mo></mrow><mo>)</mo></mrow></mrow></math> respectively. In our implementation, we run one epoch of our model without low-rank parameters and initialize the tensor <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P2.p2.m20" class="ltx_Math" alttext="A" display="inline"><mi>A</mi></math>.</p>
+</div>
+</div>
+<div id="S4.SS2.SSS0.P3" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Parameter Averaging</h4>
+
+<div id="S4.SS2.SSS0.P3.p1" class="ltx_para">
+<p class="ltx_p">The passive-aggressive algorithm regularizes the increments (e.g. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P3.p1.m1" class="ltx_Math" alttext="\Delta\theta" display="inline"><mrow><mi mathvariant="normal">Δ</mi><mo>⁢</mo><mi>θ</mi></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P3.p1.m2" class="ltx_Math" alttext="\Delta U" display="inline"><mrow><mi mathvariant="normal">Δ</mi><mo>⁢</mo><mi>U</mi></mrow></math>) during each update but does not include any overall regularization. In other words, keeping updating the model may lead to large parameter values and over-fitting. To counter this effect, we use parameter averaging as used in the MST and Turbo parsers. The final parameters are those averaged across all the iterations (cf. <cite class="ltx_cite">[<a href="#bib.bib31" title="Discriminative training methods for hidden markov models: theory and experiments with perceptron algorithms" class="ltx_ref">7</a>]</cite>). For simplicity, in
+our algorithm we average <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P3.p1.m3" class="ltx_Math" alttext="U" display="inline"><mi>U</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P3.p1.m4" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P3.p1.m5" class="ltx_Math" alttext="W" display="inline"><mi>W</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.SSS0.P3.p1.m6" class="ltx_Math" alttext="\theta" display="inline"><mi>θ</mi></math> separately, which works well empirically.</p>
+</div>
+<div id="S4.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_rr ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_rr ltx_border_t" colspan="4"><span class="ltx_text ltx_font_small">First-order only</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t" colspan="5"><span class="ltx_text ltx_font_small">High-order</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_rr ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">  Ours</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">NT-1st</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small"> MST</span></th>
+<th class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small"> Turbo</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Ours-3rd</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">NT-3rd</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">MST-2nd</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Turbo-3rd</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">Best Published</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">Arabic</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">79.60</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">78.71</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">78.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">77.23</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">79.95</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">79.53</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">78.75</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">79.64</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">81.12 (Ma11)</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_rr"><span class="ltx_text ltx_font_small">Bulgarian</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">92.30</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">91.14</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">90.98</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_small">91.76</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">93.50</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">92.79</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">91.56</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">93.1</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">94.02 (Zh13)</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_rr"><span class="ltx_text ltx_font_small">Chinese</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">91.43</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">90.85</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">90.40</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_small">88.49</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">92.68</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">92.39</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">91.77</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">89.98</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">91.89 (Ma10)</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_rr"><span class="ltx_text ltx_font_small">Czech</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">87.90</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">86.62</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">86.18</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_small">87.66</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">90.50</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">89.43</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">87.3</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">90.32</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">90.32 (Ma13)</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_rr"><span class="ltx_text ltx_font_small">Danish</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">90.64</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">89.80</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">89.84</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_small">89.42</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">91.39</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">90.82</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">90.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">91.48</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">92.00 (Zh13)</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_rr"><span class="ltx_text ltx_font_small">Dutch</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">84.81</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">83.77</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">82.89</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_small">83.61</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">86.41</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">86.08</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">84.11</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">86.19</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">86.19 (Ma13)</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_rr"><span class="ltx_text ltx_font_small">English</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">91.84</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">91.40</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">90.59</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_small">91.21</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">93.02</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">92.82</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">91.54</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">93.22</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">93.22 (Ma13)</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_rr"><span class="ltx_text ltx_font_small">German</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">90.24</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">89.70</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">89.54</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_small">90.52</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">91.97</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">92.26</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">90.14</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">92.41</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">92.41 (Ma13)</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_rr"><span class="ltx_text ltx_font_small">Japanese</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">93.74</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">93.36</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">93.38</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_small">92.78</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">93.71</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">93.23</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">92.92</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">93.52</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">93.72 (Ma11)</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_rr"><span class="ltx_text ltx_font_small">Portuguese</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">90.94</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">90.67</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">89.92</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_small">91.14</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">91.92</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">91.63</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">91.08</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">92.69</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">93.03 (Ko10)</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_rr"><span class="ltx_text ltx_font_small">Slovene</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">84.25</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">83.15</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">82.09</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_small">82.81</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">86.24</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">86.07</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">83.25</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">86.01</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">86.95 (Ma11)</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_rr"><span class="ltx_text ltx_font_small">Spanish</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">85.27</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">84.95</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">83.79</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_small">83.61</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">88.00</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">87.47</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">84.33</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">85.59</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">87.96 (Zh13)</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_rr"><span class="ltx_text ltx_font_small">Swedish</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">89.86</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">89.66</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">88.27</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_small">89.36</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">91.00</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">90.83</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">89.05</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">91.14</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">91.62 (Zh13)</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_rr"><span class="ltx_text ltx_font_small">Turkish</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">75.84</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">74.89</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">74.81</span></td>
+<td class="ltx_td ltx_align_center ltx_border_rr"><span class="ltx_text ltx_font_small">75.98</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">76.84</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">75.83</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">74.39</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">76.9</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">77.55 (Ko10)</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Average</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">87.76</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">87.05</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">86.5</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_rr ltx_border_t"><span class="ltx_text ltx_font_small">86.83</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">89.08</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">88.66</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">87.19</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">88.73</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">89.43</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 2: </span>First-order parsing (left) and high-order parsing (right) results on CoNLL-2006 datasets
+and the English dataset of CoNLL-2008. For our model, the experiments are ran with
+rank <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m4" class="ltx_Math" alttext="r=50" display="inline"><mrow><mi mathsize="normal" stretchy="false">r</mi><mo mathsize="normal" stretchy="false">=</mo><mn mathsize="normal" stretchy="false">50</mn></mrow></math> and hyper-parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m5" class="ltx_Math" alttext="\gamma=0.3" display="inline"><mrow><mi mathsize="normal" stretchy="false">γ</mi><mo mathsize="normal" stretchy="false">=</mo><mn mathsize="normal" stretchy="false">0.3</mn></mrow></math>. To remove the tensor in our model, we
+ran experiments with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m6" class="ltx_Math" alttext="\gamma=1" display="inline"><mrow><mi mathsize="normal" stretchy="false">γ</mi><mo mathsize="normal" stretchy="false">=</mo><mn mathsize="normal" stretchy="false">1</mn></mrow></math>, corresponding to columns NT-1st and NT-3rd. The last column shows results of most accurate parsers among <cite class="ltx_cite">Nivre<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib42" title="Labeled pseudo-projective dependency parsing with support vector machines" class="ltx_ref">2006</a>)</cite>, <cite class="ltx_cite">McDonald<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib43" title="Multilingual dependency analysis with a two-stage discriminative parser" class="ltx_ref">2006</a>)</cite>,
+<cite class="ltx_cite">Martins<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib44" title="Turbo parsers: dependency parsing by approximate variational inference" class="ltx_ref">2010</a>)</cite>, <cite class="ltx_cite">Martins<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib29" title="Dual decomposition with many overlapping components" class="ltx_ref">2011a</a>)</cite>, <cite class="ltx_cite">Martins<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib12" title="Turning on the turbo: fast third-order non-projective turbo parsers" class="ltx_ref">2013</a>)</cite>, <cite class="ltx_cite">Koo<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib45" title="Dual decomposition for parsing with non-projective head automata" class="ltx_ref">2010</a>)</cite>, <cite class="ltx_cite">Rush and Petrov (<a href="#bib.bib46" title="Vine pruning for efficient multi-pass dependency parsing" class="ltx_ref">2012a</a>)</cite>, <cite class="ltx_cite">Zhang and McDonald (<a href="#bib.bib47" title="Generalized higher-order dependency parsing with cube pruning" class="ltx_ref">2012a</a>)</cite> and <cite class="ltx_cite">Zhang<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib51" title="Online learning for inexact hypergraph search" class="ltx_ref">2013</a>)</cite>. </div>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Experimental Setup</h2>
+
+<div id="S5.SS2.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Datasets</h4>
+
+<div id="S5.SS2.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">We test our dependency model on 14 languages,
+including the English dataset from CoNLL 2008 shared tasks and all 13
+datasets from CoNLL 2006 shared
+tasks <cite class="ltx_cite">[<a href="#bib.bib17" title="CoNLL-X shared task on multilingual dependency parsing" class="ltx_ref">3</a>, <a href="#bib.bib18" title="The CoNLL-2008 shared task on joint parsing of syntactic and semantic dependencies" class="ltx_ref">39</a>]</cite>. These datasets include
+manually annotated dependency trees, POS tags and
+morphological information. Following standard practices, we encode
+this information as features.</p>
+</div>
+</div>
+<div id="S5.SS2.SSS0.P2" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Methods</h4>
+
+<div id="S5.SS2.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">We compare our model to MST
+and Turbo parsers on non-projective dependency parsing. For our
+parser, we train both a first-order parsing model (as described in
+Section 3 and 4) as well as a third-order model. The third
+order parser simply adds high-order features, those
+typically used in MST and Turbo
+parsers, into our
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS0.P2.p1.m1" class="ltx_Math" alttext="s_{\theta}(x,y)=\left&lt;\theta,\phi(x,y)\right&gt;" display="inline"><mrow><mrow><msub><mi>s</mi><mi>θ</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mo>⟨</mo><mrow><mi>θ</mi><mo>,</mo><mrow><mi>ϕ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow></mrow><mo>⟩</mo></mrow></mrow></math> scoring component. The decoding
+algorithm for the third-order parsing is based on <cite class="ltx_cite">[<a href="#bib.bib50" title="Steps to excellence: simple inference with refined scoring of dependency trees" class="ltx_ref">46</a>]</cite>. For
+the Turbo parser, we directly compare with the recent published
+results in <cite class="ltx_cite">[<a href="#bib.bib12" title="Turning on the turbo: fast third-order non-projective turbo parsers" class="ltx_ref">22</a>]</cite>. For the MST parser, we train and
+test using the most recent version of the
+code.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup><a href="http://sourceforge.net/projects/mstparser/" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter ltx_font_script">http://sourceforge.net/projects/mstparser/</span></a></span></span></span>
+In addition, we implemented two additional baselines, NT-1st (first order) and NT-3rd (third order), corresponding to our model without the tensor component.</p>
+</div>
+</div>
+<div id="S5.SS2.SSS0.P3" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Features</h4>
+
+<div id="S5.SS2.SSS0.P3.p1" class="ltx_para">
+<p class="ltx_p">For the arc feature vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS0.P3.p1.m1" class="ltx_Math" alttext="\phi_{h\rightarrow m}" display="inline"><msub><mi>ϕ</mi><mrow><mi>h</mi><mo>→</mo><mi>m</mi></mrow></msub></math>,
+we use the same set of feature templates as MST v0.5.1. For
+head/modifier vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS0.P3.p1.m2" class="ltx_Math" alttext="\phi_{h}" display="inline"><msub><mi>ϕ</mi><mi>h</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS0.P3.p1.m3" class="ltx_Math" alttext="\phi_{m}" display="inline"><msub><mi>ϕ</mi><mi>m</mi></msub></math>, we show the complete set
+of feature templates used by our model in Table <a href="#S3.T1" title="Table 1 ‣ 3.2 Dependency Parsing ‣ 3 Problem Formulation ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+Finally, we use a similar set of feature templates as Turbo v2.1 for
+3rd order parsing.</p>
+</div>
+<div id="S5.SS2.SSS0.P3.p2" class="ltx_para">
+<p class="ltx_p">To add auxiliary word vector representations, we use the publicly
+available word vectors <cite class="ltx_cite">[<a href="#bib.bib19" title="The AI-KU system at the SPMRL 2013 shared task : unsupervised features for dependency parsing" class="ltx_ref">5</a>]</cite>, learned from
+raw data <cite class="ltx_cite">[<a href="#bib.bib40" title="Euclidean embedding of co-occurrence data" class="ltx_ref">13</a>, <a href="#bib.bib41" title="Sphere embedding: an application to part-of-speech induction." class="ltx_ref">20</a>]</cite>. Three languages in our
+dataset – English, German and Swedish – have corresponding word
+vectors in this
+collection.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup><a href="https://github.com/wolet/sprml13-word-embeddings" title="" class="ltx_ref ltx_url"><span class="ltx_text ltx_font_typewriter ltx_font_script">https://github.com/wolet/sprml13-word-embeddings</span></a></span></span></span>
+The dimensionality of this representation varies by language: English
+has 50 dimensional word vectors, while German and Swedish have 25
+dimensional word vectors. Each entry of the word vector is added as a
+feature value into feature vectors <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS0.P3.p2.m1" class="ltx_Math" alttext="\phi_{h}" display="inline"><msub><mi>ϕ</mi><mi>h</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS0.P3.p2.m2" class="ltx_Math" alttext="\phi_{m}" display="inline"><msub><mi>ϕ</mi><mi>m</mi></msub></math>. For each
+word in the sentence, we add its own word vector as well as the
+vectors of its left and right words.</p>
+</div>
+<div id="S5.SS2.SSS0.P3.p3" class="ltx_para">
+<p class="ltx_p">We should note that since our model parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS0.P3.p3.m1" class="ltx_Math" alttext="A" display="inline"><mi>A</mi></math> is represented and
+learned in the low-rank form, we only have to store and maintain the
+low-rank projections <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS0.P3.p3.m2" class="ltx_Math" alttext="U\phi_{h}" display="inline"><mrow><mi>U</mi><mo>⁢</mo><msub><mi>ϕ</mi><mi>h</mi></msub></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS0.P3.p3.m3" class="ltx_Math" alttext="V\phi_{m}" display="inline"><mrow><mi>V</mi><mo>⁢</mo><msub><mi>ϕ</mi><mi>m</mi></msub></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS0.P3.p3.m4" class="ltx_Math" alttext="W\phi_{h,m}" display="inline"><mrow><mi>W</mi><mo>⁢</mo><msub><mi>ϕ</mi><mrow><mi>h</mi><mo>,</mo><mi>m</mi></mrow></msub></mrow></math> rather
+than explicitly calculate the feature tensor <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS0.P3.p3.m5" class="ltx_Math" alttext="\phi_{h}\otimes\phi_{m}\otimes\phi_{h,m}" display="inline"><mrow><msub><mi>ϕ</mi><mi>h</mi></msub><mo>⊗</mo><msub><mi>ϕ</mi><mi>m</mi></msub><mo>⊗</mo><msub><mi>ϕ</mi><mrow><mi>h</mi><mo>,</mo><mi>m</mi></mrow></msub></mrow></math>. Therefore updating parameters and decoding a
+sentence is still efficient, i.e., linear in the number of values of
+the feature vector. In contrast, assume we take the cross-product of
+the auxiliary word vector values, POS tags and lexical items of a word
+and its context, and add the crossed values into a normal model (in
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS0.P3.p3.m6" class="ltx_Math" alttext="\phi_{h\rightarrow m}" display="inline"><msub><mi>ϕ</mi><mrow><mi>h</mi><mo>→</mo><mi>m</mi></mrow></msub></math>). The number of features for
+each arc would be at least quadratic, growing into thousands, and
+would be a significant impediment to parsing efficiency.</p>
+</div>
+</div>
+<div id="S5.SS2.SSS0.P4" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Evaluation</h4>
+
+<div id="S5.SS2.SSS0.P4.p1" class="ltx_para">
+<p class="ltx_p">Following standard practices, we train our full
+model and the baselines for 10 epochs. As the evaluation measure, we
+use unlabeled attachment scores (UAS) excluding punctuation. In all
+the reported experiments, the hyper-parameters are set as follows:
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS0.P4.p1.m1" class="ltx_Math" alttext="r=50" display="inline"><mrow><mi>r</mi><mo>=</mo><mn>50</mn></mrow></math> (rank of the tensor), <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS0.P4.p1.m2" class="ltx_Math" alttext="C=1" display="inline"><mrow><mi>C</mi><mo>=</mo><mn>1</mn></mrow></math> for first-order model and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.SSS0.P4.p1.m3" class="ltx_Math" alttext="C=0.01" display="inline"><mrow><mi>C</mi><mo>=</mo><mn>0.01</mn></mrow></math>
+for third-order model.</p>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Results</h2>
+
+<div id="S6.SS2.SSS0.P1" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Overall Performance</h4>
+
+<div id="S6.SS2.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">Table <a href="#S4.T2" title="Table 2 ‣ Parameter Averaging ‣ 4 Learning ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> shows the performance of our model and the
+baselines on 14 CoNLL datasets. Our model outperforms Turbo parser,
+MST parser, as well as its own variants without the tensor component.
+The improvements of our low-rank model are consistent across
+languages: results for the first
+order parser are better on 11 out of 14 languages. By comparing NT-1st and NT-3rd (models without low-rank) with our full model (with low-rank), we obtain 0.7% absolute improvement on first-order parsing, and 0.3%
+improvement on third-order parsing. Our model also achieves the best
+UAS on 5 languages.</p>
+</div>
+<div id="S6.SS2.SSS0.P1.p2" class="ltx_para">
+<p class="ltx_p">We next focus on the first-order model and gauge the impact
+of the tensor component.  First, we test our model by varying the
+hyper-parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.SSS0.P1.p2.m1" class="ltx_Math" alttext="\gamma" display="inline"><mi>γ</mi></math> which balances the tensor score and the
+traditional MST/Turbo score components.
+Figure <a href="#S6.F1" title="Figure 1 ‣ Overall Performance ‣ 6 Results ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> shows the average UAS on CoNLL test
+datasets after each training epoch. We can see that the improvement of
+adding the low-rank tensor is consistent across various choices of
+hyper parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.SSS0.P1.p2.m2" class="ltx_Math" alttext="\gamma" display="inline"><mi>γ</mi></math>. When training with the tensor component
+alone (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.SSS0.P1.p2.m3" class="ltx_Math" alttext="\gamma=0" display="inline"><mrow><mi>γ</mi><mo>=</mo><mn>0</mn></mrow></math>), the model converges more slowly. Learning
+of the tensor is harder because the scoring function is not
+linear (nor convex) with respect to parameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.SSS0.P1.p2.m4" class="ltx_Math" alttext="U" display="inline"><mi>U</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.SSS0.P1.p2.m5" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math> and
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.SSS0.P1.p2.m6" class="ltx_Math" alttext="W" display="inline"><mi>W</mi></math>. However, the tensor scoring component achieves better
+generalization on the test data, resulting in better UAS
+than NT-1st after 8 training epochs.</p>
+</div>
+<div id="S6.F1" class="ltx_figure"><img src="P14-1130/image001.png" id="S6.F1.g1" class="ltx_graphics ltx_centering" width="338" height="437" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Average UAS on CoNLL testsets after different epochs. Our
+full model consistently performs better than NT-1st (its variation
+without tensor component) under different choices of the
+hyper-parameter <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.F1.m2" class="ltx_Math" alttext="\gamma" display="inline"><mi>γ</mi></math>.</div>
+</div>
+<div id="S6.SS2.SSS0.P1.p3" class="ltx_para">
+<p class="ltx_p">To assess the ability of our model to incorporate a range of features,
+we add unsupervised word vectors to our model. As described in
+previous section, we do so by appending the values of different
+coordinates in the word vector into <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.SSS0.P1.p3.m1" class="ltx_Math" alttext="\phi_{h}" display="inline"><msub><mi>ϕ</mi><mi>h</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.SSS0.P1.p3.m2" class="ltx_Math" alttext="\phi_{m}" display="inline"><msub><mi>ϕ</mi><mi>m</mi></msub></math>. As
+Table <a href="#S6.T3" title="Table 3 ‣ Overall Performance ‣ 6 Results ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> shows, adding this information increases the
+parsing performance for all the three languages. For instance, we
+obtain more than 0.5% absolute improvement on Swedish.</p>
+</div>
+<div id="S6.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">no word vector</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">with word vector</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">English</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">91.84</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">92.07</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">German</th>
+<td class="ltx_td ltx_align_center ltx_border_r">90.24</td>
+<td class="ltx_td ltx_align_center ltx_border_r">90.48</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r">Swedish</th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">89.86</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">90.38</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 3: </span>Results of adding unsupervised word vectors to the tensor.
+Adding this information yields consistent improvement for all languages.</div>
+</div>
+<div id="S6.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t" colspan="2">Our model</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t" colspan="2">NT-1st</th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r"/>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">-POS</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">+wv.</th>
+<th class="ltx_td ltx_align_center ltx_border_rr ltx_border_t">-POS</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">+POS</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">English</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">88.89</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">90.49</td>
+<td class="ltx_td ltx_align_center ltx_border_rr ltx_border_t">86.70</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">90.58</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">German</td>
+<td class="ltx_td ltx_align_center ltx_border_r">82.63</td>
+<td class="ltx_td ltx_align_center ltx_border_r">85.80</td>
+<td class="ltx_td ltx_align_center ltx_border_rr">78.71</td>
+<td class="ltx_td ltx_align_center ltx_border_r">88.50</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r">Swedish</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">81.84</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">85.90</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_rr">79.65</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">88.75</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 4: </span>The first three columns show parsing results when models are
+trained without POS tags. The last column gives the upper-bound,
+i.e. the performance of a parser trained with <span class="ltx_text ltx_font_bold">12 Core POS
+tags</span>. The low-rank model outperforms NT-1st by a large margin.
+Adding word vector features further improves
+performance.</div>
+</div>
+</div>
+<div id="S6.SS2.SSS0.P2" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Syntactic Abstraction without POS</h4>
+
+<div id="S6.SS2.SSS0.P2.p1" class="ltx_para">
+<p class="ltx_p">Since our model learns a
+compressed representation of feature vectors, we are interested to
+measure its performance when part-of-speech tags are not provided (See
+Table <a href="#S6.T4" title="Table 4 ‣ Overall Performance ‣ 6 Results ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>). The rationale is that given all other
+features, the model would induce representations that play a similar
+role to POS tags. Note that the performance of traditional parsers drops
+when tags are not provided. For example, the performance
+gap is 10% on German. Our experiments show that low-rank parser operates
+effectively in the absence of tags. In fact, it nearly reaches the
+performance of the original parser that used the tags on English.</p>
+</div>
+</div>
+<div id="S6.SS2.SSS0.P3" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Examples of Derived Projections</h4>
+
+<div id="S6.SS2.SSS0.P3.p1" class="ltx_para">
+<p class="ltx_p">We manually analyze
+low-dimensional projections to assess whether they capture syntactic
+abstraction. For this purpose, we train a model with only a tensor
+component (such that it has to learn an accurate tensor) on the
+English dataset and obtain low dimensional embeddings <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.SSS0.P3.p1.m1" class="ltx_Math" alttext="U\phi_{w}" display="inline"><mrow><mi>U</mi><mo>⁢</mo><msub><mi>ϕ</mi><mi>w</mi></msub></mrow></math> and
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.SS2.SSS0.P3.p1.m2" class="ltx_Math" alttext="V\phi_{w}" display="inline"><mrow><mi>V</mi><mo>⁢</mo><msub><mi>ϕ</mi><mi>w</mi></msub></mrow></math> for each word. The two r-dimension vectors are concatenated
+as an “averaged” vector. We use this vector to calculate the cosine
+similarity between words. Table <a href="#S6.T5" title="Table 5 ‣ Examples of Derived Projections ‣ 6 Results ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> shows examples
+of five closest neighbors of queried words. While these lists include
+some noise, we can clearly see that the neighbors exhibit similar
+syntactic behavior. For example, “on” is close to other
+prepositions. More interestingly, we can consider the impact of
+syntactic context on the derived projections. The bottom part of
+Table <a href="#S6.T5" title="Table 5 ‣ Examples of Derived Projections ‣ 6 Results ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a> shows that the neighbors change
+substantially depending on the syntactic role of the word. For
+example, the closest words to the word “increase” are verbs in the
+context phrase “will increase again”, while the closest words become
+nouns given a different phrase “an increase of”.</p>
+</div>
+<div id="S6.T5" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_footnote">greatly</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold ltx_font_footnote">profit</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold ltx_font_footnote">says</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_footnote">on</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_footnote">when</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">actively</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_footnote">earnings</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_footnote">adds</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">with</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_footnote">where</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_footnote">openly</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r" colspan="2"><span class="ltx_text ltx_font_footnote">franchisees</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r" colspan="2"><span class="ltx_text ltx_font_footnote">predicts</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">into</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">what</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_footnote">significantly</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r" colspan="2"><span class="ltx_text ltx_font_footnote">shares</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r" colspan="2"><span class="ltx_text ltx_font_footnote">noted</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">at</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">why</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_footnote">outright</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r" colspan="2"><span class="ltx_text ltx_font_footnote">revenue</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r" colspan="2"><span class="ltx_text ltx_font_footnote">wrote</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">during</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">which</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_footnote">substantially</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r" colspan="2"><span class="ltx_text ltx_font_footnote">members</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r" colspan="2"><span class="ltx_text ltx_font_footnote">contends</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">over</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_footnote">who</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_tt" colspan="2"><span class="ltx_text ltx_font_bold ltx_font_footnote">increase</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt" colspan="2"><span class="ltx_text ltx_font_footnote">will </span><span class="ltx_text ltx_font_bold ltx_font_footnote">increase</span><span class="ltx_text ltx_font_footnote"> again</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt" colspan="3"><span class="ltx_text ltx_font_footnote">an </span><span class="ltx_text ltx_font_bold ltx_font_footnote">increase</span><span class="ltx_text ltx_font_footnote"> of</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_footnote">rise</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_footnote">arguing</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t" colspan="3"><span class="ltx_text ltx_font_footnote">gain</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r" colspan="2"><span class="ltx_text ltx_font_footnote">advance</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r" colspan="2"><span class="ltx_text ltx_font_footnote">be</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r" colspan="3"><span class="ltx_text ltx_font_footnote">prices</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r" colspan="2"><span class="ltx_text ltx_font_footnote">contest</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r" colspan="2"><span class="ltx_text ltx_font_footnote">charging</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r" colspan="3"><span class="ltx_text ltx_font_footnote">payment</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r" colspan="2"><span class="ltx_text ltx_font_footnote">halt</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r" colspan="2"><span class="ltx_text ltx_font_footnote">gone</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r" colspan="3"><span class="ltx_text ltx_font_footnote">members</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r" colspan="2"><span class="ltx_text ltx_font_footnote">Exchequer</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r" colspan="2"><span class="ltx_text ltx_font_footnote">making</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r" colspan="3"><span class="ltx_text ltx_font_footnote">subsidiary</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_tt" colspan="2"><span class="ltx_text ltx_font_bold ltx_font_footnote">hit</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt" colspan="2"><span class="ltx_text ltx_font_footnote">attacks </span><span class="ltx_text ltx_font_bold ltx_font_footnote">hit</span><span class="ltx_text ltx_font_footnote"> the</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_tt" colspan="3"><span class="ltx_text ltx_font_footnote">hardest </span><span class="ltx_text ltx_font_bold ltx_font_footnote">hit</span><span class="ltx_text ltx_font_footnote"> is</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_footnote">shed</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_footnote">distributes</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t" colspan="3"><span class="ltx_text ltx_font_footnote">monopolies</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r" colspan="2"><span class="ltx_text ltx_font_footnote">rallied</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r" colspan="2"><span class="ltx_text ltx_font_footnote">stayed</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r" colspan="3"><span class="ltx_text ltx_font_footnote">pills</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r" colspan="2"><span class="ltx_text ltx_font_footnote">triggered</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r" colspan="2"><span class="ltx_text ltx_font_footnote">sang</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r" colspan="3"><span class="ltx_text ltx_font_footnote">sophistication</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r" colspan="2"><span class="ltx_text ltx_font_footnote">appeared</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r" colspan="2"><span class="ltx_text ltx_font_footnote">removed</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r" colspan="3"><span class="ltx_text ltx_font_footnote">ventures</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r" colspan="2"><span class="ltx_text ltx_font_footnote">understate</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r" colspan="2"><span class="ltx_text ltx_font_footnote">eased</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r" colspan="3"><span class="ltx_text ltx_font_footnote">factors</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_footnote"><span class="ltx_tag ltx_tag_table">Table 5: </span>Five closest neighbors of the queried words (shown in bold).
+The upper part shows our learned embeddings group words with similar
+syntactic behavior. The two bottom parts of the table demonstrate
+that how the projections change depending on the syntactic context of
+the word.
+</div>
+</div>
+<div id="S6.T6" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t" rowspan="2">#Tok.</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t" rowspan="2">Len.</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t" colspan="2">Train. Time (hour)</th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_l ltx_border_r"/>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">NT-1st</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Ours</th></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Arabic</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">42K</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">32</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.13</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">0.22</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Chinese</td>
+<td class="ltx_td ltx_align_center ltx_border_r">337K</td>
+<td class="ltx_td ltx_align_center ltx_border_r">6</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.37</td>
+<td class="ltx_td ltx_align_center ltx_border_r">0.65</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r">English</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">958K</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">24</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">1.88</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">2.83</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 6: </span>Comparison of training times across three typical datasets.
+The second column is the number of tokens in each data set. The
+third column shows the average sentence length. Both first-order
+models are implemented in Java and run as a single process.
+</div>
+</div>
+</div>
+<div id="S6.SS2.SSS0.P4" class="ltx_paragraph">
+<h4 class="ltx_title ltx_title_paragraph">Running Time</h4>
+
+<div id="S6.SS2.SSS0.P4.p1" class="ltx_para">
+<p class="ltx_p">Table <a href="#S6.T6" title="Table 6 ‣ Examples of Derived Projections ‣ 6 Results ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> illustrates the impact of estimating low-rank
+tensor parameters on the running time of the algorithm. For
+comparison, we also show the NT-1st times across three typical
+languages. The Arabic dataset has the longest average sentence
+length, while the Chinese dataset has the shortest sentence length in
+CoNLL 2006. Based on these results, estimating a rank-50 tensor
+together with MST parameters only increases the running time by a
+factor of 1.7.</p>
+</div>
+</div>
+</div>
+<div id="S7" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">7 </span>Conclusions</h2>
+
+<div id="S7.p1" class="ltx_para">
+<p class="ltx_p">Accurate scoring of syntactic structures such as head-modifier arcs in dependency parsing typically requires rich, high-dimensional feature representations. We introduce a low-rank factorization method that enables to map high dimensional feature vectors into low dimensional representations. Our method maintains the parameters as a low-rank tensor to obtain low dimensional representations of words in their syntactic roles, and to leverage modularity in the tensor for easy training
+with online algorithms. We implement the approach on first-order to third-order dependency parsing. Our parser outperforms the Turbo and MST parsers across 14 languages.</p>
+</div>
+<div id="S7.p2" class="ltx_para">
+<p class="ltx_p">Future work involves extending the tensor component to capture higher-order structures. In particular, we would consider second-order structures such as grandparent-head-modifier by increasing the dimensionality of the tensor. This tensor will accordingly be a four or five-way array. The online update algorithm remains applicable since each dimension is optimized in an alternating fashion.</p>
+</div>
+</div>
+<div id="S8" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">8 </span>Acknowledgements</h2>
+
+<div id="S8.p1" class="ltx_para">
+<p class="ltx_p">The authors acknowledge the support of the MURI program
+(W911NF-10-1-0533) and the DARPA BOLT program. This research is
+developed in collaboration with the Arabic Language Technoligies (ALT)
+group at Qatar Computing Research Institute (QCRI) within the <span class="ltx_text ltx_font_smallcaps">lyas</span> project. We thank Volkan Cirik for sharing the unsupervised word
+vector data. Thanks to Amir Globerson, Andreea Gane, the members of
+the MIT NLP group and the ACL reviewers for their suggestions and
+comments. Any opinions, findings, conclusions, or recommendations
+expressed in this paper are those of the authors, and do not
+necessarily reflect the views of the funding organizations.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib25" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Ballesteros and J. Nivre</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">MaltOptimizer: an optimization tool for MaltParser.</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P1.p1" title="Selecting Features for Dependency Parsing ‣ 2 Related Work ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib27" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Ballesteros</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Effective morphological feature selection with MaltOptimizer at the SPMRL 2013 shared task</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P1.p1" title="Selecting Features for Dependency Parsing ‣ 2 Related Work ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib17" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Buchholz and E. Marsi</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">CoNLL-X shared task on multilingual dependency parsing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">CoNLL-X ’06</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS2.SSS0.P1.p1" title="Datasets ‣ 5 Experimental Setup ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib36" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">V. Chandrasekaran, S. Sanghavi, P. A. Parrilo and A. S. Willsky</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Rank-sparsity incoherence for matrix decomposition</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">SIAM Journal on Optimization</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P3.p2" title="Dimensionality Reduction ‣ 2 Related Work ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib19" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">V. Cirik and H. Şensoy</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The AI-KU system at the SPMRL 2013 shared task : unsupervised features for dependency parsing</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P2.p1" title="Embedding for Dependency Parsing ‣ 2 Related Work ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S2.SS0.SSS0.P2.p2" title="Embedding for Dependency Parsing ‣ 2 Related Work ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S5.SS2.SSS0.P3.p2" title="Features ‣ 5 Experimental Setup ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib14" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. B. Cohen, K. Stratos, M. Collins, D. P. Foster and L. Ungar</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Spectral learning of latent-variable PCFGs</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P3.p3" title="Dimensionality Reduction ‣ 2 Related Work ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib31" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Collins</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Discriminative training methods for hidden markov models: theory and experiments with perceptron algorithms</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">EMNLP ’02</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.SSS0.P3.p1" title="Parameter Averaging ‣ 4 Learning ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib22" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Collobert and J. Weston</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A unified architecture for natural language processing: deep neural networks with multitask learning</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P2.p1" title="Embedding for Dependency Parsing ‣ 2 Related Work ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib11" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Crammer, O. Dekel, J. Keshet, S. Shalev-Shwartz and Y. Singer</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Online passive-aggressive algorithms</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">The Journal of Machine Learning Research</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p2" title="4 Learning ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib39" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. V. de Cruys, T. Poibeau and A. Korhonen</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A tensor-based factorization model of semantic compositionality.</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P3.p3" title="Dimensionality Reduction ‣ 2 Related Work ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib23" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. S. Dhillon, D. Foster and L. Ungar</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Multiview learning of word embeddings via CCA</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P2.p1" title="Embedding for Dependency Parsing ‣ 2 Related Work ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib35" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Evgeniou and M. Pontil</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Multi-task feature learning</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P3.p1" title="Dimensionality Reduction ‣ 2 Related Work ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib40" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Globerson, G. Chechik, F. Pereira and N. Tishby</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Euclidean embedding of co-occurrence data</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Machine Learning Research</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS2.SSS0.P3.p2" title="Features ‣ 5 Experimental Setup ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib9" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Hillar and L. Lim</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Most tensor problems are NP-hard</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">arXiv preprint arXiv:0911.1393</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P3.p3" title="Dimensionality Reduction ‣ 2 Related Work ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib16" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Hsu and S. M. Kakade</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning mixtures of spherical gaussians: moment methods and spectral decompositions</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P3.p3" title="Dimensionality Reduction ‣ 2 Related Work ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Koo and M. Collins</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Efficient third-order dependency parsers</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">ACL ’10</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS0.SSS0.P1.p1" title="Selecting Features for Dependency Parsing ‣ 2 Related Work ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib45" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Koo, A. M. Rush, M. Collins, T. Jaakkola and D. Sontag</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Dual decomposition for parsing with non-projective head automata</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.T2" title="Table 2 ‣ Parameter Averaging ‣ 4 Learning ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib32" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Lazaridou, E. M. Vecchi and M. Baroni</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Fish transporters and miracle homes: how compositional distributional semantics can help NP parsing</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P1.p1" title="Selecting Features for Dependency Parsing ‣ 2 Related Work ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. D. Lee and H. S. Seung</span><span class="ltx_text ltx_bib_year">(1999)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning the parts of objects by non-negative matrix factorization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Nature</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P3.p1" title="Dimensionality Reduction ‣ 2 Related Work ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib41" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Maron, M. Lamar and E. Bienenstock</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Sphere embedding: an application to part-of-speech induction.</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS2.SSS0.P3.p2" title="Features ‣ 5 Experimental Setup ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib29" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. F. T. Martins, N. A. Smith, P. M. Q. Aguiar and M. A. T. Figueiredo</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Dual decomposition with many overlapping components</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">EMNLP ’11</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.T2" title="Table 2 ‣ Parameter Averaging ‣ 4 Learning ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib12" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. F. Martins, M. B. Almeida and N. A. Smith</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Turning on the turbo: fast third-order non-projective turbo parsers</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p5" title="1 Introduction ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS0.SSS0.P1.p1" title="Selecting Features for Dependency Parsing ‣ 2 Related Work ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS2.p1" title="3.2 Dependency Parsing ‣ 3 Problem Formulation ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>,
+<a href="#S4.T2" title="Table 2 ‣ Parameter Averaging ‣ 4 Learning ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S5.SS2.SSS0.P2.p1" title="Methods ‣ 5 Experimental Setup ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib49" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. F. Martins, N. A. Smith, P. M. Aguiar and M. A. Figueiredo</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Structured sparsity in structured prediction</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P1.p1" title="Selecting Features for Dependency Parsing ‣ 2 Related Work ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib44" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. F. Martins, N. A. Smith, E. P. Xing, P. M. Aguiar and M. A. Figueiredo</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Turbo parsers: dependency parsing by approximate variational inference</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.T2" title="Table 2 ‣ Parameter Averaging ‣ 4 Learning ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib33" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Marton, N. Habash and O. Rambow</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Improving arabic dependency parsing with lexical and inflectional morphological features</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">SPMRL ’10</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P1.p1" title="Selecting Features for Dependency Parsing ‣ 2 Related Work ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib34" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Marton, N. Habash and O. Rambow</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Improving arabic dependency parsing with form-based and functional morphological features</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P1.p1" title="Selecting Features for Dependency Parsing ‣ 2 Related Work ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib3" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. McDonald, K. Crammer and F. Pereira</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Online large-margin training of dependency parsers</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S1.p5" title="1 Introduction ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS0.SSS0.P1.p1" title="Selecting Features for Dependency Parsing ‣ 2 Related Work ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS2.p2" title="3.2 Dependency Parsing ‣ 3 Problem Formulation ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib43" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[28]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. McDonald, K. Lerman and F. Pereira</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Multilingual dependency analysis with a two-stage discriminative parser</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.T2" title="Table 2 ‣ Parameter Averaging ‣ 4 Learning ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib48" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[29]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. McDonald, F. Pereira, K. Ribarov and J. Hajič</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Non-projective dependency parsing using spanning tree algorithms</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P1.p1" title="Selecting Features for Dependency Parsing ‣ 2 Related Work ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib30" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[30]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Mikolov, K. Chen, G. Corrado and J. Dean</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Efficient estimation of word representations in vector space</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">CoRR</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P2.p1" title="Embedding for Dependency Parsing ‣ 2 Related Work ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib26" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[31]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Nilsson and P. Nugues</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Automatic discovery of feature sets for dependency parsing</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P1.p1" title="Selecting Features for Dependency Parsing ‣ 2 Related Work ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib28" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[32]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Nivre, J. Hall, J. Nilsson, A. Chanev, G. Eryigit, S. Kübler, S. Marinov and E. Marsi</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">MaltParser: a language-independent system for data-driven dependency parsing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Natural Language Engineering</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P2.p2" title="Embedding for Dependency Parsing ‣ 2 Related Work ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib42" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[33]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Nivre, J. Hall, J. Nilsson, G. EryiÇ§it and S. Marinov</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Labeled pseudo-projective dependency parsing with support vector machines</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.T2" title="Table 2 ‣ Parameter Averaging ‣ 4 Learning ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib46" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[34]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. M. Rush and S. Petrov</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Vine pruning for efficient multi-pass dependency parsing</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.T2" title="Table 2 ‣ Parameter Averaging ‣ 4 Learning ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib38" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[35]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Rush and S. Petrov</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Vine pruning for efficient multi-pass dependency parsing</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P1.p1" title="Selecting Features for Dependency Parsing ‣ 2 Related Work ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[36]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Socher, J. Bauer, C. D. Manning and A. Y. Ng</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Parsing with compositional vector grammars</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P2.p2" title="Embedding for Dependency Parsing ‣ 2 Related Work ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[37]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Srebro and T. Jaakkola</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Weighted low-rank approximations</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P3.p1" title="Dimensionality Reduction ‣ 2 Related Work ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib7" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[38]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Srebro, J. Rennie and T. S. Jaakkola</span><span class="ltx_text ltx_bib_year">(2004)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Maximum-margin matrix factorization</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P3.p1" title="Dimensionality Reduction ‣ 2 Related Work ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[39]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Surdeanu, R. Johansson, A. Meyers, L. Màrquez and J. Nivre</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">The CoNLL-2008 shared task on joint parsing of syntactic and semantic dependencies</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">CoNLL ’08</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS2.SSS0.P1.p1" title="Datasets ‣ 5 Experimental Setup ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib5" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[40]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Tao and X. Yuan</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Recovering low-rank and sparse components of matrices from incomplete and noisy observations</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">SIAM Journal on Optimization</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P3.p2" title="Dimensionality Reduction ‣ 2 Related Work ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib21" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[41]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Turian, L. Ratinov and Y. Bengio</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Word representations: a simple and general method for semi-supervised learning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">ACL ’10</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P2.p1" title="Embedding for Dependency Parsing ‣ 2 Related Work ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib13" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[42]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. E. Waters, A. C. Sankaranarayanan and R. Baraniuk</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">SpaRCS: recovering low-rank and sparse matrices from compressive measurements</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P3.p2" title="Dimensionality Reduction ‣ 2 Related Work ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib47" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[43]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Zhang and R. McDonald</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Generalized higher-order dependency parsing with cube pruning</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.T2" title="Table 2 ‣ Parameter Averaging ‣ 4 Learning ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib37" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[44]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Zhang and R. McDonald</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Generalized higher-order dependency parsing with cube pruning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">EMNLP-CoNLL ’12</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P1.p1" title="Selecting Features for Dependency Parsing ‣ 2 Related Work ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib51" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[45]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Zhang, L. H. K. Zhao and R. McDonald</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Online learning for inexact hypergraph search</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.T2" title="Table 2 ‣ Parameter Averaging ‣ 4 Learning ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib50" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[46]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Zhang, T. Lei, R. Barzilay, T. Jaakkola and A. Globerson</span><span class="ltx_text ltx_bib_year">(2014)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Steps to excellence: simple inference with refined scoring of dependency trees</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.SS2.SSS0.P2.p1" title="Methods ‣ 5 Experimental Setup ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib4" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[47]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Zhou and D. Tao</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Godec: randomized low-rank &amp; sparse matrix decomposition in noisy case</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.SS0.SSS0.P3.p2" title="Dimensionality Reduction ‣ 2 Related Work ‣ Low-Rank Tensors for Scoring Dependency Structures" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 19:03:26 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

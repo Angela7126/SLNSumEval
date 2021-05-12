@@ -1,0 +1,762 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Word Segmentation of Informal Arabic with Domain Adaptation</title>
+<!--Generated on Wed Jun 11 17:42:22 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Word Segmentation of Informal Arabic with Domain Adaptation</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Will Monroe,  Spence Green, 
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Christopher D. Manning 
+<br class="ltx_break"/>Computer Science Department, Stanford University 
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">wmonroe4,spenceg,manning</span>}<span class="ltx_text ltx_font_typewriter">@stanford.edu</span> 
+<br class="ltx_break"/>
+</span></span></div>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Segmentation of clitics has been shown to improve accuracy on a
+variety of Arabic NLP tasks. However, state-of-the-art Arabic word
+segmenters are either limited to formal Modern Standard Arabic,
+performing poorly on Arabic text featuring dialectal vocabulary
+and grammar, or rely on linguistic knowledge that is hand-tuned for
+each dialect. We extend an existing MSA segmenter
+with a simple domain adaptation technique and new features in order
+to segment informal and dialectal Arabic text. Experiments show that
+our system outperforms existing systems on newswire, broadcast news
+and Egyptian dialect, improving segmentation F<sub class="ltx_sub">1</sub> score on a recently
+released Egyptian Arabic corpus to 95.1%, compared to 90.8% for
+another segmenter designed specifically for Egyptian Arabic.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Segmentation of words, clitics, and affixes is essential for a number
+of natural language processing (NLP) applications, including machine
+translation, parsing, and speech recognition <cite class="ltx_cite">[<a href="#bib.bib6" title="Optimizing Chinese word segmentation for machine translation performance" class="ltx_ref">1</a>, <a href="#bib.bib42" title="Integrated morphological and syntactic disambiguation for Modern Hebrew" class="ltx_ref">14</a>, <a href="#bib.bib26" title="Unlimited vocabulary speech recognition for agglutinative languages" class="ltx_ref">9</a>]</cite>.
+Segmentation is a common practice in Arabic NLP due to the language’s
+morphological richness. Specifically, clitic separation has been shown
+to improve performance on Arabic parsing <cite class="ltx_cite">[<a href="#bib.bib18" title="Better Arabic parsing: baselines, evaluations, and analysis" class="ltx_ref">5</a>]</cite> and Arabic-English
+machine translation <cite class="ltx_cite">[<a href="#bib.bib23" title="Arabic preprocessing schemes for statistical machine translation" class="ltx_ref">8</a>]</cite>. However, the variety of Arabic
+dialects presents challenges in Arabic NLP. Dialectal Arabic contains
+non-standard orthography, vocabulary, morphology, and syntax. Tools
+that depend on corpora or grammatical properties that only consider formal Modern Standard Arabic (MSA) do not perform well
+when confronted with these differences. The creation of annotated
+corpora in dialectal Arabic <cite class="ltx_cite">[<a href="#bib.bib29" title="Developing and using a pilot dialectal Arabic treebank" class="ltx_ref">11</a>]</cite>
+has promoted the development of new systems that support dialectal
+Arabic, but these systems tend to be tailored to specific dialects
+and require separate efforts for Egyptian Arabic, Levantine Arabic,
+Maghrebi Arabic, etc.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">We present a single clitic segmentation model that is accurate on both MSA and informal Arabic. The model is an extension of the character-level conditional random field (CRF) model
+of <cite class="ltx_cite">Green and DeNero (<a href="#bib.bib17" title="A class-based agreement model for generating accurately inflected translations" class="ltx_ref">2012</a>)</cite>. Our work goes beyond theirs in three aspects.
+First, we handle two Arabic orthographic normalization rules that commonly require
+rewriting of tokens after segmentation. Second, we add new features
+that improve segmentation accuracy. Third, we show that dialectal data can be handled in the framework of <span class="ltx_text ltx_font_italic">domain adaptation</span>. Specifically, we show that even simple feature space augmentation <cite class="ltx_cite">[<a href="#bib.bib10" title="Frustratingly easy domain adaptation" class="ltx_ref">3</a>]</cite> yields significant improvements in task accuracy.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">We compare our work to the original Green and DeNero model and two
+other Arabic segmentation systems: the MADA+TOKAN toolkit v. 3.1 <cite class="ltx_cite">[<a href="#bib.bib22" title="MADA+TOKAN: a toolkit for Arabic tokenization, diacritization, morphological disambiguation, POS tagging, stemming and lemmatization" class="ltx_ref">6</a>]</cite> and its Egyptian dialect variant, MADA-ARZ v. 0.4 <cite class="ltx_cite">[<a href="#bib.bib20" title="Morphological analysis and disambiguation for dialectal Arabic" class="ltx_ref">7</a>]</cite>. We
+demonstrate that our system achieves better performance across the
+board, beating all three systems on MSA newswire, informal broadcast news, and Egyptian dialect. Our segmenter achieves
+a 95.1% F<sub class="ltx_sub">1</sub> segmentation score evaluated against a gold standard
+on Egyptian dialect data, compared to 90.8% for MADA-ARZ and 92.9%
+for Green and DeNero. In addition, our model decodes input an order of magnitude faster than either version of MADA. Like the Green and DeNero system, but unlike
+MADA and MADA-ARZ, our system does not rely on a morphological analyzer,
+and can be applied directly to any dialect for which segmented training data is available. The source code is available in the latest public release of the Stanford Word Segmenter (<span class="ltx_text ltx_font_typewriter ltx_font_small">http://nlp.stanford.edu/software/ segmenter.shtml</span>).</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Arabic Word Segmentation Model</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">A CRF model <cite class="ltx_cite">[<a href="#bib.bib27" title="Conditional random fields: probabilistic models for segmenting and labeling sequence data" class="ltx_ref">10</a>]</cite> defines a distribution <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m1" class="ltx_Math" alttext="p(\mathbf{Y}|\mathbf{X};\theta)" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><mi>𝐘</mi><mo>|</mo><mi>𝐗</mi><mo>;</mo><mi>θ</mi><mo>)</mo></mrow></mrow></math>,
+where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m2" class="ltx_Math" alttext="\mathbf{X}=\{x_{1},\ldots,x_{N}\}" display="inline"><mrow><mi>𝐗</mi><mo>=</mo><mrow><mo>{</mo><mrow><msub><mi>x</mi><mn>1</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>x</mi><mi>N</mi></msub></mrow><mo>}</mo></mrow></mrow></math> is the observed input sequence
+and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m3" class="ltx_Math" alttext="\mathbf{Y}=\{y_{1},\ldots,y_{N}\}" display="inline"><mrow><mi>𝐘</mi><mo>=</mo><mrow><mo>{</mo><mrow><msub><mi>y</mi><mn>1</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>y</mi><mi>N</mi></msub></mrow><mo>}</mo></mrow></mrow></math> is the sequence of labels
+we seek to predict. Green and DeNero use a linear-chain
+model with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m4" class="ltx_Math" alttext="\mathbf{X}" display="inline"><mi>𝐗</mi></math> as the sequence of input <span class="ltx_text ltx_font_italic">characters</span>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m5" class="ltx_Math" alttext="\mathbf{Y}^{*}" display="inline"><msup><mi>𝐘</mi><mo>*</mo></msup></math> chosen according to the decision rule</p>
+<table id="S2.Ex1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex1.m1" class="ltx_Math" alttext="\mathbf{Y}^{*}=\operatorname*{arg\,max}_{\mathbf{Y}}\sum_{i=1}^{N}\theta^{\top%&#10;}\phi(\mathbf{X},y_{i},\ldots,y_{i-3},i)\;." display="block"><mrow><mrow><msup><mi>𝐘</mi><mo>*</mo></msup><mo>=</mo><mrow><msub><mrow><mpadded width="+1.7pt"><mi>arg</mi></mpadded><mo>⁢</mo><mi>max</mi></mrow><mi>𝐘</mi></msub><mo>⁢</mo><mrow><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>N</mi></munderover><mrow><msup><mi>θ</mi><mo>⊤</mo></msup><mo>⁢</mo><mi>ϕ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>𝐗</mi><mo>,</mo><msub><mi>y</mi><mi>i</mi></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msub><mi>y</mi><mrow><mi>i</mi><mo>-</mo><mn>3</mn></mrow></msub><mo>,</mo><mi>i</mi></mrow><mo>)</mo></mrow></mrow></mrow></mrow></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m6" class="ltx_Math" alttext="\phi" display="inline"><mi>ϕ</mi></math> is the feature map defined in Section <a href="#S2.SS1" title="2.1 Features ‣ 2 Arabic Word Segmentation Model ‣ Word Segmentation of Informal Arabic with Domain Adaptation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>. Their model classifies each <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m7" class="ltx_Math" alttext="y_{i}" display="inline"><msub><mi>y</mi><mi>i</mi></msub></math> as one of I (continuation of
+a segment), O (whitespace outside any segment), B (beginning of
+a segment), or F (pre-grouped foreign characters).</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">Our segmenter expands this label space in order to handle two Arabic-specific
+orthographic rules. In our model, each <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m1" class="ltx_Math" alttext="y_{i}" display="inline"><msub><mi>y</mi><mi>i</mi></msub></math> can take on one of
+the six values <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m2" class="ltx_Math" alttext="\{\textsc{I},\textsc{O},\textsc{B},\textsc{F},\textsc{RewAl},\textsc{RewTa}\}" display="inline"><mrow><mo>{</mo><mrow><mtext mathvariant="normal">I</mtext><mo>,</mo><mtext mathvariant="normal">O</mtext><mo>,</mo><mtext mathvariant="normal">B</mtext><mo>,</mo><mtext mathvariant="normal">F</mtext><mo>,</mo><mtext mathvariant="normal">RewAl</mtext><mo>,</mo><mtext mathvariant="normal">RewTa</mtext></mrow><mo>}</mo></mrow></math>:</p>
+<ul id="I1" class="ltx_itemize">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_markedasmath ltx_font_smallcaps">RewAl</span> indicates that the current character, which is always
+the Arabic letter &lt;l&gt;, starts a new segment and should additionally
+be transformed into the definite article &lt;al—&gt; when segmented.
+This type of transformation occurs after the prefix &lt;li—&gt; ‘‘to’’.</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_markedasmath ltx_font_smallcaps">RewTa</span> indicates that the current character, which is always
+the Arabic letter &lt;t&gt;, is a continuation but should be transformed
+into the letter &lt;T&gt; when segmented. Arabic orthography rules restrict
+the occurrence of &lt;T&gt; to the word-final position, writing it instead
+as &lt;t&gt; whenever it is followed by a suffix.</p>
+</div></li>
+</ul>
+</div>
+<div id="S2.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.1 </span>Features</h3>
+
+<div id="S2.SS1.p1" class="ltx_para">
+<p class="ltx_p">The model of Green and DeNero is a third-order (i.e., 4-gram) Markov CRF, employing
+the following indicator features:</p>
+<ul id="I2" class="ltx_itemize">
+<li id="I2.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i1.p1" class="ltx_para">
+<p class="ltx_p">a five-character window around the current character: for each <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m1" class="ltx_Math" alttext="-2\leq\delta\leq 2" display="inline"><mrow><mrow><mo>-</mo><mn>2</mn></mrow><mo>≤</mo><mi>δ</mi><mo>≤</mo><mn>2</mn></mrow></math>
+and <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m2" class="ltx_Math" alttext="1\leq i\leq N" display="inline"><mrow><mn>1</mn><mo>≤</mo><mi>i</mi><mo>≤</mo><mi>N</mi></mrow></math>, the triple <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m3" class="ltx_Math" alttext="(x_{i+\delta},\delta,y_{i})" display="inline"><mrow><mo>(</mo><mrow><msub><mi>x</mi><mrow><mi>i</mi><mo>+</mo><mi>δ</mi></mrow></msub><mo>,</mo><mi>δ</mi><mo>,</mo><msub><mi>y</mi><mi>i</mi></msub></mrow><mo>)</mo></mrow></math></p>
+</div></li>
+<li id="I2.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i2.p1" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i2.p1.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-grams consisting of the current character and up to three preceding
+characters: for each <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i2.p1.m2" class="ltx_Math" alttext="2\leq n\leq 4" display="inline"><mrow><mn>2</mn><mo>≤</mo><mi>n</mi><mo>≤</mo><mn>4</mn></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i2.p1.m3" class="ltx_Math" alttext="n\leq i\leq N" display="inline"><mrow><mi>n</mi><mo>≤</mo><mi>i</mi><mo>≤</mo><mi>N</mi></mrow></math>, the character-sequence/label-sequence
+pair <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i2.p1.m4" class="ltx_Math" alttext="(x_{i-n+1}\dots x_{i},y_{i-n+1}\dots y_{i})" display="inline"><mrow><mo>(</mo><mrow><mrow><msub><mi>x</mi><mrow><mi>i</mi><mo>-</mo><mi>n</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>⁢</mo><mi mathvariant="normal">…</mi><mo>⁢</mo><msub><mi>x</mi><mi>i</mi></msub></mrow><mo>,</mo><mrow><msub><mi>y</mi><mrow><mi>i</mi><mo>-</mo><mi>n</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>⁢</mo><mi mathvariant="normal">…</mi><mo>⁢</mo><msub><mi>y</mi><mi>i</mi></msub></mrow></mrow><mo>)</mo></mrow></math></p>
+</div></li>
+<li id="I2.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i3.p1" class="ltx_para">
+<p class="ltx_p">whether the current character is punctuation</p>
+</div></li>
+<li id="I2.i4" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i4.p1" class="ltx_para">
+<p class="ltx_p">whether the current character is a digit</p>
+</div></li>
+<li id="I2.i5" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i5.p1" class="ltx_para">
+<p class="ltx_p">the Unicode block of the current character</p>
+</div></li>
+<li id="I2.i6" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i6.p1" class="ltx_para">
+<p class="ltx_p">the Unicode character class of the current character</p>
+</div></li>
+</ul>
+<p class="ltx_p">In addition to these, we include two other types of features motivated
+by specific errors the original system made on Egyptian dialect development
+data:</p>
+<ul id="I3" class="ltx_itemize">
+<li id="I3.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i1.p1" class="ltx_para">
+<p class="ltx_p">Word length and position within a word: for each <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i1.p1.m1" class="ltx_Math" alttext="1\leq i\leq N" display="inline"><mrow><mn>1</mn><mo>≤</mo><mi>i</mi><mo>≤</mo><mi>N</mi></mrow></math>,
+the pairs <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i1.p1.m2" class="ltx_Math" alttext="(\ell,y_{i})" display="inline"><mrow><mo>(</mo><mrow><mi mathvariant="normal">ℓ</mi><mo>,</mo><msub><mi>y</mi><mi>i</mi></msub></mrow><mo>)</mo></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i1.p1.m3" class="ltx_Math" alttext="(a,y_{i})" display="inline"><mrow><mo>(</mo><mrow><mi>a</mi><mo>,</mo><msub><mi>y</mi><mi>i</mi></msub></mrow><mo>)</mo></mrow></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i1.p1.m4" class="ltx_Math" alttext="(b,y_{i})" display="inline"><mrow><mo>(</mo><mrow><mi>b</mi><mo>,</mo><msub><mi>y</mi><mi>i</mi></msub></mrow><mo>)</mo></mrow></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i1.p1.m5" class="ltx_Math" alttext="\ell" display="inline"><mi mathvariant="normal">ℓ</mi></math>,
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i1.p1.m6" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math>, and <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i1.p1.m7" class="ltx_Math" alttext="b" display="inline"><mi>b</mi></math> are the total length of the word containing <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i1.p1.m8" class="ltx_Math" alttext="x_{i}" display="inline"><msub><mi>x</mi><mi>i</mi></msub></math>,
+the number of characters after <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i1.p1.m9" class="ltx_Math" alttext="x_{i}" display="inline"><msub><mi>x</mi><mi>i</mi></msub></math> in the word, and the number
+of characters before <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i1.p1.m10" class="ltx_Math" alttext="x_{i}" display="inline"><msub><mi>x</mi><mi>i</mi></msub></math> in the word, respectively. Some incorrect
+segmentations produced by the original system could be ruled out with
+the knowledge of these statistics.</p>
+</div></li>
+<li id="I3.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i2.p1" class="ltx_para">
+<p class="ltx_p">First and last two characters of the current word, separately influencing the
+first two labels and the last two labels: for each word consisting of characters
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i2.p1.m1" class="ltx_Math" alttext="x_{s}\dots x_{t}" display="inline"><mrow><msub><mi>x</mi><mi>s</mi></msub><mo>⁢</mo><mi mathvariant="normal">…</mi><mo>⁢</mo><msub><mi>x</mi><mi>t</mi></msub></mrow></math>, the tuples <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i2.p1.m2" class="ltx_Math" alttext="(x_{s}x_{s+1}," display="inline"><mrow><mo>(</mo><msub><mi>x</mi><mi>s</mi></msub><msub><mi>x</mi><mrow><mi>s</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>,</mo></mrow></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i2.p1.m3" class="ltx_Math" alttext="x_{t-1}x_{t}," display="inline"><mrow><mrow><msub><mi>x</mi><mrow><mi>t</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>⁢</mo><msub><mi>x</mi><mi>t</mi></msub></mrow><mo>,</mo></mrow></math>
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i2.p1.m4" class="ltx_Math" alttext="y_{s}y_{s+1}," display="inline"><mrow><mrow><msub><mi>y</mi><mi>s</mi></msub><mo>⁢</mo><msub><mi>y</mi><mrow><mi>s</mi><mo>+</mo><mn>1</mn></mrow></msub></mrow><mo>,</mo></mrow></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i2.p1.m5" class="ltx_Math" alttext="\text{\textquotedblleft begin\textquotedblright})" display="inline"><mrow><mtext>“begin”</mtext><mo>)</mo></mrow></math>
+and <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i2.p1.m6" class="ltx_Math" alttext="(x_{s}x_{s+1}," display="inline"><mrow><mo>(</mo><msub><mi>x</mi><mi>s</mi></msub><msub><mi>x</mi><mrow><mi>s</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>,</mo></mrow></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i2.p1.m7" class="ltx_Math" alttext="x_{t-1}x_{t}," display="inline"><mrow><mrow><msub><mi>x</mi><mrow><mi>t</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>⁢</mo><msub><mi>x</mi><mi>t</mi></msub></mrow><mo>,</mo></mrow></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i2.p1.m8" class="ltx_Math" alttext="y_{t-1}y_{t}," display="inline"><mrow><mrow><msub><mi>y</mi><mrow><mi>t</mi><mo>-</mo><mn>1</mn></mrow></msub><mo>⁢</mo><msub><mi>y</mi><mi>t</mi></msub></mrow><mo>,</mo></mrow></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i2.p1.m9" class="ltx_Math" alttext="\text{\textquotedblleft end\textquotedblright})" display="inline"><mrow><mtext>“end”</mtext><mo>)</mo></mrow></math>.
+This set of features addresses a particular dialectal Arabic construction,
+the negation &lt;mA&gt;- + [verb] + &lt;-^s&gt;, which requires a matching
+prefix and suffix to be segmented simultaneously. This feature set
+also allows the model to take into account other interactions between
+the beginning and end of a word, particularly those involving the
+definite article &lt;al—&gt;.</p>
+</div></li>
+</ul>
+<p class="ltx_p">A notable property of this feature set is that it remains highly dialect-agnostic,
+even though our additional features were chosen in response to errors
+made on text in Egyptian dialect. In particular, it does not depend
+on the existence of a dialect-specific lexicon or morphological analyzer.
+As a result, we expect this model to perform similarly well when applied
+to other Arabic dialects.</p>
+</div>
+</div>
+<div id="S2.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.2 </span>Domain adaptation</h3>
+
+<div id="S2.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td"/>
+<th class="ltx_td"/>
+<td class="ltx_td ltx_align_center" colspan="3">F<sub class="ltx_sub">1</sub> (%)</td>
+<td class="ltx_td ltx_align_center" colspan="3">TEDEval (%)</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">Model</th>
+<th class="ltx_td ltx_align_left">Training Data</th>
+<td class="ltx_td ltx_align_center">ATB</td>
+<td class="ltx_td ltx_align_center">BN</td>
+<td class="ltx_td ltx_align_center">ARZ</td>
+<td class="ltx_td ltx_align_center">ATB</td>
+<td class="ltx_td ltx_align_center">BN</td>
+<td class="ltx_td ltx_align_center">ARZ</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t">GD</th>
+<th class="ltx_td ltx_align_left ltx_border_t">ATB</th>
+<td class="ltx_td ltx_align_center ltx_border_t">97.60</td>
+<td class="ltx_td ltx_align_center ltx_border_t">94.87</td>
+<td class="ltx_td ltx_align_center ltx_border_t">79.92</td>
+<td class="ltx_td ltx_align_center ltx_border_t">98.22</td>
+<td class="ltx_td ltx_align_center ltx_border_t">96.81</td>
+<td class="ltx_td ltx_align_center ltx_border_t">87.30</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">GD</th>
+<th class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m1" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math>BN<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m2" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math>ARZ</th>
+<td class="ltx_td ltx_align_center">97.28</td>
+<td class="ltx_td ltx_align_center">96.37</td>
+<td class="ltx_td ltx_align_center">92.90</td>
+<td class="ltx_td ltx_align_center">98.05</td>
+<td class="ltx_td ltx_align_center">97.45</td>
+<td class="ltx_td ltx_align_center">95.01</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m3" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math>Rew</th>
+<th class="ltx_td ltx_align_left ltx_border_t">ATB</th>
+<td class="ltx_td ltx_align_center ltx_border_t">97.55</td>
+<td class="ltx_td ltx_align_center ltx_border_t">94.95</td>
+<td class="ltx_td ltx_align_center ltx_border_t">79.95</td>
+<td class="ltx_td ltx_align_center ltx_border_t">98.72</td>
+<td class="ltx_td ltx_align_center ltx_border_t">97.45</td>
+<td class="ltx_td ltx_align_center ltx_border_t">87.54</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m4" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math>Rew</th>
+<th class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m5" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math>BN</th>
+<td class="ltx_td ltx_align_center">97.58</td>
+<td class="ltx_td ltx_align_center">96.60</td>
+<td class="ltx_td ltx_align_center">82.94</td>
+<td class="ltx_td ltx_align_center">98.75</td>
+<td class="ltx_td ltx_align_center">98.18</td>
+<td class="ltx_td ltx_align_center">89.43</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m6" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math>Rew</th>
+<th class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m7" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math>BN<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m8" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math>ARZ</th>
+<td class="ltx_td ltx_align_center">97.30</td>
+<td class="ltx_td ltx_align_center">96.09</td>
+<td class="ltx_td ltx_align_center">92.64</td>
+<td class="ltx_td ltx_align_center">98.59</td>
+<td class="ltx_td ltx_align_center">97.91</td>
+<td class="ltx_td ltx_align_center">95.03</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m9" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math>Rew<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m10" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math>DA</th>
+<th class="ltx_td ltx_align_left ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m11" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math>BN<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m12" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math>ARZ</th>
+<td class="ltx_td ltx_align_center ltx_border_t">97.71</td>
+<td class="ltx_td ltx_align_center ltx_border_t">96.57</td>
+<td class="ltx_td ltx_align_center ltx_border_t">93.87</td>
+<td class="ltx_td ltx_align_center ltx_border_t">98.79</td>
+<td class="ltx_td ltx_align_center ltx_border_t">98.14</td>
+<td class="ltx_td ltx_align_center ltx_border_t">95.86</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_bb"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m13" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math>Rew<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m14" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math>DA<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m15" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math>Feat</th>
+<th class="ltx_td ltx_align_left ltx_border_bb"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m16" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math>BN<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m17" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math>ARZ</th>
+<td class="ltx_td ltx_align_center ltx_border_bb"><span class="ltx_text ltx_font_bold">98.36</span></td>
+<td class="ltx_td ltx_align_center ltx_border_bb"><span class="ltx_text ltx_font_bold">97.35</span></td>
+<td class="ltx_td ltx_align_center ltx_border_bb"><span class="ltx_text ltx_font_bold">95.06</span></td>
+<td class="ltx_td ltx_align_center ltx_border_bb"><span class="ltx_text ltx_font_bold">99.14</span></td>
+<td class="ltx_td ltx_align_center ltx_border_bb"><span class="ltx_text ltx_font_bold">98.57</span></td>
+<td class="ltx_td ltx_align_center ltx_border_bb"><span class="ltx_text ltx_font_bold">96.67</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 1: </span>Development set results. <span class="ltx_text ltx_font_bold">GD</span> is the model of <cite class="ltx_cite">Green and DeNero (<a href="#bib.bib17" title="A class-based agreement model for generating accurately inflected translations" class="ltx_ref">2012</a>)</cite>. <span class="ltx_text ltx_font_bold">Rew</span> is support for orthographic rewrites with the <span class="ltx_text ltx_font_smallcaps">RewAl</span> and <span class="ltx_text ltx_font_smallcaps">RewTa</span> labels. The fifth row shows the strongest baseline, which is the GD<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m20" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math>Rew model trained on the concatenated training sets from all three treebanks. <span class="ltx_text ltx_font_bold">DA</span> is domain adaptation via feature space augmentation. <span class="ltx_text ltx_font_bold">Feat</span> adds the additional feature templates described in section <a href="#S2.SS1" title="2.1 Features ‣ 2 Arabic Word Segmentation Model ‣ Word Segmentation of Informal Arabic with Domain Adaptation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>.
+<span class="ltx_text ltx_font_bold">ATB</span> is the newswire ATB; <span class="ltx_text ltx_font_bold">BN</span> is the Broadcast News treebank; <span class="ltx_text ltx_font_bold">ARZ</span> is the Egyptian treebank. Best results (<span class="ltx_text ltx_font_bold">bold</span>) are statistically significant (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T1.m21" class="ltx_Math" alttext="p&lt;\;" display="inline"><mrow><mi>p</mi><mo rspace="5.3pt">&lt;</mo><mi/></mrow></math>0.001) relative to the strongest baseline.</div>
+</div>
+<div id="S2.SS2.p1" class="ltx_para">
+<p class="ltx_p">In this work, we train our model to segment Arabic text drawn from
+three domains: newswire, which consists of formal text in MSA; broadcast
+news, which contains scripted, formal MSA as well as extemporaneous
+dialogue in a mix of MSA and dialect; and discussion forum posts written
+primarily in Egyptian dialect.</p>
+</div>
+<div id="S2.SS2.p2" class="ltx_para">
+<p class="ltx_p">The approach to domain adaptation we use is that of <span class="ltx_text ltx_font_italic">feature space augmentation</span> <cite class="ltx_cite">[<a href="#bib.bib10" title="Frustratingly easy domain adaptation" class="ltx_ref">3</a>]</cite>. Each indicator
+feature from the model described in Section <a href="#S2.SS1" title="2.1 Features ‣ 2 Arabic Word Segmentation Model ‣ Word Segmentation of Informal Arabic with Domain Adaptation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>
+is replaced by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m1" class="ltx_Math" alttext="N+1" display="inline"><mrow><mi>N</mi><mo>+</mo><mn>1</mn></mrow></math> features in the augmented model, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m2" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math>
+is the number of domains from which the data is drawn
+(here, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m3" class="ltx_Math" alttext="N=3" display="inline"><mrow><mi>N</mi><mo>=</mo><mn>3</mn></mrow></math>). These <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m4" class="ltx_Math" alttext="N+1" display="inline"><mrow><mi>N</mi><mo>+</mo><mn>1</mn></mrow></math> features consist of the
+original feature and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m5" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math> ‘‘domain-specific’’ features, one for each of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS2.p2.m6" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math>
+domains, each of which is active only when both the original feature
+is present and the current text comes from its assigned domain.</p>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Experiments</h2>
+
+<div id="S3.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td"/>
+<th class="ltx_td ltx_align_center" colspan="3">F<sub class="ltx_sub">1</sub> (%)</th>
+<th class="ltx_td ltx_align_center" colspan="3">TEDEval (%)</th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td"/>
+<th class="ltx_td ltx_align_center">ATB</th>
+<th class="ltx_td ltx_align_center">BN</th>
+<th class="ltx_td ltx_align_center">ARZ</th>
+<th class="ltx_td ltx_align_center">ATB</th>
+<th class="ltx_td ltx_align_center">BN</th>
+<th class="ltx_td ltx_align_center">ARZ</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t">MADA</th>
+<td class="ltx_td ltx_align_center ltx_border_t">97.36</td>
+<td class="ltx_td ltx_align_center ltx_border_t">94.54</td>
+<td class="ltx_td ltx_align_center ltx_border_t">78.35</td>
+<td class="ltx_td ltx_align_center ltx_border_t">97.62</td>
+<td class="ltx_td ltx_align_center ltx_border_t">96.96</td>
+<td class="ltx_td ltx_align_center ltx_border_t">86.78</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">MADA-ARZ</th>
+<td class="ltx_td ltx_align_center">92.83</td>
+<td class="ltx_td ltx_align_center">91.89</td>
+<td class="ltx_td ltx_align_center">90.76</td>
+<td class="ltx_td ltx_align_center">91.26</td>
+<td class="ltx_td ltx_align_center">91.10</td>
+<td class="ltx_td ltx_align_center">90.39</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_bb">GD<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m1" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math>Rew<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m2" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math>DA<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m3" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math>Feat</th>
+<td class="ltx_td ltx_align_center ltx_border_bb"><span class="ltx_text ltx_font_bold">98.30</span></td>
+<td class="ltx_td ltx_align_center ltx_border_bb"><span class="ltx_text ltx_font_bold">97.17</span></td>
+<td class="ltx_td ltx_align_center ltx_border_bb"><span class="ltx_text ltx_font_bold">95.13</span></td>
+<td class="ltx_td ltx_align_center ltx_border_bb"><span class="ltx_text ltx_font_bold">99.10</span></td>
+<td class="ltx_td ltx_align_center ltx_border_bb"><span class="ltx_text ltx_font_bold">98.42</span></td>
+<td class="ltx_td ltx_align_center ltx_border_bb"><span class="ltx_text ltx_font_bold">96.75</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 2: </span>Test set results. Our final model (last row) is trained on all available data (ATB<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m7" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math>BN<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m8" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math>ARZ). Best results (<span class="ltx_text ltx_font_bold">bold</span>) are statistically significant (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T2.m9" class="ltx_Math" alttext="p&lt;\;" display="inline"><mrow><mi>p</mi><mo rspace="5.3pt">&lt;</mo><mi/></mrow></math>0.001) relative to each MADA version.</div>
+</div>
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">We train and evaluate on three corpora: parts 1–3 of the newswire Arabic Treebank
+(ATB),<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>LDC2010T13, LDC2011T09, LDC2010T08</span></span></span>
+the Broadcast News Arabic Treebank (BN),<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>LDC2012T07</span></span></span>
+and parts 1–8 of the BOLT Phase 1 Egyptian Arabic Treebank (ARZ).<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>LDC2012E{93,98,89,99,107,125}, LDC2013E{12,21}</span></span></span>
+These correspond respectively to the domains in section <a href="#S2.SS2" title="2.2 Domain adaptation ‣ 2 Arabic Word Segmentation Model ‣ Word Segmentation of Informal Arabic with Domain Adaptation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+We target the segmentation scheme used by these corpora (leaving morphological affixes and the definite article attached).
+For the ATB, we use the same split as <cite class="ltx_cite">Chiang<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib8" title="Parsing Arabic dialects" class="ltx_ref">2006</a>)</cite>. For each
+of the other two corpora, we split the data into 80% training, 10%
+development, and 10% test in chronological order by document.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>These splits are publicly available at <span class="ltx_text ltx_font_typewriter ltx_font_small">http://nlp.stanford.edu/software/parser-arabic-data-splits.shtml</span>.</span></span></span> We train the Green and DeNero model
+and our improvements using L-BFGS with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m1" class="ltx_Math" alttext="L_{2}" display="inline"><msub><mi>L</mi><mn>2</mn></msub></math> regularization.</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Evaluation metrics</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">We use two evaluation metrics in our experiments. The first is an F<sub class="ltx_sub">1</sub>
+precision-recall measure, ignoring orthographic rewrites. F<sub class="ltx_sub">1</sub>
+scores provide a more informative assessment of performance
+than word-level or character-level accuracy scores, as over 80% of tokens in the development sets consist of only one segment, with an average of one segmentation every 4.7 tokens (or one every 20.4 characters).</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">The second metric we use is the TEDEval metric <cite class="ltx_cite">[<a href="#bib.bib43" title="Joint evaluation of morphological segmentation and syntactic parsing" class="ltx_ref">13</a>]</cite>.
+TEDEval was developed to evaluate joint segmentation and parsing<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup>In order to evaluate segmentation in isolation, we convert each segmented
+sentence from both the model output and the gold standard to a flat
+tree with all segments descending directly from the root.</span></span></span> in Hebrew, which requires a greater variety of orthographic rewrites
+than those possible in Arabic. Its edit distance-based scoring algorithm
+is robust enough to handle the rewrites produced by both MADA and
+our segmenter.</p>
+</div>
+<div id="S3.SS1.p3" class="ltx_para">
+<p class="ltx_p">We measure the statistical significance of differences in these metrics
+with an approximate randomization test <cite class="ltx_cite">[<a href="#bib.bib49" title="More accurate tests for the statistical significance of result differences" class="ltx_ref">15</a>, <a href="#bib.bib37" title="User’s guide to sigf: significance testing by approximate randomisation" class="ltx_ref">12</a>]</cite>, with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m1" class="ltx_Math" alttext="R=\;" display="inline"><mrow><mi>R</mi><mo rspace="5.3pt">=</mo><mi/></mrow></math>10,000 samples.</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Results</h3>
+
+<div id="S3.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td"/>
+<td class="ltx_td ltx_align_center">ATB</td>
+<td class="ltx_td ltx_align_center">BN</td>
+<td class="ltx_td ltx_align_center">ARZ</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t">MADA</th>
+<td class="ltx_td ltx_align_right ltx_border_t">705.6<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m1" class="ltx_Math" alttext="\;\pm\;" display="inline"><mo lspace="5.3pt" rspace="5.3pt">±</mo></math>5.1</td>
+<td class="ltx_td ltx_align_right ltx_border_t">472.0<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m2" class="ltx_Math" alttext="\;\pm\;" display="inline"><mo lspace="5.3pt" rspace="5.3pt">±</mo></math>0.8</td>
+<td class="ltx_td ltx_align_right ltx_border_t">767.8<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m3" class="ltx_Math" alttext="\;\pm\;" display="inline"><mo lspace="5.3pt" rspace="5.3pt">±</mo></math>1.9</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">MADA-ARZ</th>
+<td class="ltx_td ltx_align_right">784.7<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m4" class="ltx_Math" alttext="\;\pm\;" display="inline"><mo lspace="5.3pt" rspace="5.3pt">±</mo></math>1.6</td>
+<td class="ltx_td ltx_align_right">492.1<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m5" class="ltx_Math" alttext="\;\pm\;" display="inline"><mo lspace="5.3pt" rspace="5.3pt">±</mo></math>4.2</td>
+<td class="ltx_td ltx_align_right">779.0<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m6" class="ltx_Math" alttext="\;\pm\;" display="inline"><mo lspace="5.3pt" rspace="5.3pt">±</mo></math>2.7</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_bb">GD<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m7" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math>Rew<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m8" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math>DA<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m9" class="ltx_Math" alttext="+" display="inline"><mo>+</mo></math>Feat</th>
+<td class="ltx_td ltx_align_right ltx_border_bb"><span class="ltx_text ltx_font_bold">90.0<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m10" class="ltx_Math" alttext="\;\pm\;" display="inline"><mo lspace="5.3pt" mathvariant="normal" rspace="5.3pt">±</mo></math></span>1.0</td>
+<td class="ltx_td ltx_align_right ltx_border_bb"><span class="ltx_text ltx_font_bold">59.5<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m11" class="ltx_Math" alttext="\;\pm\;" display="inline"><mo lspace="5.3pt" mathvariant="normal" rspace="5.3pt">±</mo></math></span>0.3</td>
+<td class="ltx_td ltx_align_right ltx_border_bb"><span class="ltx_text ltx_font_bold">72.7<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T3.m12" class="ltx_Math" alttext="\;\pm\;" display="inline"><mo lspace="5.3pt" mathvariant="normal" rspace="5.3pt">±</mo></math></span>0.2</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 3: </span>Wallclock time (in seconds) for MADA, MADA-ARZ, and our model for decoding
+each of the three development datasets. Means and standard deviations were computed for 10 independent
+runs. MADA and MADA-ARZ are single-threaded. Our segmenter supports multithreaded execution, but the times reported here are for single-threaded runs. </div>
+</div>
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">Table <a href="#S2.T1" title="Table 1 ‣ 2.2 Domain adaptation ‣ 2 Arabic Word Segmentation Model ‣ Word Segmentation of Informal Arabic with Domain Adaptation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> contains results on the development set for
+the model of Green and DeNero and our improvements. Using domain adaptation alone helps
+performance on two of the three datasets (with a statistically insignificant
+decrease on broadcast news), and that our additional features
+further improve segmentation on all datasets. Table <a href="#S3.T2" title="Table 2 ‣ 3 Experiments ‣ Word Segmentation of Informal Arabic with Domain Adaptation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> shows the
+segmentation scores our model achieves when evaluated
+on the three test sets, as well as the results for MADA and MADA-ARZ.
+Our segmenter achieves higher scores than MADA and MADA-ARZ on all
+datasets under both evaluation metrics. In addition,
+our segmenter is faster than MADA. Table <a href="#S3.T3" title="Table 3 ‣ 3.2 Results ‣ 3 Experiments ‣ Word Segmentation of Informal Arabic with Domain Adaptation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> compares
+the running times of the three systems. Our segmenter achieves a 7x
+or more speedup over MADA and MADA-ARZ on all datasets.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Error Analysis</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">We sampled 100 errors randomly from all errors made by our final model
+(trained on all three datasets with domain adaptation and additional
+features) on the ARZ development set; see Table <a href="#S4.T4" title="Table 4 ‣ 4.1 Typographical errors and annotation inconsistencies ‣ 4 Error Analysis ‣ Word Segmentation of Informal Arabic with Domain Adaptation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+These errors fall into three general categories:</p>
+<ul id="I4" class="ltx_itemize">
+<li id="I4.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I4.i1.p1" class="ltx_para">
+<p class="ltx_p">typographical errors and annotation inconsistencies in the gold data;</p>
+</div></li>
+<li id="I4.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I4.i2.p1" class="ltx_para">
+<p class="ltx_p">errors that can be fixed with a fuller analysis of just the problematic
+token, and therefore represent a deficiency in the feature set; and</p>
+</div></li>
+<li id="I4.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I4.i3.p1" class="ltx_para">
+<p class="ltx_p">errors that would require additional context or sophisticated
+semantic awareness to fix.</p>
+</div></li>
+</ul>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Typographical errors and annotation inconsistencies</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">Of the 100 errors we sampled, 33 are due to typographical errors or
+inconsistencies in the gold data. We classify 7 as typos and 26 as
+annotation inconsistencies, although the distinction between the two is murky:
+typos are intentionally preserved in the treebank
+data, but segmentation of typos varies
+depending on how well they can be reconciled with standard Arabic
+orthography. Four of the seven typos are the result of a missing space, such as:</p>
+<ul id="I5" class="ltx_itemize">
+<li id="I5.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I5.i1.p1" class="ltx_para">
+<p class="ltx_p">&lt;yas|har-bi-al-layAlI&gt; ‘‘staysawakeatnight’’ (&lt;yashar&gt; + &lt;bi-&gt; + &lt;al-layAlI&gt;)</p>
+</div></li>
+<li id="I5.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I5.i2.p1" class="ltx_para">
+<p class="ltx_p">&lt;‘amilatnA-’an&gt; ‘‘madeus’’ (&lt;‘amilat&gt; + &lt;—nA&gt; + &lt;’an&gt;)</p>
+</div></li>
+</ul>
+<p class="ltx_p">The first example is segmented in the Egyptian treebank but is left unsegmented by our system; the second is left as a single token in the treebank but is split into the above three segments by our system.</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">Of the annotation inconsistencies that do not involve typographical errors,
+a handful are segmentation mistakes; however, in the majority of these cases,
+the annotator chose not to segment
+a word for justifiable but arbitrary reasons. In particular, a few
+colloquial ‘‘filler’’ expressions are sometimes not segmented,
+despite being compound Arabic words that are segmented
+elsewhere in the data. These include &lt;rabbinA&gt; ‘‘[our] Lord’’
+(oath); &lt;‘indamA&gt; ‘‘when’’/‘‘while’’; and &lt;_hallIk&gt; ‘‘keep’’/‘‘stay’’. Also, tokens containing
+foreign words are sometimes not segmented, despite carrying Arabic
+affixes. An example of this is &lt;wamistur&gt; ‘‘and <em class="ltx_emph">Mister</em> [English]’’,
+which could be segmented as &lt;wa&gt;-
++ &lt;mistur&gt;.</p>
+</div>
+<div id="S4.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left">Category</th>
+<th class="ltx_td ltx_align_right"># of errors</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_bold">Abnormal gold data</span></td>
+<td class="ltx_td ltx_align_right ltx_border_t"><span class="ltx_text ltx_font_bold">33</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">  Typographical error</td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_italic">7</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">  Annotation inconsistency</td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_italic">26</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold">Need full-token features</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold">36</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_bold">Need more context</span></td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_bold">31</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">  &lt;wlA&gt;</td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_italic">5</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">  &lt;—nA&gt;: verb/pron</td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_italic">7</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left">  &lt;—y&gt;: <span class="ltx_text ltx_font_italic">nisba</span>/pron</td>
+<td class="ltx_td ltx_align_right"><span class="ltx_text ltx_font_italic">4</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_bb">  other</td>
+<td class="ltx_td ltx_align_right ltx_border_bb"><span class="ltx_text ltx_font_italic">15</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 4: </span>Counts of error categories (out of 100 randomly sampled ARZ development set errors).</div>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Features too local</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">In 36 of the 100 sampled errors, we conjecture that the presence of
+the error indicates a shortcoming of the feature set,
+resulting in segmentations that make sense locally but are not plausible
+given the full token. Two examples of these are:</p>
+<ul id="I6" class="ltx_itemize">
+<li id="I6.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I6.i1.p1" class="ltx_para">
+<p class="ltx_p">&lt;wafi.tarIqaT&gt; “and in the way”
+segmented as &lt;wa&gt;- + &lt;fi.tarIqaT&gt; (correct analysis is &lt;wa&gt;- + &lt;fi—&gt; + &lt;.tarIqaT&gt;). &lt;f.tr&gt; ‘‘break’’/‘‘breakfast’’ is a common Arabic root, but the presence of &lt;q&gt; should indicate that &lt;f.tr&gt; is not the root in this case.</p>
+</div></li>
+<li id="I6.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I6.i2.p1" class="ltx_para">
+<p class="ltx_p">&lt;walAyuhimmhum&gt; ‘‘and it’s not important to them’’ segmented as &lt;wa&gt;- + &lt;li—&gt; + &lt;—ayuhimm&gt; + &lt;—hum&gt; (correct analysis is &lt;wa&gt;- + &lt;lA&gt; + &lt;yuhimm&gt; + &lt;—hum&gt;). The 4-character window &lt;lAyh&gt; occurs commonly with a segment boundary after the &lt;l&gt;, but the segment &lt;—ayuhimm&gt; is not a well-formed Arabic word.</p>
+</div></li>
+</ul>
+</div>
+</div>
+<div id="S4.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.3 </span>Context-sensitive segmentations and multiple word senses</h3>
+
+<div id="S4.SS3.p1" class="ltx_para">
+<p class="ltx_p">In the remaining 31 of 100 errors, external context is needed.
+In many of these, it is not
+clear how to address the error without sophisticated semantic reasoning
+about the surrounding sentence.</p>
+</div>
+<div id="S4.SS3.p2" class="ltx_para">
+<p class="ltx_p">One token accounts for five of these errors: &lt;wlA&gt;, which in Egyptian
+dialect can be analyzed as &lt;wa&gt;- + &lt;lA&gt; ‘‘and [do/does] not’’
+or as &lt;wallA&gt; ‘‘or’’. In a few cases, either is syntactically correct,
+and the meaning must be inferred from context.</p>
+</div>
+<div id="S4.SS3.p3" class="ltx_para">
+<p class="ltx_p">Two other ambiguities are a frequent cause of error and seem to require
+sophisticated disambiguation. The first is &lt;—nA&gt;, which is both
+a first person plural object pronoun and a first person plural
+past tense ending. The former is
+segmented, while the latter is not. An example of this is the pair &lt;‘ilmunA&gt;
+‘‘our knowledge’’ (&lt;‘ilmu&gt; + &lt;—nA&gt;) versus &lt;‘alimnA&gt; ‘‘we knew’’
+(one segment). The other is &lt;—y&gt;, which is both a
+first person singular possessive
+pronoun and the <em class="ltx_emph">nisba</em> adjective ending (which turns a noun
+into an adjective meaning ‘‘of or related to’’); only the
+former is segmented. One example of this distinction that appeared
+in the development set is the pair &lt;maw.dU‘I&gt; ‘‘my topic’’ (&lt;maw.dU‘&gt;
++ &lt;—y&gt;) versus &lt;maw.dU‘Iy&gt; ‘‘topical’’, ‘‘objective’’.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Conclusion</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">In this paper we demonstrate substantial gains on Arabic clitic segmentation
+for both formal and dialectal text using a single model with dialect-independent
+features and a simple domain adaptation strategy. We present a new
+Arabic segmenter which performs better than tools employing sophisticated
+linguistic analysis, while also giving impressive speed improvements. We evaluated our segmenter on broadcast news and Egyptian
+Arabic due to the current availability of annotated data in these domains. However, as data for other Arabic dialects and genres becomes available, we expect that the model’s simplicity and the domain adaptation
+method we use will allow the system to be applied to these dialects
+with minimal effort and without a loss of performance in the original
+domains.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">We thank the three anonymous reviewers, and Reut Tsarfaty for valuable
+correspondence regarding TEDEval. The second author is supported by a National Science Foundation Graduate Research Fellowship. This work was supported by the Defense Advanced Research Projects Agency (DARPA)
+Broad Operational Language Translation (BOLT) program
+through IBM. Any opinions, findings, and conclusions
+or recommendations expressed in this material are
+those of the author(s) and do not necessarily reflect
+the view of DARPA or the US government.</p>
+</div><span class="ltx_ERROR undefined">\atColsBreak</span>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib6" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Chang, M. Galley and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Optimizing Chinese word segmentation for machine translation performance</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-932432-09-1</span>,
+<a href="http://dl.acm.org/citation.cfm?id=1626394.1626430" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Word Segmentation of Informal Arabic with Domain Adaptation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib8" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Chiang, M. T. Diab, N. Habash, O. Rambow and S. Shareef</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Parsing Arabic dialects</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.p1" title="3 Experiments ‣ Word Segmentation of Informal Arabic with Domain Adaptation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>.
+</span></li>
+<li id="bib.bib10" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Daumé</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Frustratingly easy domain adaptation</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P07-1033" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Word Segmentation of Informal Arabic with Domain Adaptation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.SS2.p2" title="2.2 Domain adaptation ‣ 2 Arabic Word Segmentation Model ‣ Word Segmentation of Informal Arabic with Domain Adaptation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.2</span></a>.
+</span></li>
+<li id="bib.bib17" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Green and J. DeNero</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A class-based agreement model for generating accurately inflected translations</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dl.acm.org/citation.cfm?id=2390524.2390546" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Word Segmentation of Informal Arabic with Domain Adaptation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S2.T1" title="Table 1 ‣ 2.2 Domain adaptation ‣ 2 Arabic Word Segmentation Model ‣ Word Segmentation of Informal Arabic with Domain Adaptation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Green and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Better Arabic parsing: baselines, evaluations, and analysis</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dl.acm.org/citation.cfm?id=1873781.1873826" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Word Segmentation of Informal Arabic with Domain Adaptation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib22" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Habash, O. Rambow and R. Roth</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">MADA+TOKAN: a toolkit for Arabic tokenization, diacritization, morphological disambiguation, POS tagging, stemming and lemmatization</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Word Segmentation of Informal Arabic with Domain Adaptation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib20" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Habash, R. Roth, O. Rambow, R. Eskander and N. Tomeh</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Morphological analysis and disambiguation for dialectal Arabic</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/N13-1044" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Word Segmentation of Informal Arabic with Domain Adaptation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib23" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. Habash and F. Sadat</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Arabic preprocessing schemes for statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dl.acm.org/citation.cfm?id=1614049.1614062" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Word Segmentation of Informal Arabic with Domain Adaptation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib26" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Kurimo, A. Puurula, E. Arisoy, V. Siivola, T. Hirsimäki, J. Pylkkönen, T. Alumäe and M. Saraclar</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Unlimited vocabulary speech recognition for agglutinative languages</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dx.doi.org/10.3115/1220835.1220897" title="" class="ltx_ref doi ltx_bib_external">Document</a>,
+<a href="http://dx.doi.org/10.3115/1220835.1220897" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Word Segmentation of Informal Arabic with Domain Adaptation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib27" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. D. Lafferty, A. McCallum and F. C. N. Pereira</span><span class="ltx_text ltx_bib_year">(2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Conditional random fields: probabilistic models for segmenting and labeling sequence data</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 1-55860-778-1</span>,
+<a href="http://dl.acm.org/citation.cfm?id=645530.655813" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Arabic Word Segmentation Model ‣ Word Segmentation of Informal Arabic with Domain Adaptation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib29" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Maamouri, A. Bies, T. Buckwalter, M. Diab, N. Habash, O. Rambow and D. Tabessi</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Developing and using a pilot dialectal Arabic treebank</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Word Segmentation of Informal Arabic with Domain Adaptation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib37" class="ltx_bibitem ltx_bib_manual"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Padó</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">User’s guide to <span class="ltx_text ltx_font_typewriter">sigf</span>: significance testing by approximate randomisation</span>.
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note"><span class="ltx_ERROR undefined">\url</span>http://www.nlpado.de/~sebastian/ software/sigf.shtml</span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p3" title="3.1 Evaluation metrics ‣ 3 Experiments ‣ Word Segmentation of Informal Arabic with Domain Adaptation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib43" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Tsarfaty, J. Nivre and E. Andersson</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Joint evaluation of morphological segmentation and syntactic parsing</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dl.acm.org/citation.cfm?id=2390665.2390668" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p2" title="3.1 Evaluation metrics ‣ 3 Experiments ‣ Word Segmentation of Informal Arabic with Domain Adaptation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib42" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Tsarfaty</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Integrated morphological and syntactic disambiguation for Modern Hebrew</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Word Segmentation of Informal Arabic with Domain Adaptation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib49" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Yeh</span><span class="ltx_text ltx_bib_year">(2000)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">More accurate tests for the statistical significance of result differences</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://dx.doi.org/10.3115/992730.992783" title="" class="ltx_ref doi ltx_bib_external">Document</a>,
+<a href="http://dx.doi.org/10.3115/992730.992783" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p3" title="3.1 Evaluation metrics ‣ 3 Experiments ‣ Word Segmentation of Informal Arabic with Domain Adaptation" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 17:42:22 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

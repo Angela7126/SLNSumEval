@@ -1,0 +1,572 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Infusion of Labeled Data into Distant Supervision for Relation Extraction</title>
+<!--Generated on Wed Jun 11 18:25:13 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Infusion of Labeled Data into Distant Supervision for Relation Extraction</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Maria Pershina <sup class="ltx_sup">+</sup> Bonan Min<sup class="ltx_sup">^</sup>
+
+ Wei Xu <sup class="ltx_sup">#</sup> Ralph Grishman <sup class="ltx_sup">+</sup>
+<br class="ltx_break"/><sup class="ltx_sup">+</sup>New York University, New York, NY 
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">pershina, grishman</span>}<span class="ltx_text ltx_font_typewriter">@cs.nyu.edu</span> 
+<br class="ltx_break"/><sup class="ltx_sup">^</sup>Raytheon BBN Technologies, Cambridge, MA
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">bmin@bbn.com</span> 
+<br class="ltx_break"/><sup class="ltx_sup">#</sup>University of Pennsylvania, Philadelphia, PA 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">xwe@cis.upenn.edu</span>
+
+</span><span class="ltx_author_notes"><span> Most of the work was done when this author was at New York University</span></span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Distant supervision usually utilizes only unlabeled data and existing knowledge bases to learn relation extraction models.
+However, in some cases a small amount of human labeled data is available. In this paper, we demonstrate how a state-of-the-art
+multi-instance multi-label model can be modified to make use of these reliable sentence-level labels in addition
+to the relation-level distant supervision from a database. Experiments show that our approach achieves a statistically significant increase of 13.5% in
+F-score and 37% in area under the precision recall curve.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Relation extraction is the task of tagging semantic relations between pairs of entities from free text. Recently, distant supervision has
+emerged as an important technique for relation extraction and has attracted increasing attention because of its effective use of readily
+available databases <cite class="ltx_cite">[]</cite>.
+It automatically labels its own training data by heuristically aligning a knowledge base of facts
+with an unlabeled corpus. The intuition is that any sentence which mentions a pair of entities (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p1.m1" class="ltx_Math" alttext="e_{1}" display="inline"><msub><mi>e</mi><mn>1</mn></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p1.m2" class="ltx_Math" alttext="e_{2}" display="inline"><msub><mi>e</mi><mn>2</mn></msub></math>) that
+participate in a relation, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p1.m3" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math>, is likely to express the fact <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p1.m4" class="ltx_Math" alttext="r(e_{1},\!e_{2})" display="inline"><mrow><mi>r</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>e</mi><mn>1</mn></msub><mo>,</mo><msub><mi>e</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></mrow></math> and thus forms a positive training example of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p1.m5" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math>.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">One of most crucial problems in distant supervision is the inherent errors in the automatically generated training data <cite class="ltx_cite">[]</cite>. Table <a href="#S1.T1" title="Table 1 ‣ 1 Introduction ‣ Infusion of Labeled Data into Distant Supervision for Relation Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> illustrates this problem
+with a toy example.
+Sophisticated multi-instance learning algorithms <cite class="ltx_cite">[]</cite> have been proposed to
+address the issue by loosening the distant supervision assumption. These approaches consider all mentions of the same pair <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m1" class="ltx_Math" alttext="(e_{1},\!e_{2})" display="inline"><mrow><mo>(</mo><mrow><msub><mi>e</mi><mn>1</mn></msub><mo>,</mo><msub><mi>e</mi><mn>2</mn></msub></mrow><mo>)</mo></mrow></math> and assume
+that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m2" class="ltx_Math" alttext="at" display="inline"><mrow><mi>a</mi><mo>⁢</mo><mi>t</mi></mrow></math>-<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m3" class="ltx_Math" alttext="least" display="inline"><mrow><mi>l</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi></mrow></math>-<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p2.m4" class="ltx_Math" alttext="one" display="inline"><mrow><mi>o</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>e</mi></mrow></math> mention actually expresses the relation.
+On top of that, researchers further improved performance by explicitly adding preprocessing
+steps <cite class="ltx_cite">[]</cite> or additional layers inside the model <cite class="ltx_cite">[]</cite> to reduce the effect of training noise.</p>
+</div>
+<div id="S1.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:57.8pt;" width="57.8pt"><span class="ltx_text ltx_font_small">True Positive</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:137.3pt;" width="137.3pt"><span class="ltx_text ltx_font_small">… to get information out of captured al-Qaida </span><span class="ltx_text ltx_font_italic ltx_font_small">leader</span><span class="ltx_text ltx_font_small"> </span><span class="ltx_text ltx_font_bold ltx_font_small">Abu Zubaydah</span><span class="ltx_text ltx_font_small">.</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:57.8pt;" width="57.8pt"><span class="ltx_text ltx_font_small">False Positive</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:137.3pt;" width="137.3pt"><span class="ltx_text ltx_font_bold ltx_font_small">…Abu Zubaydah</span><span class="ltx_text ltx_font_small"> and former Taliban </span><span class="ltx_text ltx_font_italic ltx_font_small">leader</span><span class="ltx_text ltx_font_small"> Jalaluddin Haqqani …</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r ltx_border_t" style="width:57.8pt;" width="57.8pt"><span class="ltx_text ltx_font_small">False Negative</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_t" style="width:137.3pt;" width="137.3pt"><span class="ltx_text ltx_font_bold ltx_font_small">…Abu Zubaydah</span><span class="ltx_text ltx_font_small"> is one of Osama bin Laden’s </span><span class="ltx_text ltx_font_italic ltx_font_small">senior operational planners</span><span class="ltx_text ltx_font_small">…</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 1: </span>Classic errors in the training data generated by a toy knowledge base of only one entry
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T1.m2" class="ltx_Math" alttext="\mathsf{personTitle}" display="inline"><mi mathsize="normal" stretchy="false">𝗉𝖾𝗋𝗌𝗈𝗇𝖳𝗂𝗍𝗅𝖾</mi></math>(Abu Zubaydah, <span class="ltx_text ltx_font_italic">leader</span>).</div>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">However, the potential of these previously proposed approaches is limited by the inevitable gap between the relation-level knowledge and the instance-level
+extraction task. In this paper, we present the first effective approach, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p3.m1" class="ltx_Math" alttext="\mathsf{{\bf G}uided\ DS}" display="inline"><mrow><mi>𝐆</mi><mo>⁢</mo><mpadded width="+5.0pt"><mi>𝗎𝗂𝖽𝖾𝖽</mi></mpadded><mo>⁢</mo><mi>𝖣𝖲</mi></mrow></math> (distant supervision), to incorporate labeled data into distant
+supervision for extracting relations from sentences. In contrast to simply taking the union of the hand-labeled data and the corpus labeled by
+distant supervision as in the previous work by Zhang et al. <cite class="ltx_cite">[]</cite>, we generalize the labeled data through feature selection and
+model this additional information directly in the latent variable approaches. Aside from previous semi-supervised work that employs labeled and unlabeled data <cite class="ltx_cite">[, and others]</cite>, this is a learning scheme that combines unlabeled text and two training sources whose quantity and quality are radically different <cite class="ltx_cite">[]</cite>.</p>
+</div>
+<div id="S1.T2" class="ltx_table">
+<table class="ltx_tabular ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Guideline <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m1" class="ltx_Math" alttext="g=\{g_{i}|i=1,2,3\}" display="inline"><mrow><mi>g</mi><mo>=</mo><mrow><mo>{</mo><mrow><msub><mi>g</mi><mi>i</mi></msub><mo separator="true">|</mo><mrow><mi>i</mi><mo>=</mo><mrow><mn>1</mn><mo>,</mo><mn>2</mn><mo>,</mo><mn>3</mn></mrow></mrow></mrow><mo>}</mo></mrow></mrow></math>:</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Relation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m2" class="ltx_Math" alttext="r(g)" display="inline"><mrow><mi>r</mi><mo>⁢</mo><mrow><mo>(</mo><mi>g</mi><mo>)</mo></mrow></mrow></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m3" class="ltx_Math" alttext="\mathsf{types\ of\ entities}" display="inline"><mrow><mpadded width="+5.0pt"><mi>𝗍𝗒𝗉𝖾𝗌</mi></mpadded><mo>⁢</mo><mpadded width="+5.0pt"><mi>𝗈𝖿</mi></mpadded><mo>⁢</mo><mi>𝖾𝗇𝗍𝗂𝗍𝗂𝖾𝗌</mi></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m4" class="ltx_Math" alttext="dependency\ path" display="inline"><mrow><mi>d</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mpadded width="+5.0pt"><mi>y</mi></mpadded><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>h</mi></mrow></math>, span word (optional)</th>
+<td class="ltx_td ltx_border_r"/></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m5" class="ltx_Math" alttext="\mathsf{person\_person}" display="inline"><mrow><mi>𝗉𝖾𝗋𝗌𝗈𝗇</mi><mo>⁢</mo><mi mathvariant="normal">_</mi><mo>⁢</mo><mi>𝗉𝖾𝗋𝗌𝗈𝗇</mi></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m6" class="ltx_Math" alttext="nsubj\rightarrow\leftarrow dobj" display="inline"><mrow><mi>n</mi><mi>s</mi><mi>u</mi><mi>b</mi><mi>j</mi><mo>→</mo><mo>←</mo><mi>d</mi><mi>o</mi><mi>b</mi><mi>j</mi></mrow></math>, married</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m7" class="ltx_Math" alttext="\mathsf{personSpouse}" display="inline"><mi>𝗉𝖾𝗋𝗌𝗈𝗇𝖲𝗉𝗈𝗎𝗌𝖾</mi></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m8" class="ltx_Math" alttext="\mathsf{person\_organization}" display="inline"><mrow><mi>𝗉𝖾𝗋𝗌𝗈𝗇</mi><mo>⁢</mo><mi mathvariant="normal">_</mi><mo>⁢</mo><mi>𝗈𝗋𝗀𝖺𝗇𝗂𝗓𝖺𝗍𝗂𝗈𝗇</mi></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m9" class="ltx_Math" alttext="nsubj\rightarrow\leftarrow prep\_of" display="inline"><mrow><mi>n</mi><mi>s</mi><mi>u</mi><mi>b</mi><mi>j</mi><mo>→</mo><mo>←</mo><mi>p</mi><mi>r</mi><mi>e</mi><mi>p</mi><mi mathvariant="normal">_</mi><mi>o</mi><mi>f</mi></mrow></math>, became</th>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m10" class="ltx_Math" alttext="\mathsf{personMemberOf}" display="inline"><mi>𝗉𝖾𝗋𝗌𝗈𝗇𝖬𝖾𝗆𝖻𝖾𝗋𝖮𝖿</mi></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m11" class="ltx_Math" alttext="\mathsf{organization\_organization}" display="inline"><mrow><mi>𝗈𝗋𝗀𝖺𝗇𝗂𝗓𝖺𝗍𝗂𝗈𝗇</mi><mo>⁢</mo><mi mathvariant="normal">_</mi><mo>⁢</mo><mi>𝗈𝗋𝗀𝖺𝗇𝗂𝗓𝖺𝗍𝗂𝗈𝗇</mi></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m12" class="ltx_Math" alttext="nsubj\rightarrow\leftarrow prep\_of" display="inline"><mrow><mi>n</mi><mi>s</mi><mi>u</mi><mi>b</mi><mi>j</mi><mo>→</mo><mo>←</mo><mi>p</mi><mi>r</mi><mi>e</mi><mi>p</mi><mi mathvariant="normal">_</mi><mi>o</mi><mi>f</mi></mrow></math>, company</th>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m13" class="ltx_Math" alttext="\mathsf{organizationSubsidiaries}" display="inline"><mi>𝗈𝗋𝗀𝖺𝗇𝗂𝗓𝖺𝗍𝗂𝗈𝗇𝖲𝗎𝖻𝗌𝗂𝖽𝗂𝖺𝗋𝗂𝖾𝗌</mi></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m14" class="ltx_Math" alttext="\mathsf{person\_person}" display="inline"><mrow><mi>𝗉𝖾𝗋𝗌𝗈𝗇</mi><mo>⁢</mo><mi mathvariant="normal">_</mi><mo>⁢</mo><mi>𝗉𝖾𝗋𝗌𝗈𝗇</mi></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m15" class="ltx_Math" alttext="poss\rightarrow\leftarrow appos" display="inline"><mrow><mi>p</mi><mi>o</mi><mi>s</mi><mi>s</mi><mo>→</mo><mo>←</mo><mi>a</mi><mi>p</mi><mi>p</mi><mi>o</mi><mi>s</mi></mrow></math>, sister</th>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m16" class="ltx_Math" alttext="\mathsf{personSiblings}" display="inline"><mi>𝗉𝖾𝗋𝗌𝗈𝗇𝖲𝗂𝖻𝗅𝗂𝗇𝗀𝗌</mi></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m17" class="ltx_Math" alttext="\mathsf{person\_person}" display="inline"><mrow><mi>𝗉𝖾𝗋𝗌𝗈𝗇</mi><mo>⁢</mo><mi mathvariant="normal">_</mi><mo>⁢</mo><mi>𝗉𝖾𝗋𝗌𝗈𝗇</mi></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m18" class="ltx_Math" alttext="poss\rightarrow\leftarrow appos" display="inline"><mrow><mi>p</mi><mi>o</mi><mi>s</mi><mi>s</mi><mo>→</mo><mo>←</mo><mi>a</mi><mi>p</mi><mi>p</mi><mi>o</mi><mi>s</mi></mrow></math>, father</th>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m19" class="ltx_Math" alttext="\mathsf{personParents}" display="inline"><mi>𝗉𝖾𝗋𝗌𝗈𝗇𝖯𝖺𝗋𝖾𝗇𝗍𝗌</mi></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m20" class="ltx_Math" alttext="\mathsf{person\_title}" display="inline"><mrow><mi>𝗉𝖾𝗋𝗌𝗈𝗇</mi><mo>⁢</mo><mi mathvariant="normal">_</mi><mo>⁢</mo><mi>𝗍𝗂𝗍𝗅𝖾</mi></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m21" class="ltx_Math" alttext="\leftarrow nn" display="inline"><mrow><mi/><mo>←</mo><mrow><mi>n</mi><mo>⁢</mo><mi>n</mi></mrow></mrow></math></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m22" class="ltx_Math" alttext="\mathsf{personTitle}" display="inline"><mi>𝗉𝖾𝗋𝗌𝗈𝗇𝖳𝗂𝗍𝗅𝖾</mi></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m23" class="ltx_Math" alttext="\mathsf{organization\_person}" display="inline"><mrow><mi>𝗈𝗋𝗀𝖺𝗇𝗂𝗓𝖺𝗍𝗂𝗈𝗇</mi><mo>⁢</mo><mi mathvariant="normal">_</mi><mo>⁢</mo><mi>𝗉𝖾𝗋𝗌𝗈𝗇</mi></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m24" class="ltx_Math" alttext="prep\_of\rightarrow appos\rightarrow" display="inline"><mrow><mrow><mi>p</mi><mo>⁢</mo><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mi mathvariant="normal">_</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>f</mi></mrow><mo>→</mo><mrow><mi>a</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>s</mi></mrow><mo>→</mo><mi/></mrow></math></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m25" class="ltx_Math" alttext="\mathsf{organizationTopMembersEmployees}" display="inline"><mi>𝗈𝗋𝗀𝖺𝗇𝗂𝗓𝖺𝗍𝗂𝗈𝗇𝖳𝗈𝗉𝖬𝖾𝗆𝖻𝖾𝗋𝗌𝖤𝗆𝗉𝗅𝗈𝗒𝖾𝖾𝗌</mi></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m26" class="ltx_Math" alttext="\mathsf{person\_cause}" display="inline"><mrow><mi>𝗉𝖾𝗋𝗌𝗈𝗇</mi><mo>⁢</mo><mi mathvariant="normal">_</mi><mo>⁢</mo><mi>𝖼𝖺𝗎𝗌𝖾</mi></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m27" class="ltx_Math" alttext="nsubj\rightarrow\leftarrow prep\_of" display="inline"><mrow><mi>n</mi><mi>s</mi><mi>u</mi><mi>b</mi><mi>j</mi><mo>→</mo><mo>←</mo><mi>p</mi><mi>r</mi><mi>e</mi><mi>p</mi><mi mathvariant="normal">_</mi><mi>o</mi><mi>f</mi></mrow></math></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m28" class="ltx_Math" alttext="\mathsf{personCauseOfDeath}" display="inline"><mi>𝗉𝖾𝗋𝗌𝗈𝗇𝖢𝖺𝗎𝗌𝖾𝖮𝖿𝖣𝖾𝖺𝗍𝗁</mi></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m29" class="ltx_Math" alttext="\mathsf{person\_number}" display="inline"><mrow><mi>𝗉𝖾𝗋𝗌𝗈𝗇</mi><mo>⁢</mo><mi mathvariant="normal">_</mi><mo>⁢</mo><mi>𝗇𝗎𝗆𝖻𝖾𝗋</mi></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m30" class="ltx_Math" alttext="\leftarrow appos" display="inline"><mrow><mi/><mo>←</mo><mrow><mi>a</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>s</mi></mrow></mrow></math></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m31" class="ltx_Math" alttext="\mathsf{personAge}" display="inline"><mi>𝗉𝖾𝗋𝗌𝗈𝗇𝖠𝗀𝖾</mi></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m32" class="ltx_Math" alttext="\mathsf{person\_date}" display="inline"><mrow><mi>𝗉𝖾𝗋𝗌𝗈𝗇</mi><mo>⁢</mo><mi mathvariant="normal">_</mi><mo>⁢</mo><mi>𝖽𝖺𝗍𝖾</mi></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m33" class="ltx_Math" alttext="nsubjpass\rightarrow\leftarrow prep\_on\leftarrow num" display="inline"><mrow><mi>n</mi><mi>s</mi><mi>u</mi><mi>b</mi><mi>j</mi><mi>p</mi><mi>a</mi><mi>s</mi><mi>s</mi><mo>→</mo><mo>←</mo><mi>p</mi><mi>r</mi><mi>e</mi><mi>p</mi><mi mathvariant="normal">_</mi><mi>o</mi><mi>n</mi><mo>←</mo><mi>n</mi><mi>u</mi><mi>m</mi></mrow></math></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m34" class="ltx_Math" alttext="\mathsf{personDateOfBirth}" display="inline"><mi>𝗉𝖾𝗋𝗌𝗈𝗇𝖣𝖺𝗍𝖾𝖮𝖿𝖡𝗂𝗋𝗍𝗁</mi></math></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"/>
+<td class="ltx_td ltx_border_t"/></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 2: </span> Some examples from the final set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.T2.m36" class="ltx_Math" alttext="{\bf G}" display="inline"><mi>𝐆</mi></math> of extracted guidelines.</div>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">To demonstrate the effectiveness of our proposed approach, we extend <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p4.m1" class="ltx_Math" alttext="\mathsf{MIML}" display="inline"><mi>𝖬𝖨𝖬𝖫</mi></math> <cite class="ltx_cite">[]</cite>, a state-of-the-art distant supervision model
+and show a significant improvement of 13.5% in F-score on the relation extraction benchmark TAC-KBP <cite class="ltx_cite">[]</cite> dataset. While prior work employed tens
+of thousands of human labeled examples <cite class="ltx_cite">[]</cite> and only got a 6.5% increase in F-score over a logistic regression baseline, our approach
+uses much less labeled data (about 1/8) but achieves much higher improvement on performance over stronger baselines.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>The Challenge</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">Simply taking the union of the hand-labeled data and the corpus labeled by distant supervision is not effective since hand-labeled
+data will be swamped by a larger amount of distantly labeled data. An effective approach must recognize that the hand-labeled data
+is more reliable than the automatically labeled data and so must take precedence
+in cases of conflict. Conflicts cannot be limited to those cases where all the
+features in two examples are the same; this would almost never occur, because of the dozens of features used by a typical relation
+extractor <cite class="ltx_cite">[]</cite>.
+Instead we propose to perform feature selection to generalize human labeled data into <span class="ltx_text ltx_font_italic">training guidelines</span>, and integrate them into latent variable model.</p>
+</div>
+<div id="S2.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">2.1 </span>Guidelines</h3>
+
+<div id="S2.SS1.p1" class="ltx_para">
+<p class="ltx_p">The sparse nature of feature space dilutes the discriminative capability of useful features.
+Given the small amount of hand-labeled data, it is important to
+identify a small set of features that are general enough while being capable of
+predicting quite accurately the type of relation that may hold
+between two entities.</p>
+</div>
+<div id="S2.SS1.p2" class="ltx_para">
+<p class="ltx_p">We experimentally tested alternative feature sets by building
+supervised Maximum Entropy (MaxEnt) models using the hand-labeled data (Table <a href="#S2.T3" title="Table 3 ‣ 2.1 Guidelines ‣ 2 The Challenge ‣ Infusion of Labeled Data into Distant Supervision for Relation Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>), and selected
+an effective combination of three features from the full feature set used by Surdeanu et al., <cite class="ltx_cite">[]</cite>:</p>
+<ul id="I1" class="ltx_itemize">[leftmargin=*]
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p">the semantic types of the two arguments (e.g. person, organization, location, date, title, …)</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p">the sequence of dependency relations along the path
+connecting the heads of the two arguments in the dependency tree.</p>
+</div></li>
+<li id="I1.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I1.i3.p1" class="ltx_para">
+<p class="ltx_p">a word in the sentence between the two arguments</p>
+</div></li>
+</ul>
+</div>
+<div id="S2.SS1.p3" class="ltx_para">
+<p class="ltx_p">These three features are strong indicators of the type
+of relation between two entities. In some cases the
+semantic types of the arguments alone narrows the
+possibilities to one or two relation types.
+For example, entity types such as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p3.m1" class="ltx_Math" alttext="\mathsf{person}" display="inline"><mi>𝗉𝖾𝗋𝗌𝗈𝗇</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p3.m2" class="ltx_Math" alttext="\mathsf{title}" display="inline"><mi>𝗍𝗂𝗍𝗅𝖾</mi></math>
+often implies the relation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p3.m3" class="ltx_Math" alttext="\mathsf{personTitle}" display="inline"><mi>𝗉𝖾𝗋𝗌𝗈𝗇𝖳𝗂𝗍𝗅𝖾</mi></math>.
+Some lexical items
+are clear indicators of particular relations, such as “brother” and “sister” for a sibling relationship</p>
+</div>
+<div id="S2.T3" class="ltx_table">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:57.8pt;" width="57.8pt"><span class="ltx_text ltx_font_small">Model</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:36.1pt;" width="36.1pt"><span class="ltx_text ltx_font_small">Precision</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:36.1pt;" width="36.1pt"><span class="ltx_text ltx_font_small">Recall</span></th>
+<th class="ltx_td ltx_align_justify ltx_border_t" style="width:36.1pt;" width="36.1pt"><span class="ltx_text ltx_font_small">F-score</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:57.8pt;" width="57.8pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T3.m1" class="ltx_Math" alttext="\mathsf{MaxEnt}^{\rm all}" display="inline"><msup><mi>𝖬𝖺𝗑𝖤𝗇𝗍</mi><mi>all</mi></msup></math></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:36.1pt;" width="36.1pt"><span class="ltx_text ltx_font_small">18.6</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:36.1pt;" width="36.1pt"><span class="ltx_text ltx_font_small">6.3</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:36.1pt;" width="36.1pt"><span class="ltx_text ltx_font_small">9.4</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:57.8pt;" width="57.8pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T3.m2" class="ltx_Math" alttext="\mathsf{MaxEnt}^{\rm two}" display="inline"><msup><mi>𝖬𝖺𝗑𝖤𝗇𝗍</mi><mi>two</mi></msup></math></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:36.1pt;" width="36.1pt"><span class="ltx_text ltx_font_small">24.13</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_r ltx_border_t" style="width:36.1pt;" width="36.1pt"><span class="ltx_text ltx_font_small">10.75</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_t" style="width:36.1pt;" width="36.1pt"><span class="ltx_text ltx_font_small">14.87</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r ltx_border_t" style="width:57.8pt;" width="57.8pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.T3.m3" class="ltx_Math" alttext="\mathsf{MaxEnt}^{\rm three}" display="inline"><msup><mi>𝖬𝖺𝗑𝖤𝗇𝗍</mi><mi>three</mi></msup></math></td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r ltx_border_t" style="width:36.1pt;" width="36.1pt"><span class="ltx_text ltx_font_small">40.27</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_r ltx_border_t" style="width:36.1pt;" width="36.1pt"><span class="ltx_text ltx_font_small">12.40</span></td>
+<td class="ltx_td ltx_align_justify ltx_border_b ltx_border_t" style="width:36.1pt;" width="36.1pt"><span class="ltx_text ltx_font_small">18.97</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 3: </span>Performance of a MaxEnt, trained on hand-labeled
+data using all features <cite class="ltx_cite">[]</cite> vs using a subset of two (types of entities, dependency path), or three (adding a span word) features, and evaluated on the test set. </div>
+</div>
+<div id="S2.SS1.p4" class="ltx_para">
+<p class="ltx_p">We extract guidelines from hand-labeled data. Each guideline <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p4.m1" class="ltx_Math" alttext="g" display="inline"><mi>g</mi></math>={<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p4.m2" class="ltx_Math" alttext="g_{i}|i" display="inline"><mrow><msub><mi>g</mi><mi>i</mi></msub><mo>|</mo><mi>i</mi></mrow></math>=1,2,3} consists of a pair of
+semantic types, a dependency path, and optionally
+a span word and is associated with a particular relation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p4.m3" class="ltx_Math" alttext="r(g)" display="inline"><mrow><mi>r</mi><mo>⁢</mo><mrow><mo>(</mo><mi>g</mi><mo>)</mo></mrow></mrow></math>. We keep only those guidelines which make the correct
+prediction for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p4.m4" class="ltx_Math" alttext="all" display="inline"><mrow><mi>a</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>l</mi></mrow></math> and at least <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p4.m5" class="ltx_Math" alttext="k" display="inline"><mi>k</mi></math>=3 examples in the training
+corpus (threshold 3 was obtained by running experiments on the development dataset). Table <a href="#S1.T2" title="Table 2 ‣ 1 Introduction ‣ Infusion of Labeled Data into Distant Supervision for Relation Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> shows some examples in the final set <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.SS1.p4.m6" class="ltx_Math" alttext="{\bf G}" display="inline"><mi>𝐆</mi></math> of extracted guidelines.</p>
+</div>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Guided DS</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">Our goal is to jointly model human-labeled ground truth and structured data from a knowledge base in distant supervision. To do this, we extend the MIML model <cite class="ltx_cite">[]</cite> by adding a new layer as shown in Figure <a href="#S3.F1" title="Figure 1 ‣ 3 Guided DS ‣ Infusion of Labeled Data into Distant Supervision for Relation Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">The input to the model consists of (1) distantly supervised data, represented as a list of <span class="ltx_text ltx_font_italic">n</span> bags<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>A bag is a set of mentions sharing same entity pair.</span></span></span>
+with a vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m1" class="ltx_Math" alttext="{\bf y_{i}}" display="inline"><msub><mi>𝐲</mi><mi>𝐢</mi></msub></math> of binary gold-standard labels,
+either <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m2" class="ltx_Math" alttext="Positive(P)" display="inline"><mrow><mi>P</mi><mo>⁢</mo><mi>o</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>v</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mrow><mo>(</mo><mi>P</mi><mo>)</mo></mrow></mrow></math> or <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m3" class="ltx_Math" alttext="Negative(N)" display="inline"><mrow><mi>N</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>g</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>v</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mrow><mo>(</mo><mi>N</mi><mo>)</mo></mrow></mrow></math> for each relation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m4" class="ltx_Math" alttext="r\!\!\in\!\!R" display="inline"><mrow><mpadded width="-3.4pt"><mi>r</mi></mpadded><mo rspace="0pt">∈</mo><mi>R</mi></mrow></math>; (2) generalized human-labeled ground truth, represented as a set <span class="ltx_text ltx_font_bold">G</span>
+of feature conjunctions <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m5" class="ltx_Math" alttext="g" display="inline"><mi>g</mi></math>={<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m6" class="ltx_Math" alttext="g_{i}|i" display="inline"><mrow><msub><mi>g</mi><mi>i</mi></msub><mo>|</mo><mi>i</mi></mrow></math>=1,2,3} associated with a unique relation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m7" class="ltx_Math" alttext="r(g)" display="inline"><mrow><mi>r</mi><mo>⁢</mo><mrow><mo>(</mo><mi>g</mi><mo>)</mo></mrow></mrow></math>.
+Given a bag of sentences, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m8" class="ltx_Math" alttext="{\bf x_{i}}" display="inline"><msub><mi>𝐱</mi><mi>𝐢</mi></msub></math>, which mention an <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m9" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math>th entity pair (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m10" class="ltx_Math" alttext="e_{1}" display="inline"><msub><mi>e</mi><mn>1</mn></msub></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m11" class="ltx_Math" alttext="e_{2}" display="inline"><msub><mi>e</mi><mn>2</mn></msub></math>),
+our goal is to correctly predict which relation is mentioned in each sentence, or <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m12" class="ltx_Math" alttext="N\!R" display="inline"><mrow><mpadded width="-1.7pt"><mi>N</mi></mpadded><mo>⁢</mo><mi>R</mi></mrow></math> if none of the relations under consideration are mentioned.
+The vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m13" class="ltx_Math" alttext="{\bf z_{i}}" display="inline"><msub><mi>𝐳</mi><mi>𝐢</mi></msub></math> contains the latent mention-level classifications for the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m14" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math>th entity pair.
+We introduce a set of latent variables <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m15" class="ltx_Math" alttext="{\bf h_{i}}" display="inline"><msub><mi>𝐡</mi><mi>𝐢</mi></msub></math> which model human ground truth for each mention in the <span class="ltx_text ltx_font_italic">i</span>th bag
+and take precedence over the current model assignment <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p2.m16" class="ltx_Math" alttext="{\bf z_{i}}" display="inline"><msub><mi>𝐳</mi><mi>𝐢</mi></msub></math>.</p>
+</div>
+<div id="S3.F1" class="ltx_figure">
+<p class="ltx_p ltx_align_center"><img src="" id="S3.F1.g1" class="ltx_graphics" alt=""/></p>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Plate diagram of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.F1.m2" class="ltx_Math" alttext="\mathsf{{\bf G}uided\ DS}" display="inline"><mrow><mi>𝐆</mi><mo>⁢</mo><mpadded width="+5.0pt"><mi>𝗎𝗂𝖽𝖾𝖽</mi></mpadded><mo>⁢</mo><mi>𝖣𝖲</mi></mrow></math> </div>
+</div>
+<div id="S3.p3" class="ltx_para">
+<p class="ltx_p">Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m1" class="ltx_Math" alttext="i,j" display="inline"><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow></math> be the index in the bag and the mention level, respectively.
+We model mention-level extraction <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m2" class="ltx_Math" alttext="p(z_{ij}|{\bf x}_{ij};{\bf w}_{z})" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><msub><mi>z</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>|</mo><msub><mi>𝐱</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>;</mo><msub><mi>𝐰</mi><mi>z</mi></msub><mo>)</mo></mrow></mrow></math>,
+human relabeling <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m3" class="ltx_Math" alttext="h_{ij}({\bf x}_{ij},z_{ij})" display="inline"><mrow><msub><mi>h</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>𝐱</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>,</mo><msub><mi>z</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub></mrow><mo>)</mo></mrow></mrow></math> and multi-label aggregation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p3.m4" class="ltx_Math" alttext="p(y_{i}^{r}|{\bf h}_{i};{\bf w_{y}})" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><msubsup><mi>y</mi><mi>i</mi><mi>r</mi></msubsup><mo>|</mo><msub><mi>𝐡</mi><mi>i</mi></msub><mo>;</mo><msub><mi>𝐰</mi><mi>𝐲</mi></msub><mo>)</mo></mrow></mrow></math>.
+We define:</p>
+</div>
+<div id="S3.p4" class="ltx_para">
+<ul id="I2" class="ltx_itemize">[leftmargin=*]
+<li id="I2.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i1.p1" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m1" class="ltx_Math" alttext="y_{i}^{r}\!\in\!\{P,N\}:r" display="inline"><mrow><mrow><mpadded width="-1.7pt"><msubsup><mi>y</mi><mi>i</mi><mi>r</mi></msubsup></mpadded><mo rspace="0.8pt">∈</mo><mrow><mo>{</mo><mrow><mi>P</mi><mo>,</mo><mi>N</mi></mrow><mo>}</mo></mrow></mrow><mo>:</mo><mi>r</mi></mrow></math> holds for the <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i1.p1.m2" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math>th bag or not.</p>
+</div></li>
+<li id="I2.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i2.p1" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i2.p1.m1" class="ltx_Math" alttext="{\bf x}_{ij}" display="inline"><msub><mi>𝐱</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub></math> is the feature representation of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i2.p1.m2" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math>th relation mention in the <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i2.p1.m3" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math>th bag. We use the same set of features as in Surdeanu et al. (2012).</p>
+</div></li>
+<li id="I2.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i3.p1" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i3.p1.m1" class="ltx_Math" alttext="z_{ij}\!\!\in\!\!R\cup N\!R" display="inline"><mrow><mpadded width="-3.4pt"><msub><mi>z</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub></mpadded><mo rspace="0pt">∈</mo><mrow><mi>R</mi><mo>∪</mo><mrow><mpadded width="-1.7pt"><mi>N</mi></mpadded><mo>⁢</mo><mi>R</mi></mrow></mrow></mrow></math>: a latent variable that denotes the relation of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i3.p1.m2" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math>th mention in the <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i3.p1.m3" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math>th bag</p>
+</div></li>
+<li id="I2.i4" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i4.p1" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i4.p1.m1" class="ltx_Math" alttext="h_{ij}\!\in\!R\cup N\!R" display="inline"><mrow><mpadded width="-1.7pt"><msub><mi>h</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub></mpadded><mo rspace="0.8pt">∈</mo><mrow><mi>R</mi><mo>∪</mo><mrow><mpadded width="-1.7pt"><mi>N</mi></mpadded><mo>⁢</mo><mi>R</mi></mrow></mrow></mrow></math>: a latent variable that denotes the refined relation of the mention <math xmlns="http://www.w3.org/1998/Math/MathML" id="I2.i4.p1.m2" class="ltx_Math" alttext="{\bf x}_{ij}" display="inline"><msub><mi>𝐱</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub></math></p>
+</div></li>
+</ul>
+<p class="ltx_p">We define relabeled relations <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m1" class="ltx_Math" alttext="h_{ij}" display="inline"><msub><mi>h</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub></math> as following:</p>
+<table id="S3.Ex1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex1.m1" class="ltx_Math" alttext="h_{ij}(x_{ij},z_{ij})\!\!=\!\!\left\{\begin{array}[]{l}\!\!\!\!r(g),\!\ {\rm if%&#10;\ }\exists!\ \!g\!\in\!{\bf G}{\rm\ s.t.\ }\!g\!=\!\!\{g_{k}\!\}\!\!\subseteq%&#10;\!\!\{{\bf x}_{ij}\!\}\\&#10;\!\!\!z_{ij}\ \ ,{\rm\ \ otherwise}\end{array}\right." display="block"><mrow><mrow><msub><mi>h</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>x</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>,</mo><msub><mi>z</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub></mrow><mo>)</mo></mrow></mrow><mo rspace="0pt">=</mo><mrow><mo>{</mo><mtable align="center" columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mrow><mpadded lspace="-6.8pt" width="-6.8pt"><mi>r</mi></mpadded><mrow><mo>(</mo><mi>g</mi><mo>)</mo></mrow><mo rspace="0pt">,</mo><mpadded width="+5.0pt"><mi>if</mi></mpadded><mo>∃</mo><mi mathvariant="normal">!</mi><mo mathvariant="italic" separator="true"> </mo><mpadded width="-1.7pt"><mi>g</mi></mpadded><mo rspace="0.8pt">∈</mo><mpadded width="+5.0pt"><mi>𝐆</mi></mpadded><mi mathvariant="normal">s</mi><mo>.</mo><mi mathvariant="normal">t</mi><mo>.</mo><mo separator="true"> </mo><mpadded width="-1.7pt"><mi>g</mi></mpadded><mo rspace="0pt">=</mo><mrow><mo>{</mo><mpadded width="-1.7pt"><msub><mi>g</mi><mi>k</mi></msub></mpadded><mo rspace="0pt">}</mo></mrow><mo rspace="0pt">⊆</mo><mrow><mo>{</mo><mpadded width="-1.7pt"><msub><mi>𝐱</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub></mpadded><mo>}</mo></mrow></mrow></mtd></mtr><mtr><mtd columnalign="left"><mrow><msub><mpadded lspace="-5.1pt" width="-5.1pt"><mi>z</mi></mpadded><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo mathvariant="italic" separator="true"> </mo><mo rspace="12.5pt">,</mo><mi>otherwise</mi></mrow></mtd></mtr></mtable></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S3.p5" class="ltx_para">
+<p class="ltx_p">Thus, relation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p5.m1" class="ltx_Math" alttext="r(g)" display="inline"><mrow><mi>r</mi><mo>⁢</mo><mrow><mo>(</mo><mi>g</mi><mo>)</mo></mrow></mrow></math> is assigned to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p5.m2" class="ltx_Math" alttext="h_{ij}" display="inline"><msub><mi>h</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub></math> iff there exists a unique guideline <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p5.m3" class="ltx_Math" alttext="g\!\!\in\!\!{\bf G}" display="inline"><mrow><mpadded width="-3.4pt"><mi>g</mi></mpadded><mo rspace="0pt">∈</mo><mi>𝐆</mi></mrow></math>,
+such that the feature vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p5.m4" class="ltx_Math" alttext="{\bf x}_{ij}" display="inline"><msub><mi>𝐱</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub></math> contains all constituents of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p5.m5" class="ltx_Math" alttext="g" display="inline"><mi>g</mi></math>, i.e.
+entity types, a dependency path and maybe a span word, if <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p5.m6" class="ltx_Math" alttext="g" display="inline"><mi>g</mi></math> has one.
+We use mention relation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p5.m7" class="ltx_Math" alttext="z_{ij}" display="inline"><msub><mi>z</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub></math> inferred by the model
+only in case no such a guideline exists or there is more than one matching guideline.
+We also define:</p>
+</div>
+<div id="S3.p6" class="ltx_para">
+<ul id="I3" class="ltx_itemize">[leftmargin=*]
+<li id="I3.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i1.p1" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i1.p1.m1" class="ltx_Math" alttext="{\bf w}_{z}" display="inline"><msub><mi>𝐰</mi><mi>z</mi></msub></math> is the weight vector for the multi-class relation mention-level classifier<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>All classifiers are implemented using L2-regularized logistic regression with Stanford CoreNLP package.</span></span></span></p>
+</div></li>
+<li id="I3.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I3.i2.p1" class="ltx_para">
+<p class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i2.p1.m1" class="ltx_Math" alttext="{\bf w}_{y}^{r}" display="inline"><msubsup><mi>𝐰</mi><mi>y</mi><mi>r</mi></msubsup></math> is the weight vector for the <span class="ltx_text ltx_font_italic">r</span>th binary top-level aggregation classifier (from mention labels to bag-level prediction).
+We use <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i2.p1.m2" class="ltx_Math" alttext="{\bf w}_{y}" display="inline"><msub><mi>𝐰</mi><mi>y</mi></msub></math> to represent <math xmlns="http://www.w3.org/1998/Math/MathML" id="I3.i2.p1.m3" class="ltx_Math" alttext="{\bf w}_{y}^{1},{\bf w}_{y}^{2},\dots,{\bf w}_{y}^{|R|}" display="inline"><mrow><msubsup><mi>𝐰</mi><mi>y</mi><mn>1</mn></msubsup><mo>,</mo><msubsup><mi>𝐰</mi><mi>y</mi><mn>2</mn></msubsup><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><msubsup><mi>𝐰</mi><mi>y</mi><mrow><mo fence="true">|</mo><mi>R</mi><mo fence="true">|</mo></mrow></msubsup></mrow></math>.</p>
+</div></li>
+</ul>
+<p class="ltx_p">Our approach is aimed at improving the mention-level classifier, while keeping the multi-instance multi-label
+framework to allow for joint modeling.</p>
+</div>
+<div id="S3.T4" class="ltx_table">
+<table class="ltx_tabular ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_rr ltx_border_t">             Iteration</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">1</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">2</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">3</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">4</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">5</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">6</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">7</td>
+<td class="ltx_td ltx_align_center ltx_border_t">8</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_rr ltx_border_t">(a) Corrected relations:</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">2052</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">718</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">648</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">596</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">505</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">545</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">557</td>
+<td class="ltx_td ltx_align_center ltx_border_t">535</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_rr ltx_border_t">(b) Retrieved relations:</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">10219</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">860</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">676</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">670</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">621</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">599</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">594</td>
+<td class="ltx_td ltx_align_center ltx_border_t">592</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_rr ltx_border_t">Total relabelings</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">12271</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">1578</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">1324</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">1264</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">1226</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">1144</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r ltx_border_t">1153</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_t">1127</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 4: </span> Number of relabelings for each training iteration of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T4.m4" class="ltx_Math" alttext="\mathsf{{\bf G}uided\ DS}" display="inline"><mrow><mi>𝐆</mi><mo>⁢</mo><mpadded width="+5.0pt"><mi>𝗎𝗂𝖽𝖾𝖽</mi></mpadded><mo>⁢</mo><mi>𝖣𝖲</mi></mrow></math>:
+(a) relabelings due to corrected relations, e.g. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T4.m5" class="ltx_Math" alttext="\mathsf{personChildren}\!\!\rightarrow\!\!\mathsf{personSiblings}" display="inline"><mrow><mpadded width="-3.4pt"><mi>𝗉𝖾𝗋𝗌𝗈𝗇𝖢𝗁𝗂𝗅𝖽𝗋𝖾𝗇</mi></mpadded><mo rspace="0pt">→</mo><mi>𝗉𝖾𝗋𝗌𝗈𝗇𝖲𝗂𝖻𝗅𝗂𝗇𝗀𝗌</mi></mrow></math>
+(b) relabelings due to retrieved relations, e.g. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.T4.m6" class="ltx_Math" alttext="\mathsf{notRelated}(N\!R)\!\rightarrow\!\mathsf{personTitle}" display="inline"><mrow><mrow><mi>𝗇𝗈𝗍𝖱𝖾𝗅𝖺𝗍𝖾𝖽</mi><mo>⁢</mo><mpadded width="-1.7pt"><mrow><mo>(</mo><mrow><mpadded width="-1.7pt"><mi>N</mi></mpadded><mo>⁢</mo><mi>R</mi></mrow><mo>)</mo></mrow></mpadded></mrow><mo rspace="0.8pt">→</mo><mi>𝗉𝖾𝗋𝗌𝗈𝗇𝖳𝗂𝗍𝗅𝖾</mi></mrow></math></div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Training</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">We use a hard expectation maximization algorithm to train the model.
+Our objective function is to maximize log-likelihood of the data:</p>
+<table id="Sx1.EGx1" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S4.Ex2" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex2.m2" class="ltx_Math" alttext="\displaystyle LL({\bf w_{y},w_{z}})=\sum_{i=1}^{n}\log p({\bf y_{i}|x_{i},w_{y%&#10;},w_{z},G})" display="inline"><mrow><mi>L</mi><mi>L</mi><mrow><mo>(</mo><msub><mi>𝐰</mi><mi>𝐲</mi></msub><mo>,</mo><msub><mi>𝐰</mi><mi>𝐳</mi></msub><mo>)</mo></mrow><mo>=</mo><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover></mstyle><mi>log</mi><mi>p</mi><mrow><mo>(</mo><msub><mi>𝐲</mi><mi>𝐢</mi></msub><mo>|</mo><msub><mi>𝐱</mi><mi>𝐢</mi></msub><mo>,</mo><msub><mi>𝐰</mi><mi>𝐲</mi></msub><mo>,</mo><msub><mi>𝐰</mi><mi>𝐳</mi></msub><mo>,</mo><mi>𝐆</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S4.Ex3" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex3.m2" class="ltx_Math" alttext="\displaystyle=\sum_{i=1}^{n}\log\sum_{\bf h_{i}}p({\bf y_{i},h_{i}|x_{i},w_{y}%&#10;,w_{z},G})" display="inline"><mrow><mo>=</mo><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover></mstyle><mi>log</mi><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><msub><mi>𝐡</mi><mi>𝐢</mi></msub></munder></mstyle><mi>p</mi><mrow><mo>(</mo><msub><mi>𝐲</mi><mi>𝐢</mi></msub><mo>,</mo><msub><mi>𝐡</mi><mi>𝐢</mi></msub><mo>|</mo><msub><mi>𝐱</mi><mi>𝐢</mi></msub><mo>,</mo><msub><mi>𝐰</mi><mi>𝐲</mi></msub><mo>,</mo><msub><mi>𝐰</mi><mi>𝐳</mi></msub><mo>,</mo><mi>𝐆</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S4.Ex4" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex4.m2" class="ltx_Math" alttext="\displaystyle=\sum_{i=1}^{n}\log\sum_{\bf h_{i}}\prod_{j=1}^{|{\bf h_{i}}|}p(h%&#10;_{ij}|{\bf x}_{ij},\!{\bf w_{z}},\!{\bf G})\!\!\!\!\!\!\prod_{r\in P_{i}\cup N%&#10;_{i}}\!\!\!\!\!p(y_{i}^{r}|{\bf h}_{i},\!{\bf w}_{\bf y}^{r})" display="inline"><mrow><mo>=</mo><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover></mstyle><mi>log</mi><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><msub><mi>𝐡</mi><mi>𝐢</mi></msub></munder></mstyle><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∏</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mrow><mo fence="true">|</mo><msub><mi>𝐡</mi><mi>𝐢</mi></msub><mo fence="true">|</mo></mrow></munderover></mstyle><mi>p</mi><mrow><mo>(</mo><msub><mi>h</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>|</mo><msub><mi>𝐱</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo rspace="0.8pt">,</mo><msub><mi>𝐰</mi><mi>𝐳</mi></msub><mo rspace="0.8pt">,</mo><mi>𝐆</mi><mo rspace="0pt">)</mo></mrow><mpadded width="-8.5pt"><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∏</mo><mrow><mi>r</mi><mo>∈</mo><mrow><msub><mi>P</mi><mi>i</mi></msub><mo>∪</mo><msub><mi>N</mi><mi>i</mi></msub></mrow></mrow></munder></mstyle></mpadded><mi>p</mi><mrow><mo>(</mo><msubsup><mi>y</mi><mi>i</mi><mi>r</mi></msubsup><mo>|</mo><msub><mi>𝐡</mi><mi>i</mi></msub><mo rspace="0.8pt">,</mo><msubsup><mi>𝐰</mi><mi>𝐲</mi><mi>r</mi></msubsup><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where the last equality is due to conditional independence.
+Because of the non-convexity of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m1" class="ltx_Math" alttext="LL({\bf w_{y},w_{z}})" display="inline"><mrow><mi>L</mi><mo>⁢</mo><mi>L</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mi>𝐰</mi><mi>𝐲</mi></msub><mo>,</mo><msub><mi>𝐰</mi><mi>𝐳</mi></msub></mrow><mo>)</mo></mrow></mrow></math> we approximate and maximize the joint log-probability <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m2" class="ltx_Math" alttext="p({\bf y_{i},\!h_{i}|x_{i},\!w_{y},\!\!w_{z},\!G}\!)" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><msub><mi>𝐲</mi><mi>𝐢</mi></msub><mo rspace="0.8pt">,</mo><msub><mi>𝐡</mi><mi>𝐢</mi></msub><mo>|</mo><msub><mi>𝐱</mi><mi>𝐢</mi></msub><mo rspace="0.8pt">,</mo><msub><mi>𝐰</mi><mi>𝐲</mi></msub><mo rspace="0pt">,</mo><msub><mi>𝐰</mi><mi>𝐳</mi></msub><mo rspace="0.8pt">,</mo><mpadded width="-1.7pt"><mi>𝐆</mi></mpadded><mo>)</mo></mrow></mrow></math> for each entity pair in the database:</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<table id="Sx1.EGx2" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S4.Ex5" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex5.m2" class="ltx_Math" alttext="\displaystyle\log p({\bf y_{i},\!h_{i}|x_{i},\!w_{y},\!\!w_{z},\!G}\!)" display="inline"><mrow><mi>log</mi><mi>p</mi><mrow><mo>(</mo><msub><mi>𝐲</mi><mi>𝐢</mi></msub><mo rspace="0.8pt">,</mo><msub><mi>𝐡</mi><mi>𝐢</mi></msub><mo>|</mo><msub><mi>𝐱</mi><mi>𝐢</mi></msub><mo rspace="0.8pt">,</mo><msub><mi>𝐰</mi><mi>𝐲</mi></msub><mo rspace="0pt">,</mo><msub><mi>𝐰</mi><mi>𝐳</mi></msub><mo rspace="0.8pt">,</mo><mpadded width="-1.7pt"><mi>𝐆</mi></mpadded><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S4.Ex6" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex6.m2" class="ltx_Math" alttext="\displaystyle=\sum_{j=1}^{|{\bf h_{i}}|}\!\log p(h_{ij}|{\bf x}_{ij},\!{\bf w_%&#10;{z},\!G})\!+\!\!\!\!\!\!\!\sum_{r\in P_{i}\cup N_{i}}\!\!\!\!\!\!\log p(y_{i}^%&#10;{r}|{\bf h}_{i},\!{\bf w}_{\bf y}^{r})." display="inline"><mrow><mo>=</mo><mpadded width="-1.7pt"><mstyle displaystyle="true"><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mrow><mo fence="true">|</mo><msub><mi>𝐡</mi><mi>𝐢</mi></msub><mo fence="true">|</mo></mrow></munderover></mstyle></mpadded><mi>log</mi><mi>p</mi><mrow><mo>(</mo><msub><mi>h</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>|</mo><msub><mi>𝐱</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo rspace="0.8pt">,</mo><msub><mi>𝐰</mi><mi>𝐳</mi></msub><mo rspace="0.8pt">,</mo><mi>𝐆</mi><mo rspace="0.8pt">)</mo></mrow><mo rspace="0pt">+</mo><mpadded width="-10.2pt"><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>r</mi><mo>∈</mo><mrow><msub><mi>P</mi><mi>i</mi></msub><mo>∪</mo><msub><mi>N</mi><mi>i</mi></msub></mrow></mrow></munder></mstyle></mpadded><mi>log</mi><mi>p</mi><mrow><mo>(</mo><msubsup><mi>y</mi><mi>i</mi><mi>r</mi></msubsup><mo>|</mo><msub><mi>𝐡</mi><mi>i</mi></msub><mo rspace="0.8pt">,</mo><msubsup><mi>𝐰</mi><mi>𝐲</mi><mi>r</mi></msubsup><mo>)</mo></mrow><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div><span class="ltx_ERROR undefined">{algorithm}</span>
+<div id="S4.p3" class="ltx_para">
+<p class="ltx_p">[h!]
+<span class="ltx_text ltx_caption">: <span class="ltx_text ltx_font_bold">G</span>uided DS training</span>
+<span class="ltx_ERROR undefined">{algorithmic}</span>[1]
+<span class="ltx_ERROR undefined">\State</span>Phase 1: build set <span class="ltx_text ltx_font_bold">G</span> of guidelines
+<span class="ltx_ERROR undefined">\State</span>Phase 2: EM training
+<span class="ltx_ERROR undefined">\For</span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m1" class="ltx_Math" alttext="{\rm iteration}=1,\dots,T" display="inline"><mrow><mi>iteration</mi><mo>=</mo><mrow><mn>1</mn><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mi>T</mi></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\For</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m2" class="ltx_Math" alttext="i=1,\dots,n" display="inline"><mrow><mi>i</mi><mo>=</mo><mrow><mn>1</mn><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mi>n</mi></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\For</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m3" class="ltx_Math" alttext="j=1,\dots,|{\bf x_{i}}|" display="inline"><mrow><mi>j</mi><mo>=</mo><mrow><mn>1</mn><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mrow><mo fence="true">|</mo><msub><mi>𝐱</mi><mi>𝐢</mi></msub><mo fence="true">|</mo></mrow></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\State</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m4" class="ltx_Math" alttext="\!\!\!\!\!\!z_{ij}^{*}\!\!={\rm argmax}_{z_{ij}}p(z_{ij}|{\bf x_{i},\!y_{i},\!%&#10;w_{z},\!w_{y}}\!)" display="inline"><mrow><mpadded width="-3.4pt"><msubsup><mpadded lspace="-10.2pt" width="-10.2pt"><mi>z</mi></mpadded><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow><mo>*</mo></msubsup></mpadded><mo>=</mo><msub><mi>argmax</mi><msub><mi>z</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub></msub><mi>p</mi><mrow><mo>(</mo><msub><mi>z</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>|</mo><msub><mi>𝐱</mi><mi>𝐢</mi></msub><mo rspace="0.8pt">,</mo><msub><mi>𝐲</mi><mi>𝐢</mi></msub><mo rspace="0.8pt">,</mo><msub><mi>𝐰</mi><mi>𝐳</mi></msub><mo rspace="0.8pt">,</mo><mpadded width="-1.7pt"><msub><mi>𝐰</mi><mi>𝐲</mi></msub></mpadded><mo>)</mo></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\State</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m5" class="ltx_Math" alttext="\!\!\!\!\!\!h_{ij}^{*}\!\!\!=\!\!\left\{\begin{array}[]{l}\!\!\!\!r(g),\!\ {%&#10;\rm if\ }\exists!\ \!g\!\in\!{\bf G}\!:\!\{g_{k}\!\}\!\!\subseteq\!\!\{{\bf x}%&#10;_{ij}\!\}\\&#10;\!\!\!{z_{ij}}^{*}\ ,{\rm\ otherwise}\end{array}\right." display="inline"><mrow><mpadded width="-5.1pt"><msubsup><mpadded lspace="-10.2pt" width="-10.2pt"><mi>h</mi></mpadded><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow><mo>*</mo></msubsup></mpadded><mo rspace="0pt">=</mo><mrow><mo>{</mo><mtable align="center" columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mrow><mrow><mrow><mrow><mpadded lspace="-6.8pt" width="-6.8pt"><mi>r</mi></mpadded><mo>⁢</mo><mrow><mo>(</mo><mi>g</mi><mo>)</mo></mrow></mrow><mo>,</mo><mrow><mpadded width="+5.0pt"><mi>if</mi></mpadded><mo>⁢</mo><mrow><mo>∃</mo><mi mathvariant="normal">!</mi></mrow></mrow><mo separator="true"> </mo><mpadded width="-1.7pt"><mi>g</mi></mpadded></mrow><mo rspace="0.8pt">∈</mo><mpadded width="-1.7pt"><mi>𝐆</mi></mpadded></mrow><mo rspace="0.8pt">:</mo><mrow><mrow><mo>{</mo><mpadded width="-1.7pt"><msub><mi>g</mi><mi>k</mi></msub></mpadded><mo>}</mo></mrow><mo rspace="0pt">⊆</mo><mrow><mo>{</mo><mpadded width="-1.7pt"><msub><mi>𝐱</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub></mpadded><mo>}</mo></mrow></mrow></mrow></mtd></mtr><mtr><mtd columnalign="left"><mrow><mpadded width="+5.0pt"><mmultiscripts><mpadded lspace="-5.1pt" width="-5.1pt"><mi>z</mi></mpadded><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow><none/><none/><mo>*</mo></mmultiscripts></mpadded><mo separator="true">,  </mo><mi>otherwise</mi></mrow></mtd></mtr></mtable></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\State</span><span class="ltx_text ltx_font_bold">update <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m6" class="ltx_Math" alttext="\bf h_{i}" display="inline"><msub><mi>𝐡</mi><mi>𝐢</mi></msub></math> with </span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m7" class="ltx_Math" alttext="h_{ij}^{*}" display="inline"><msubsup><mi>h</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow><mo>*</mo></msubsup></math>
+<span class="ltx_ERROR undefined">\EndFor</span><span class="ltx_ERROR undefined">\EndFor</span><span class="ltx_ERROR undefined">\State</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m8" class="ltx_Math" alttext="{\bf w}_{\bf z}^{*}\!\!=\!\!{\rm argmax}_{\bf w}\!\sum_{i=1}^{n}\!\sum_{j=1}^{%&#10;|{\bf x_{i}}|}\!\log p(h_{ij}|{\bf x}_{ij},\!\!{\bf w}\!)" display="inline"><mrow><mpadded width="-3.4pt"><msubsup><mi>𝐰</mi><mi>𝐳</mi><mo>*</mo></msubsup></mpadded><mo rspace="0pt">=</mo><mpadded width="-1.7pt"><msub><mi>argmax</mi><mi>𝐰</mi></msub></mpadded><mpadded width="-1.7pt"><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></msubsup></mpadded><mpadded width="-1.7pt"><msubsup><mo largeop="true" symmetric="true">∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mrow><mo fence="true">|</mo><msub><mi>𝐱</mi><mi>𝐢</mi></msub><mo fence="true">|</mo></mrow></msubsup></mpadded><mi>log</mi><mi>p</mi><mrow><mo>(</mo><msub><mi>h</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>|</mo><msub><mi>𝐱</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo rspace="0pt">,</mo><mpadded width="-1.7pt"><mi>𝐰</mi></mpadded><mo>)</mo></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\For</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m9" class="ltx_Math" alttext="r\in R" display="inline"><mrow><mi>r</mi><mo>∈</mo><mi>R</mi></mrow></math>
+<span class="ltx_ERROR undefined">\State</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m10" class="ltx_Math" alttext="{\bf w_{y}^{r*}}\!\!=\!{\rm argmax}_{\bf w}\!\!\!\!\!\!\!\!\!\!\!\sum\limits_{%&#10;1\leq i\leq n\ s.t.\ r\in P_{i}\cup N_{i}}\!\!\!\!\!\!\!\!\!\!\!\log p(y_{i}^{%&#10;r}|{\bf h_{i}},\!\!{\bf w}\!)" display="inline"><mrow><mpadded width="-3.4pt"><msubsup><mi>𝐰</mi><mi>𝐲</mi><mrow><mi>𝐫</mi><mo>⁣</mo><mo>*</mo></mrow></msubsup></mpadded><mo rspace="0.8pt">=</mo><mpadded width="-18.7pt"><msub><mi>argmax</mi><mi>𝐰</mi></msub></mpadded><mpadded width="-18.7pt"><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mrow><mn>1</mn><mo>≤</mo><mi>i</mi><mo>≤</mo><mrow><mpadded width="+5.0pt"><mi>n</mi></mpadded><mo>⁢</mo><mi>s</mi></mrow></mrow><mo separator="true">.</mo><mi>t</mi><mo separator="true">.  </mo><mrow><mi>r</mi><mo>∈</mo><mrow><msub><mi>P</mi><mi>i</mi></msub><mo>∪</mo><msub><mi>N</mi><mi>i</mi></msub></mrow></mrow></mrow></munder></mpadded><mi>log</mi><mi>p</mi><mrow><mo>(</mo><msubsup><mi>y</mi><mi>i</mi><mi>r</mi></msubsup><mo>|</mo><msub><mi>𝐡</mi><mi>𝐢</mi></msub><mo rspace="0pt">,</mo><mpadded width="-1.7pt"><mi>𝐰</mi></mpadded><mo>)</mo></mrow></mrow></math>
+<span class="ltx_ERROR undefined">\EndFor</span><span class="ltx_ERROR undefined">\EndFor</span><span class="ltx_ERROR undefined">\State</span><span class="ltx_text ltx_font_bold">return</span> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p3.m11" class="ltx_Math" alttext="\bf w_{z},w_{y}" display="inline"><mrow><msub><mi>𝐰</mi><mi>𝐳</mi></msub><mo>,</mo><msub><mi>𝐰</mi><mi>𝐲</mi></msub></mrow></math></p>
+</div>
+<div id="S4.p4" class="ltx_para">
+<p class="ltx_p">The pseudocode is presented as algorithm 1.</p>
+</div>
+<div id="S4.p5" class="ltx_para">
+<p class="ltx_p">The following approximation is used for inference at step 6:</p>
+<table id="Sx1.EGx3" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S4.Ex7" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex7.m1" class="ltx_Math" alttext="\displaystyle p(z_{ij}|" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><msub><mi>z</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>|</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex7.m2" class="ltx_Math" alttext="\displaystyle{\bf x_{i},\!y_{i},\!w_{z},\!w_{y}}\!)\propto p({\bf y_{i}},z_{ij%&#10;}|{\bf x_{i},w_{y},w_{z}})" display="inline"><mrow><msub><mi>𝐱</mi><mi>𝐢</mi></msub><mo rspace="0.8pt">,</mo><msub><mi>𝐲</mi><mi>𝐢</mi></msub><mo rspace="0.8pt">,</mo><msub><mi>𝐰</mi><mi>𝐳</mi></msub><mo rspace="0.8pt">,</mo><mpadded width="-1.7pt"><msub><mi>𝐰</mi><mi>𝐲</mi></msub></mpadded><mo>)</mo><mo>∝</mo><mi>p</mi><mo>(</mo><msub><mi>𝐲</mi><mi>𝐢</mi></msub><mo>,</mo><msub><mi>z</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>|</mo><msub><mi>𝐱</mi><mi>𝐢</mi></msub><mo>,</mo><msub><mi>𝐰</mi><mi>𝐲</mi></msub><mo>,</mo><msub><mi>𝐰</mi><mi>𝐳</mi></msub><mo>)</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S4.Ex8" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex8.m2" class="ltx_Math" alttext="\displaystyle\approx p(z_{ij}|x_{ij},{\bf w_{z}})p({\bf y_{i}|h_{i}^{\prime},w%&#10;_{y}})" display="inline"><mrow><mo>≈</mo><mi>p</mi><mrow><mo>(</mo><msub><mi>z</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>|</mo><msub><mi>x</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>,</mo><msub><mi>𝐰</mi><mi>𝐳</mi></msub><mo>)</mo></mrow><mi>p</mi><mrow><mo>(</mo><msub><mi>𝐲</mi><mi>𝐢</mi></msub><mo>|</mo><msubsup><mi>𝐡</mi><mi>𝐢</mi><mo>′</mo></msubsup><mo>,</mo><msub><mi>𝐰</mi><mi>𝐲</mi></msub><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S4.Ex9" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex9.m2" class="ltx_Math" alttext="\displaystyle=p(z_{ij}|x_{ij},{\bf w_{z}})\prod_{r\in P_{i}\cup N_{i}}p(y_{i}^%&#10;{r}|{\bf h_{i}^{\prime},w_{y}^{r}})," display="inline"><mrow><mo>=</mo><mi>p</mi><mrow><mo>(</mo><msub><mi>z</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>|</mo><msub><mi>x</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>,</mo><msub><mi>𝐰</mi><mi>𝐳</mi></msub><mo>)</mo></mrow><mstyle displaystyle="true"><munder><mo largeop="true" movablelimits="false" symmetric="true">∏</mo><mrow><mi>r</mi><mo>∈</mo><mrow><msub><mi>P</mi><mi>i</mi></msub><mo>∪</mo><msub><mi>N</mi><mi>i</mi></msub></mrow></mrow></munder></mstyle><mi>p</mi><mrow><mo>(</mo><msubsup><mi>y</mi><mi>i</mi><mi>r</mi></msubsup><mo>|</mo><msubsup><mi>𝐡</mi><mi>𝐢</mi><mo>′</mo></msubsup><mo>,</mo><msubsup><mi>𝐰</mi><mi>𝐲</mi><mi>𝐫</mi></msubsup><mo>)</mo></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S4.p6" class="ltx_para">
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p6.m1" class="ltx_Math" alttext="{\bf h_{i}^{\prime}}" display="inline"><msubsup><mi>𝐡</mi><mi>𝐢</mi><mo>′</mo></msubsup></math> contains previously inferred and maybe further relabeled mention labels for group <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p6.m2" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math> (steps 5-10), with the exception of component <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p6.m3" class="ltx_Math" alttext="j" display="inline"><mi>j</mi></math> whose label is replaced by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p6.m4" class="ltx_Math" alttext="z_{ij}" display="inline"><msub><mi>z</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub></math>.
+In the M-step (lines 12-15) we optimize model parameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p6.m5" class="ltx_Math" alttext="\bf w_{z},w_{y}" display="inline"><mrow><msub><mi>𝐰</mi><mi>𝐳</mi></msub><mo>,</mo><msub><mi>𝐰</mi><mi>𝐲</mi></msub></mrow></math>, given the current assignment
+of mention-level labels <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p6.m6" class="ltx_Math" alttext="\bf h_{i}" display="inline"><msub><mi>𝐡</mi><mi>𝐢</mi></msub></math>.</p>
+</div>
+<div id="S4.p7" class="ltx_para">
+<p class="ltx_p">Experiments show that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p7.m1" class="ltx_Math" alttext="\mathsf{{\bf G}uided\ DS}" display="inline"><mrow><mi>𝐆</mi><mo>⁢</mo><mpadded width="+5.0pt"><mi>𝗎𝗂𝖽𝖾𝖽</mi></mpadded><mo>⁢</mo><mi>𝖣𝖲</mi></mrow></math>
+efficiently learns new model,
+resulting in a drastically decreasing
+number of needed relabelings for further iterations (Table <a href="#S3.T4" title="Table 4 ‣ 3 Guided DS ‣ Infusion of Labeled Data into Distant Supervision for Relation Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>).
+At the inference step we first classify all mentions:</p>
+<table id="S4.Ex10" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex10.m1" class="ltx_Math" alttext="z_{ij}^{*}={\rm argmax}_{z\in R\cup N\!R}\ \ p(z|x_{ij},{\bf w_{z}})" display="block"><mrow><msubsup><mi>z</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow><mo>*</mo></msubsup><mo>=</mo><msub><mi>argmax</mi><mrow><mi>z</mi><mo>∈</mo><mrow><mi>R</mi><mo>∪</mo><mrow><mpadded width="-1.7pt"><mi>N</mi></mpadded><mo>⁢</mo><mi>R</mi></mrow></mrow></mrow></msub><mo mathvariant="italic" separator="true"> </mo><mi>p</mi><mrow><mo>(</mo><mi>z</mi><mo>|</mo><msub><mi>x</mi><mrow><mi>i</mi><mo>⁢</mo><mi>j</mi></mrow></msub><mo>,</mo><msub><mi>𝐰</mi><mi>𝐳</mi></msub><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">Then final relation labels for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p7.m2" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math>th entity tuple are obtained via the top-level classifiers:</p>
+<table id="S4.Ex11" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.Ex11.m1" class="ltx_Math" alttext="y_{i}^{r*}={\rm argmax}_{y\in\{P,N\}}\ \ p(y|{\bf z_{i}^{*},w_{y}^{r}})" display="block"><mrow><msubsup><mi>y</mi><mi>i</mi><mrow><mi>r</mi><mo>⁣</mo><mo>*</mo></mrow></msubsup><mo>=</mo><msub><mi>argmax</mi><mrow><mi>y</mi><mo>∈</mo><mrow><mo>{</mo><mrow><mi>P</mi><mo>,</mo><mi>N</mi></mrow><mo>}</mo></mrow></mrow></msub><mo mathvariant="italic" separator="true"> </mo><mi>p</mi><mrow><mo>(</mo><mi>y</mi><mo>|</mo><msubsup><mi>𝐳</mi><mi>𝐢</mi><mo>*</mo></msubsup><mo>,</mo><msubsup><mi>𝐰</mi><mi>𝐲</mi><mi>𝐫</mi></msubsup><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Experiments</h2>
+
+<div id="S5.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.1 </span>Data</h3>
+
+<div id="S5.SS1.p1" class="ltx_para">
+<p class="ltx_p">We use the KBP <cite class="ltx_cite">[]</cite>
+dataset<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>Available from Linguistic Data Consortium (LDC) at http://projects.ldc.upenn.edu/kbp/data.</span></span></span>
+which is preprocessed by Surdeanu et al. <cite class="ltx_cite">[]</cite> using the Stanford parser<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>http://nlp.stanford.edu/software/lex-parser.shtml</span></span></span> <cite class="ltx_cite">[]</cite>.
+This dataset is generated by mapping Wikipedia
+infoboxes into a large unlabeled corpus that consists of 1.5M documents from KBP source corpus and a complete snapshot of Wikipedia.</p>
+</div>
+<div id="S5.SS1.p2" class="ltx_para">
+<p class="ltx_p">The KBP 2010 and 2011 data includes 200 query named entities with the relations they are involved in.
+We used 40 queries as development set and the rest 160 queries (3334 entity pairs that express a relation) as the test set.
+The official KBP evaluation is performed by pooling the system responses and manually reviewing each response,
+producing a hand-checked assessment data. We used KBP 2012 assessment data to generate guidelines since
+queries from different years do not overlap. It contains about 2500
+labeled sentences of 41 relations, which
+is less than 0.09% of the size of the distantly labeled dataset of 2M sentences.
+The final set <span class="ltx_text ltx_font_bold">G</span> consists of 99 guidelines (section <a href="#S2.SS1" title="2.1 Guidelines ‣ 2 The Challenge ‣ Infusion of Labeled Data into Distant Supervision for Relation Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>).</p>
+</div>
+<div id="S5.F2" class="ltx_figure"><img src="" id="S5.F2.g1" class="ltx_graphics" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>Performance of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m10" class="ltx_Math" alttext="\mathsf{{\bf G}uided\ DS}" display="inline"><mrow><mi>𝐆</mi><mo>⁢</mo><mpadded width="+5.0pt"><mi>𝗎𝗂𝖽𝖾𝖽</mi></mpadded><mo>⁢</mo><mi>𝖣𝖲</mi></mrow></math> on KBP task compared to a) baselines:
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m11" class="ltx_Math" alttext="\mathsf{MaxEnt}" display="inline"><mi>𝖬𝖺𝗑𝖤𝗇𝗍</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m12" class="ltx_Math" alttext="\mathsf{DS}" display="inline"><mi>𝖣𝖲</mi></math>+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m13" class="ltx_Math" alttext="\mathsf{upsampling}" display="inline"><mi>𝗎𝗉𝗌𝖺𝗆𝗉𝗅𝗂𝗇𝗀</mi></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m14" class="ltx_Math" alttext="\mathsf{Semi}" display="inline"><mi>𝖲𝖾𝗆𝗂</mi></math>-<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m15" class="ltx_Math" alttext="\mathsf{MIML}" display="inline"><mi>𝖬𝖨𝖬𝖫</mi></math> <cite class="ltx_cite">[]</cite>
+b) state-of-art models: <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m16" class="ltx_Math" alttext="\mathsf{Mintz}" display="inline"><mi>𝖬𝗂𝗇𝗍𝗓</mi></math>++ <cite class="ltx_cite">[]</cite>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m17" class="ltx_Math" alttext="\mathsf{MultiR}" display="inline"><mi>𝖬𝗎𝗅𝗍𝗂𝖱</mi></math> <cite class="ltx_cite">[]</cite>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.F2.m18" class="ltx_Math" alttext="\mathsf{MIML}" display="inline"><mi>𝖬𝖨𝖬𝖫</mi></math> <cite class="ltx_cite">[]</cite></div>
+</div>
+</div>
+<div id="S5.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.2 </span>Models</h3>
+
+<div id="S5.SS2.p1" class="ltx_para">
+<p class="ltx_p">We implement <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m1" class="ltx_Math" alttext="\mathsf{{\bf G}uided\ DS}" display="inline"><mrow><mi>𝐆</mi><mo>⁢</mo><mpadded width="+5.0pt"><mi>𝗎𝗂𝖽𝖾𝖽</mi></mpadded><mo>⁢</mo><mi>𝖣𝖲</mi></mrow></math> on top of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m2" class="ltx_Math" alttext="\mathsf{MIML}" display="inline"><mi>𝖬𝖨𝖬𝖫</mi></math> <cite class="ltx_cite">[]</cite>
+code base<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">5</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">5</sup>Available at http://nlp.stanford.edu/software/mimlre.shtml.</span></span></span>.
+Training <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p1.m3" class="ltx_Math" alttext="\mathsf{MIML}" display="inline"><mi>𝖬𝖨𝖬𝖫</mi></math> on a simple fusion of distantly-labeled and human-labeled datasets does not improve the maximum F-score since
+this hand-labeled data is swamped by a much larger amount of distant-supervised data of much lower quality. Upsampling the labeled data did not improve the performance either.
+We experimented with different upsampling ratios and report best results using ratio 1:1 in Figure <a href="#S5.F2" title="Figure 2 ‣ 5.1 Data ‣ 5 Experiments ‣ Infusion of Labeled Data into Distant Supervision for Relation Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.</p>
+</div>
+<div id="S5.SS2.p2" class="ltx_para">
+<p class="ltx_p">Our baselines: 1) <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m1" class="ltx_Math" alttext="\mathsf{MaxEnt}" display="inline"><mi>𝖬𝖺𝗑𝖤𝗇𝗍</mi></math> is a supervised maximum entropy baseline trained on a human-labeled data;
+2) <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m2" class="ltx_Math" alttext="\mathsf{DS}" display="inline"><mi>𝖣𝖲</mi></math>+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m3" class="ltx_Math" alttext="\mathsf{upsampling}" display="inline"><mi>𝗎𝗉𝗌𝖺𝗆𝗉𝗅𝗂𝗇𝗀</mi></math> is an upsampling experiment, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m4" class="ltx_Math" alttext="\mathsf{MIML}" display="inline"><mi>𝖬𝖨𝖬𝖫</mi></math> was trained on a
+mix of a distantly-labeled and human-labeled data;
+3) <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m5" class="ltx_Math" alttext="\mathsf{Semi}" display="inline"><mi>𝖲𝖾𝗆𝗂</mi></math>-<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m6" class="ltx_Math" alttext="\mathsf{MIML}" display="inline"><mi>𝖬𝖨𝖬𝖫</mi></math> is a recent semi-supervised extension.
+We also compare <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m7" class="ltx_Math" alttext="\mathsf{{\bf G}uided\ DS}" display="inline"><mrow><mi>𝐆</mi><mo>⁢</mo><mpadded width="+5.0pt"><mi>𝗎𝗂𝖽𝖾𝖽</mi></mpadded><mo>⁢</mo><mi>𝖣𝖲</mi></mrow></math> with three state-of-the-art models:
+1) <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m8" class="ltx_Math" alttext="\mathsf{MultiR}" display="inline"><mi>𝖬𝗎𝗅𝗍𝗂𝖱</mi></math> and 2) <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m9" class="ltx_Math" alttext="\mathsf{MIML}" display="inline"><mi>𝖬𝖨𝖬𝖫</mi></math> are two distant supervision models that support multi-instance learning
+and overlapping relations;
+3) <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m10" class="ltx_Math" alttext="\mathsf{Mintz}" display="inline"><mi>𝖬𝗂𝗇𝗍𝗓</mi></math>++ is a single-instance learning algorithm for distant supervision.
+The difference between <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m11" class="ltx_Math" alttext="\mathsf{{\bf G}uided\ DS}" display="inline"><mrow><mi>𝐆</mi><mo>⁢</mo><mpadded width="+5.0pt"><mi>𝗎𝗂𝖽𝖾𝖽</mi></mpadded><mo>⁢</mo><mi>𝖣𝖲</mi></mrow></math> and all other systems is significant
+with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m12" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math>-value less than 0.05 according to a paired <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS2.p2.m13" class="ltx_Math" alttext="t" display="inline"><mi>t</mi></math>-test assuming a normal distribution.</p>
+</div>
+</div>
+<div id="S5.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.3 </span>Results</h3>
+
+<div id="S5.SS3.p1" class="ltx_para">
+<p class="ltx_p">We scored our model against all 41 relations and thus replicated the actual KBP evaluation.
+Figure <a href="#S5.F2" title="Figure 2 ‣ 5.1 Data ‣ 5 Experiments ‣ Infusion of Labeled Data into Distant Supervision for Relation Extraction" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> shows that our model consistently outperforms all six algorithms at almost all recall levels and
+improves the maximum <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p1.m1" class="ltx_Math" alttext="F" display="inline"><mi>F</mi></math>-score by more than 13.5<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p1.m2" class="ltx_Math" alttext="\%" display="inline"><mi mathvariant="normal">%</mi></math> relative to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p1.m3" class="ltx_Math" alttext="\mathsf{MIML}" display="inline"><mi>𝖬𝖨𝖬𝖫</mi></math> (from 28.35<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p1.m4" class="ltx_Math" alttext="\%" display="inline"><mi mathvariant="normal">%</mi></math>
+to 32.19<math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p1.m5" class="ltx_Math" alttext="\%" display="inline"><mi mathvariant="normal">%</mi></math>) as well as increases the area under precision-recall curve by more than 37% (from 11.74 to 16.1).
+Also, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p1.m6" class="ltx_Math" alttext="\mathsf{{\bf G}uided\ DS}" display="inline"><mrow><mi>𝐆</mi><mo>⁢</mo><mpadded width="+5.0pt"><mi>𝗎𝗂𝖽𝖾𝖽</mi></mpadded><mo>⁢</mo><mi>𝖣𝖲</mi></mrow></math> improves the overall recall by more than 9% absolute
+(from 30.9% to 39.93%) at a comparable level of precision
+(24.35% for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p1.m7" class="ltx_Math" alttext="\mathsf{MIML}" display="inline"><mi>𝖬𝖨𝖬𝖫</mi></math> vs 23.64% for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p1.m8" class="ltx_Math" alttext="\mathsf{{\bf G}uided\ DS}" display="inline"><mrow><mi>𝐆</mi><mo>⁢</mo><mpadded width="+5.0pt"><mi>𝗎𝗂𝖽𝖾𝖽</mi></mpadded><mo>⁢</mo><mi>𝖣𝖲</mi></mrow></math>), while increases the running time of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p1.m9" class="ltx_Math" alttext="\mathsf{MIML}" display="inline"><mi>𝖬𝖨𝖬𝖫</mi></math> by only 3%.
+Thus, our approach outperforms state-of-the-art model for relation extraction using much less labeled data
+that was used by Zhang et al., <cite class="ltx_cite">[]</cite> to outperform logistic regression baseline.
+Performance of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS3.p1.m10" class="ltx_Math" alttext="\mathsf{{\bf G}uided\ DS}" display="inline"><mrow><mi>𝐆</mi><mo>⁢</mo><mpadded width="+5.0pt"><mi>𝗎𝗂𝖽𝖾𝖽</mi></mpadded><mo>⁢</mo><mi>𝖣𝖲</mi></mrow></math> also compares favorably with best scored hand-coded systems for a similar task such as Sun et al., <cite class="ltx_cite">[]</cite>
+system for KBP 2011, which reports an F-score of 25.7%.</p>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Conclusions and Future Work</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">We show that relation extractors trained with distant supervision can benefit significantly from a small number of human labeled examples. We propose a strategy to generate and select guidelines so that they are more generalized
+forms of labeled instances. We show how to incorporate these guidelines into an existing state-of-art model for relation extraction. Our approach significantly improves performance in practice and thus opens up many opportunities
+for further research in RE where only a very limited amount of labeled training data is available.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">Supported by the Intelligence Advanced Research Projects Activity (
+IARPA) via Air Force Research Laboratory (AFRL) contract number FA8650-10-C-7058. The U.S. Government is authorized to reproduce and distribute reprints for Governmental purposes notwithstanding any copyright annotation thereon. The views and conclusions contained herein are those of the authors and should not be interpreted as necessarily representing the official policies or endorsements, either expressed or implied, of IARPA, AFRL, or the U.S. Government.</p>
+</div>
+<div class="ltx_pagination ltx_role_newpage"/>
+<div id="Sx1.p2" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite"/></p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 18:25:13 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

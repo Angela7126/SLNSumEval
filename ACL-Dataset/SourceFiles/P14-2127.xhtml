@@ -1,0 +1,914 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" prefix="dcterms: http://purl.org/dc/terms/">
+<head>
+<title>Hierarchical MT Training using Max-Violation Perceptron
+</title>
+<!--Generated on Wed Jun 11 18:28:28 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Hierarchical MT Training using Max-Violation Perceptron
+</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">
+
+ Kai Zhao<math xmlns="http://www.w3.org/1998/Math/MathML" id="m1" class="ltx_Math" alttext="{}^{\dagger}" display="inline"><msup><mi/><mo>†</mo></msup></math>     Liang Huang<math xmlns="http://www.w3.org/1998/Math/MathML" id="m2" class="ltx_Math" alttext="{}^{\dagger}" display="inline"><msup><mi/><mo>†</mo></msup></math> 
+<br class="ltx_break"/><math xmlns="http://www.w3.org/1998/Math/MathML" id="m3" class="ltx_Math" alttext="{}^{\dagger}" display="inline"><msup><mi/><mo>†</mo></msup></math>Graduate Center &amp; Queens College
+<br class="ltx_break"/>City University of New York
+<br class="ltx_break"/>{<span class="ltx_text ltx_font_typewriter">kzhao@gc,huang@cs.qc</span>}<span class="ltx_text ltx_font_typewriter">.cuny.edu</span>
+&amp;
+     Haitao Mi<math xmlns="http://www.w3.org/1998/Math/MathML" id="m4" class="ltx_Math" alttext="{}^{\ddagger}" display="inline"><msup><mi/><mo>‡</mo></msup></math>     Abe Ittycheriah<math xmlns="http://www.w3.org/1998/Math/MathML" id="m5" class="ltx_Math" alttext="{}^{\ddagger}" display="inline"><msup><mi/><mo>‡</mo></msup></math>
+<br class="ltx_break"/>     <math xmlns="http://www.w3.org/1998/Math/MathML" id="m6" class="ltx_Math" alttext="{}^{\ddagger}" display="inline"><msup><mi/><mo>‡</mo></msup></math>T. J. Watson Research Center
+<br class="ltx_break"/>      IBM
+<br class="ltx_break"/>      {<span class="ltx_text ltx_font_typewriter">hmi,abei</span>}<span class="ltx_text ltx_font_typewriter">@us.ibm.com</span>
+
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Large-scale discriminative training has become promising
+for statistical machine translation
+by leveraging the huge training corpus;
+for example the recent effort in phrase-based MT <cite class="ltx_cite">[<a href="#bib.bib232" title="Max-violation perceptron and forced decoding for scalable MT training" class="ltx_ref">21</a>]</cite>
+significantly outperforms mainstream methods
+that only train on small tuning sets. However, phrase-based MT suffers from limited reorderings,
+and thus its training can only utilize a small portion of the bitext due to the distortion limit. To address this problem, we extend <span class="ltx_ERROR undefined">\newcite</span>yu+:2013 to syntax-based MT by
+generalizing their latent variable “violation-fixing” perceptron from graphs to hypergraphs.
+Experiments confirm that our method leads
+to up to +1.2 <span class="ltx_text ltx_font_smallcaps">Bleu</span>improvement over mainstream methods such as <span class="ltx_text ltx_font_smallcaps">Mert</span>and <span class="ltx_text ltx_font_smallcaps">Pro</span>.</p>
+</div><span class="ltx_ERROR undefined">\exampleindent</span>
+<div id="p1" class="ltx_para">
+<p class="ltx_p">1.5em</p>
+</div><span class="ltx_ERROR undefined">\algrenewcommand</span><span class="ltx_ERROR undefined">\algorithmicindent</span>
+<div id="p2" class="ltx_para">
+<p class="ltx_p">1em</p>
+</div><span class="ltx_ERROR undefined">\floatname</span>
+<div id="p3" class="ltx_para">
+<p class="ltx_p">algorithmAlgorithm</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Many natural language processing problems
+including part-of-speech tagging <cite class="ltx_cite">[<a href="#bib.bib107" title="Discriminative training methods for hidden markov models: theory and experiments with perceptron algorithms" class="ltx_ref">7</a>]</cite>,
+parsing <cite class="ltx_cite">[<a href="#bib.bib24" title="Online large-margin training of dependency parsers" class="ltx_ref">18</a>]</cite>, and event extraction
+<cite class="ltx_cite">[<a href="#bib.bib236" title="Joint event extraction via structured prediction with global features" class="ltx_ref">16</a>]</cite>
+have enjoyed great success using large-scale discriminative training algorithms. However, a similar success on machine translation
+has been elusive, where the mainstream methods still tune on small datasets.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">What makes large-scale MT training so hard then?
+After numerous attempts by various researchers
+<cite class="ltx_cite">[<a href="#bib.bib76" title="An end-to-end discriminative approach to machine translation" class="ltx_ref">17</a>, <a href="#bib.bib215" title="Online large-margin training for statistical machine translation" class="ltx_ref">20</a>, <a href="#bib.bib237" title="Online learning methods for discriminative training of phrase based statistical machine translation" class="ltx_ref">1</a>, <a href="#bib.bib238" title="A discriminative latent variable model for statistical machine translation." class="ltx_ref">2</a>, <a href="#bib.bib214" title="Online large-margin training of syntactic and structural translation features" class="ltx_ref">5</a>, <a href="#bib.bib239" title="Large-scale discriminative training for statistical machine translation using held-out line search" class="ltx_ref">9</a>, <a href="#bib.bib240" title="Fast and adaptive online training of feature-rich translation models" class="ltx_ref">10</a>]</cite>,
+the recent work of <span class="ltx_ERROR undefined">\newcite</span>yu+:2013 finally reveals a major reason: it is the vast amount of (inevitable) search errors in MT decoding that astray learning.
+To alleviate this problem, their work adopts
+the theoretically-motivated framework of
+violation-fixing perceptron <cite class="ltx_cite">[<a href="#bib.bib161" title="Structured perceptron with inexact search" class="ltx_ref">12</a>]</cite> tailed for inexact search, yielding great results on phrase-based MT
+(outperforming small-scale <span class="ltx_text ltx_font_smallcaps">Mert</span>/<span class="ltx_text ltx_font_smallcaps">Pro</span>by a large margin for the first time).
+However, the underlying phrase-based model suffers
+from limited distortion
+and thus can only employ a small portion (about 1/3 in their Ch-En experiments)
+of the bitext in training.</p>
+</div>
+<div id="S1.F1" class="ltx_figure">
+<table class="ltx_tabular ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">Collins (02)</span></td>
+<td class="ltx_td ltx_align_justify" style="width:12.8pt;" width="12.8pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m1" class="ltx_Math" alttext="\stackbin[\text{search}]{\text{inexact}}{\longrightarrow}" display="inline"><mrow><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\stackbin</mtext></merror><mo>⁢</mo><mrow><mo>[</mo><mtext mathsize="small" stretchy="false">search</mtext><mo>]</mo></mrow><mo>⁢</mo><mtext mathsize="small" stretchy="false">inexact</mtext></mrow><mo>⟶</mo><mi/></mrow></math></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">Huang et al. (12)</span></td>
+<td class="ltx_td ltx_align_justify" style="width:14.2pt;" width="14.2pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m2" class="ltx_Math" alttext="\stackbin[\text{variable}]{\text{latent}}{\longrightarrow}" display="inline"><mrow><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\stackbin</mtext></merror><mo>⁢</mo><mrow><mo>[</mo><mtext mathsize="small" stretchy="false">variable</mtext><mo>]</mo></mrow><mo>⁢</mo><mtext mathsize="small" stretchy="false">latent</mtext></mrow><mo>⟶</mo><mi/></mrow></math></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">Yu et al. (13)</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_justify" style="width:12.8pt;" width="12.8pt"/>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">  </span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m3" class="ltx_Math" alttext="\downarrow" display="inline"><mo>↓</mo></math><span class="ltx_text ltx_font_small"> </span><span class="ltx_text ltx_font_script">hypergraph</span></td>
+<td class="ltx_td ltx_align_justify" style="width:14.2pt;" width="14.2pt"/>
+<td class="ltx_td ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m4" class="ltx_Math" alttext="\downarrow" display="inline"><mo>↓</mo></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td"/>
+<td class="ltx_td ltx_align_justify" style="width:12.8pt;" width="12.8pt"/>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">Zhang et al. (13)</span></td>
+<td class="ltx_td ltx_align_justify" style="width:14.2pt;" width="14.2pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F1.m5" class="ltx_Math" alttext="\stackbin[\text{\color{white}\colorlet{pgfstrokecolor}{.}{variable}}]{}{\longrightarrow}" display="inline"><mrow><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\stackbin</mtext></merror><mo>⁢</mo><mrow><mo>[</mo><mtext mathcolor="#FFFFFF" mathsize="small" stretchy="false">variable</mtext><mo>]</mo></mrow></mrow><mo>⟶</mo><mi/></mrow></math></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold ltx_font_small">this work</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_font_small"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Relationship with previous work.</div>
+</div>
+<div id="S1.F2" class="ltx_figure">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:125.7pt;" width="125.7pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span>
+<span class="ltx_inline-block ltx_align_center ltx_transformed_outer" style="width:166.9pt;height:243.888888888889px;vertical-align:-1.5pt;"><span class="ltx_transformed_inner" style="transform:translate(-27.8pt,-29.3pt) scale(0.75,0.75) ;-webkit-transform:translate(-27.8pt,-29.3pt) scale(0.75,0.75) ;-ms-transform:translate(-27.8pt,-29.3pt) scale(0.75,0.75) ;">
+<table class="ltx_tabular ltx_align_middle">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_r" style="width:8.5pt;" width="8.5pt">id</td>
+<td class="ltx_td ltx_align_justify ltx_align_middle" style="width:143.7pt;" width="143.7pt">rule</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_r ltx_border_tt" style="width:8.5pt;" width="8.5pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.m1" class="ltx_Math" alttext="r_{0}" display="inline"><msub><mi>r</mi><mn>0</mn></msub></math></td>
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_tt" style="width:143.7pt;" width="143.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.m2" class="ltx_Math" alttext="\text{S}\rightarrow\langle{\text{X}_{\kern-0.5pt{\raisebox{1.0pt}{\framebox{%&#10;\tiny 1}}}},\text{X}_{\kern-0.5pt{\raisebox{1.0pt}{\framebox{\tiny 1}}}}}\rangle" display="inline"><mrow><mtext>S</mtext><mo>→</mo><mrow><mo>⟨</mo><mrow><msub><mtext>X</mtext><mtext mathsize="small" stretchy="false">1</mtext></msub><mo>,</mo><msub><mtext>X</mtext><mtext mathsize="small" stretchy="false">1</mtext></msub></mrow><mo>⟩</mo></mrow></mrow></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_r" style="width:8.5pt;" width="8.5pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.m3" class="ltx_Math" alttext="r_{1}" display="inline"><msub><mi>r</mi><mn>1</mn></msub></math></td>
+<td class="ltx_td ltx_align_justify ltx_align_middle" style="width:143.7pt;" width="143.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.m4" class="ltx_Math" alttext="\text{S}\rightarrow\langle{\text{S}_{\kern-0.5pt{\raisebox{1.0pt}{\framebox{%&#10;\tiny 1}}}}\text{X}_{\kern-0.5pt{\raisebox{1.0pt}{\framebox{\tiny 2}}}},\text{%&#10;S}_{\kern-0.5pt{\raisebox{1.0pt}{\framebox{\tiny 1}}}}\text{X}_{\kern-0.5pt{%&#10;\raisebox{1.0pt}{\framebox{\tiny 2}}}}}\rangle" display="inline"><mrow><mtext>S</mtext><mo>→</mo><mrow><mo>⟨</mo><mrow><mrow><msub><mtext>S</mtext><mtext mathsize="small" stretchy="false">1</mtext></msub><mo>⁢</mo><msub><mtext>X</mtext><mtext mathsize="small" stretchy="false">2</mtext></msub></mrow><mo>,</mo><mrow><msub><mtext>S</mtext><mtext mathsize="small" stretchy="false">1</mtext></msub><mo>⁢</mo><msub><mtext>X</mtext><mtext mathsize="small" stretchy="false">2</mtext></msub></mrow></mrow><mo>⟩</mo></mrow></mrow></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_r ltx_border_t" style="width:8.5pt;" width="8.5pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.m5" class="ltx_Math" alttext="r_{2}" display="inline"><msub><mi>r</mi><mn>2</mn></msub></math></td>
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_t" style="width:143.7pt;" width="143.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.m6" class="ltx_Math" alttext="\text{X}\rightarrow\langle{\mbox{{\it{B\`{u}sh\'{i}}}},\text{Bush}}\rangle" display="inline"><mrow><mtext>X</mtext><mo>→</mo><mrow><mo>⟨</mo><mrow><mtext mathvariant="italic">Bùshí</mtext><mo>,</mo><mtext>Bush</mtext></mrow><mo>⟩</mo></mrow></mrow></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_r" style="width:8.5pt;" width="8.5pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.m7" class="ltx_Math" alttext="r_{3}" display="inline"><msub><mi>r</mi><mn>3</mn></msub></math></td>
+<td class="ltx_td ltx_align_justify ltx_align_middle" style="width:143.7pt;" width="143.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.m8" class="ltx_Math" alttext="\text{X}\rightarrow\langle{\mbox{{\it{Sh\={a}l\'{o}ng}}},\text{Sharon}}\rangle" display="inline"><mrow><mtext>X</mtext><mo>→</mo><mrow><mo>⟨</mo><mrow><mtext mathvariant="italic">Shālóng</mtext><mo>,</mo><mtext>Sharon</mtext></mrow><mo>⟩</mo></mrow></mrow></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_r" style="width:8.5pt;" width="8.5pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.m9" class="ltx_Math" alttext="r_{4}" display="inline"><msub><mi>r</mi><mn>4</mn></msub></math></td>
+<td class="ltx_td ltx_align_justify ltx_align_middle" style="width:143.7pt;" width="143.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.m10" class="ltx_Math" alttext="\text{X}\rightarrow\langle{\mbox{{\it{hu\`{i}t\'{a}n}}},\text{talks}}\rangle" display="inline"><mrow><mtext>X</mtext><mo>→</mo><mrow><mo>⟨</mo><mrow><mtext mathvariant="italic">huìtán</mtext><mo>,</mo><mtext>talks</mtext></mrow><mo>⟩</mo></mrow></mrow></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_r" style="width:8.5pt;" width="8.5pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.m11" class="ltx_Math" alttext="r_{5}" display="inline"><msub><mi>r</mi><mn>5</mn></msub></math></td>
+<td class="ltx_td ltx_align_justify ltx_align_middle" style="width:143.7pt;" width="143.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.m12" class="ltx_Math" alttext="\text{X}\rightarrow\langle\mbox{{\it{y\v{u}}}}\ \text{X}_{\kern-0.5pt{%&#10;\raisebox{1.0pt}{\framebox{\tiny 1}}}}\ \mbox{{\it{j\v{u}x\'{i}ng}}}\ \text{X}%&#10;_{\kern-0.5pt{\raisebox{1.0pt}{\framebox{\tiny 2}}}}\text{,\qquad\quad\ }" display="inline"><mrow><mtext>X</mtext><mo>→</mo><mrow><mo>⟨</mo><mpadded width="+5.0pt"><mtext mathvariant="italic">yǔ</mtext></mpadded><mpadded width="+5.0pt"><msub><mtext>X</mtext><mtext mathsize="small" stretchy="false">1</mtext></msub></mpadded><mpadded width="+5.0pt"><mtext mathvariant="italic">jǔxíng</mtext></mpadded><msub><mtext>X</mtext><mtext mathsize="small" stretchy="false">2</mtext></msub><mtext>,    </mtext></mrow></mrow></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.m13" class="ltx_Math" alttext="\text{\ \ \qquad\qquad\quad held }\text{X}_{\kern-0.5pt{\raisebox{1.0pt}{%&#10;\framebox{\tiny 2}}}}\text{ with }\text{X}_{\kern-0.5pt{\raisebox{1.0pt}{%&#10;\framebox{\tiny 1}}}}\rangle" display="inline"><mrow><msub><mrow><mtext>       held </mtext><mtext>X</mtext></mrow><mtext mathsize="small" stretchy="false">2</mtext></msub><msub><mrow><mtext> with </mtext><mtext>X</mtext></mrow><mtext mathsize="small" stretchy="false">1</mtext></msub><mo>⟩</mo></mrow></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_r" style="width:8.5pt;" width="8.5pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.m14" class="ltx_Math" alttext="r_{6}" display="inline"><msub><mi>r</mi><mn>6</mn></msub></math></td>
+<td class="ltx_td ltx_align_justify ltx_align_middle" style="width:143.7pt;" width="143.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.m15" class="ltx_Math" alttext="\text{X}\rightarrow\langle{\mbox{{\it{y\v{u}}}}\ \mbox{{\it{Sh\={a}l\'{o}ng}}}%&#10;,\text{ with Sharon}}\rangle" display="inline"><mrow><mtext>X</mtext><mo>→</mo><mrow><mo>⟨</mo><mrow><mrow><mpadded width="+5.0pt"><mtext mathvariant="italic">yǔ</mtext></mpadded><mo>⁢</mo><mtext mathvariant="italic">Shālóng</mtext></mrow><mo>,</mo><mtext> with Sharon</mtext></mrow><mo>⟩</mo></mrow></mrow></math></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_b ltx_border_r" style="width:8.5pt;" width="8.5pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.m16" class="ltx_Math" alttext="r_{7}" display="inline"><msub><mi>r</mi><mn>7</mn></msub></math></td>
+<td class="ltx_td ltx_align_justify ltx_align_middle ltx_border_b" style="width:143.7pt;" width="143.7pt"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.m17" class="ltx_Math" alttext="\text{X}\rightarrow\langle\text{X}_{\kern-0.5pt{\raisebox{1.0pt}{\framebox{%&#10;\tiny 1}}}}\ \mbox{{\it{j\v{u}x\'{i}ng}}}\ \text{X}_{\kern-0.5pt{\raisebox{1.0%&#10;pt}{\framebox{\tiny 2}}}}\text{,}\qquad\qquad\ \ " display="inline"><mrow><mtext>X</mtext><mo>→</mo><mrow><mo>⟨</mo><mpadded width="+5.0pt"><msub><mtext>X</mtext><mtext mathsize="small" stretchy="false">1</mtext></msub></mpadded><mpadded width="+5.0pt"><mtext mathvariant="italic">jǔxíng</mtext></mpadded><msub><mtext>X</mtext><mtext mathsize="small" stretchy="false">2</mtext></msub><mpadded width="+80pt"><mtext>,</mtext></mpadded></mrow></mrow></math> <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.m18" class="ltx_Math" alttext="\text{\ \ \ \ \ \ \qquad\qquad\qquad}\text{X}_{\kern-0.5pt{\raisebox{1.0pt}{%&#10;\framebox{\tiny 1}}}}\ \text{held }\text{X}_{\kern-0.5pt{\raisebox{1.0pt}{%&#10;\framebox{\tiny 2}}}}\rangle" display="inline"><mrow><mpadded width="+5.0pt"><msub><mrow><mtext>            </mtext><mtext>X</mtext></mrow><mtext mathsize="small" stretchy="false">1</mtext></msub></mpadded><msub><mrow><mtext>held </mtext><mtext>X</mtext></mrow><mtext mathsize="small" stretchy="false">2</mtext></msub><mo>⟩</mo></mrow></math></td></tr>
+</table>
+</span></span></td>
+<td class="ltx_td ltx_align_justify" style="width:143.1pt;" width="143.1pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span>
+<span class="ltx_inline-block ltx_align_center ltx_transformed_outer" style="width:65.7pt;height:246.805555555555px;vertical-align:-1.5pt;"><span class="ltx_transformed_inner" style="transform:translate(-11.0pt,-29.6pt) scale(0.75,0.75) ;-webkit-transform:translate(-11.0pt,-29.6pt) scale(0.75,0.75) ;-ms-transform:translate(-11.0pt,-29.6pt) scale(0.75,0.75) ;"><svg xmlns="http://www.w3.org/2000/svg" version="1.1" xml:id="S1.F2.pic1" fragid="S1.F2.pic1" width="90" height="327" viewBox="-45 -317 45 10" overflow="visible"><g transform="translate(0,0)"><g transform="scale(1 -1)"><g transform="scale(1 -1) translate(-5,-10)"><foreignObject width="50" height="20"><svg height="325" version="1.1" viewBox="-45 -312 90 325" width="90"><g transform="matrix(1 0 0 -1 0 -299)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.pic1.m1" class="ltx_Math" alttext="S_{[0:5]}" display="inline"><msub><mi>S</mi><mrow><mo>[</mo><mn>0</mn><mo>:</mo><mn>5</mn><mo>]</mo></mrow></msub></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.pic1.m2" class="ltx_Math" alttext="S_{[0:1]}" display="inline"><msub><mi>S</mi><mrow><mo>[</mo><mn>0</mn><mo>:</mo><mn>1</mn><mo>]</mo></mrow></msub></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.pic1.m3" class="ltx_Math" alttext="X_{[0:1]}" display="inline"><msub><mi>X</mi><mrow><mo>[</mo><mn>0</mn><mo>:</mo><mn>1</mn><mo>]</mo></mrow></msub></math><g><g><g transform="matrix(1 0 0 1 -39 -2)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="16" overflow="visible" width="79">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.pic1.m4" class="ltx_Math" alttext="{}_{0}" display="inline"><msub><mi/><mn>0</mn></msub></math> <span class="ltx_text ltx_font_italic">Bùshí</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.pic1.m5" class="ltx_Math" alttext="{}_{1}" display="inline"><msub><mi/><mn>1</mn></msub></math></p></foreignObject></switch></g></g></g></g><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.pic1.m6" class="ltx_Math" alttext="X_{[1:5]}" display="inline"><msub><mi>X</mi><mrow><mo>[</mo><mn>1</mn><mo>:</mo><mn>5</mn><mo>]</mo></mrow></msub></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.pic1.m7" class="ltx_Math" alttext="\mid" display="inline"><mo>∣</mo></math><g><g><g transform="matrix(1 0 0 1 -15 -2)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="16" overflow="visible" width="29">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><span class="ltx_text ltx_font_italic">yǔ</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.pic1.m8" class="ltx_Math" alttext="{}_{2}" display="inline"><msub><mi/><mn>2</mn></msub></math></p></foreignObject></switch></g></g></g></g><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.pic1.m9" class="ltx_Math" alttext="X_{[2:3]}" display="inline"><msub><mi>X</mi><mrow><mo>[</mo><mn>2</mn><mo>:</mo><mn>3</mn><mo>]</mo></mrow></msub></math><g><g><g transform="matrix(1 0 0 1 -40 -2)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="16" overflow="visible" width="81">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><span class="ltx_text ltx_font_italic">Shālóng</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.pic1.m10" class="ltx_Math" alttext="{}_{3}" display="inline"><msub><mi/><mn>3</mn></msub></math></p></foreignObject></switch></g></g></g></g><g><g><g transform="matrix(1 0 0 1 -35 -2)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="16" overflow="visible" width="71">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><span class="ltx_text ltx_font_italic">jǔxíng</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.pic1.m11" class="ltx_Math" alttext="{}_{4}" display="inline"><msub><mi/><mn>4</mn></msub></math></p></foreignObject></switch></g></g></g></g><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.pic1.m12" class="ltx_Math" alttext="X_{[4:5]}" display="inline"><msub><mi>X</mi><mrow><mo>[</mo><mn>4</mn><mo>:</mo><mn>5</mn><mo>]</mo></mrow></msub></math><g><g><g transform="matrix(1 0 0 1 -35 -2)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="16" overflow="visible" width="71">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><span class="ltx_text ltx_font_italic">huìtán</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.pic1.m13" class="ltx_Math" alttext="{}_{5}" display="inline"><msub><mi/><mn>5</mn></msub></math></p></foreignObject></switch></g></g></g></g></g><g><g><g><g transform="matrix(1 0 0 1 -39 -302)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="16" overflow="visible" width="79">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.pic1.m14" class="ltx_Math" alttext="{}_{0}" display="inline"><msub><mi/><mn>0</mn></msub></math> Bush <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.pic1.m15" class="ltx_Math" alttext="{}_{1}" display="inline"><msub><mi/><mn>1</mn></msub></math></p></foreignObject></switch></g></g></g></g><g><g><g transform="matrix(1 0 0 1 -30 -302)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="16" overflow="visible" width="60">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">held <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.pic1.m16" class="ltx_Math" alttext="{}_{2}" display="inline"><msub><mi/><mn>2</mn></msub></math></p></foreignObject></switch></g></g></g></g><g><g><g transform="matrix(1 0 0 1 -35 -302)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="16" overflow="visible" width="71">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">talks <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.pic1.m17" class="ltx_Math" alttext="{}_{3}" display="inline"><msub><mi/><mn>3</mn></msub></math></p></foreignObject></switch></g></g></g></g><g><g><g transform="matrix(1 0 0 1 -30 -302)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="16" overflow="visible" width="60">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.pic1.m18" class="ltx_Math" alttext="{}_{4}" display="inline"><msub><mi/><mn>4</mn></msub></math></p></foreignObject></switch></g></g></g></g><g><g><g transform="matrix(1 0 0 1 -40 -302)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="16" overflow="visible" width="81">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">Sharon <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.pic1.m19" class="ltx_Math" alttext="{}_{5}" display="inline"><msub><mi/><mn>5</mn></msub></math></p></foreignObject></switch></g></g></g></g><g><g><g transform="matrix(1 0 0 1 -10 -11)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 0)"><switch><foreignObject color="#000000" height="0" overflow="visible" width="0">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"/></foreignObject></switch></g></g></g></g><g><g><g transform="matrix(1 0 0 1 -23 -11)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 0)"><switch><foreignObject color="#000000" height="0" overflow="visible" width="0">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"/></foreignObject></switch></g></g></g></g><g><g><g transform="matrix(1 0 0 1 -17 -11)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 0)"><switch><foreignObject color="#000000" height="0" overflow="visible" width="0">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"/></foreignObject></switch></g></g></g></g><g><g><g transform="matrix(1 0 0 1 -17 -11)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 0)"><switch><foreignObject color="#000000" height="0" overflow="visible" width="0">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"/></foreignObject></switch></g></g></g></g><g><g><g transform="matrix(1 0 0 1 -19 -289)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 0)"><switch><foreignObject color="#000000" height="0" overflow="visible" width="0">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"/></foreignObject></switch></g></g></g></g><g><g><g transform="matrix(1 0 0 1 -24 -289)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 0)"><switch><foreignObject color="#000000" height="0" overflow="visible" width="0">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"/></foreignObject></switch></g></g></g></g><g><g><g transform="matrix(1 0 0 1 -12 -289)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 0)"><switch><foreignObject color="#000000" height="0" overflow="visible" width="0">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"/></foreignObject></switch></g></g></g></g><g><g><g transform="matrix(1 0 0 1 -23 -289)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 0)"><switch><foreignObject color="#000000" height="0" overflow="visible" width="0">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"/></foreignObject></switch></g></g></g></g></g><g><g stroke-dasharray="3.0pt,3.0pt" stroke-dashoffset="0.0pt"><path d="M 0 -13 L 0 -287" style="fill:none"/><path d="M -10 -16 L -12 -284" style="fill:none"/><path d="M -23 -16 L -23 -284" style="fill:none"/><path d="M -17 -16 L -19 -284" style="fill:none"/><path d="M -18 -16 L -24 -284" style="fill:none"/></g></g></g></g></g></g></g></g></svg></foreignObject></g><g transform="scale(1 -1) translate(-5,-10)"><foreignObject width="50" height="20"><span xmlns="http://www.w3.org/1999/xhtml" class="ltx_ERROR undefined">\Tree</span></foreignObject></g><g transform="scale(1 -1) translate(-5,-10)"><foreignObject width="50" height="20"><span xmlns="http://www.w3.org/1999/xhtml" class="ltx_ERROR undefined">\Tree</span></foreignObject></g></g></g></svg>
+</span></span></td>
+<td class="ltx_td ltx_align_justify" style="width:143.1pt;" width="143.1pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span>
+<span class="ltx_inline-block ltx_align_center ltx_transformed_outer" style="width:65.7pt;height:246.805555555555px;vertical-align:-1.5pt;"><span class="ltx_transformed_inner" style="transform:translate(-11.0pt,-29.6pt) scale(0.75,0.75) ;-webkit-transform:translate(-11.0pt,-29.6pt) scale(0.75,0.75) ;-ms-transform:translate(-11.0pt,-29.6pt) scale(0.75,0.75) ;"><svg xmlns="http://www.w3.org/2000/svg" version="1.1" xml:id="S1.F2.pic2" fragid="S1.F2.pic2" width="90" height="327" viewBox="-45 -317 45 10" overflow="visible"><g transform="translate(0,0)"><g transform="scale(1 -1)"><g transform="scale(1 -1) translate(-5,-10)"><foreignObject width="50" height="20"><svg height="325" version="1.1" viewBox="-45 -312 90 325" width="90"><g transform="matrix(1 0 0 -1 0 -299)"><g><g stroke="#000000"><g fill="#000000"><g stroke-width="0.4pt"><g><g><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.pic2.m1" class="ltx_Math" alttext="\text{S}_{[0:5]}" display="inline"><msub><mrow/><mrow><mo>[</mo><mn>0</mn><mo>:</mo><mn>5</mn><mo>]</mo></mrow></msub></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.pic2.m2" class="ltx_Math" alttext="\text{S}_{[0:1]}" display="inline"><msub><mrow/><mrow><mo>[</mo><mn>0</mn><mo>:</mo><mn>1</mn><mo>]</mo></mrow></msub></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.pic2.m3" class="ltx_Math" alttext="\text{X}_{[0:1]}" display="inline"><msub><mrow/><mrow><mo>[</mo><mn>0</mn><mo>:</mo><mn>1</mn><mo>]</mo></mrow></msub></math><g><g><g transform="matrix(1 0 0 1 -39 -2)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="16" overflow="visible" width="79">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.pic2.m4" class="ltx_Math" alttext="{}_{0}" display="inline"><msub><mi/><mn>0</mn></msub></math> <span class="ltx_text ltx_font_italic">Bùshí</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.pic2.m5" class="ltx_Math" alttext="{}_{1}" display="inline"><msub><mi/><mn>1</mn></msub></math></p></foreignObject></switch></g></g></g></g><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.pic2.m6" class="ltx_Math" alttext="\text{X}_{[1:5]}" display="inline"><msub><mrow/><mrow><mo>[</mo><mn>1</mn><mo>:</mo><mn>5</mn><mo>]</mo></mrow></msub></math><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.pic2.m7" class="ltx_Math" alttext="\text{X}_{[1:3]}" display="inline"><msub><mrow/><mrow><mo>[</mo><mn>1</mn><mo>:</mo><mn>3</mn><mo>]</mo></mrow></msub></math><g><g><g transform="matrix(1 0 0 1 -15 -2)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="16" overflow="visible" width="29">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><span class="ltx_text ltx_font_italic">yǔ</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.pic2.m8" class="ltx_Math" alttext="{}_{2}" display="inline"><msub><mi/><mn>2</mn></msub></math></p></foreignObject></switch></g></g></g></g><g><g><g transform="matrix(1 0 0 1 -40 -2)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="16" overflow="visible" width="81">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><span class="ltx_text ltx_font_italic">Shālóng</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.pic2.m9" class="ltx_Math" alttext="{}_{3}" display="inline"><msub><mi/><mn>3</mn></msub></math></p></foreignObject></switch></g></g></g></g><g><g><g transform="matrix(1 0 0 1 -35 -2)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="16" overflow="visible" width="71">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><span class="ltx_text ltx_font_italic">jǔxíng</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.pic2.m10" class="ltx_Math" alttext="{}_{4}" display="inline"><msub><mi/><mn>4</mn></msub></math></p></foreignObject></switch></g></g></g></g><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.pic2.m11" class="ltx_Math" alttext="\text{X}_{[4:5]}" display="inline"><msub><mrow/><mrow><mo>[</mo><mn>4</mn><mo>:</mo><mn>5</mn><mo>]</mo></mrow></msub></math><g><g><g transform="matrix(1 0 0 1 -35 -2)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="16" overflow="visible" width="71">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><span class="ltx_text ltx_font_italic">huìtán</span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.pic2.m12" class="ltx_Math" alttext="{}_{5}" display="inline"><msub><mi/><mn>5</mn></msub></math></p></foreignObject></switch></g></g></g></g></g><g><g><g><g transform="matrix(1 0 0 1 -39 -302)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="16" overflow="visible" width="79">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.pic2.m13" class="ltx_Math" alttext="{}_{0}" display="inline"><msub><mi/><mn>0</mn></msub></math> Bush <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.pic2.m14" class="ltx_Math" alttext="{}_{1}" display="inline"><msub><mi/><mn>1</mn></msub></math></p></foreignObject></switch></g></g></g></g><g><g><g transform="matrix(1 0 0 1 -30 -302)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="16" overflow="visible" width="60">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.pic2.m15" class="ltx_Math" alttext="{}_{2}" display="inline"><msub><mi/><mn>2</mn></msub></math></p></foreignObject></switch></g></g></g></g><g><g><g transform="matrix(1 0 0 1 -40 -302)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="16" overflow="visible" width="81">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">Sharon <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.pic2.m16" class="ltx_Math" alttext="{}_{3}" display="inline"><msub><mi/><mn>3</mn></msub></math></p></foreignObject></switch></g></g></g></g><g><g><g transform="matrix(1 0 0 1 -30 -302)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="16" overflow="visible" width="60">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">held <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.pic2.m17" class="ltx_Math" alttext="{}_{4}" display="inline"><msub><mi/><mn>4</mn></msub></math></p></foreignObject></switch></g></g></g></g><g><g><g transform="matrix(1 0 0 1 -35 -302)"><g class="ltx_svg_fog" transform="matrix(1 0 0 -1 0 10)"><switch><foreignObject color="#000000" height="16" overflow="visible" width="71">
+<p xmlns="http://www.w3.org/1999/xhtml" class="ltx_p">talks <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.F2.pic2.m18" class="ltx_Math" alttext="{}_{5}" display="inline"><msub><mi/><mn>5</mn></msub></math></p></foreignObject></switch></g></g></g></g></g><g><g stroke-dasharray="3.0pt,3.0pt" stroke-dashoffset="0.0pt"><path d="M 0 -13 L 0 -287" style="fill:none"/><path d="M 0 -13 L 0 -287" style="fill:none"/><path d="M 0 -13 L 0 -287" style="fill:none"/><path d="M 0 -13 L 0 -287" style="fill:none"/><path d="M 0 -13 L 0 -287" style="fill:none"/></g></g></g></g></g></g></g></g></svg></foreignObject></g><g transform="scale(1 -1) translate(-5,-10)"><foreignObject width="50" height="20"><span xmlns="http://www.w3.org/1999/xhtml" class="ltx_ERROR undefined">\Tree</span></foreignObject></g><g transform="scale(1 -1) translate(-5,-10)"><foreignObject width="50" height="20"><span xmlns="http://www.w3.org/1999/xhtml" class="ltx_ERROR undefined">\Tree</span></foreignObject></g></g></g></svg>
+</span></span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_justify" style="width:125.7pt;" width="125.7pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span>(a) <span class="ltx_text ltx_font_smallcaps ltx_align_center">Hiero</span>rules</td>
+<td class="ltx_td ltx_align_justify" style="width:143.1pt;" width="143.1pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span>(b) gold derivation</td>
+<td class="ltx_td ltx_align_justify" style="width:143.1pt;" width="143.1pt"><span class="ltx_ERROR undefined ltx_centering">\arraybackslash</span>(c) Viterbi derivation</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>An example of <span class="ltx_text ltx_font_smallcaps">Hiero</span>translation.
+</div>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">To better utilize the large training set,
+we propose to generalize from phrase-based MT to syntax-based MT,
+in particular the hierarchical phrase-based translation model (<span class="ltx_text ltx_font_smallcaps">Hiero</span>) <cite class="ltx_cite">[<a href="#bib.bib27" title="A hierarchical phrase-based model for statistical machine translation" class="ltx_ref">6</a>]</cite>,
+in order to exploit sentence pairs beyond the expressive capacity of phrase-based MT.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">The key challenge here is to extend the latent variable violation-fixing perceptron of <span class="ltx_ERROR undefined">\newcite</span>yu+:2013
+to handle tree-structured derivations and translation hypergraphs.
+Luckily, <span class="ltx_ERROR undefined">\newcite</span>zhang+:2013 have recently generalized
+the underlying violation-fixing perceptron of <span class="ltx_ERROR undefined">\newcite</span>huang+:2012
+from graphs to hypergraphs for bottom-up parsing, which resembles syntax-based decoding.
+We just need to further extend it to handle latent variables.
+We make the following contributions:</p>
+<ol id="I1" class="ltx_enumerate">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">1.</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p">We generalize the
+latent variable violation-fixing perceptron
+framework to inexact search over hypergraphs,
+which subsumes previous algorithms for PBMT and bottom-up parsing
+as special cases (see Fig. <a href="#S1.F1" title="Figure 1 ‣ 1 Introduction ‣ Hierarchical MT Training using Max-Violation Perceptron" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>).</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">2.</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p">We show that syntax-based MT,
+with its better handling of long-distance reordering,
+can exploit a larger portion of the training set, which facilitates sparse lexicalized features.</p>
+</div></li>
+<li id="I1.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">3.</span> 
+<div id="I1.i3.p1" class="ltx_para">
+<p class="ltx_p">Experiments show that our training algorithm
+outperforms mainstream tuning methods (which optimize on small devsets)
+by +1.2 <span class="ltx_text ltx_font_smallcaps">Bleu</span>over <span class="ltx_text ltx_font_smallcaps">Mert</span>and <span class="ltx_text ltx_font_smallcaps">Pro</span>on FBIS.</p>
+</div></li>
+</ol>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Review: Syntax-based MT Decoding</h2>
+
+<div id="S2.F3" class="ltx_figure"><img src="P14-2127/image001.png" id="S2.F3.g1" class="ltx_graphics ltx_centering" width="238" height="149" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 3: </span>A <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.F3.m2" class="ltx_Math" alttext="\mathord{-}\textrm{LM}" display="inline"><mrow><mi mathvariant="normal">-</mi><mo>⁢</mo><mtext>LM</mtext></mrow></math>hypergraph with two derivations:
+the gold derivation (Fig. <a href="#S1.F2" title="Figure 2 ‣ 1 Introduction ‣ Hierarchical MT Training using Max-Violation Perceptron" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>b) in solid lines,
+and the Viterbi derivation (Fig. <a href="#S1.F2" title="Figure 2 ‣ 1 Introduction ‣ Hierarchical MT Training using Max-Violation Perceptron" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>c) in dashed lines.
+
+</div>
+</div>
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">For clarity reasons we will describe <span class="ltx_text ltx_font_smallcaps">Hiero</span>decoding as a two-pass process,
+first without a language model, and then integrating the LM.
+This section mostly follows <span class="ltx_ERROR undefined">\newcite</span>huang+chiang:2007.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">In the first, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m1" class="ltx_Math" alttext="\mathord{-}\textrm{LM}" display="inline"><mrow><mi mathvariant="normal">-</mi><mo>⁢</mo><mtext>LM</mtext></mrow></math>phase, the decoder parses the source sentence using the source projection
+of the synchronous grammar (see Fig. <a href="#S1.F2" title="Figure 2 ‣ 1 Introduction ‣ Hierarchical MT Training using Max-Violation Perceptron" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> (a) for an example),
+producing a <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m2" class="ltx_Math" alttext="\mathord{-}\textrm{LM}" display="inline"><mrow><mi mathvariant="normal">-</mi><mo>⁢</mo><mtext>LM</mtext></mrow></math>hypergraph where
+each node has a signature <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m3" class="ltx_Math" alttext="N_{[i:j]}" display="inline"><msub><mi>N</mi><mrow><mo>[</mo><mi>i</mi><mo>:</mo><mi>j</mi><mo>]</mo></mrow></msub></math>,
+where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m4" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math> is the nonterminal type (either X or S in <span class="ltx_text ltx_font_smallcaps">Hiero</span>) and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m5" class="ltx_Math" alttext="[i:j]" display="inline"><mrow><mo>[</mo><mrow><mi>i</mi><mo>:</mo><mi>j</mi></mrow><mo>]</mo></mrow></math> is the span,
+and each hyperedge <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m6" class="ltx_Math" alttext="e" display="inline"><mi>e</mi></math> is an application of the translation rule <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p2.m7" class="ltx_Math" alttext="r(e)" display="inline"><mrow><mi>r</mi><mo>⁢</mo><mrow><mo>(</mo><mi>e</mi><mo>)</mo></mrow></mrow></math>
+(see Figure <a href="#S2.F3" title="Figure 3 ‣ 2 Review: Syntax-based MT Decoding ‣ Hierarchical MT Training using Max-Violation Perceptron" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>).</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">To incorporate the language model,
+each node also needs to remember its target side boundary words.
+Thus a <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m1" class="ltx_Math" alttext="\mathord{-}\textrm{LM}" display="inline"><mrow><mi mathvariant="normal">-</mi><mo>⁢</mo><mtext>LM</mtext></mrow></math>node <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m2" class="ltx_Math" alttext="N_{[i:j]}" display="inline"><msub><mi>N</mi><mrow><mo>[</mo><mi>i</mi><mo>:</mo><mi>j</mi><mo>]</mo></mrow></msub></math> is split into
+multiple <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m3" class="ltx_Math" alttext="\mathord{+}\textrm{LM}" display="inline"><mrow><mi mathvariant="normal">+</mi><mo>⁢</mo><mtext>LM</mtext></mrow></math>nodes of signature <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m4" class="ltx_Math" alttext="N_{[i:j]}^{a\star b}" display="inline"><msubsup><mi>N</mi><mrow><mo>[</mo><mi>i</mi><mo>:</mo><mi>j</mi><mo>]</mo></mrow><mrow><mi>a</mi><mo>⋆</mo><mi>b</mi></mrow></msubsup></math>,
+where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m5" class="ltx_Math" alttext="a" display="inline"><mi>a</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m6" class="ltx_Math" alttext="b" display="inline"><mi>b</mi></math> are the boundary words.
+For example, with a bigram LM, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m7" class="ltx_Math" alttext="\text{X}_{[1:5]}^{\text{held}\star\text{Sharon}}" display="inline"><msubsup><mtext>X</mtext><mrow><mo>[</mo><mn>1</mn><mo>:</mo><mn>5</mn><mo>]</mo></mrow><mrow><mtext>held</mtext><mo>⋆</mo><mtext>Sharon</mtext></mrow></msubsup></math>
+is a node whose translation starts with “held” and ends with “Sharon”.</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p class="ltx_p">More formally, the whole decoding process can be cast as a deductive system.
+Take the partial translation of “held talks with Sharon” in
+Figure <a href="#S1.F2" title="Figure 2 ‣ 1 Introduction ‣ Hierarchical MT Training using Max-Violation Perceptron" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> (b) for example, the deduction is</p>
+<table id="S2.Ex1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.Ex1.m1" class="ltx_Math" alttext="\inferrule{\quad\text{X}_{[2:3]}^{\text{Sharon}\star\text{Sharon}}:s_{1}\qquad%&#10;\text{X}_{[4:5]}^{\text{talks}\star\text{talks}}:s_{2}\quad}{\text{X}_{[1:5]}^%&#10;{\text{held}\star\text{Sharon}}:s_{1}+s_{2}+s(r_{5})+\lambda}\quad r_{5}," display="block"><mrow><mrow><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\inferrule</mtext></merror><mo separator="true"> </mo><msubsup><mtext>X</mtext><mrow><mo>[</mo><mn>2</mn><mo>:</mo><mn>3</mn><mo>]</mo></mrow><mrow><mtext>Sharon</mtext><mo>⋆</mo><mtext>Sharon</mtext></mrow></msubsup></mrow><mo>:</mo><mrow><msub><mi>s</mi><mn>1</mn></msub><mo separator="true">  </mo><msubsup><mtext>X</mtext><mrow><mo>[</mo><mn>4</mn><mo>:</mo><mn>5</mn><mo>]</mo></mrow><mrow><mtext>talks</mtext><mo>⋆</mo><mtext>talks</mtext></mrow></msubsup></mrow><mo>:</mo><mrow><msub><mi>s</mi><mn>2</mn></msub><mo separator="true"> </mo><msubsup><mtext>X</mtext><mrow><mo>[</mo><mn>1</mn><mo>:</mo><mn>5</mn><mo>]</mo></mrow><mrow><mtext>held</mtext><mo>⋆</mo><mtext>Sharon</mtext></mrow></msubsup></mrow><mo>:</mo><mrow><mrow><msub><mi>s</mi><mn>1</mn></msub><mo>+</mo><msub><mi>s</mi><mn>2</mn></msub><mo>+</mo><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>r</mi><mn>5</mn></msub><mo>)</mo></mrow></mrow><mo>+</mo><mi>λ</mi></mrow><mo separator="true"> </mo><msub><mi>r</mi><mn>5</mn></msub></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p4.m1" class="ltx_Math" alttext="s(r_{5})" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>r</mi><mn>5</mn></msub><mo>)</mo></mrow></mrow></math> is the score of rule <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p4.m2" class="ltx_Math" alttext="r_{5}" display="inline"><msub><mi>r</mi><mn>5</mn></msub></math>,
+and the LM combo score
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p4.m3" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math> is
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p4.m4" class="ltx_Math" alttext="\log\mathrm{P}_{\mathrm{lm}}(\text{talks}\mid\text{held})\mathrm{P}_{\mathrm{%&#10;lm}}(\text{with}\mid\text{talks})\mathrm{P}_{\mathrm{lm}}(\text{Sharon}\mid%&#10;\text{with})" display="inline"><mrow><mi>log</mi><msub><mi mathvariant="normal">P</mi><mi>lm</mi></msub><mrow><mo>(</mo><mtext>talks</mtext><mo>∣</mo><mtext>held</mtext><mo>)</mo></mrow><msub><mi mathvariant="normal">P</mi><mi>lm</mi></msub><mrow><mo>(</mo><mtext>with</mtext><mo>∣</mo><mtext>talks</mtext><mo>)</mo></mrow><msub><mi mathvariant="normal">P</mi><mi>lm</mi></msub><mrow><mo>(</mo><mtext>Sharon</mtext><mo>∣</mo><mtext>with</mtext><mo>)</mo></mrow></mrow></math>.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Violation-Fixing Perceptron for <span class="ltx_text ltx_font_smallcaps">Hiero</span></h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">As mentioned in Section 1,
+the key to the success of <span class="ltx_ERROR undefined">\newcite</span>yu+:2013
+is the adoption of violation-fixing perceptron of <span class="ltx_ERROR undefined">\newcite</span>huang+:2012
+which is tailored for vastly inexact search.
+The general idea is to update somewhere in the middle of the search (where search error happens)
+rather than at the very end (standard update is often invalid).
+To adapt it to MT where many derivations can output the same translation (i.e., spurious ambiguity),
+<span class="ltx_ERROR undefined">\newcite</span>yu+:2013 extends it to handle latent variables which correspond to phrase-based derivations.
+On the other hand, <span class="ltx_ERROR undefined">\newcite</span>zhang+:2013 has generalized <span class="ltx_ERROR undefined">\newcite</span>huang+:2012
+from graphs to hypergraphs for bottom-up parsing, which resembles <span class="ltx_text ltx_font_smallcaps">Hiero</span>decoding.
+So we just need to combine the two generalizing directions (latent variable and hypergraph,
+see Fig. <a href="#S1.F1" title="Figure 1 ‣ 1 Introduction ‣ Hierarchical MT Training using Max-Violation Perceptron" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>).</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Latent Variable Hypergraph Search</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">The key difference between bottom-up parsing and MT decoding is that
+in parsing the gold tree for each input sentence is unique,
+while in MT many derivations can generate the same reference translation.
+In other words, the gold derivation to update towards is a latent variable.</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">Here we formally define the latent variable “max-violation” perceptron over a hypergraph for MT training.
+For a given sentence pair <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m1" class="ltx_Math" alttext="\langle{x,y}\rangle" display="inline"><mrow><mo>⟨</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>⟩</mo></mrow></math>,
+we denote <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m2" class="ltx_Math" alttext="H(x)" display="inline"><mrow><mi>H</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></math> as the decoding hypergraph of <span class="ltx_text ltx_font_smallcaps">Hiero</span>without any pruning.
+We say <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m3" class="ltx_Math" alttext="D\in H(x)" display="inline"><mrow><mi>D</mi><mo>∈</mo><mrow><mi>H</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow></math> if <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m4" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math> is a full derivation of decoding <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m5" class="ltx_Math" alttext="x" display="inline"><mi>x</mi></math>,
+and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m6" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math> can be derived from the hypergraph.
+Let <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m7" class="ltx_Math" alttext="\mathit{good}(x,y)" display="inline"><mrow><mi>𝑔𝑜𝑜𝑑</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow></math> be the set of <span class="ltx_text ltx_markedasmath"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m8.m1" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math>-good</span>derivations for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m9" class="ltx_Math" alttext="\langle{x,y}\rangle" display="inline"><mrow><mo>⟨</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>⟩</mo></mrow></math>:</p>
+<table id="S3.Ex2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex2.m1" class="ltx_Math" alttext="\mathit{good}(x,y)\stackrel{\Delta}{=}\{D\in H(x)\mid e(D)=y\}," display="block"><mrow><mrow><mrow><mi>𝑔𝑜𝑜𝑑</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow><mover><mo movablelimits="false">=</mo><mi mathvariant="normal">Δ</mi></mover><mrow><mo>{</mo><mrow><mrow><mi>D</mi><mo>∈</mo><mrow><mi>H</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow><mo separator="true">∣</mo><mrow><mrow><mi>e</mi><mo>⁢</mo><mrow><mo>(</mo><mi>D</mi><mo>)</mo></mrow></mrow><mo>=</mo><mi>y</mi></mrow></mrow><mo>}</mo></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m10" class="ltx_Math" alttext="e(D)" display="inline"><mrow><mi>e</mi><mo>⁢</mo><mrow><mo>(</mo><mi>D</mi><mo>)</mo></mrow></mrow></math> is the translation from derivation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m11" class="ltx_Math" alttext="D" display="inline"><mi>D</mi></math>.
+We then define the set of <span class="ltx_text ltx_markedasmath"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m12.m1" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math>-good</span>partial derivations that cover <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m13" class="ltx_Math" alttext="x_{[i:j]}" display="inline"><msub><mi>x</mi><mrow><mo>[</mo><mi>i</mi><mo>:</mo><mi>j</mi><mo>]</mo></mrow></msub></math>
+with root <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m14" class="ltx_Math" alttext="N_{[i:j]}" display="inline"><msub><mi>N</mi><mrow><mo>[</mo><mi>i</mi><mo>:</mo><mi>j</mi><mo>]</mo></mrow></msub></math> as</p>
+<table id="Sx1.EGx1" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S3.Ex3" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex3.m1" class="ltx_Math" alttext="\displaystyle\mathit{good}_{N_{[i:j]}}(x,y)\stackrel{\Delta}{=}\{" display="inline"><mrow><msub><mi>𝑔𝑜𝑜𝑑</mi><msub><mi>N</mi><mrow><mo>[</mo><mi>i</mi><mo>:</mo><mi>j</mi><mo>]</mo></mrow></msub></msub><mrow><mo>(</mo><mi>x</mi><mo>,</mo><mi>y</mi><mo>)</mo></mrow><mover><mo movablelimits="false">=</mo><mi mathvariant="normal">Δ</mi></mover><mo>{</mo></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex3.m2" class="ltx_Math" alttext="\displaystyle d\in D\mid D\in\mathit{good}(x,y)," display="inline"><mrow><mi>d</mi><mo>∈</mo><mi>D</mi><mo>∣</mo><mi>D</mi><mo>∈</mo><mi>𝑔𝑜𝑜𝑑</mi><mrow><mo>(</mo><mi>x</mi><mo>,</mo><mi>y</mi><mo>)</mo></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S3.Ex4" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex4.m2" class="ltx_Math" alttext="\displaystyle\mathit{root}(d)=N_{[i:j]}\}" display="inline"><mrow><mi>𝑟𝑜𝑜𝑡</mi><mrow><mo>(</mo><mi>d</mi><mo>)</mo></mrow><mo>=</mo><msub><mi>N</mi><mrow><mo>[</mo><mi>i</mi><mo>:</mo><mi>j</mi><mo>]</mo></mrow></msub><mo>}</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+</div>
+<div id="S3.SS1.p3" class="ltx_para">
+<p class="ltx_p">We further denote the real decoding hypergraph with beam-pruning and cube-pruning as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m1" class="ltx_Math" alttext="H^{\prime}(x)" display="inline"><mrow><msup><mi>H</mi><mo>′</mo></msup><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></math>.
+The set of <span class="ltx_text ltx_markedasmath"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m2.m1" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math>-bad</span>derivations is defined as</p>
+<table id="Sx1.EGx2" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S3.Ex5" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex5.m1" class="ltx_Math" alttext="\displaystyle\mathit{bad}_{N_{[i:j]}}(x,y)\stackrel{\Delta}{=}\{" display="inline"><mrow><msub><mi>𝑏𝑎𝑑</mi><msub><mi>N</mi><mrow><mo>[</mo><mi>i</mi><mo>:</mo><mi>j</mi><mo>]</mo></mrow></msub></msub><mrow><mo>(</mo><mi>x</mi><mo>,</mo><mi>y</mi><mo>)</mo></mrow><mover><mo movablelimits="false">=</mo><mi mathvariant="normal">Δ</mi></mover><mo>{</mo></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex5.m2" class="ltx_Math" alttext="\displaystyle d\in D\mid D\in H^{\prime}(x,y)," display="inline"><mrow><mi>d</mi><mo>∈</mo><mi>D</mi><mo>∣</mo><mi>D</mi><mo>∈</mo><msup><mi>H</mi><mo>′</mo></msup><mrow><mo>(</mo><mi>x</mi><mo>,</mo><mi>y</mi><mo>)</mo></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S3.Ex6" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex6.m1" class="ltx_Math" alttext="\displaystyle\mathit{root}(d)" display="inline"><mrow><mi>𝑟𝑜𝑜𝑡</mi><mo>⁢</mo><mrow><mo>(</mo><mi>d</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex6.m2" class="ltx_Math" alttext="\displaystyle=N_{[i:j]},d\not\in\mathit{good}_{N_{[i:j]}}(x,y)\}." display="inline"><mrow><mo>=</mo><msub><mi>N</mi><mrow><mo>[</mo><mi>i</mi><mo>:</mo><mi>j</mi><mo>]</mo></mrow></msub><mo>,</mo><mi>d</mi><mo>∉</mo><msub><mi>𝑔𝑜𝑜𝑑</mi><msub><mi>N</mi><mrow><mo>[</mo><mi>i</mi><mo>:</mo><mi>j</mi><mo>]</mo></mrow></msub></msub><mrow><mo>(</mo><mi>x</mi><mo>,</mo><mi>y</mi><mo>)</mo></mrow><mo>}</mo><mo>.</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">Note that the <span class="ltx_text ltx_markedasmath"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m3.m1" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math>-good</span>derivations are defined over the <span class="ltx_text ltx_font_italic">unpruned</span> whole decoding hypergraph,
+while the <span class="ltx_text ltx_markedasmath"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m4.m1" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math>-bad</span>derivations are defined over the real decoding hypergraph with pruning.</p>
+</div>
+<div id="S3.SS1.p4" class="ltx_para">
+<p class="ltx_p">The max-violation method performs the update where the model score difference between
+the incorrect Viterbi partial derivation and the best <span class="ltx_text ltx_markedasmath"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m1.m1" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math>-good</span>partial derivation is maximal,
+by penalizing the incorrect Viterbi partial derivation
+and rewarding the <span class="ltx_text ltx_markedasmath"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m2.m1" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math>-good</span>partial derivation.</p>
+</div>
+<div id="S3.SS1.p5" class="ltx_para">
+<p class="ltx_p">More formally, we first find the Viterbi partial derivation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p5.m1" class="ltx_Math" alttext="d^{-}" display="inline"><msup><mi>d</mi><mo>-</mo></msup></math>
+and the best <span class="ltx_text ltx_markedasmath"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p5.m2.m1" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math>-good</span>partial derivation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p5.m3" class="ltx_Math" alttext="d^{+}" display="inline"><msup><mi>d</mi><mo>+</mo></msup></math> for each <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p5.m4" class="ltx_Math" alttext="N_{[i:j]}" display="inline"><msub><mi>N</mi><mrow><mo>[</mo><mi>i</mi><mo>:</mo><mi>j</mi><mo>]</mo></mrow></msub></math> group in the pruned <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p5.m5" class="ltx_Math" alttext="\mathord{+}\textrm{LM}" display="inline"><mrow><mi mathvariant="normal">+</mi><mo>⁢</mo><mtext>LM</mtext></mrow></math>hypergraph:</p>
+<table id="S3.Ex7" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex7.m1" class="ltx_Math" alttext="d^{+}_{N_{[i:j]}}(x,y)\stackrel{\Delta}{=}\operatornamewithlimits{\mathbf{%&#10;argmax}}_{d\in\mathit{good}_{N_{[i:j]}}(x,y)}\mathbf{w}\cdot\mathbf{\Phi}(x,d)," display="block"><mrow><mrow><mrow><msubsup><mi>d</mi><msub><mi>N</mi><mrow><mo>[</mo><mi>i</mi><mo>:</mo><mi>j</mi><mo>]</mo></mrow></msub><mo>+</mo></msubsup><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow><mover><mo movablelimits="false">=</mo><mi mathvariant="normal">Δ</mi></mover><mrow><mrow><munder><mo movablelimits="false">𝐚𝐫𝐠𝐦𝐚𝐱</mo><mrow><mi>d</mi><mo>∈</mo><mrow><msub><mi>𝑔𝑜𝑜𝑑</mi><msub><mi>N</mi><mrow><mo>[</mo><mi>i</mi><mo>:</mo><mi>j</mi><mo>]</mo></mrow></msub></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow></mrow></munder><mo>⁡</mo><mrow><mi>𝐰</mi><mo>⋅</mo><mi>𝚽</mi></mrow></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>d</mi></mrow><mo>)</mo></mrow></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<table id="S3.Ex8" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex8.m1" class="ltx_Math" alttext="d^{-}_{N_{[i:j]}}(x,y)\stackrel{\Delta}{=}\operatornamewithlimits{\mathbf{%&#10;argmax}}_{d\in\mathit{bad}_{N_{[i:j]}}(x,y)}\mathbf{w}\cdot\mathbf{\Phi}(x,d)," display="block"><mrow><mrow><mrow><msubsup><mi>d</mi><msub><mi>N</mi><mrow><mo>[</mo><mi>i</mi><mo>:</mo><mi>j</mi><mo>]</mo></mrow></msub><mo>-</mo></msubsup><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow><mover><mo movablelimits="false">=</mo><mi mathvariant="normal">Δ</mi></mover><mrow><mrow><munder><mo movablelimits="false">𝐚𝐫𝐠𝐦𝐚𝐱</mo><mrow><mi>d</mi><mo>∈</mo><mrow><msub><mi>𝑏𝑎𝑑</mi><msub><mi>N</mi><mrow><mo>[</mo><mi>i</mi><mo>:</mo><mi>j</mi><mo>]</mo></mrow></msub></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow></mrow></munder><mo>⁡</mo><mrow><mi>𝐰</mi><mo>⋅</mo><mi>𝚽</mi></mrow></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>d</mi></mrow><mo>)</mo></mrow></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p5.m6" class="ltx_Math" alttext="\mathbf{\Phi}(x,d)" display="inline"><mrow><mi>𝚽</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>d</mi></mrow><mo>)</mo></mrow></mrow></math> is the feature vector for derivation <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p5.m7" class="ltx_Math" alttext="d" display="inline"><mi>d</mi></math>.
+Then it finds the group <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p5.m8" class="ltx_Math" alttext="N^{*}_{[i^{*}:j^{*}]}" display="inline"><msubsup><mi>N</mi><mrow><mo>[</mo><msup><mi>i</mi><mo>*</mo></msup><mo>:</mo><msup><mi>j</mi><mo>*</mo></msup><mo>]</mo></mrow><mo>*</mo></msubsup></math> with the maximal score difference between the Viterbi derivation
+and the best <span class="ltx_text ltx_markedasmath"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p5.m9.m1" class="ltx_Math" alttext="y" display="inline"><mi>y</mi></math>-good</span>derivation:</p>
+<table id="Sx1.EGx3" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S3.Ex9" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex9.m1" class="ltx_Math" alttext="\displaystyle N^{*}_{[i^{*}:j^{*}]}\stackrel{\Delta}{=}" display="inline"><mrow><msubsup><mi>N</mi><mrow><mo>[</mo><msup><mi>i</mi><mo>*</mo></msup><mo>:</mo><msup><mi>j</mi><mo>*</mo></msup><mo>]</mo></mrow><mo>*</mo></msubsup><mover><mo movablelimits="false">=</mo><mi mathvariant="normal">Δ</mi></mover><mi/></mrow></math></td>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex9.m2" class="ltx_Math" alttext="\displaystyle\operatornamewithlimits{\mathbf{argmax}}_{N_{[i:j]}}" display="inline"><munder><mo movablelimits="false">𝐚𝐫𝐠𝐦𝐚𝐱</mo><msub><mi>N</mi><mrow><mo>[</mo><mi>i</mi><mo>:</mo><mi>j</mi><mo>]</mo></mrow></msub></munder></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+<tr id="S3.Ex10" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"/>
+<td class="ltx_td ltx_align_left"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex10.m2" class="ltx_Math" alttext="\displaystyle\mathbf{w}\cdot\Delta\mathbf{\Phi}(x,d^{+}_{N_{[i:j]}}(x,y),d^{-}%&#10;_{N_{[i:j]}}(x,y))," display="inline"><mrow><mrow><mrow><mi>𝐰</mi><mo>⋅</mo><mi mathvariant="normal">Δ</mi></mrow><mo>⁢</mo><mi>𝚽</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mrow><msubsup><mi>d</mi><msub><mi>N</mi><mrow><mo>[</mo><mi>i</mi><mo>:</mo><mi>j</mi><mo>]</mo></mrow></msub><mo>+</mo></msubsup><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow><mo>,</mo><mrow><msubsup><mi>d</mi><msub><mi>N</mi><mrow><mo>[</mo><mi>i</mi><mo>:</mo><mi>j</mi><mo>]</mo></mrow></msub><mo>-</mo></msubsup><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow></mrow><mo>)</mo></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">and update as follows:</p>
+<table id="S3.Ex11" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex11.m1" class="ltx_Math" alttext="\mathbf{w}\leftarrow\mathbf{w}+\Delta\mathbf{\Phi}(x,d^{+}_{N^{*}_{[i^{*}:j^{*%&#10;}]}}(x,y),d^{-}_{N^{*}_{[i^{*}:j^{*}]}}(x,y))," display="block"><mrow><mrow><mi>𝐰</mi><mo>←</mo><mrow><mi>𝐰</mi><mo>+</mo><mrow><mi mathvariant="normal">Δ</mi><mo>⁢</mo><mi>𝚽</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mrow><msubsup><mi>d</mi><msubsup><mi>N</mi><mrow><mo>[</mo><msup><mi>i</mi><mo>*</mo></msup><mo>:</mo><msup><mi>j</mi><mo>*</mo></msup><mo>]</mo></mrow><mo>*</mo></msubsup><mo>+</mo></msubsup><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow><mo>,</mo><mrow><msubsup><mi>d</mi><msubsup><mi>N</mi><mrow><mo>[</mo><msup><mi>i</mi><mo>*</mo></msup><mo>:</mo><msup><mi>j</mi><mo>*</mo></msup><mo>]</mo></mrow><mo>*</mo></msubsup><mo>-</mo></msubsup><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>y</mi></mrow><mo>)</mo></mrow></mrow></mrow><mo>)</mo></mrow></mrow></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p5.m10" class="ltx_Math" alttext="\Delta\mathbf{\Phi}(x,d,d^{\prime})\stackrel{\Delta}{=}\mathbf{\Phi}(x,d)-%&#10;\mathbf{\Phi}(x,d^{\prime})" display="inline"><mrow><mrow><mi mathvariant="normal">Δ</mi><mo>⁢</mo><mi>𝚽</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>d</mi><mo>,</mo><msup><mi>d</mi><mo>′</mo></msup></mrow><mo>)</mo></mrow></mrow><mover><mo movablelimits="false">=</mo><mi mathvariant="normal">Δ</mi></mover><mrow><mrow><mi>𝚽</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><mi>d</mi></mrow><mo>)</mo></mrow></mrow><mo>-</mo><mrow><mi>𝚽</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>x</mi><mo>,</mo><msup><mi>d</mi><mo>′</mo></msup></mrow><mo>)</mo></mrow></mrow></mrow></mrow></math>.</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Forced Decoding for <span class="ltx_text ltx_font_smallcaps">Hiero</span></h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">We now describe how to find the gold derivations.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>We only
+consider <span class="ltx_text ltx_font_italic">single</span> reference in this paper.</span></span></span>
+Such derivations can be generated in way similar to <span class="ltx_ERROR undefined">\newcite</span>yu+:2013
+by using a language model tailored for forced decoding:</p>
+<table id="S3.Ex12" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex12.m1" class="ltx_Math" alttext="\mathrm{P}_{\it forced}(q\mid p)=\begin{cases}1&amp;\text{if $q=p+1$}\\&#10;0&amp;\text{otherwise}\end{cases}," display="block"><mrow><msub><mi mathvariant="normal">P</mi><mi>𝑓𝑜𝑟𝑐𝑒𝑑</mi></msub><mrow><mo>(</mo><mi>q</mi><mo>∣</mo><mi>p</mi><mo>)</mo></mrow><mo>=</mo><mrow><mo>{</mo><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mn>1</mn></mtd><mtd columnalign="left"><mrow><mtext>if </mtext><mrow><mi>q</mi><mo>=</mo><mrow><mi>p</mi><mo>+</mo><mn>1</mn></mrow></mrow></mrow></mtd></mtr><mtr><mtd columnalign="left"><mn>0</mn></mtd><mtd columnalign="left"><mtext>otherwise</mtext></mtd></mtr></mtable></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m1" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m2" class="ltx_Math" alttext="q" display="inline"><mi>q</mi></math> are the indices of the boundary words in the reference translation.
+The <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m3" class="ltx_Math" alttext="\mathord{+}\textrm{LM}" display="inline"><mrow><mi mathvariant="normal">+</mi><mo>⁢</mo><mtext>LM</mtext></mrow></math>node now has signature <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m4" class="ltx_Math" alttext="N_{[i:j]}^{p\star q}" display="inline"><msubsup><mi>N</mi><mrow><mo>[</mo><mi>i</mi><mo>:</mo><mi>j</mi><mo>]</mo></mrow><mrow><mi>p</mi><mo>⋆</mo><mi>q</mi></mrow></msubsup></math>,
+where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m5" class="ltx_Math" alttext="p" display="inline"><mi>p</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m6" class="ltx_Math" alttext="q" display="inline"><mi>q</mi></math> are the indexes of the boundary words.
+If a boundary word does not occur in the reference, its index is set to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m7" class="ltx_Math" alttext="\infty" display="inline"><mi mathvariant="normal">∞</mi></math>
+so that its language model score will always be <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m8" class="ltx_Math" alttext="-\infty" display="inline"><mrow><mo>-</mo><mi mathvariant="normal">∞</mi></mrow></math>;
+if a boundary word occurs more than once in the reference,
+its <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m9" class="ltx_Math" alttext="\mathord{-}\textrm{LM}" display="inline"><mrow><mi mathvariant="normal">-</mi><mo>⁢</mo><mtext>LM</mtext></mrow></math>node is split into multiple <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p1.m10" class="ltx_Math" alttext="\mathord{+}\textrm{LM}" display="inline"><mrow><mi mathvariant="normal">+</mi><mo>⁢</mo><mtext>LM</mtext></mrow></math>nodes, one for each such index.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>Our formulation
+of index-based language model fixes a bug in the word-based LM of <span class="ltx_ERROR undefined">\newcite</span>yu+:2013
+when a substring appears more than once in the reference (e.g. “the man…the man…”);
+thanks to Dan Gildea for pointing it out.</span></span></span></p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p">We have a similar deductive system for forced decoding.
+For the previous example, rule <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m1" class="ltx_Math" alttext="r_{5}" display="inline"><msub><mi>r</mi><mn>5</mn></msub></math> in Figure <a href="#S1.F2" title="Figure 2 ‣ 1 Introduction ‣ Hierarchical MT Training using Max-Violation Perceptron" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> (a) is rewritten as</p>
+<table id="S3.Ex13" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex13.m1" class="ltx_Math" alttext="\text{X}\rightarrow\langle{\mbox{{\it{y\v{u}}}}\ \text{X}_{\kern-0.5pt{%&#10;\raisebox{1.0pt}{\framebox{\tiny 1}}}}\ \mbox{{\it{j\v{u}x\'{i}ng}}}\ \text{X}%&#10;_{\kern-0.5pt{\raisebox{1.0pt}{\framebox{\tiny 2}}}},1\ \text{X}_{\kern-0.5pt{%&#10;\raisebox{1.0pt}{\framebox{\tiny 2}}}}\ 4\ \text{X}_{\kern-0.5pt{\raisebox{1.0%&#10;pt}{\framebox{\tiny 1}}}}}\rangle," display="block"><mrow><mrow><mtext>X</mtext><mo>→</mo><mrow><mo>⟨</mo><mrow><mrow><mpadded width="+5.0pt"><mtext mathvariant="italic">yǔ</mtext></mpadded><mo>⁢</mo><mpadded width="+5.0pt"><msub><mtext>X</mtext><mtext mathsize="small" stretchy="false">1</mtext></msub></mpadded><mo>⁢</mo><mpadded width="+5.0pt"><mtext mathvariant="italic">jǔxíng</mtext></mpadded><mo>⁢</mo><msub><mtext>X</mtext><mtext mathsize="small" stretchy="false">2</mtext></msub></mrow><mo>,</mo><mrow><mpadded width="+5.0pt"><mn>1</mn></mpadded><mo>⁢</mo><msub><mtext>X</mtext><mtext mathsize="small" stretchy="false">2</mtext></msub><mo>⁢</mo><mpadded width="+5.0pt"><mn> 4</mn></mpadded><mo>⁢</mo><msub><mtext>X</mtext><mtext mathsize="small" stretchy="false">1</mtext></msub></mrow></mrow><mo>⟩</mo></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m2" class="ltx_Math" alttext="1" display="inline"><mn>1</mn></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m3" class="ltx_Math" alttext="4" display="inline"><mn>4</mn></math> are the indexes for reference words “held” and “with” respectively.
+The deduction for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m4" class="ltx_Math" alttext="\text{X}_{[1:5]}" display="inline"><msub><mtext>X</mtext><mrow><mo>[</mo><mn>1</mn><mo>:</mo><mn>5</mn><mo>]</mo></mrow></msub></math> in Figure <a href="#S1.F2" title="Figure 2 ‣ 1 Introduction ‣ Hierarchical MT Training using Max-Violation Perceptron" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> (b) is</p>
+<table id="S3.Ex14" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.Ex14.m1" class="ltx_Math" alttext="\inferrule{\quad\text{X}_{[2:3]}^{5\star 5}:s_{1}\qquad\text{X}_{[4:5]}^{2%&#10;\star 3}:s_{2}\quad}{\text{X}_{[1:5]}^{1\star 5}:s(r_{5})+\lambda+s_{1}+s_{2}}%&#10;\quad r_{5}," display="block"><mrow><mrow><mrow><merror class="ltx_ERROR undefined undefined"><mtext>\inferrule</mtext></merror><mo separator="true"> </mo><msubsup><mtext>X</mtext><mrow><mo>[</mo><mn>2</mn><mo>:</mo><mn>3</mn><mo>]</mo></mrow><mrow><mn>5</mn><mo>⋆</mo><mn>5</mn></mrow></msubsup></mrow><mo>:</mo><mrow><msub><mi>s</mi><mn>1</mn></msub><mo separator="true">  </mo><msubsup><mtext>X</mtext><mrow><mo>[</mo><mn>4</mn><mo>:</mo><mn>5</mn><mo>]</mo></mrow><mrow><mn>2</mn><mo>⋆</mo><mn>3</mn></mrow></msubsup></mrow><mo>:</mo><mrow><msub><mi>s</mi><mn>2</mn></msub><mo separator="true"> </mo><msubsup><mtext>X</mtext><mrow><mo>[</mo><mn>1</mn><mo>:</mo><mn>5</mn><mo>]</mo></mrow><mrow><mn>1</mn><mo>⋆</mo><mn>5</mn></mrow></msubsup></mrow><mo>:</mo><mrow><mrow><mrow><mi>s</mi><mo>⁢</mo><mrow><mo>(</mo><msub><mi>r</mi><mn>5</mn></msub><mo>)</mo></mrow></mrow><mo>+</mo><mi>λ</mi><mo>+</mo><msub><mi>s</mi><mn>1</mn></msub><mo>+</mo><msub><mi>s</mi><mn>2</mn></msub></mrow><mo separator="true"> </mo><msub><mi>r</mi><mn>5</mn></msub></mrow></mrow><mo>,</mo></mrow></math></td>
+<td class="ltx_eqn_center_padright"/></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m5" class="ltx_Math" alttext="\lambda=\log\prod_{i\in\{1,3,4\}}\mathrm{P}_{\it forced}(i+1\mid i)=0" display="inline"><mrow><mi>λ</mi><mo>=</mo><mi>log</mi><msub><mo largeop="true" symmetric="true">∏</mo><mrow><mi>i</mi><mo>∈</mo><mrow><mo>{</mo><mrow><mn>1</mn><mo>,</mo><mn>3</mn><mo>,</mo><mn>4</mn></mrow><mo>}</mo></mrow></mrow></msub><msub><mi mathvariant="normal">P</mi><mi>𝑓𝑜𝑟𝑐𝑒𝑑</mi></msub><mrow><mo>(</mo><mi>i</mi><mo>+</mo><mn>1</mn><mo>∣</mo><mi>i</mi><mo>)</mo></mrow><mo>=</mo><mn>0</mn></mrow></math>.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Experiments</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">Following <span class="ltx_ERROR undefined">\newcite</span>yu+:2013, we call our max-violation method <span class="ltx_text ltx_font_smallcaps">MaxForce</span>.
+Our implementation is mostly in Python on top of the <span class="ltx_text ltx_font_typewriter">cdec</span>system <cite class="ltx_cite">[<a href="#bib.bib234" title="Cdec: a decoder, alignment, and learning framework for finite-state and context-free translation models" class="ltx_ref">8</a>]</cite>
+via the <span class="ltx_text ltx_font_typewriter">pycdec</span> interface <cite class="ltx_cite">[<a href="#bib.bib241" title="Pycdec: a python interface to cdec" class="ltx_ref">3</a>]</cite>.
+In addition, we use minibatch parallelization of <cite class="ltx_cite">[<a href="#bib.bib225" title="Minibatch and parallelization for online large margin structured learning" class="ltx_ref">22</a>]</cite> to speedup perceptron training.
+We evaluate <span class="ltx_text ltx_font_smallcaps">MaxForce</span>for <span class="ltx_text ltx_font_smallcaps">Hiero</span>over two <span class="ltx_text ltx_font_smallcaps">Ch-En</span>corpora, IWSLT09 and FBIS,
+and compare the performance with vanilla <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-best <span class="ltx_text ltx_font_smallcaps">Mert<cite class="ltx_cite"><span class="ltx_text ltx_font_upright">[</span><a href="#bib.bib87" title="Minimum error rate training in statistical machine translation" class="ltx_ref">19</a><span class="ltx_text ltx_font_upright">]</span></cite></span> from Moses <cite class="ltx_cite">[<a href="#bib.bib220" title="Moses: open source toolkit for statistical machine translation" class="ltx_ref">14</a>]</cite>,
+Hypergraph <span class="ltx_text ltx_font_smallcaps">Mert<cite class="ltx_cite"><span class="ltx_text ltx_font_upright">[</span><a href="#bib.bib235" title="Efficient minimum error rate training and minimum bayes-risk decoding for translation hypergraphs and lattices" class="ltx_ref">15</a><span class="ltx_text ltx_font_upright">]</span></cite></span>, and <span class="ltx_text ltx_font_smallcaps">Pro<cite class="ltx_cite"><span class="ltx_text ltx_font_upright">[</span><a href="#bib.bib216" title="Tuning as ranking" class="ltx_ref">11</a><span class="ltx_text ltx_font_upright">]</span></cite></span> from <span class="ltx_text ltx_font_typewriter">cdec</span>.</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Features Design</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">We use all the 18 <span class="ltx_text ltx_font_italic">dense</span> features from <span class="ltx_text ltx_font_typewriter">cdec</span>,
+including language model, direct translation probability <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m1" class="ltx_Math" alttext="p(e|f)" display="inline"><mrow><mi>p</mi><mrow><mo>(</mo><mi>e</mi><mo>|</mo><mi>f</mi><mo>)</mo></mrow></mrow></math>,
+lexical translation probabilities <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m2" class="ltx_Math" alttext="p_{l}(e|f)" display="inline"><mrow><msub><mi>p</mi><mi>l</mi></msub><mrow><mo>(</mo><mi>e</mi><mo>|</mo><mi>f</mi><mo>)</mo></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m3" class="ltx_Math" alttext="p_{l}(f|e)" display="inline"><mrow><msub><mi>p</mi><mi>l</mi></msub><mrow><mo>(</mo><mi>f</mi><mo>|</mo><mi>e</mi><mo>)</mo></mrow></mrow></math>,
+length penalty, counts for the source and target sides in the training corpus,
+and flags for the glue rules and pass-through rules.</p>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">For <span class="ltx_text ltx_font_italic">sparse</span> features we use Word-Edges features
+<cite class="ltx_cite">[<a href="#bib.bib26" title="Coarse-to-fine-grained n-best parsing and discriminative reranking" class="ltx_ref">4</a>, <a href="#bib.bib127" title="Forest reranking: discriminative parsing with non-local features" class="ltx_ref">13</a>]</cite>
+which are shown to be extremely effective in both parsing and
+phrase-based MT <cite class="ltx_cite">[<a href="#bib.bib232" title="Max-violation perceptron and forced decoding for scalable MT training" class="ltx_ref">21</a>]</cite>.
+We find that even simple Word-Edges features boost the performance significantly,
+and adding complex Word-Edges features from <span class="ltx_ERROR undefined">\newcite</span>yu+:2013 brings limited improvement and slows down the decoding.
+So in the following experiments we only use Word-Edges features consisting of combinations of
+English and Chinese words,
+and Chinese characters, and do not use word clusters nor word types.
+For simplicity and efficiency reasons, we also exclude all non-local features.</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Datasets and Preprocessing</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">Our first corpus, IWSLT09, contains <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m1" class="ltx_Math" alttext="\sim" display="inline"><mo>∼</mo></math>30k short sentences collected from spoken language.
+IWSLT04 is used as development set in <span class="ltx_text ltx_font_smallcaps">MaxForce</span>training,
+and as tuning set for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p1.m2" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-best <span class="ltx_text ltx_font_smallcaps">Mert</span>, Hypergraph <span class="ltx_text ltx_font_smallcaps">Mert</span>, and <span class="ltx_text ltx_font_smallcaps">Pro</span>.
+IWSLT05 is used as test set.
+Both IWSLT04 and IWSLT05 contain 16 references.We mainly use this corpus to investigate the properties of <span class="ltx_text ltx_font_smallcaps">MaxForce</span>.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">The second corpus, FBIS, contains <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m1" class="ltx_Math" alttext="\sim" display="inline"><mo>∼</mo></math>240k sentences.
+NIST06 newswire is used as development set for <span class="ltx_text ltx_font_smallcaps">MaxForce</span>training,
+and as tuning set for all other tuning methods.
+NIST08 newswire is used as test set.
+Both NIST06 newswire and NIST08 newswire contain 4 references.
+We mainly use this corpus to demonstrate the performance of <span class="ltx_text ltx_font_smallcaps">MaxForce</span>in large-scale training.</p>
+</div>
+<div id="S4.SS2.p3" class="ltx_para">
+<p class="ltx_p">For both corpora, we do standard tokenization, alignment and rule extraction using the <span class="ltx_text ltx_font_typewriter">cdec</span>tools.
+In rule extraction, we remove all 1-count rules
+but keep the rules mapping from one Chinese word to one English word to help balancing between overfitting and coverage.
+We use a trigram language model trained from the target sides of the two corpora respectively.</p>
+</div>
+<div id="S4.T1" class="ltx_table">
+<span class="ltx_inline-block ltx_align_center ltx_transformed_outer" style="width:209.2pt;height:102.777777777778px;vertical-align:-2.0pt;"><span class="ltx_transformed_inner" style="transform:translate(0.0pt,0.0pt) scale(1,1) ;-webkit-transform:translate(0.0pt,0.0pt) scale(1,1) ;-ms-transform:translate(0.0pt,0.0pt) scale(1,1) ;">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r"/>
+<th class="ltx_td ltx_align_center">sent.</th>
+<th class="ltx_td ltx_align_center">words</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">phrase-based MT</th>
+<td class="ltx_td ltx_align_center ltx_border_t">32%</td>
+<td class="ltx_td ltx_align_center ltx_border_t">12%</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_smallcaps">Hiero</span></th>
+<td class="ltx_td ltx_align_center">35%</td>
+<td class="ltx_td ltx_align_center">30%</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_smallcaps">Hiero</span> <span class="ltx_text ltx_font_small">(all rules)</span></th>
+<td class="ltx_td ltx_align_center">65%</td>
+<td class="ltx_td ltx_align_center">55%</td></tr>
+</tbody>
+</table>
+</span></span>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 1: </span>Reachability comparison (on FBIS)
+between phrase-based MT reported in <span class="ltx_ERROR undefined">\newcite</span>yu+:2013 (without 1-count rules)
+and <span class="ltx_text ltx_font_smallcaps">Hiero</span>(with and without 1-count rules).</div>
+</div>
+<div id="S4.F4" class="ltx_figure"><img src="P14-2127/image002.png" id="S4.F4.g1" class="ltx_graphics ltx_centering" width="270" height="190" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 4: </span>Reachability vs. sent. length on FBIS.
+See text below for “loose” and “tight”.
+</div>
+</div>
+</div>
+<div id="S4.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.3 </span>Forced Decoding Reachability</h3>
+
+<div id="S4.SS3.p1" class="ltx_para">
+<p class="ltx_p">We first report the forced decoding reachability for <span class="ltx_text ltx_font_smallcaps">Hiero</span>on FBIS in Table <a href="#S4.T1" title="Table 1 ‣ 4.2 Datasets and Preprocessing ‣ 4 Experiments ‣ Hierarchical MT Training using Max-Violation Perceptron" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+With the full rule set,
+65% sentences and 55% words of the whole corpus are forced decodable in <span class="ltx_text ltx_font_smallcaps">Hiero</span>.
+After pruning 1-count rules,
+our forced decoding covers significantly more words
+than phrase-based MT in <span class="ltx_ERROR undefined">\newcite</span>yu+:2013.
+Furthermore, in phrase-based MT, most decodable sentences are very short,
+while in <span class="ltx_text ltx_font_smallcaps">Hiero</span>the lengths of decodable sentences are more evenly distributed.</p>
+</div>
+<div id="S4.SS3.p2" class="ltx_para">
+<p class="ltx_p">However, in the following experiments, due to efficiency considerations,
+we use the “tight” rule extraction in <span class="ltx_text ltx_font_typewriter">cdec</span>that is more strict than the standard “loose” rule extraction,
+which generates a reduced rule set and, thus, a reduced reachability.
+We show the reachability distributions of both tight and loose rule extraction in Figure <a href="#S4.F4" title="Figure 4 ‣ 4.2 Datasets and Preprocessing ‣ 4 Experiments ‣ Hierarchical MT Training using Max-Violation Perceptron" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.</p>
+</div>
+</div>
+<div id="S4.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.4 </span>Evaluation on IWSLT</h3>
+
+<div id="S4.F5" class="ltx_figure"><img src="P14-2127/image003.png" id="S4.F5.g1" class="ltx_graphics ltx_centering" width="270" height="190" alt=""/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 5: </span>Comparison of various update methods.</div>
+</div>
+<div id="S4.F6" class="ltx_figure"><img src="P14-2127/image004.png" id="S4.F6.g1" class="ltx_graphics ltx_centering" width="270" height="190" alt=""/>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 6: </span>Sparse features (Word-Edges) contribute <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.F6.m2" class="ltx_Math" alttext="\sim" display="inline"><mo>∼</mo></math>2 <span class="ltx_text ltx_font_smallcaps">Bleu</span>points,
+outperforming <span class="ltx_text ltx_font_smallcaps">Pro</span>and <span class="ltx_text ltx_font_smallcaps">Mert</span>. </div>
+</div>
+<div id="S4.SS4.p1" class="ltx_para">
+<p class="ltx_p">For IWSLT, we first compare the performance from various update methods
+in Figure <a href="#S4.F5" title="Figure 5 ‣ 4.4 Evaluation on IWSLT ‣ 4 Experiments ‣ Hierarchical MT Training using Max-Violation Perceptron" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+The max-violation method is more than 15 <span class="ltx_text ltx_font_smallcaps">Bleu</span>points better than
+the standard perceptron (also known as “bold-update” in <span class="ltx_ERROR undefined">\newcite</span>liang+:2006)
+which updates at the root of the derivation tree.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>We find that while <span class="ltx_text ltx_font_smallcaps">MaxForce</span>generates translations of length ratio close to 1 during training,
+the length ratios on dev/test sets are significantly lower, due to OOVs.
+So we run a binary search for the length penalty weight after each training iteration
+to tune the length ratio to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p1.m1" class="ltx_Math" alttext="\sim" display="inline"><mo>∼</mo></math>0.97 on dev set.</span></span></span><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p1.m2" class="ltx_Math" alttext="{}^{,}" display="inline"><msup><mi/><mo>,</mo></msup></math><span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>
+We report <span class="ltx_text ltx_font_smallcaps">Bleu</span>with <span class="ltx_text ltx_font_bold">averaged</span> reference lengths.</span></span></span>
+This can be explained by the fact that in training <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p1.m3" class="ltx_Math" alttext="\sim" display="inline"><mo>∼</mo></math>58% of the standard
+updates are invalid (i.e., they do not fix any violation).
+We also use the “skip” strategy of <span class="ltx_ERROR undefined">\newcite</span>zhang+:2013
+which updates at the root of the derivation
+only when it fixes a search error, avoiding all invalid updates. This achieves <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p1.m4" class="ltx_Math" alttext="\sim" display="inline"><mo>∼</mo></math>10 <span class="ltx_text ltx_font_smallcaps">Bleu</span>better than the standard update,
+but is still more than <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p1.m5" class="ltx_Math" alttext="\sim" display="inline"><mo>∼</mo></math>5 <span class="ltx_text ltx_font_smallcaps">Bleu</span>worse than Max-Violation update.
+Finally we also try the “local-update” method from <span class="ltx_ERROR undefined">\newcite</span>liang+:2006
+which updates towards the derivation with the best <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p1.m6" class="ltx_Math" alttext="\mathrm{Bleu}^{+1}" display="inline"><msup><mi>Bleu</mi><mrow><mo>+</mo><mn>1</mn></mrow></msup></math>in the root group <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p1.m7" class="ltx_Math" alttext="S_{[0:\lvert x\rvert]}" display="inline"><msub><mi>S</mi><mrow><mo>[</mo><mn>0</mn><mo>:</mo><mrow><mo fence="true">|</mo><mi>x</mi><mo fence="true">|</mo></mrow><mo>]</mo></mrow></msub></math>.
+This method
+is about 2 <span class="ltx_text ltx_font_smallcaps">Bleu</span>points worse than max-violation.</p>
+</div>
+<div id="S4.SS4.p2" class="ltx_para">
+<p class="ltx_p">We further investigate the contribution of sparse features in Figure <a href="#S4.F6" title="Figure 6 ‣ 4.4 Evaluation on IWSLT ‣ 4 Experiments ‣ Hierarchical MT Training using Max-Violation Perceptron" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a>.
+On the development set, max-violation update without Word-Edges features achieves <span class="ltx_text ltx_font_smallcaps">Bleu</span>similar to
+<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p2.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-best <span class="ltx_text ltx_font_smallcaps">Mert</span>and <span class="ltx_text ltx_font_smallcaps">Pro</span>, but lower than Hypergraph <span class="ltx_text ltx_font_smallcaps">Mert</span>.
+Adding simple Word-Edges features improves <span class="ltx_text ltx_font_smallcaps">Bleu</span>by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p2.m2" class="ltx_Math" alttext="\sim" display="inline"><mo>∼</mo></math>2 points,
+outperforming the very strong Hypergraph <span class="ltx_text ltx_font_smallcaps">Mert</span>baseline by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p2.m3" class="ltx_Math" alttext="\sim" display="inline"><mo>∼</mo></math>1 point.
+See Table <a href="#S4.T2" title="Table 2 ‣ 4.4 Evaluation on IWSLT ‣ 4 Experiments ‣ Hierarchical MT Training using Max-Violation Perceptron" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> for details.
+The results of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p2.m4" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-best <span class="ltx_text ltx_font_smallcaps">Mert</span>, Hypergraph <span class="ltx_text ltx_font_smallcaps">Mert</span>, and <span class="ltx_text ltx_font_smallcaps">Pro</span>are
+averages from 3 runs.</p>
+</div>
+<div id="S4.T2" class="ltx_table">
+<span class="ltx_inline-block ltx_align_center ltx_transformed_outer" style="width:262.5pt;height:152.777777777778px;vertical-align:-2.0pt;"><span class="ltx_transformed_inner" style="transform:translate(0.0pt,0.0pt) scale(1,1) ;-webkit-transform:translate(0.0pt,0.0pt) scale(1,1) ;-ms-transform:translate(0.0pt,0.0pt) scale(1,1) ;">
+<table class="ltx_tabular ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r">algorithm</th>
+<th class="ltx_td ltx_align_center ltx_border_r"># feats</th>
+<td class="ltx_td ltx_align_center ltx_border_r">dev</td>
+<td class="ltx_td ltx_align_center">test</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-best <span class="ltx_text ltx_font_smallcaps">Mert</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">18</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">44.9</td>
+<td class="ltx_td ltx_align_center ltx_border_t">47.9</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r">Hypergraph <span class="ltx_text ltx_font_smallcaps">Mert</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r">18</th>
+<td class="ltx_td ltx_align_center ltx_border_r">46.6</td>
+<td class="ltx_td ltx_align_center">50.7</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_smallcaps">Pro</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r">18</th>
+<td class="ltx_td ltx_align_center ltx_border_r">45.0</td>
+<td class="ltx_td ltx_align_center">49.5</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">local update perc.</th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">443K</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">45.6</td>
+<td class="ltx_td ltx_align_center ltx_border_t">49.1</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_smallcaps">MaxForce</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r">529K</th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_bold">47.4</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_bold">51.5</span></td></tr>
+</tbody>
+</table>
+</span></span>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 2: </span><span class="ltx_text ltx_font_smallcaps">Bleu</span>scores (with 16 references) of various training algorithms on IWSLT09.
+</div>
+</div>
+</div>
+<div id="S4.SS5" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.5 </span>Evaluation on FBIS</h3>
+
+<div id="S4.T3" class="ltx_table">
+<span class="ltx_inline-block ltx_align_center ltx_transformed_outer" style="width:240.0pt;height:102.777777777778px;vertical-align:-2.0pt;"><span class="ltx_transformed_inner" style="transform:translate(0.0pt,0.0pt) scale(1,1) ;-webkit-transform:translate(0.0pt,0.0pt) scale(1,1) ;-ms-transform:translate(0.0pt,0.0pt) scale(1,1) ;">
+<table class="ltx_tabular ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r">algorithm</th>
+<th class="ltx_td ltx_align_center ltx_border_r"># feats</th>
+<th class="ltx_td ltx_align_center ltx_border_r">dev</th>
+<th class="ltx_td ltx_align_center">test</th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">Hypergraph <span class="ltx_text ltx_font_smallcaps">Mert</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">18</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">27.3</td>
+<td class="ltx_td ltx_align_center ltx_border_t">23.0</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_smallcaps">Pro</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r">18</th>
+<td class="ltx_td ltx_align_center ltx_border_r">26.4</td>
+<td class="ltx_td ltx_align_center">22.7</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_smallcaps">MaxForce</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t">4.5M</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">27.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold">23.9</span></td></tr>
+</tbody>
+</table>
+</span></span>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 3: </span><span class="ltx_text ltx_font_smallcaps">Bleu</span>scores (with 4 references) of various training algorithms on FBIS.
+</div>
+</div>
+<div id="S4.SS5.p1" class="ltx_para">
+<p class="ltx_p">Table <a href="#S4.T3" title="Table 3 ‣ 4.5 Evaluation on FBIS ‣ 4 Experiments ‣ Hierarchical MT Training using Max-Violation Perceptron" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> shows <span class="ltx_text ltx_font_smallcaps">Bleu</span>scores of Hypergraph <span class="ltx_text ltx_font_smallcaps">Mert</span>, <span class="ltx_text ltx_font_smallcaps">Pro</span>,
+and <span class="ltx_text ltx_font_smallcaps">MaxForce</span>on FBIS.
+<span class="ltx_text ltx_font_smallcaps">MaxForce</span>actives 4.5M features, and achieves
++1.2 <span class="ltx_text ltx_font_smallcaps">Bleu</span>over <span class="ltx_text ltx_font_smallcaps">Pro</span>and +0.9 <span class="ltx_text ltx_font_smallcaps">Bleu</span>over Hypergraph <span class="ltx_text ltx_font_smallcaps">Mert</span>.
+The training time (on 32 cores) for Hypergraph <span class="ltx_text ltx_font_smallcaps">Mert</span>and <span class="ltx_text ltx_font_smallcaps">Pro</span>is about 30 min. on the dev set,
+and is about 5 hours for <span class="ltx_text ltx_font_smallcaps">MaxForce</span>on the training set.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Conclusions</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">We have presented a latent-variable violation-fixing framework
+for general structured prediction problems with
+inexact search over hypergraphs.
+Its application on <span class="ltx_text ltx_font_smallcaps">Hiero</span>brings significant improvement in <span class="ltx_text ltx_font_smallcaps">Bleu</span>,
+compared to algorithms that are specially designed for MT tuning such as <span class="ltx_text ltx_font_smallcaps">Mert</span>and <span class="ltx_text ltx_font_smallcaps">Pro</span>.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgment</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">Part of this work was done during K. Z.’s internship at
+IBM. We thank Martin Čmejrek and Lemao Liu for discussions,
+David Chiang for pointing us to <span class="ltx_text ltx_font_typewriter">pycdec</span>, Dan Gildea for Footnote <a href="#S3.Ex12" title="3.2 Forced Decoding for Hiero ‣ 3 Violation-Fixing Perceptron for Hiero ‣ Hierarchical MT Training using Max-Violation Perceptron" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>,
+and the anonymous reviewers for comments.
+This work is supported by DARPA FA8750-13-2-0041 (DEFT),
+DARPA HR0011-12-C-0015 (BOLT),
+and a Google Faculty Research Award.</p>
+</div>
+<div id="Sx1.p2" class="ltx_para">
+<p class="ltx_p"><cite class="ltx_cite"/></p>
+</div>
+<div class="ltx_pagination ltx_role_newpage"/><span class="ltx_ERROR undefined">\balance</span>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib237" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Arun and P. Koehn</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Online learning methods for discriminative training of phrase based statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Proc. of MT Summit XI</span> <span class="ltx_text ltx_bib_volume">2</span> (<span class="ltx_text ltx_bib_number">5</span>), <span class="ltx_text ltx_bib_pages"> pp. 29</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Hierarchical MT Training using Max-Violation Perceptron" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib238" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Blunsom, T. Cohn and M. Osborne</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A discriminative latent variable model for statistical machine translation.</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 200–208</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Hierarchical MT Training using Max-Violation Perceptron" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib241" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">V. Chahuneau, N. Smith and C. Dyer</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Pycdec: a python interface to cdec</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Prague Bulletin of Mathematical Linguistics</span> (<span class="ltx_text ltx_bib_number">98</span>).
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p1" title="4 Experiments ‣ Hierarchical MT Training using Max-Violation Perceptron" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib26" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">E. Charniak and M. Johnson</span><span class="ltx_text ltx_bib_year">(2005-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Coarse-to-fine-grained <math xmlns="http://www.w3.org/1998/Math/MathML" id="bib.bib26.m1a" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-best parsing and discriminative reranking</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Ann Arbor, MI</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.p2" title="4.1 Features Design ‣ 4 Experiments ‣ Hierarchical MT Training using Max-Violation Perceptron" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib214" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Chiang, Y. Marton and P. Resnik</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Online large-margin training of syntactic and structural translation features</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Hierarchical MT Training using Max-Violation Perceptron" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib27" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Chiang</span><span class="ltx_text ltx_bib_year">(2005)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A hierarchical phrase-based model for statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p3" title="1 Introduction ‣ Hierarchical MT Training using Max-Violation Perceptron" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib107" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Collins</span><span class="ltx_text ltx_bib_year">(2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Discriminative training methods for hidden markov models: theory and experiments with perceptron algorithms</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Hierarchical MT Training using Max-Violation Perceptron" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#Sx1.p2" title="Acknowledgment ‣ Hierarchical MT Training using Max-Violation Perceptron" class="ltx_ref"><span class="ltx_text ltx_ref_title">Acknowledgment</span></a>.
+</span></li>
+<li id="bib.bib234" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">C. Dyer, A. Lopez, J. Ganitkevitch, J. Weese, F. Ture, P. Blunsom, H. Setiawan, V. Eidelman and P. Resnik</span><span class="ltx_text ltx_bib_year">(2010)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Cdec: a decoder, alignment, and learning framework for finite-state and context-free translation models</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p1" title="4 Experiments ‣ Hierarchical MT Training using Max-Violation Perceptron" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib239" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Flanigan, C. Dyer and J. Carbonell</span><span class="ltx_text ltx_bib_year">(2013-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Large-scale discriminative training for statistical machine translation using held-out line search</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Atlanta, Georgia</span>, <span class="ltx_text ltx_bib_pages"> pp. 248–258</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/N13-1025" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Hierarchical MT Training using Max-Violation Perceptron" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib240" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Green, S. Wang, D. Cer and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Fast and adaptive online training of feature-rich translation models</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">to appear) ACL</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Hierarchical MT Training using Max-Violation Perceptron" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib216" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Hopkins and J. May</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Tuning as ranking</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p1" title="4 Experiments ‣ Hierarchical MT Training using Max-Violation Perceptron" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib161" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Huang, S. Fayong and Y. Guo</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Structured perceptron with inexact search</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Hierarchical MT Training using Max-Violation Perceptron" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib127" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Huang</span><span class="ltx_text ltx_bib_year">(2008-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Forest reranking: discriminative parsing with non-local features</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Columbus, OH</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.p2" title="4.1 Features Design ‣ 4 Experiments ‣ Hierarchical MT Training using Max-Violation Perceptron" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib220" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Koehn, H. Hoang, A. Birch, C. Callison-Burch, M. Federico, N. Bertoldi, B. Cowan, W. Shen, C. Moran, R. Zens, C. Dyer, O. Bojar, A. Constantin and E. Herbst</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Moses: open source toolkit for statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p1" title="4 Experiments ‣ Hierarchical MT Training using Max-Violation Perceptron" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib235" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">S. Kumar, W. Macherey, C. Dyer and F. Och</span><span class="ltx_text ltx_bib_year">(2009)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Efficient minimum error rate training and minimum bayes-risk decoding for translation hypergraphs and lattices</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p1" title="4 Experiments ‣ Hierarchical MT Training using Max-Violation Perceptron" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib236" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Q. Li, H. Ji and L. Huang</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Joint event extraction via structured prediction with global features</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Hierarchical MT Training using Max-Violation Perceptron" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib76" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Liang, A. Bouchard-Côté, D. Klein and B. Taskar</span><span class="ltx_text ltx_bib_year">(2006-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">An end-to-end discriminative approach to machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sydney, Australia</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P/P06/P06-1096" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Hierarchical MT Training using Max-Violation Perceptron" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib24" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. McDonald, K. Crammer and F. Pereira</span><span class="ltx_text ltx_bib_year">(2005-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Online large-margin training of dependency parsers</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Hierarchical MT Training using Max-Violation Perceptron" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib87" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. J. Och</span><span class="ltx_text ltx_bib_year">(2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Minimum error rate training in statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 160–167</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p1" title="4 Experiments ‣ Hierarchical MT Training using Max-Violation Perceptron" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+<li id="bib.bib215" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">T. Watanabe, J. Suzuki, H. Tsukada and H. Isozaki</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Online large-margin training for statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Hierarchical MT Training using Max-Violation Perceptron" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib232" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Yu, L. Huang, H. Mi and K. Zhao</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Max-violation perceptron and forced decoding for scalable MT training</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/D13-1112" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <span class="ltx_ref ltx_ref_self"><span class="ltx_text ltx_ref_title">Hierarchical MT Training using Max-Violation Perceptron</span></span>,
+<a href="#S4.SS1.p2" title="4.1 Features Design ‣ 4 Experiments ‣ Hierarchical MT Training using Max-Violation Perceptron" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib225" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Zhao and L. Huang</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Minibatch and parallelization for online large margin structured learning</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.p1" title="4 Experiments ‣ Hierarchical MT Training using Max-Violation Perceptron" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>.
+</span></li>
+</ul>
+</div><div class="ltx_rdf" about="" property="dcterms:creator"/>
+<div class="ltx_rdf" about="" property="dcterms:subject"/>
+<div class="ltx_rdf" about="" property="dcterms:title"/>
+
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 18:28:28 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

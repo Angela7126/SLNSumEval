@@ -1,0 +1,729 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Linguistic Considerations in Automatic Question Generation</title>
+<!--Generated on Wed Jun 11 17:47:34 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Linguistic Considerations in Automatic Question Generation</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Karen Mazidi 
+<br class="ltx_break"/>HiLT Lab 
+<br class="ltx_break"/>University of North Texas 
+<br class="ltx_break"/>Denton TX 76207, USA 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">KarenMazidi@my.unt.edu</span> 
+<br class="ltx_break"/>
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Rodney D. Nielsen 
+<br class="ltx_break"/>HiLT Lab 
+<br class="ltx_break"/>University of North Texas 
+<br class="ltx_break"/>Denton TX 76207, USA 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter">Rodney.Nielsen@unt.edu</span> 
+<br class="ltx_break"/>
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">As students read expository text, comprehension is improved by pausing to answer questions that reinforce the material. We describe an automatic question generator that uses semantic pattern recognition to create questions of varying depth and type for self-study or tutoring. Throughout, we explore how linguistic considerations inform system design. In the described system, semantic role labels of source sentences are used in a domain-independent manner to generate both questions and answers related to the source sentence. Evaluation results show a 44% reduction in the error rate relative to the best prior systems, averaging over all metrics, and up to 61% reduction in the error rate on grammaticality judgments.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Studies of student learning show that answering questions increases depth of student learning, facilitates transfer learning, and improves students’ retention of material (McDaniel et al., 2007; Carpenter, 2012; Roediger and Pyc, 2012). The aim of this work is to automatically generate questions for such pedagogical purposes.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Related Work</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">Approaches to automatic question generation from text span nearly four decades. The vast majority of systems generate questions by selecting one sentence at a time, extracting portions of the source sentence, then applying transformation rules or patterns in order to construct a question. A well-known early work is Wolfe’s AUTOQUEST (Wolfe, 1976), a syntactic pattern matching system. A recent approach from Heilman and Smith (2009, 2010) uses syntactic parsing and transformation rules to generate questions. Syntactic, sentence-level approaches outnumber other approaches as seen in the Question Generation Shared Task Evaluation Challenge 2010 (Boyer and Piwek, 2010) which received only one paragraph-level, semantic entry. Argawal, Shah and Mannem (2011) continue the paragraph-level approach using discourse cues to find appropriate text segments upon which to construct questions at a deeper conceptual level. The uniqueness of their work lies in their use of discourse cues to extract semantic content for question generation. They generate questions of types: <span class="ltx_text ltx_font_italic">why</span>, <span class="ltx_text ltx_font_italic">when</span>, <span class="ltx_text ltx_font_italic">give an example</span>, and <span class="ltx_text ltx_font_italic">yes/no</span>.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">In contrast to the above systems, other approaches have an intermediate step of transforming input into some sort of semantic representation. Examples of this intermediate step can be found in Yao and Zhang (2010) which uses Minimal Recursive Semantics, and in Olney et al. (2012) which uses concept maps. These approaches can potentially ask deeper questions due to their focus on semantics. A novel question generator by Curto et al. (2012) leverages lexico-syntactic patterns gleaned from the web with seed question-answer pairs.</p>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">Another recent approach is Lindberg et al. (2013), which used semantic role labeling to identify patterns in the source text from which questions can be generated. This work most closely parallels our own with a few exceptions: our system only asks questions that can be answered from the source text, our approach is domain-independent, and the patterns also identify the answer to the question.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Approach</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">The system consists of a straightforward pipeline. First, the source text is divided into sentences which are processed by SENNA<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>http://ml.nec-labs.com/senna/</span></span></span> software, described in (Collobert et al., 2011). SENNA provides the tokenizing, pos tagging, syntactic constituency parsing and semantic role labeling used in the system. SENNA produces separate semantic role labels for each predicate in the sentence. For each predicate and its associated semantic arguments, a matcher function is called which will return a list of patterns that match the source sentence’s predicate-argument structure. Then questions are generated and stored by question type in a question hash table.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">Generation patterns specify the text, verb forms and semantic arguments from the source sentence to form the question. Additionally, patterns indicate the semantic arguments that provide the answer to the question, required fields, and filter condition fields. As these patterns are matched, they will be rejected as candidates for generation for a particular sentence if the required arguments are absent or if filter conditions are present. For example, a filter for personal pronouns will prevent a question being generated with an argument that starts with a personal pronoun. From: <span class="ltx_text ltx_font_italic">It means that the universe is expanding</span>, we do not want to generate a vague question such as: <span class="ltx_text ltx_font_italic">What does it mean?</span> Coreference resolution, which could help avoid vague question generation, is discussed in Section 5. Table 1 shows selected required and filter fields, Section 3.3 gives examples of their use.</p>
+</div>
+<div id="S3.p3" class="ltx_para">
+<p class="ltx_p">Patterns specify whether verbs should be included in their lexical form or as they appear in the source text. Either form will include subsequent particles such as: The lungs <span class="ltx_text ltx_font_italic">take in</span> air. The most common use of the verb as it appears in the sentence is with the verb <span class="ltx_text ltx_font_italic">be</span>, as in: What <span class="ltx_text ltx_font_italic">were</span> fused into helium nuclei? This pattern takes the copular <span class="ltx_text ltx_font_italic">be</span> as it appears in the source text. However, most patterns use the lexical form of the main verb along with the appropriate form of the auxiliary <span class="ltx_text ltx_font_italic">do</span> (do, does, did), for the subject-auxiliary inversion required in forming interrogatives.</p>
+</div>
+<div id="S3.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Field</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Meaning</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">Ax</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">Sentence must contain an Ax</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">!Ax</td>
+<td class="ltx_td ltx_align_left ltx_border_r">Sentence must not contain an Ax</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">AxPER</td>
+<td class="ltx_td ltx_align_left ltx_border_r">Ax must refer to a person</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">AxGER</td>
+<td class="ltx_td ltx_align_left ltx_border_r">Ax must contain a gerund</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">AxNN</td>
+<td class="ltx_td ltx_align_left ltx_border_r">Ax must contain nouns</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">!AxIN</td>
+<td class="ltx_td ltx_align_left ltx_border_r">Ax cannot start with a preposition</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">!AxPRP</td>
+<td class="ltx_td ltx_align_left ltx_border_r">Ax cannot start with per. pronoun</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">V=<span class="ltx_text ltx_font_italic">verb</span></td>
+<td class="ltx_td ltx_align_left ltx_border_r">Verb must be a form of <span class="ltx_text ltx_font_italic">verb</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">!be</td>
+<td class="ltx_td ltx_align_left ltx_border_r">Verb cannot be a form of <span class="ltx_text ltx_font_italic">be</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r">negation</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r">Sentence cannot contain negation</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 1: </span> Selected required and filter fields <span class="ltx_text ltx_font_italic">(Ax is a semantic argument such as A0 or ArgM)</span> </div>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Pattern Authoring</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">The system at the time of this evaluation had 42 patterns. SENNA uses the 2005 PropBank coding scheme and we followed the documentation in (Babko-Malaya, 2005) for the patterns. The most commonly used semantic roles are A0, A1 and A2, as well as the ArgM modifiers. <span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>Within PropBank, the precise roles of A0 - A6 vary by predicate.</span></span></span></p>
+</div>
+<div id="S3.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Question 1:</span> Why did <span class="ltx_text" style="text-decoration:underline;">potential energy</span> release?</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_bold">Answer:</span> <span class="ltx_text ltx_font_italic">because the new bonds have lower potential energy than the original bonds</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_bold">Source: </span> As this occurs, <span class="ltx_text" style="text-decoration:underline;">potential energy</span> is released <span class="ltx_text ltx_font_italic">because the new bonds have lower potential</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_italic">energy than the original bonds.</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Question 2:</span> What does <span class="ltx_text" style="text-decoration:underline;">an increased surface area to volume ratio</span> indicate?</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_bold">Answer:</span> <span class="ltx_text ltx_font_italic">increased exposure to the environment</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_bold">Source: </span> <span class="ltx_text" style="text-decoration:underline;">An increased surface area to volume ratio</span> means <span class="ltx_text ltx_font_italic">increased exposure to the environment</span>.</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Question 3:</span> What is another term for <span class="ltx_text" style="text-decoration:underline;">electrically neutral particles?</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_bold">Answer:</span> <span class="ltx_text ltx_font_italic">neutrons</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_bold">Source: </span> The nucleus contains positively charged particles called protons and</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text" style="text-decoration:underline;">electrically neutral particles</span> called <span class="ltx_text ltx_font_italic">neutrons</span>.</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Question 4:</span> What happens <span class="ltx_text" style="text-decoration:underline;">if you continue to move atoms closer and closer together</span>?</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_bold">Answer:</span> <span class="ltx_text ltx_font_italic">eventually the two nuclei will begin to repel each other</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_bold">Source: </span> <span class="ltx_text" style="text-decoration:underline;">If you continue to move atoms closer and closer together</span>, <span class="ltx_text ltx_font_italic">eventually the two nuclei will</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_italic">begin to repel each other.</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_table">Table 2: </span>Selected generated questions with source sentences</div>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Software Tools and Source Text</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">The system was created using SENNA and Python. Importing NLTK within Python provides a simple interface to WordNet from which we determine the lexical form of verbs. SENNA provided all the necessary processing of the data, quickly, accurately and in one run.</p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p">In order to generate questions, passages were selected from science textbooks downloaded from www.ck12.org. Textbooks were chosen rather than hand-crafted source material so that a more realistic assessment of performance could be achieved. For the experiments in this paper, we selected three passages from the subjects of biology, chemistry, and earth science, filtering out references to equations and figures. The passages average around 60 sentences each, and represent chapter sections. The average grade level is approximately grade 10 as indicated by the on-line readability scorer read-able.com.</p>
+</div>
+</div>
+<div id="S3.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.3 </span>Examples</h3>
+
+<div id="S3.SS3.p1" class="ltx_para">
+<p class="ltx_p">Table 2 provides examples of generated questions. The pattern that generated Question 1 requires argument A1 (underlined in Table 2) and a causation ArgM (italicized). The pattern also filters out sentences with A0 or A2. The patterns are designed to match only the arguments used as part of the question or the answer, in order to prevent over generation of questions. The system inserted the correct forms of <span class="ltx_text ltx_font_italic">release</span> and <span class="ltx_text ltx_font_italic">do</span>, and ignored the phrase <span class="ltx_text ltx_font_italic">As this occurs</span> since it is not part of the semantic argument.</p>
+</div>
+<div id="S3.SS3.p2" class="ltx_para">
+<p class="ltx_p">The pattern that generated Question 2 requires A0, A1 and a verb whose lexical form is <span class="ltx_text ltx_font_italic">mean</span> (V=mean in Table 1). In this pattern, A1 (italicized) forms the answer and A0 (underlined) becomes part of the question along with the appropriate form of <span class="ltx_text ltx_font_italic">do</span>. This pattern supplies the word <span class="ltx_text ltx_font_italic">indicate</span> instead of the source text’s <span class="ltx_text ltx_font_italic">mean</span> which broadens the question context.</p>
+</div>
+<div id="S3.SS3.p3" class="ltx_para">
+<p class="ltx_p">Question 3 is from the source sentence’s 3rd predicate-argument set because this matched the pattern requirements: A1, A2, V=call. The answer is the text from the A2 argument. The ability to generate questions from any predicate-argument set means that sentence simplification is not required as a preprocessing step, and that the sentence can match multiple patterns. For example, this sentence could also match patterns to generate questions such as: <span class="ltx_text ltx_font_italic">What are positively charged particles called?</span> or <span class="ltx_text ltx_font_italic">Describe the nucleus</span>.</p>
+</div>
+<div id="S3.SS3.p4" class="ltx_para">
+<p class="ltx_p">Question 4 requires A1 and an ArgM that includes the discourse cue <span class="ltx_text ltx_font_italic">if</span>. The ArgM (underlined) becomes part of the question, while the rest of the source sentence forms the answer. This pattern also requires that ArgM contain nouns (AxNN from Table 1), which helps filter vague questions.</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Results</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">This paper focuses on evaluating generated questions primarily in terms of their linguistic quality, as did Heilman and Smith (2010a). In a related work (Mazidi and Nielsen, 2014) we evaluated the quality of the questions and answers from a pedagogical perspective, and our approach outperformed comparable systems in both linguistic and pedagogical evaluations. However, the task here is to explore the linguistic quality of generated questions. The annotators are university students who are science majors and native speakers of English. Annotators were given instructions to read a paragraph, then the questions based on that paragraph. Two annotators evaluated each set of questions using Likert-scale ratings from 1 to 5, where 5 is the best rating, for grammaticality, clarity, and naturalness. The average inter-annotator agreement, allowing a difference of one between the annotators’ ratings was 88% and Pearson’s r=0.47 was statistically significant (p&lt;0.001), suggesting a high correlation and agreement between annotators. The two annotator ratings were averaged for all the evaluations reported here.</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">We present results on three linguistic evaluations: (1) evaluation of our generated questions, (2) comparison of our generated questions with those from Heilman and Smith’s question generator, and (3) comparison of our generated questions with those from Lindberg, Popowich, Nesbit and Winne. We compared our system to the H&amp;S and LPN&amp;W systems because they produce questions that are the most similar to ours, and for the same purpose: reading comprehension reinforcement. The Heilman and Smith system is available online;<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>http://www.ark.cs.cmu.edu/mheilman/questions/</span></span></span> Lindberg graciously shared his code with us.</p>
+</div>
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Evaluation of our Generated Questions</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">This evaluation was conducted with one file (Chemistry: Bonds) which had 59 sentences, from which the system generated 142 questions. The purpose of this evaluation was to determine if any patterns consistently produce poor questions. The average linguistics score per pattern in this evaluation was 5.0 to 4.18. We were also interested to know if first predicates make better questions than later ones. The average score by predicate position is shown in Table 3. Note that the Rating column gives the average of the grammaticality, clarity and naturalness scores.</p>
+</div>
+<div id="S4.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Predicate</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Questions</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Rating</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">First</th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">58</td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_t">4.7</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Second</th>
+<td class="ltx_td ltx_align_center ltx_border_r">35</td>
+<td class="ltx_td ltx_align_center ltx_border_r">4.7</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r">Third</th>
+<td class="ltx_td ltx_align_center ltx_border_r">23</td>
+<td class="ltx_td ltx_align_center ltx_border_r">4.5</td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r">Higher</th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">26</td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r">4.6</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 3: </span> Predicate depth and question quality </div>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">Based on this sample of questions there is no significant difference in linguistic scores for questions generated at various predicate positions. Some question generation systems simplify complex sentences in initial stages of their system. In our approach this is unnecessary, and simplifying could miss many valid questions.</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Comparison with Heilman and Smith</h3>
+
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">This task utilized a file (Biology: the body) with 56 source sentences from which our system generated 102 questions. The Heilman and Smith system, as they describe it, takes an over-generate and rank approach. We only took questions that scored a 2.0 or better with their ranking system,<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">4</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">4</sup>In our experiments, their rankings ranged from very small negative numbers to 3.0.</span></span></span> which resulted in less than 27% of their top questions. In all, 84 of their questions were evaluated. The questions again were presented with accompanying paragraphs of the source text. Questions from the two systems were randomly intermingled. Annotators gave 1 - 5 scores for each category of grammaticality, clarity and naturalness.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">As seen in Table 4, our results represent a 44% reduction in the error rate relative to Heilman and Smith on the average rating over all metrics, and as high as 61% reduction in the error rate on grammaticality judgments. The error reduction calculation is shown below. Note that <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS2.p2.m1" class="ltx_Math" alttext="rating^{*}" display="inline"><mrow><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><msup><mi>g</mi><mo>*</mo></msup></mrow></math> is the maximum rating of 5.0.</p>
+</div>
+<div id="S4.SS2.p3" class="ltx_para">
+<table id="S4.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.E1.m1" class="ltx_Math" alttext="\frac{rating_{system2}-rating_{system1}}{rating^{*}-rating_{system1}}\times 10%&#10;0.0" display="block"><mrow><mfrac><mrow><mrow><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><msub><mi>g</mi><mrow><mi>s</mi><mo>⁢</mo><mi>y</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mn>2</mn></mrow></msub></mrow><mo>-</mo><mrow><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><msub><mi>g</mi><mrow><mi>s</mi><mo>⁢</mo><mi>y</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mn>1</mn></mrow></msub></mrow></mrow><mrow><mrow><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><msup><mi>g</mi><mo>*</mo></msup></mrow><mo>-</mo><mrow><mi>r</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><msub><mi>g</mi><mrow><mi>s</mi><mo>⁢</mo><mi>y</mi><mo>⁢</mo><mi>s</mi><mo>⁢</mo><mi>t</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mn>1</mn></mrow></msub></mrow></mrow></mfrac><mo>×</mo><mn>100.0</mn></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+</div>
+<div id="S4.T4" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">System</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Gram</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Clarity</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Natural</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Avg</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">H&amp;S</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">4.38</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">4.13</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">3.94</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">4.15</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">M&amp;N</td>
+<td class="ltx_td ltx_align_left ltx_border_r">4.76</td>
+<td class="ltx_td ltx_align_left ltx_border_r">4.26</td>
+<td class="ltx_td ltx_align_left ltx_border_r">4.53</td>
+<td class="ltx_td ltx_align_left ltx_border_r">4.52</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r">Err. Red.</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r">61%</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r">15%</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r">56%</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r">44%</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 4: </span> Comparison with Heilman and Smith </div>
+</div>
+<div id="S4.T5" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">System</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Gram</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Clarity</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Natural</span></th>
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold">Avg</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t">LPN&amp;W</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">4.57</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">4.56</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">4.55</td>
+<td class="ltx_td ltx_align_left ltx_border_r ltx_border_t">4.57</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_l ltx_border_r">M&amp;N</td>
+<td class="ltx_td ltx_align_left ltx_border_r">4.80</td>
+<td class="ltx_td ltx_align_left ltx_border_r">4.69</td>
+<td class="ltx_td ltx_align_left ltx_border_r">4.78</td>
+<td class="ltx_td ltx_align_left ltx_border_r">4.76</td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r">Err. Red.</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r">54%</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r">30%</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r">51%</td>
+<td class="ltx_td ltx_align_left ltx_border_b ltx_border_r">44%</td></tr>
+</tbody>
+</table>
+<div class="ltx_caption"><span class="ltx_tag ltx_tag_table">Table 5: </span> Comparison with Lindberg et al. </div>
+</div>
+</div>
+<div id="S4.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.3 </span>Comparison with Lindberg et al.</h3>
+
+<div id="S4.SS3.p1" class="ltx_para">
+<p class="ltx_p">For a comparison with the Lindberg, Popowich, Nesbit and Winne system we used a file (Earth science: weather fronts) that seemed most similar to the text files for which their system was designed. The file has 93 sentences and our system generated 184 questions; the LPN&amp;W system generated roughly 4 times as many questions. From each system, 100 questions were randomly selected, making sure that the LPN&amp;W questions did not include questions generated from domain-specific templates such as: <span class="ltx_text ltx_font_italic">Summarize the influence of the maximum amount on the environment.</span> The phrases <span class="ltx_text ltx_font_italic">Summarize the influence of</span> and <span class="ltx_text ltx_font_italic">on the environment</span> are part of a domain-specific template. The comparison results are shown in Table 5. Interestingly, our system again achieved a 44% reduction in the error rate when averaging over all metrics, just as it did in the Heilman and Smith comparison.</p>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Linguistic Challenges</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">Natural language generation faces many linguistic challenges. Here we briefly describe three challenges: negation detection, coreference resolution, and verb forms.</p>
+</div>
+<div id="S5.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.1 </span>Negation Detection</h3>
+
+<div id="S5.SS1.p1" class="ltx_para">
+<p class="ltx_p">Negation detection is a complicated task because negation can occur at the word, phrase or clause level, and because there are subtle shades of negation between definite positive and negative polarities (Blanco and Moldovan, 2011). For our purposes we focused on negation as identified by the NEG label in SENNA which identified <span class="ltx_text ltx_font_italic">not</span> in verb phrases. We have left for future work the task of identifying other negative indicators, which occasionally does lead to poor question/answer quality as in the following:</p>
+</div>
+<div id="S5.SS1.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Source sentence:</span> In Darwin’s time and today, many people incorrectly believe that evolution means humans come from monkeys.</p>
+</div>
+<div id="S5.SS1.p3" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Question:</span> What does evolution mean?</p>
+</div>
+<div id="S5.SS1.p4" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Answer:</span> that humans come from monkeys</p>
+</div>
+<div id="S5.SS1.p5" class="ltx_para">
+<p class="ltx_p">The negation in the word <span class="ltx_text ltx_font_italic">incorrectly</span> is not identified.</p>
+</div>
+</div>
+<div id="S5.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.2 </span>Coreference Resolution</h3>
+
+<div id="S5.SS2.p1" class="ltx_para">
+<p class="ltx_p">Currently, our system does not use any type of coreference resolution. Experiments with existing coreference software performed well only for personal pronouns, which occur infrequently in most expository text. Not having coreference resolution leads to vague questions, some of which can be filtered as discussed previously. However, further work on filters is needed to avoid questions such as:</p>
+</div>
+<div id="S5.SS2.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Source sentence:</span> Air cools when it comes into contact with a cold surface or when it rises.</p>
+</div>
+<div id="S5.SS2.p3" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Question:</span> What happens when it comes into contact with a cold surface or when it rises?</p>
+</div>
+<div id="S5.SS2.p4" class="ltx_para">
+<p class="ltx_p">Heilman and Smith chose to filter out questions with personal pronouns, possessive pronouns and noun phrases composed simply of determiners such as <span class="ltx_text ltx_font_italic">those</span>. Lindberg et al. used the emPronoun system from Charniak and Elsner, which only handles personal pronouns. Since current state-of-the-art systems do not deal well with relative and possessive pronouns, this will continue to be a limitation of natural language generation systems for the time being.</p>
+</div>
+</div>
+<div id="S5.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">5.3 </span>Verb Forms</h3>
+
+<div id="S5.SS3.p1" class="ltx_para">
+<p class="ltx_p">Since our focus is on expository text, system patterns deal primarily with the present and simple past tenses. Some patterns look for modals and so can handle future tense:</p>
+</div>
+<div id="S5.SS3.p2" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Source sentence:</span> If you continue to move atoms closer and closer together, eventually the two nuclei will begin to repel each other.</p>
+</div>
+<div id="S5.SS3.p3" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Question:</span> Discuss what the two nuclei will repel.</p>
+</div>
+<div id="S5.SS3.p4" class="ltx_para">
+<p class="ltx_p">Light verbs pose complications in NLG because they are highly idiosyncratic and subject to syntactic variability (Sag et al., 2002). Light verbs can either carry semantic meaning (<span class="ltx_text ltx_font_italic">take</span> your passport) or can be bleached of semantic content when combined with other words as in: <span class="ltx_text ltx_font_italic">make</span> a decision, <span class="ltx_text ltx_font_italic">have</span> a drink, <span class="ltx_text ltx_font_italic">take</span> a walk. Common English verbs that can be light verbs include give, have, make, take. Handling these constructions as well as other multi-word expressions may require both rule-based and statistical approaches. The catenative construction also potentially adds complexity (Huddleston and Pullum, 2005), as shown in this example: As the universe expanded, it became less dense and <span class="ltx_text ltx_font_italic">began</span> to <span class="ltx_text ltx_font_italic">cool</span>. Care must be taken not to generate questions based on one predicate in the catenative construction.</p>
+</div>
+<div id="S5.SS3.p5" class="ltx_para">
+<p class="ltx_p">We are also hindered at times by the performance of the part of speech tagging and parsing software. The most common error observed was confusion between the noun and verb roles of a word. For example in: <span class="ltx_text ltx_font_italic">Plant roots and bacterial decay use carbon dioxide in the process of respiration,</span> the word <span class="ltx_text ltx_font_italic">use</span> was classified as NN, leaving no predicate and no semantic role labels in this sentence.</p>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Conclusions</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">Roediger and Pyc (2012) advocate assisting students in building a strong knowledge base because creative discoveries are unlikely to occur when students do not have a sound set of facts and principles at their command. To that end, automatic question generation systems can facilitate the learning process by alternating passages of text with questions that reinforce the material learned.</p>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p class="ltx_p">We have demonstrated a semantic approach to automatic question generation that outperforms similar systems. We evaluated our system on text extracted from open domain STEM textbooks rather than hand-crafted text, showing the robustness of our approach. Our system achieved a 44% reduction in the error rate relative to both the Heilman and Smith, and the Lindberg et al. system on the average over all metrics. The results shows are statistically significant (p&lt;0.001). Our question generator can be used for self-study or tutoring, or by teachers to generate questions for classroom discussion or assessment. Finally, we addressed linguistic challenges to question generation.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">This research was supported by the Institute of Education Sciences, U.S. Dept. of Ed., Grant R305A120808 to UNT. The opinions expressed are those of the authors.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul class="ltx_biblist">
+<li id="bib.bibx1" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Agarwal et al.2011</span>
+<span class="ltx_bibblock">
+Agarwal, M., Shah, R., and Mannem, P.
+
+</span>
+<span class="ltx_bibblock">2011.
+
+</span>
+<span class="ltx_bibblock">Automatic question generation using discourse cues.
+
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_font_italic">Proceedings of the 6th Workshop on Innovative Use of NLP for Building Educational Applications</span>,
+
+</span>
+<span class="ltx_bibblock">Association for Computational Linguistics.
+
+</span></li>
+<li id="bib.bibx2" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Babko-Malaya 2005</span>
+<span class="ltx_bibblock">
+Babko-Malaya, O.
+
+</span>
+<span class="ltx_bibblock">2005.
+
+</span>
+<span class="ltx_bibblock">Propbank annotation guidelines.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">URL: http://verbs.colorado.edu</span>
+
+</span></li>
+<li id="bib.bibx3" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Blanco et al.2011</span>
+<span class="ltx_bibblock">
+Blanco, E., and Moldovan, D.
+
+</span>
+<span class="ltx_bibblock">2011.
+
+</span>
+<span class="ltx_bibblock">Some issues on detecting negation from text.
+
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_font_italic">FLAIRS Conference.</span>
+
+</span></li>
+<li id="bib.bibx4" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Boyer and Piwek 2010</span>
+<span class="ltx_bibblock">
+Boyer, K. E., and Piwek, P., editors.
+</span>
+<span class="ltx_bibblock">2010.
+
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_font_italic">Proceedings of QG2010: The Third Workshop on Question Generation.</span>
+Pittsburgh: questiongeneration.org
+
+</span></li>
+<li id="bib.bibx5" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">carpenter2012</span>
+<span class="ltx_bibblock">
+Carpenter, S.
+
+</span>
+<span class="ltx_bibblock">2012.
+
+</span>
+<span class="ltx_bibblock">Testing enhances the transfer of learning.
+
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_font_italic">Current directions in psychological science,</span> 21(5), 279-283.
+
+</span></li>
+<li id="bib.bibx6" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">charniak 2009</span>
+<span class="ltx_bibblock">
+Charniak, E., and Elsner, M.
+2009.
+
+</span>
+<span class="ltx_bibblock">EM works for pronoun anaphora resolution.
+
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_font_italic">Proceedings of the 12th Conference of the European Chapter of the Association for Computational Linguistics.</span>
+Association for Computational Linguistics.
+
+</span></li>
+<li id="bib.bibx7" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Collobert et al.2011</span>
+<span class="ltx_bibblock">
+Collobert, R., Weston, J., Bottou, L., Karlen, M., Kavukcuoglu, K., &amp; Kuksa, P.
+
+</span>
+<span class="ltx_bibblock">2011.
+
+</span>
+<span class="ltx_bibblock">Natural language processing (almost) from scratch.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">The Journal of Machine Learning Research</span>, 12, 2493-2537.
+
+</span></li>
+<li id="bib.bibx8" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Curto2012</span>
+<span class="ltx_bibblock">
+Curto, S., Mendes, A., and Coheur, L.
+
+</span>
+<span class="ltx_bibblock">2012.
+
+</span>
+<span class="ltx_bibblock">Question generation based on lexico-syntactic patterns learned from the web.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Dialogue &amp; Discourse</span>, 3(2), 147-175.
+
+</span></li>
+<li id="bib.bibx9" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Heilman and Smith 2009</span>
+<span class="ltx_bibblock">
+Heilman, M., and Smith, N.
+
+</span>
+<span class="ltx_bibblock">2009.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Question generation via overgenerating transformations and ranking.</span>
+Technical Report CMU-LTI-09-013, Language Technologies Institute,
+
+</span>
+<span class="ltx_bibblock">Carnegie-Mellon University.
+
+</span></li>
+<li id="bib.bibx10" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Heilman and Smith  2010</span>
+<span class="ltx_bibblock">
+Heilman, M., and Smith, N.
+
+</span>
+<span class="ltx_bibblock">2010a.
+
+</span>
+<span class="ltx_bibblock">Good question! statistical ranking for question generation.
+
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_font_italic">Proceedings of NAACL/HLT 2010</span>.
+
+</span>
+<span class="ltx_bibblock">Association for Computational Linguistics.
+
+</span></li>
+<li id="bib.bibx11" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Heilman and Smith 2010</span>
+<span class="ltx_bibblock">
+Heilman, M., and Smith, N.
+
+</span>
+<span class="ltx_bibblock">2010b.
+
+</span>
+<span class="ltx_bibblock">Rating computer-generated questions with Mechanical Turk.
+
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_font_italic">Proceedings of the NAACL-HLT Workshop on Creating Speech and Language Data with Amazon’s Mechanical Turk.</span>
+
+</span>
+<span class="ltx_bibblock">Association for Computational Linguistics.
+
+</span></li>
+<li id="bib.bibx12" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Hudleston2005</span>
+<span class="ltx_bibblock">
+Huddleston, R. and Pullum, G.
+
+</span>
+<span class="ltx_bibblock">2005.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">A Student’s Introduction to English Grammar</span>,
+
+</span>
+<span class="ltx_bibblock">Cambridge University Press.
+
+</span></li>
+<li id="bib.bibx13" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Lindberg et al.2013</span>
+<span class="ltx_bibblock">
+Lindberg, D., Popowich, F., Nesbit, J., and Winne, P.
+
+</span>
+<span class="ltx_bibblock">2013.
+
+</span>
+<span class="ltx_bibblock">Generating natural language questions to support learning on-line.
+
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_font_italic">Proceedings of the 14th European Workshop on Natural Language Generation</span>, (2013): 105-114.
+
+</span></li>
+<li id="bib.bibx14" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Mannem et al.2010</span>
+<span class="ltx_bibblock">
+Mannem, P., Prasad, R. and Joshi, A.
+
+</span>
+<span class="ltx_bibblock">2010.
+
+</span>
+<span class="ltx_bibblock">Question generation from paragraphs at UPenn: QGSTEC system description.
+
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_font_italic">Proceedings of QG2010: The Third Workshop on Question Generation.</span>
+
+</span></li>
+<li id="bib.bibx15" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Mazidi and Nielsen 2014</span>
+<span class="ltx_bibblock">
+Mazidi, K. and Nielsen, R.D.
+
+</span>
+<span class="ltx_bibblock">2014.
+
+</span>
+<span class="ltx_bibblock">Pedagogical evaluation of automatically generated questions.
+
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_font_italic">Intelligent Tutoring Systems.</span> LNCS 8474, Springer International Publishing Switzerland.
+
+</span></li>
+<li id="bib.bibx16" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">McDaniel et al. 2007</span>
+<span class="ltx_bibblock">
+McDaniel, M. A., Anderson, J. L., Derbish, M. H., and Morrisette, N.
+
+</span>
+<span class="ltx_bibblock">2007.
+
+</span>
+<span class="ltx_bibblock">Testing the testing effect in the classroom.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">European Journal of Cognitive Psychology,</span> 19(4-5), 494-513.
+
+</span></li>
+<li id="bib.bibx17" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Olney2012</span>
+<span class="ltx_bibblock">
+Olney, A., Graesser, A., and Person, N.
+
+</span>
+<span class="ltx_bibblock">2012.
+
+</span>
+<span class="ltx_bibblock">Question generation from concept maps.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Dialogue &amp; Discourse,</span> 3(2), 75-99.
+
+</span></li>
+<li id="bib.bibx18" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Roediger and Pyc 2012</span>
+<span class="ltx_bibblock">
+Roediger III, H. L., and Pyc, M.
+
+</span>
+<span class="ltx_bibblock">2012.
+
+</span>
+<span class="ltx_bibblock">Inexpensive techniques to improve education: Applying cognitive psychology to enhance educational practice.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Journal of Applied Research in Memory and Cognition</span>, 1.4: 242-248.
+
+</span></li>
+<li id="bib.bibx19" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">sag2002</span>
+<span class="ltx_bibblock">
+Sag, I. A., Baldwin, T., Bond, F., Copestake, A., and Flickinger, D.
+
+</span>
+<span class="ltx_bibblock">2002.
+
+</span>
+<span class="ltx_bibblock">Multiword expressions: A pain in the neck for NLP.
+
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_font_italic">Computational Linguistics and Intelligent Text Processing</span>, (pp. 1-15). Springer Berlin Heidelberg.
+
+</span></li>
+<li id="bib.bibx20" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Sternberg and Grigorenko 2003</span>
+<span class="ltx_bibblock">
+Sternberg, R. J., &amp; Grigorenko, E. L.
+
+</span>
+<span class="ltx_bibblock">2003.
+
+</span>
+<span class="ltx_bibblock">Teaching for successful intelligence: Principles, procedures, and practices.
+
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_font_italic">Journal for the Education of the Gifted</span>, 27, 207-228.
+
+</span></li>
+<li id="bib.bibx21" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">Wolf 1976</span>
+<span class="ltx_bibblock">
+Wolfe, J.
+
+</span>
+<span class="ltx_bibblock">1976.
+
+</span>
+<span class="ltx_bibblock">Automatic question generation from text-an aid to independent study.
+
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_font_italic">Proceedings of ACM SIGCSE-SIGCUE</span>.
+
+</span></li>
+<li id="bib.bibx22" class="ltx_bibitem"><span class="ltx_bibtag ltx_role_refnum">yao2010</span>
+<span class="ltx_bibblock">
+Yao, X., and Zhang, Y.
+2010.
+
+</span>
+<span class="ltx_bibblock">Question generation with minimal recursion semantics.
+
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_font_italic">Proceedings of QG2010: The Third Workshop on Question Generation.</span>
+
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 17:47:34 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

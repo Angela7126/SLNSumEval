@@ -1,0 +1,1832 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Toward Future Scenario Generation:
+Extracting Event Causality Exploiting Semantic Relation, Context, and
+Association Features.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_abstract">
+      <h6 class="ltx_title ltx_title_abstract">
+       Abstract
+      </h6>
+      <p class="ltx_p">
+       We propose a supervised method
+of extracting
+event causalities like
+       conduct slash-and-burn agriculture→exacerbate desertification
+       from the web
+using
+semantic relation (between nouns), context, and association features.
+Experiments show that our
+method outperforms
+baselines
+that are
+based on state-of-the-art methods.
+We also propose methods
+of generating
+       future scenarios
+       like
+       conduct slash-and-burn agriculture→exacerbate desertification→increase Asian dust (from China)→asthma gets worse
+       .
+Experiments
+show that
+we can generate
+50,000 scenarios with 68% precision.
+We also generated a scenario
+       deforestation continues→global warming worsens→sea temperatures rise→vibrio parahaemolyticus fouls (water)
+       , which is written in no document in our input web corpus crawled in
+2007.
+But the vibrio risk due to global warming was observed in
+       Baker-Austin et al. (2013)
+       .
+Thus,
+we “predicted” the future event sequence in a sense.
+      </p>
+     </div>
+     <div class="ltx_para" id="p1">
+      <p class="ltx_p">
+       [A-]acl2014-supplementary-cameraready
+      </p>
+     </div>
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        The world can be seen as a network of causality where people,
+organizations, and other kinds of entities
+causally
+depend on each other.
+This network is so huge and complex that it is almost
+impossible for humans to exhaustively predict the consequences of a
+given event.
+Indeed,
+after the Great East Japan Earthquake in 2011, few expected that
+it would lead to an enormous trade deficit in Japan due to
+a sharp increase in energy imports.
+For effective decision making that carefully
+considers any form of future risks and chances, we need a system that helps humans do
+        scenario planning
+        [23]
+        , which is a decision-making scheme that examines
+possible future events and assesses their potential chances and
+risks.
+Our ultimate goal is to develop a system that supports scenario planning
+through generating possible
+future events using big data, which would contain what Donald Rumsfeld
+called “unknown unknowns”
+        [27]
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        To this end,
+we propose a supervised method of extracting such event
+causality as
+        conduct slash-and-burn agriculture→exacerbate desertification
+        and use its output to generate
+        future scenarios
+        (
+        scenarios
+        ),
+which are
+chains of causality
+that have been or might be observed in this world like
+        conduct slash-and-burn agriculture→exacerbate desertification→increase Asian dust (from China)→asthma gets worse
+        .
+Note that, in this paper,
+        A→B
+        denotes that
+        A
+        causes
+        B
+        , which
+means that
+“
+        if A happens, the probability of B increases
+        .”
+Our notion of causality
+should be interpreted probabilistically rather than logically.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        Our method extracts event causality
+based on three assumptions that are embodied as features of our
+classifier.
+First, we assume that two nouns
+(e.g.
+        slash-and-burn agriculture
+        and
+        desertification
+        )
+that take some specific binary semantic
+relations (e.g.
+        A
+        causes
+        B
+        ) tend to constitute event
+causality if combined with two predicates
+(e.g.
+        conduct
+        and
+        exacerbate
+        ).
+Note that semantic relations are not restricted to
+those directly relevant to causality like
+        A
+        causes
+        B
+        but can be those that might seem irrelevant to
+causality like
+        A
+        is an ingredient for
+        B
+        (e.g.
+        plutonium
+        and
+        atomic bomb
+        as in
+        plutonium is stolen→atomic bomb is made
+        ).
+Our underlying intuition is the observation that
+event causality tends to hold between two entities linked by
+semantic relations which roughly entail that one entity strongly
+affects the other.
+Such semantic relations can be expressed by (otherwise unintuitive)
+patterns like
+        A
+        is an ingredient for
+        B
+        .
+As such, semantic relations like the
+        Material
+        relation can
+also be useful.
+(See Section
+        3.2.1
+        for a more intuitive
+explanation.)
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        Our second assumption is that there are grammatical
+contexts in which event causality is more likely to appear.
+We implement what we consider likely contexts for
+event causality as context features.
+For example, a likely context of event causality
+(underlined) would be:
+        <span class="ltx_text ltx_font_italic">
+         CO2 levels rose, so
+         <span class="ltx_ERROR undefined">
+          \Underline
+         </span>
+         climatic anomalies were observed
+        </span>
+        ,
+while an unlikely context would be:
+        It remains uncertain whether if the recession is bottomed
+the declining birth rate is halted
+        .
+Useful context information includes the mood of the
+sentences (e.g., the uncertainty mood expressed by
+        uncertain
+        above),
+which is represented by lexical features
+(Section
+        3.2.2
+        ).
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p5">
+       <p class="ltx_p">
+        The last assumption embodied in our association features
+is that each word of the cause phrase must have
+a strong association (i.e., PMI, for example)
+with that of the effect phrase
+as
+        slash-and-burn agriculture
+        and
+        desertification
+        in the above example,
+as in
+        Do et al. (2011)
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p6">
+       <p class="ltx_p">
+        Our method exploits these
+features on top of our base features such as nouns and predicates.
+Experiments using 600 million web pages
+        [2]
+        show that
+our method outperforms baselines based on state-of-the-art methods
+        [8, 12]
+        by more than 19% of average precision.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p7">
+       <p class="ltx_p">
+        We require that event causality be
+        self-contained
+        ,
+i.e., intelligible as causality without the
+sentences from which it was extracted.
+For example,
+        omit toothbrushing→get a cavity
+        is self-contained, but
+        omit toothbrushing→get a girlfriend
+        is not since this is not intelligible without a context:
+        He omitted toothbrushing every day and got a girlfriend
+who was a dental assistant of dental clinic he went to for his cavity
+        .
+This is important since
+future scenarios, which are generated by chaining event causality
+as described below, must be self-contained,
+unlike
+        Hashimoto et al. (2012)
+        .
+To make event causality self-contained, we
+wrote guidelines for manually annotating
+training/development/test data.
+Annotators regarded as event
+causality only phrase pairs that were interpretable as event causality
+without contexts (i.e., self-contained).
+From the training data,
+our method seemed to successfully learn what self-contained event
+causality is.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p8">
+       <p class="ltx_p">
+        Our scenario generation method
+generates scenarios by chaining extracted event causality;
+generating
+        A→B→C
+        from
+        A→B
+        and
+        B→C
+        .
+The challenge is that many acceptable scenarios are overlooked
+if we require the joint part of the chain (
+        B
+        above)
+to be an exact match.
+To increase the number of acceptable scenarios,
+our method identifies compatibility w.r.t causality
+between two phrases
+by a recently proposed semantic polarity,
+        excitation
+        [12]
+        ,
+which properly relaxes the chaining condition
+(Section
+        3.1
+        describes it).
+For example, our method can identify the compatibility between
+        sea temperatures are high
+        and
+        sea temperatures rise
+        to chain
+        global warming worsens→sea temperatures are high
+        and
+        sea temperatures rise→vibrio parahaemolyticus
+fouls (water)
+        . Accordingly,
+we generated a scenario
+        deforestation continues→global warming worsens→sea temperatures rise→vibrio parahaemolyticus fouls (water)
+        , which is written in no document in our input web corpus that was crawled
+in 2007,
+but the vibrio risk due to global warming has actually been observed in
+the Baltic sea and reported in
+        Baker-Austin et al. (2013)
+        .
+In a sense, we “predicted” the event sequence reported in 2013 by
+documents written in 2007.
+Our experiments
+also show that we generated 50,000 scenarios with 68% precision,
+which include
+        conduct terrorist operations→terrorist bombing occurs→cause fatalities and injuries→cause economic losses
+        and the above
+“
+        slash-and-burn agriculture
+        ” scenario
+(Section
+        5.2
+        ).
+Neither is written in any document in our input corpus.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p9">
+       <p class="ltx_p">
+        In this paper, our target language is Japanese.
+However, we believe that our ideas and methods are applicable to many
+languages.
+Examples are translated into English for ease of explanation.
+Supplementary notes of this paper are available at
+        http://khn.nict.go.jp/analysis/member/ch/acl2014-sup.pdf
+        .
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Related Work
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        For
+        event causality extraction
+        ,
+clues used by previous methods can roughly
+be categorized as
+lexico-syntactic patterns
+        [1, 20]
+        ,
+words in context
+        [19]
+        ,
+associations among words
+        [28, 22, 8]
+        , and
+predicate semantics
+        [12]
+        .
+Besides
+features similar to those described above,
+we propose
+semantic relation features
+        that include those that are not obviously related to
+causality.
+We show that such thorough exploitation of new and existing features leads to
+high performance.
+Other clues include shared arguments
+        [28, 4, 5]
+        ,
+which we ignore since we target event causality about two
+distinct entities.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p2">
+       <p class="ltx_p">
+        To the best of our knowledge,
+        future scenario generation
+        is a new task,
+although previous works have addressed similar tasks
+        [20, 21]
+        .
+Neither involves chaining and restricts themselves to only one
+event causality step.
+Besides, the events they predict must be those for which
+similar events have previously been observed, and their method only
+applies to news domain.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p3">
+       <p class="ltx_p">
+        Some of the scenarios we generated are written on no page in our input
+web corpus.
+Similarly,
+        Tsuchida et al. (2011)
+        generated
+semantic knowledge like causality that is written in no
+sentence.
+However, their method cannot combine more than two pieces of knowledge
+unlike ours,
+and their target knowledge consists of nouns, but ours consists of verb
+phrases, which are more informative.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p4">
+       <p class="ltx_p">
+        Tanaka et al. (2013)
+        ’s
+web information analysis system
+provides a
+        what-happens-if QA
+        service, which is based on our
+scenario generation method.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       Event Causality Extraction Method
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        This section describes our event causality extraction method.
+Section
+        3.1
+        describes
+how to extract event causality candidates, and
+Section
+        3.2
+        details our features.
+Section
+        3.3
+        shows how to rank event
+causality candidates.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S3.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.1
+        </span>
+        Event Causality Candidate Extraction
+       </h3>
+       <div class="ltx_para" id="S3.SS1.p1">
+        <p class="ltx_p">
+         We extract the event causality between two
+events represented by two phrases from single sentences
+that are dependency parsed.
+         We obtained sentences from 600 million web pages.
+Each phrase in the event causality must
+consist of a predicate with an argument
+position (
+         template
+         , hereafter) like
+         conduct X
+         and a noun like
+         slash-and-burn agriculture
+         that completes
+         X
+         .
+We also require the predicate of the cause phrase to syntactically
+depend on the effect phrase in the sentence from which the event
+causality was extracted;
+we guarantee this by verifying the dependencies of the original sentence.
+In Japanese, since the temporal order between events is usually
+determined by precedence in a sentence, we require the
+cause phrase to precede the effect phrase.
+For context feature extraction, the
+event causality candidates are accompanied by the original sentences from
+which they were extracted.
+        </p>
+       </div>
+       <div class="ltx_paragraph" id="S3.SS1.SSS0.P1">
+        <h5 class="ltx_title ltx_title_paragraph">
+         Excitation
+        </h5>
+        <div class="ltx_para" id="S3.SS1.SSS0.P1.p1">
+         <p class="ltx_p">
+          We only keep the event causality candidates each phrase of which
+consists of
+          excitation templates
+          , which have been shown to be
+effective for causality extraction
+          [12]
+          and other
+semantic NLP tasks
+          [19]
+          .
+Excitation is a semantic property of templates
+that classifies them into
+          excitatory
+          ,
+          inhibitory
+          ,
+and
+          neutral
+          .
+Excitatory templates such as
+          cause X
+          entail that the function, effect, purpose or
+role of their argument’s referent is activated, enhanced, or manifested,
+while inhibitory templates such as
+          lower X
+          entail that it is
+deactivated or suppressed.
+Neutral ones like
+          proportional to X
+          belong to neither of
+them.
+We collectively call both excitatory and inhibitory templates
+excitation templates.
+We acquired 43,697 excitation templates by Hashimoto et al.’s
+method and the manual annotation of excitation
+template candidates.
+          We applied the excitation filter to
+all 272,025,401 event causality candidates from the web
+and 132,528,706 remained.
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS1.SSS0.P1.p2">
+         <p class="ltx_p">
+          After
+applying additional filters
+(see Section
+          <span class="ltx_ref ltx_ref_self">
+           LABEL:A-sec:filtering-conditions
+          </span>
+          in
+the supplementary notes)
+including those based on a
+stop-word list and a causal connective list
+to remove unlikely event causality
+candidates that are not removed by the above filter,
+we finally acquired 2,451,254 event causality candidates.
+         </p>
+        </div>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.2
+        </span>
+        Features for Event Causality Classifier
+       </h3>
+       <div class="ltx_subsubsection" id="S3.SS2.SSS1">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          3.2.1
+         </span>
+         Semantic Relation Features
+        </h4>
+        <div class="ltx_para" id="S3.SS2.SSS1.p1">
+         <p class="ltx_p">
+          We hypothesize that two nouns with some particular semantic relations
+are more likely to constitute event causality.
+Below we describe the semantic relations that we believe are likely
+to constitute event causality.
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS2.SSS1.p2">
+         <p class="ltx_p">
+          Causation
+          is the causal relation between two
+entities and is expressed by binary patterns like
+          A
+          causes
+          B
+          .
+          Deforestation
+          and
+          global warming
+          might complete the
+          A
+          and
+          B
+          slots.
+We manually collected
+748 binary patterns for this relation.
+(See Section
+          <span class="ltx_ref ltx_ref_self">
+           LABEL:A-sec:examples-of-binary-patterns
+          </span>
+          in
+the supplementary notes for examples of our binary patterns.)
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS2.SSS1.p3">
+         <p class="ltx_p">
+          Material
+          is the relation between a material and
+a product made of it (e.g.
+          plutonium
+          and
+          atomic bomb
+          )
+and can be expressed by
+          A
+          is made of
+          B
+          .
+Its relation to event causality might seem unclear, but
+a material can be seen as a “cause” of a product.
+Indeed materials can participate in event causality with the help of
+such template pairs as
+          A is stolen→B is made
+          as in
+          plutonium is stolen→atomic bomb is made
+          .
+We manually collected 187 binary patterns for this relation.
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS2.SSS1.p4">
+         <p class="ltx_p">
+          Necessity
+          ’s
+patterns include
+          A
+          is necessary for
+          B
+          ,
+which can be filled with
+          verbal aptitude
+          and
+          ability to think
+          . Noun pairs with this relation can constitute event causality when
+combined with template pairs like
+          improve A→cultivate B
+          .
+We collected 257 patterns for this relation.
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS2.SSS1.p5">
+         <p class="ltx_p">
+          Use
+          is the relation between means (or
+instruments) and the purpose for using them.
+          A
+          is used for
+          B
+          is a pattern of
+the relation, which can be filled with
+          e-mailer
+          and
+          exchanges of e-mail messages
+          .
+Note that means can be seen as “causing” or “realizing”
+the purpose of using the means in this relation,
+and actually event causality can be obtained by incorporating noun pairs of
+this relation into template pairs like
+          activate A→conduct B
+          .
+2,178 patterns were collected for this relation.
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS2.SSS1.p6">
+         <p class="ltx_p">
+          Prevention
+          is the relation expressed by
+patterns like
+          A
+          prevents
+          B
+          ,
+which can be filled with
+          toothbrushing
+          and
+          periodontal disease
+          .
+This relation is, so to speak, “negative
+          Causation
+          ”
+since the entity denoted by the noun completing the
+          A
+          slot
+makes the entity denoted by the
+          B
+          noun NOT realized.
+Such noun pairs mean event causality by substituting them into
+template pairs like
+          omit A→get B
+          .
+The number of patterns is 490.
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS2.SSS1.p7">
+         <p class="ltx_p">
+          The experiments
+in Section
+          5.1.1
+          show that
+not only
+          Causation
+          and
+          Prevention
+          (“negative
+          Causation
+          ”)
+but the other relations are also effective for event causality
+extraction.
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS2.SSS1.p8">
+         <p class="ltx_p">
+          In addition,
+we invented the
+          <span class="ltx_text ltx_font_smallcaps">
+           Excitation
+          </span>
+          relation that is expressed by
+binary patterns made of excitatory and inhibitory templates
+(Section
+          3.1
+          ).
+For instance, we make binary patterns
+          A
+          rises
+          B
+          and
+          A
+          lowers
+          B
+          from
+excitatory template
+          rise X
+          and inhibitory template
+          lower X
+          respectively.
+The
+          Excitation
+          relation roughly means that
+          A
+          activates
+          B
+          (excitatory) or suppresses it (inhibitory).
+We simply add an additional argument position to each template in the 43,697 excitation templates
+to make binary patterns.
+We restricted the argument positions (represented by Japanese
+postpositions) of the
+          A
+          slot to either
+          ha
+          (topic marker),
+          ga
+          (nominative), or
+          de
+          (instrumental) and those of the
+          B
+          slot to either
+          ha
+          ,
+          ga
+          ,
+          de
+          ,
+          wo
+          (accusative), or
+          ni
+          (dative),
+and obtained 55,881 patterns.
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS2.SSS1.p9">
+         <p class="ltx_p">
+          Moreover,
+for broader coverage,
+we acquired binary patterns that
+entail or are entailed by one of the patterns of the above six semantic
+relations.
+Those patterns
+were acquired from
+our web corpus by
+          Kloetzer et al. (2013b)
+          ’s
+method,
+which acquired 185 million entailment pairs with
+80% precision from our web corpus and was used for contradiction
+acquisition
+          [14]
+          .
+We acquired 335,837 patterns by this method.
+They are
+          class-dependent patterns
+          ,
+which have semantic class restrictions on arguments.
+The semantic classes
+were obtained from our web corpus based on
+          Kazama and Torisawa (2008)
+          .
+See
+          De Saeger et al. (2009)
+          ,
+          De Saeger et al. (2011)
+          and
+          Kloetzer et al. (2013a)
+          for more on our patterns.
+They collectively constitute
+the
+          <span class="ltx_text ltx_font_smallcaps">
+           Entailment
+          </span>
+          relation.
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS2.SSS1.p10">
+         <p class="ltx_p">
+          Table
+          1
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS2.SSS1.p11">
+         <p class="ltx_p">
+          shows our semantic relation features.
+To use them, we first make a database that records
+which noun pairs co-occur with each binary pattern. Then we check a noun pair (the nouns of the cause and
+effect phrases) for each event causality candidate,
+and give the candidate all the patterns in the database that
+co-occur with the noun pair.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_subsubsection" id="S3.SS2.SSS2">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          3.2.2
+         </span>
+         Context Features
+        </h4>
+        <div class="ltx_para" id="S3.SS2.SSS2.p1">
+         <p class="ltx_p">
+          We believe that contexts exist
+where event causality candidates are more likely to appear, as
+described in Section
+          1
+          .
+We developed features that capture the characteristics of
+likely contexts for Japanese event causality
+(See Section
+          <span class="ltx_ref ltx_ref_self">
+           LABEL:A-sec:context-features
+          </span>
+          in the supplementary notes).
+In a nutshell, they represent a connective
+(
+          C1
+          and
+          C2
+          in
+Section
+          <span class="ltx_ref ltx_ref_self">
+           LABEL:A-sec:context-features
+          </span>
+          ),
+the distance between the elements of event causality candidate
+(
+          C3
+          and
+          C4
+          ), words in context
+(
+          C5
+          to
+          C8
+          ),
+the existence of adnominal modifier
+(
+          9
+          to
+          C10
+          ),
+and
+the existence of additional arguments of
+cause and effect predicates (
+          C13
+          to
+          C20
+          ),
+among others.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_subsubsection" id="S3.SS2.SSS3">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          3.2.3
+         </span>
+         Association Features
+        </h4>
+        <div class="ltx_para" id="S3.SS2.SSS3.p1">
+         <p class="ltx_p">
+          These features measure the association strength between
+          slash-and-burn agriculture
+          and
+          desertification
+          in
+          conduct slash-and-burn agriculture→exacerbate desertification
+          for instance and consist of CEA-, Wikipedia-, definition-, and web-based features.
+          CEA-based features
+          are based on the Cause Effect
+Association (CEA) measure of
+          Do et al. (2011)
+          .
+It consists of association measures like PMI between arguments (nouns), between
+arguments and predicates, and between predicates
+(Table
+          2
+          ).
+Do et al. used it (along with discourse relations) to extract event
+causality.
+         </p>
+        </div>
+        <div class="ltx_para" id="S3.SS2.SSS3.p2">
+         <p class="ltx_p">
+          Wikipedia-based features
+          are the co-occurrence counts and the PMI values between cause and effect
+nouns calculated using Wikipedia
+(as of 2013-Sep-19).
+We also checked whether an Wikipedia article whose title
+is a cause (effect) noun contains its effect (cause) noun, as
+detailed in
+Section
+          <span class="ltx_ref ltx_ref_self">
+           LABEL:A-sec:wikipedia-based-association-features
+          </span>
+          in the supplementary notes.
+          Definition-based features
+          ,
+as detailed in
+Section
+          <span class="ltx_ref ltx_ref_self">
+           LABEL:A-sec:definition-based-association-features
+          </span>
+          in the supplementary notes,
+resemble the Wikipedia-based features except that the
+information source is the definition sentences automatically acquired
+from our 600 million web pages using the method of
+          Hashimoto et al. (2011)
+          .
+          Web-based features
+          provide association measures between nouns using various window
+sizes in the 600 million web pages.
+See Section
+          <span class="ltx_ref ltx_ref_self">
+           LABEL:A-sec:web-based-association-features
+          </span>
+          for detail.
+Web-based association measures were obtained from the same database as
+          AC4
+          in Table
+          2
+          .
+         </p>
+        </div>
+       </div>
+       <div class="ltx_subsubsection" id="S3.SS2.SSS4">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          3.2.4
+         </span>
+         Base Features
+        </h4>
+        <div class="ltx_para" id="S3.SS2.SSS4.p1">
+         <p class="ltx_p">
+          Base features represent the basic properties of event causality
+like nouns, templates, and their excitation polarities
+(See Section
+          <span class="ltx_ref ltx_ref_self">
+           LABEL:A-sec:base-features
+          </span>
+          in the supplementary notes).
+For
+          B3
+          and
+          B4
+          , 500 semantic classes
+were obtained from our web corpus using the method of
+          Kazama and Torisawa (2008)
+          .
+         </p>
+        </div>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S3.SS3">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         3.3
+        </span>
+        Event Causality Scoring
+       </h3>
+       <div class="ltx_para" id="S3.SS3.p1">
+        <p class="ltx_p">
+         Using the above features, a classifier
+         classifies each event causality
+candidate into causality and non-causality.
+An event causality candidate is given a causality score
+         C⁢S⁢c⁢o⁢r⁢e
+         , which is the SVM score (distance from the hyperplane)
+that is normalized to
+         [0,1]
+         by the
+sigmoid function
+         11+e-x
+         .
+Each
+event causality candidate may be given multiple original
+sentences, since a phrase pair can appear in multiple sentences,
+in which case it is given more than one SVM score.
+For such candidates, we give the largest score
+and keep only one original sentence that
+corresponds to the largest score.
+         Original sentences are also used for scenario generation,
+as described below.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Future Scenario Generation Method
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        Our future scenario
+generation method creates scenarios by chaining
+event causalities.
+A naive approach chains two phrase pairs by
+exact matching.
+However, this approach would overlook many acceptable
+scenarios
+as discussed in
+Section
+        1
+        .
+For example,
+        global warming worsens→sea temperatures are high
+        and
+        sea temperatures rise→vibrio parahaemolyticus fouls (water)
+        can be chained to constitute an acceptable scenario, but the joint part is
+not the same string.
+Note that the two phrases are not simply paraphrases;
+temperatures may be rising but remain cold,
+or they may be decreasing even though they remain high.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p2">
+       <p class="ltx_p">
+        What characterizes two phrases that can be the
+joint part of acceptable scenarios?
+Although we have no definite
+answer yet, we
+        name
+        it the
+        causal-compatibility
+        of two
+phrases and provide its preliminary characterization
+based on the excitation polarity.
+Remember that
+excitatory templates like
+        cause X
+        entail that
+        X
+        ’s function or effect
+is activated,
+but inhibitory templates like
+        lower X
+        entail that it is
+suppressed
+(Section
+        3.1
+        ).
+Two
+phrases are
+        causally-compatible
+        if they mention
+the same entity (typically described by a noun) that is predicated by
+the templates of the
+        same excitation polarity
+        .
+Indeed, both
+        X rise
+        and
+        X are high
+        are excitatory
+and hence
+        sea temperatures are high
+        and
+        sea temperatures rise
+        are causally-compatible.
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p3">
+       <p class="ltx_p">
+        Scenarios (
+        s⁢c
+        s) generated by chaining causally-compatible phrase pairs
+are scored by
+        S⁢c⁢o⁢r⁢e⁢(s⁢c)
+        , which embodies our assumption that an acceptable
+scenario consists of plausible event causality pairs:
+       </p>
+       <table class="ltx_equationgroup ltx_eqn_eqnarray" id="S6.EGx1">
+        <tr class="ltx_equation ltx_align_baseline" id="S4.Ex1">
+         <td class="ltx_eqn_center_padleft">
+         </td>
+         <td class="ltx_td ltx_align_right">
+          S⁢c⁢o⁢r⁢e⁢(s⁢c)=∏c⁢s∈C⁢A⁢U⁢S⁢(s⁢c)C⁢S⁢c⁢o⁢r⁢e⁢(c⁢s)
+         </td>
+         <td class="ltx_eqn_center_padright">
+         </td>
+        </tr>
+       </table>
+       <p class="ltx_p">
+        where
+        C⁢A⁢U⁢S⁢(s⁢c)
+        is a set of event causality pairs that constitutes
+        s⁢c
+        and
+        c⁢s
+        is a member of
+        C⁢A⁢U⁢S⁢(s⁢c)
+        .
+        C⁢S⁢c⁢o⁢r⁢e⁢(c⁢s)
+        , which is
+        c⁢s
+        ’s score, was described in
+Section
+        3.3
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S4.p4">
+       <p class="ltx_p">
+        Our method optionally applies the following two
+filters to scenarios for better precision:
+An
+        original sentence filter
+        removes a scenario if
+two event causality pairs that are chained in it
+are extracted from original sentences between which no word overlap
+exists other than words constituting causality pairs.
+In this case, the two event causality pairs tend to be about different
+topics and constitute an incoherent scenario.
+A
+        common argument filter
+        removes a scenario if a
+joint part consists of two templates that share no argument in
+our
+        ⟨
+        argument, template
+        ⟩
+        database,
+which is compiled from the syntactic dependency data between arguments
+and templates
+extracted from our web corpus.
+Such a scenario tends to be incoherent too.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Experiments
+      </h2>
+      <div class="ltx_subsection" id="S5.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.1
+        </span>
+        Event Causality Extraction
+       </h3>
+       <div class="ltx_para" id="S5.SS1.p1">
+        <p class="ltx_p">
+         Next we describe our experiments on event causality extraction
+and show
+         (a)
+         that most of our features are effective
+and
+         (b)
+         that our method outperforms the baselines
+based on state-of-the-art methods
+         [8, 12]
+         .
+Our method achieved 70% precision at 13%
+recall;
+we can extract about 69,700 event causality
+pairs with 70% precision, as described below.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p2">
+        <p class="ltx_p">
+         For the
+         test data
+         , we randomly sampled
+23,650 examples of
+         ⟨
+         event causality candidate, original sentence
+         ⟩
+         among which 3,645 were positive
+from 2,451,254 event causality candidates
+extracted from our web corpus
+(Section
+         3.1
+         ).
+For the
+         development data
+         , we identically collected 11,711 examples among which
+1,898 were positive.
+These datasets were annotated by three annotators (not the authors),
+who annotated the event causality candidates without looking at the original
+sentences.
+The final label
+was determined by majority vote.
+The
+         training data
+         were created by the annotators through
+our preliminary experiments and consists of
+112,110 among which
+9,657 were positive.
+The Kappa
+         [9]
+         of their judgments was
+0.67 (substantial agreement
+         [16]
+         ).
+These three datasets have no overlap in terms of
+phrase pairs.
+About nine man-months were required to prepare the data.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS1.p3">
+        <p class="ltx_p">
+         Our evaluation is based on
+         average precision
+         ;
+         we believe that it is important to
+         rank
+         the plausible
+event causality candidates higher.
+        </p>
+       </div>
+       <div class="ltx_subsubsection" id="S5.SS1.SSS1">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          5.1.1
+         </span>
+         Ablation Tests
+        </h4>
+        <div class="ltx_para" id="S5.SS1.SSS1.p1">
+         <p class="ltx_p">
+          We evaluated the features of our method by ablation tests.
+Table
+          3
+          shows the results
+of removing the semantic relation, the context, and the association
+features from our method.
+         </p>
+        </div>
+        <div class="ltx_para" id="S5.SS1.SSS1.p2">
+         <p class="ltx_p">
+          All the feature types are effective and
+contribute to the performance gain that was about 5% higher than the
+          Base features only
+          .
+          Proposed
+          achieved 70% precision at 13%
+recall.
+We then estimated that, with the precision rate,
+we can extract 69,700
+event causality pairs from the 2,451,254 event causality
+candidates, among which the estimated number of positive
+examples is 377,794.
+         </p>
+        </div>
+        <div class="ltx_para" id="S5.SS1.SSS1.p3">
+         <p class="ltx_p">
+          Next we examined whether the semantic relations that do not seem directly
+relevant to causality like
+          Material
+          are effective.
+Table
+          4
+          shows that
+         </p>
+        </div>
+        <div class="ltx_para" id="S5.SS1.SSS1.p4">
+         <p class="ltx_p">
+          the performance degraded (46.27
+          →
+          45.86)
+when we only used the
+          Causation
+          binary patterns and their entailing and entailed patterns
+compared to
+          Proposed
+          .
+Even when adding the
+          Prevention
+          (“negative
+          Causation
+          ”) patterns and their entailing and
+entailed patterns, the performance was still slightly worse than
+          Proposed
+          .
+The performance was even worse when using no semantic relation
+(“None” in Table
+          4
+          ).
+Consequently we conclude that not only semantic relations directly
+relevant to causality like
+          Causation
+          but also those
+that seem to lack direct relevance to causality like
+          Material
+          are somewhat effective.
+         </p>
+        </div>
+        <div class="ltx_para" id="S5.SS1.SSS1.p5">
+         <p class="ltx_p">
+          Finally, Table
+          5
+          shows the performance drop by
+removing the Wikipedia-, definition-, web-, and CEA-based features.
+         </p>
+        </div>
+        <div class="ltx_para" id="S5.SS1.SSS1.p6">
+         <p class="ltx_p">
+          The CEA-based features were the most effective, while
+the Wikipedia-based ones slightly degraded the performance.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_subsubsection" id="S5.SS1.SSS2">
+        <h4 class="ltx_title ltx_title_subsubsection">
+         <span class="ltx_tag ltx_tag_subsubsection">
+          5.1.2
+         </span>
+         Comparison to Baseline Methods
+        </h4>
+        <div class="ltx_para" id="S5.SS1.SSS2.p1">
+         <p class="ltx_p">
+          We compared our method and two baselines based on
+          Do et al. (2011)
+          :
+          CEAu⁢n⁢s
+          is an unsupervised method that uses CEA to
+rank event causality candidates, and
+          CEAs⁢u⁢p
+          is a supervised method using SVM and the CEA
+features, whose ranking is based on the SVM scores.
+The baselines are not complete implementations of Do et al.’s method
+which uses discourse relations identified based
+on
+          Lin et al. (2010)
+          and exploits them with CEA within an
+ILP framework.
+Nonetheless, we believe that this comparison is informative
+since CEA can be seen as the main component;
+they achieved a F1 of 41.7% for extracting causal event relations, but
+with only CEA they still achieved 38.6%.
+         </p>
+        </div>
+        <div class="ltx_para" id="S5.SS1.SSS2.p2">
+         <p class="ltx_p">
+          Table
+          6
+          shows the average precision of
+the compared methods.
+         </p>
+        </div>
+        <div class="ltx_para" id="S5.SS1.SSS2.p3">
+         <p class="ltx_p">
+          Proposed
+          is our proposed method.
+          Proposed-CEA
+          is
+          Proposed
+          without the CEA-features
+and shows their contribution.
+          Proposed
+          is the best and the CEA features
+slightly contribute to the performance, as
+          Proposed-CEA
+          indicates.
+We observed that
+          CEAs⁢u⁢p
+          and
+          CEAu⁢n⁢s
+          performed poorly and
+tended to
+favor event
+causality candidates whose
+phrase pairs were highly relevant to each other but described
+the contrasts of events rather than event causality
+(e.g.
+          build a slow muscle
+          and
+          build a fast muscle
+          )
+probably because their main components are PMI values.
+Figure
+          1
+          shows their
+precision-recall curves.
+         </p>
+        </div>
+        <div class="ltx_para" id="S5.SS1.SSS2.p4">
+         <p class="ltx_p">
+          Next we compared our method with the baselines based on
+          Hashimoto et al. (2012)
+          .
+They developed an automatic excitation template
+acquisition method
+that assigns each template an
+          excitation value
+          in range
+          [-1,1]
+          that is positive if the template is excitatory and negative if it is
+inhibitory.
+They ranked event causality candidates by
+          C⁢s⁢(p1,p2)=|s1|×|s2|
+          , where
+          p1
+          and
+          p2
+          are the two phrases of event causality candidates, and
+          |s1|
+          and
+          |s2|
+          are the absolute excitation values
+of
+          p1
+          ’s and
+          p2
+          ’s templates.
+The baselines are as follows:
+          Csu⁢n⁢s
+          is an unsupervised method that uses
+          C⁢s
+          for ranking, and
+          Css⁢u⁢p
+          is a supervised method using SVM with
+          C⁢s
+          as the only feature that uses SVM scores for ranking.
+Note that some event causality candidates were not given excitation values for their templates,
+since
+some templates were acquired by manual
+annotation without Hashimoto et al.’s method.
+To favor the baselines for fairness,
+the event causality candidates of the development and test data
+were restricted to
+those with excitation values.
+Since
+          Css⁢u⁢p
+          performed slightly
+better when using all of the
+training data in our preliminary experiments, we used all of it.
+         </p>
+        </div>
+        <div class="ltx_para" id="S5.SS1.SSS2.p5">
+         <p class="ltx_p">
+          Table
+          7
+          shows the average precision of
+the compared methods.
+         </p>
+        </div>
+        <div class="ltx_para" id="S5.SS1.SSS2.p6">
+         <p class="ltx_p">
+          Proposed
+          is our method.
+Its average precision is different from that in
+Table
+          6
+          due to the difference in
+test data described above.
+          Csu⁢n⁢s
+          and
+          Css⁢u⁢p
+          did not perform well.
+Many phrase pairs described two events that often happen in parallel but
+are not event causality
+(e.g.
+          reduce the intake of energy
+          and
+          increase the energy consumption
+          )
+in the highly ranked event causality candidates of
+          Csu⁢n⁢s
+          and
+          Css⁢u⁢p
+          .
+Figure
+          2
+          shows their precision-recall
+curves.
+         </p>
+        </div>
+        <div class="ltx_para" id="S5.SS1.SSS2.p7">
+         <p class="ltx_p">
+          Hashimoto et al. (2012)
+          extracted 500,000 event causalities
+with about 70% precision.
+However, as described in Section
+          1
+          ,
+our event causality criteria are different;
+since they regarded phrase pairs that were not
+self-contained as event causality
+(their annotators checked the original sentences of phrase
+pairs to see if they were event causality),
+their judgments tended to be more lenient than ours, which explains
+the performance difference.
+         </p>
+        </div>
+        <div class="ltx_para" id="S5.SS1.SSS2.p8">
+         <p class="ltx_p">
+          In preliminary experiments, since our proposed method’s performance
+degraded when
+          C⁢s
+          was incorporated, we did not use it in
+our method.
+         </p>
+        </div>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S5.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         5.2
+        </span>
+        Future Scenario Generation
+       </h3>
+       <div class="ltx_para" id="S5.SS2.p1">
+        <p class="ltx_p">
+         To show that our future scenario generation methods can generate many
+acceptable scenarios with reasonable precision,
+we experimentally
+compared four methods:
+         Proposed
+         , our scenario generation method
+without the two filters,
+         Proposed+Orig
+         , our method with the original sentence filter,
+         Proposed+Orig+Comm
+         , our method with
+the original sentence and common argument filters,
+and
+         Exact
+         , a method that chains event causality by exact
+matching.
+        </p>
+       </div>
+       <div class="ltx_paragraph" id="S5.SS2.SSS2.P1">
+        <h5 class="ltx_title ltx_title_paragraph">
+         Beginning events
+        </h5>
+        <div class="ltx_para" id="S5.SS2.SSS2.P1.p1">
+         <p class="ltx_p">
+          As the beginning event of a scenario,
+we extracted nouns that describe social problems
+(
+          social problem nouns
+          , e.g.
+          deforestation
+          ) from
+Wikipedia
+to focus our evaluation on the ability to generate scenarios about them,
+which is a realistic use-case of scenario generation.
+We extracted 557 social problem nouns
+and used the cause phrases of the event causality candidates
+that consisted of one
+of the social problem nouns as the scenario’s beginning event.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_paragraph" id="S5.SS2.SSS2.P2">
+        <h5 class="ltx_title ltx_title_paragraph">
+         Event causality
+        </h5>
+        <div class="ltx_para" id="S5.SS2.SSS2.P2.p1">
+         <p class="ltx_p">
+          We applied our event causality extraction
+method to 2,451,254 candidates
+(Section
+          3.1
+          ) and culled
+the top 1,200,000 phrase pairs from them
+(See Section
+          <span class="ltx_ref ltx_ref_self">
+           LABEL:A-sec:examples-of-event-causality
+          </span>
+          in the supplementary
+notes for examples).
+Some phrase pairs have the same noun pairs and the same template
+polarity pairs
+(e.g.
+          omit toothbrushing→get a cavity
+          and
+          neglect toothbrushing→have a cavity
+          , where
+          omit X
+          and
+          neglect X
+          are inhibitory and
+          get X
+          and
+          have X
+          are excitatory).
+We removed such phrase pairs except those with the highest
+          C⁢S⁢c⁢o⁢r⁢e
+          ,
+and 960,561 phrase pairs remained,
+from which we generated two- or three-step scenarios
+that consisted of two or three phrase pairs.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_paragraph" id="S5.SS2.SSS2.P3">
+        <h5 class="ltx_title ltx_title_paragraph">
+         Evaluation samples
+        </h5>
+        <div class="ltx_para" id="S5.SS2.SSS2.P3.p1">
+         <p class="ltx_p">
+          The numbers of two- and three-step scenarios generated by
+          Proposed
+          were 217,836 and 5,288,352,
+while those of
+          Exact
+          were 22,910 and 72,746.
+We sampled 2,000 from
+          Proposed
+          ’s two- and three-step scenarios
+and 1,000 from those of
+          Exact
+          .
+We applied the filters to the sampled scenarios of
+          Proposed
+          ,
+and the results were regarded as the sample scenarios of
+          Proposed+Orig
+          and
+          Proposed+Orig+Comm
+          .
+Table
+          8
+          shows the number and precision
+of the samples.
+         </p>
+        </div>
+        <div class="ltx_para" id="S5.SS2.SSS2.P3.p2">
+         <p class="ltx_p">
+          Note that, for the diversity of the sampled scenarios,
+our sampling proceeded as follows:
+          (i)
+          Randomly sample a beginning event phrase from
+the generated scenarios.
+          (ii)
+          Randomly sample an effect phrase for the beginning event
+phrase from the scenarios.
+          (iii)
+          Regarding the effect phrase as a cause phrase,
+randomly sample an effect phrase for it,
+and repeat (iii) up to the specified number of steps (2 or 3).
+The samples were annotated by three annotators (not the authors), who
+were instructed to regard a sample as acceptable if
+each event causality that constitutes it is plausible and
+the sample as a whole constitutes a single coherent story.
+Final judgment was made by majority vote.
+Fleiss’ kappa of their judgments was
+0.53 (moderate agreement), which is lower than
+the kappa for the causality judgment.
+This is probably because
+scenario judgment requires careful consideration about various
+possible futures for which individual annotators tend to draw different
+conclusions.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_paragraph" id="S5.SS2.SSS2.P4">
+        <h5 class="ltx_title ltx_title_paragraph">
+         Result 1
+        </h5>
+        <div class="ltx_para" id="S5.SS2.SSS2.P4.p1">
+         <p class="ltx_p">
+          Table
+          9
+          shows
+the estimated number of acceptable scenarios
+generated with 70% precision.
+The estimated number
+is calculated as the product of the recall at 70% precision and
+the number of acceptable scenarios in all the generated scenarios, which
+is estimated by the annotated samples.
+Figures
+          3
+         </p>
+        </div>
+        <div class="ltx_para" id="S5.SS2.SSS2.P4.p2">
+         <p class="ltx_p">
+          and
+          4
+         </p>
+        </div>
+        <div class="ltx_para" id="S5.SS2.SSS2.P4.p3">
+         <p class="ltx_p">
+          show the
+          precision-scenario curves
+          for the two- and three-step scenarios,
+which illustrate how many acceptable scenarios can be
+generated with what precision.
+The curve is drawn in the same way as the precision-recall curve except
+that the X-axis indicates the estimated number of acceptable scenarios.
+At 70% precision,
+all of the proposed methods
+outperformed
+          Exact
+          in the two-step setting,
+and
+          Proposed+Orig+Comm
+          outperformed
+          Exact
+          in the
+three-step setting.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_paragraph" id="S5.SS2.SSS2.P5">
+        <h5 class="ltx_title ltx_title_paragraph">
+         Result 2
+        </h5>
+        <div class="ltx_para" id="S5.SS2.SSS2.P5.p1">
+         <p class="ltx_p">
+          To evaluate the top-ranked scenarios of
+          Proposed+Orig+Comm
+          in the three-step setting with
+more samples, the annotators labeled 500 samples from the top 50,000 of
+its output.
+341 (68.20%)
+were acceptable, and
+the estimated number of acceptable scenarios at a precision
+rate of 70% and 80% are 26,700 and 5,200
+(See
+Section
+          <span class="ltx_ref ltx_ref_self">
+           LABEL:A-sec:precision-scenario-curve
+          </span>
+          in the
+supplementary notes).
+The “
+          terrorist operations
+          ” scenario and
+the “
+          slash-and-burn agriculture
+          ” scenario in
+Section
+          1
+          were ranked 16,386th and 21,968th.
+Next we examined how many of the top 50,000 scenarios were acceptable and
+          non-trivial
+          , i.e., found in no page in our
+input web corpus, using the 341 acceptable samples.
+A scenario was regarded as
+non-trivial if its nouns co-occur in no page of the corpus.
+22 among the 341 samples
+were non-trivial.
+Accordingly,
+we estimate that we can generate
+2,200 (
+          50,000×22500
+          )
+acceptable and non-trivial scenarios
+from the top 50,000.
+(See Section
+          <span class="ltx_ref ltx_ref_self">
+           LABEL:A-sec:examples-of-future-scenarios
+          </span>
+          in the
+supplementary notes for examples of the generated scenarios.)
+         </p>
+        </div>
+       </div>
+       <div class="ltx_paragraph" id="S5.SS2.SSS2.P6">
+        <h5 class="ltx_title ltx_title_paragraph">
+         Discussion
+        </h5>
+        <div class="ltx_para" id="S5.SS2.SSS2.P6.p1">
+         <p class="ltx_p">
+          Scenario
+          deforestation continues→global warming worsens→sea temperatures rise→vibrio parahaemolyticus fouls (water)
+          was generated by
+          Proposed+Orig+Comm
+          .
+It is written in no page in our input web corpus, which
+was crawled in 2007.
+          But we did find a paper
+          Baker-Austin et al. (2013)
+          that
+observed the emerging vibrio risk in the Baltic sea due to global
+warming.
+In a sense, we “predicted” an event observed in 2013 from
+documents written in 2007, although the scenario was ranked as low as
+240,738th.
+         </p>
+        </div>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>

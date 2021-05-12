@@ -1,0 +1,585 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Forming k coalitions and facilitating relationships in social networks.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Coalition formation is one of the fundamental problems in multi-agent systems research [10]. Broadly speaking, coalition formation is concerned with partitioning a population of agents into disjoint teams (or coalitions), typically with the aim that some system-wide performance measure is maximized. Most studies of coalition formation in the multi-agent systems community are based on models from the field of cooperative game theory (e.g., characteristic function games [35], non-transferable utility games [17], or hedonic games [18]). While these models have proven to be extremely useful in identifying the key issues in coalition formation, they are typically too abstract to be used in real-world cooperative scenarios. For example, models based on transferable utility games in characteristic function form simply assign a value {a mathematical formula}v(C) to every possible coalition C, indicating the payoff that would be available to coalition C, should they choose to work together. Such a model does not attempt to capture issues such as the possibility that not all coalitions may form, or the complex issues surrounding precisely how the coalition will work together. This limits the applicability of such models and techniques. A challenge for multi-agent systems researchers is therefore to investigate the extent to which traditional models of coalition formation can be enriched in order to adequately model real-world scenarios, while ensuring that such additional expressive power does not bring with it computational intractability.
+     </paragraph>
+     <paragraph>
+      One gross simplifying assumption made in most cooperative game models is that any number of coalitions can be formed. However, in many real-world scenarios there is a strong restriction on the number of possible coalitions. For example, consider a manager facing the challenge of allocating workers to a project that requires the execution of k different tasks. Since there are k tasks to carry out, any coalition structure with less than k coalitions will not complete the project, and any coalition structure with more than k coalitions includes redundant activity. Another common assumption, embodied within many models, is that any possible coalition can be formed. In real-world scenarios, there are typically many factors that prohibit the formation of some coalitions. Indeed, an issue that should often be taken into account is the interpersonal relationships between potential coalition members. For example, irrespective of the personal skills of the relevant individuals, in a mission-critical situation, we would typically not seek to form a coalition between individuals that were not acquainted, or that did not have a proven track record of being able to cooperate effectively. It is, of course, precisely these concerns that lead organizations to undertake team-building initiatives and the like, with the goal of either establishing or further strengthening interpersonal relationships between potential team members.
+     </paragraph>
+     <paragraph>
+      In this paper we address the problem of how cooperative game theory models, concepts, and techniques can be adapted to capture these concerns. The environment is modeled as follows. We use an undirected weighted graph to represent a social network – vertices are agents, edges indicate acquaintance relationships between agents, and the weight of an edge indicates the strength of the relationship. Weights may be positive or negative, and negative values imply that the respective agents are not able to cooperate successfully. The utility function of an agent (being a part of a coalition) is given by the sum of weights of edges in the social network with agents in her coalition with whom she is acquainted. The value of a coalition is defined to be the sum of utilities of agents in that coalition. We further assume that there is a centralized entity (the “organizer” hereafter) whose goal is to create coalitions to carry out k tasks. Thus, the organizer wants to build a coalition structure containing k coalitions. We sometimes assume that the organizer has some capability to adapt the game, by building relationships between agents (adding edges to the social network), although such relationship building is assumed to have an associated cost. Thus, the problem of the organizer involves trading off the cost of creating such relationships against the benefits that this brings to coalition formation.
+     </paragraph>
+     <paragraph>
+      Within this setting, we consider two key problems. The first is that of creating coalition structures with exactly k coalitions, which maximize social welfare (i.e., the sum of values of coalitions within a coalition structure). We show that this problem can be solved in polynomial time if there are only a small number of negative edges in the social network and k is fixed. If one of these conditions does not hold, we show that the problem becomes NP-complete. We note that we do not impose any other restrictions on the structure of the social network, in contrast to much related work [7]. We also show that the coalition structure that maximizes the social welfare is not necessarily a member of the core, but it still has some properties of stability. We then consider the problem faced by an organizer, who would like to add edges to the network in order to increase the social welfare. We present a polynomial time algorithm for this purpose and evaluate its performance on some sample real-world networks. Our experimental results demonstrate the benefits of the adaption made by the organizer, and that a naive algorithm will perform far from optimally. To further improve the running time of the optimal algorithm, we also provide an efficient greedy heuristic, and show that its performance is near optimal in practice.
+     </paragraph>
+     <paragraph>
+      We then consider the computational tractability of core stable coalition structures to carry out exactly k tasks. Coalition structures that maximize social welfare are relevant for situations in which organizers can force individuals to be in groups. In situations where this is not possible, we must consider selfish coalition formation, and in such settings the relevant questions are whether or not a given coalition structure is core stable (i.e., whether or not any subset of agents has any incentive to deviate from a coalition), and whether or not there exists any coalition structure that is core stable [10]. We find that answering both questions is intractable (NP-hard) even when k is fixed, but we provide a polynomial time algorithm for deciding whether or not a given coalition is core stable when there are only a small number of negative edges in the social network. We also provide a heuristic for efficiently finding a member of the core that guarantees a social welfare within a factor of 1/2 of the optimal social welfare. In order to test the effectiveness of the heuristic, we conducted an experimental evaluation on several real-world networks. Surprisingly, in all the networks we tested, the core always existed, and the coalition structure maximizing the social welfare was always a member of the core (thus a heuristic for finding a member of the core is not needed). However, our heuristic turns out to be extremely useful for finding a member of the strict core (see the definition in next section). Finally, we consider the problem faced by an organizer, who would like to add edges to the network in order to stabilize a specific coalition structure. We show that this problem is closely related to the cost of stability problem, and indeed both problems are NP-hard. We conclude by surveying related work and suggest directions for future work.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Preliminary definitions
+     </section-title>
+     <paragraph>
+      Let {a mathematical formula}A={a1,…,an} be a finite, non-empty set of agents, and let {a mathematical formula}G=(A,E,ω) be an undirected weighted graph with no self loops, representing the relations between agents. Each edge {a mathematical formula}(ai,aj)∈E is associated with a weight {a mathematical formula}ω(ai,aj)=ω(aj,ai)∈Z, representing the relationship strength or the affinity between agents {a mathematical formula}ai and {a mathematical formula}aj. If {a mathematical formula}(ai,aj)∉E then we assume that {a mathematical formula}ω(ai,aj)=0. Note that the weight on an edge {a mathematical formula}(ai,aj) represents the ability of agents {a mathematical formula}ai and {a mathematical formula}aj to cooperate and work together successfully. We refer to G as the social network. A coalition {a mathematical formula}C⊆A is a subset of agents; we do not require that agents in a coalition form a connected component in the corresponding social network. We let {a mathematical formula}u(ai,C) denote the utility that agent {a mathematical formula}ai would obtain from being in coalition C. This value is simply the sum of edge weights corresponding to the immediate neighbors of {a mathematical formula}ai that are members of C, that is:{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      We denote the value of a coalition {a mathematical formula}C⊆A by {a mathematical formula}V(C), and define this value to be the sum of utilities of members of C, that is:{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      We assume there is a central organizer, who desires to establish coalitions in order to perform {a mathematical formula}0&lt;k≤N tasks. Let {a mathematical formula}Πk(A) denote the set of partitions of agents A that contains exactly k non-empty subsets. We refer to elements of {a mathematical formula}Πk(A) as coalition structures, and typically use {a mathematical formula}P,P′,… to denote such coalition structures. With respect to P, let {a mathematical formula}σP:A→P be the function mapping agents to their coalitions, i.e., if {a mathematical formula}P∈Πk(A), {a mathematical formula}Ci∈P, and {a mathematical formula}a∈Ci then {a mathematical formula}σP(a)=Ci. If the context of P is clear, we will omit reference to it.
+     </paragraph>
+     <paragraph>
+      We denote the social welfare of the coalition structure {a mathematical formula}P∈Πk(A) by {a mathematical formula}SW(P) (see, e.g., [35]):{a mathematical formula} When we need to explicitly identify the edges of the social network E (with the corresponding weight function) in a social welfare computation, we will write {a mathematical formula}SW(P,E). A simple example illustrating the above definitions is presented in Fig. 1. As an aside, note that the model described above can be understood as a special case of symmetric additively separable hedonic games[10].
+     </paragraph>
+     <paragraph>
+      We will address scenarios in which a centralized organizer has the ability to adapt the game by adding edges to the social network G. Specifically, if {a mathematical formula}(ai,aj)∉E, then we assume the organizer is able to add an edge connecting {a mathematical formula}ai to {a mathematical formula}aj such that subsequently {a mathematical formula}ω(ai,aj)=1 (we will later relax this assumption). Intuitively, adding an edge {a mathematical formula}(ai,aj) implies creating a social relationship between agents {a mathematical formula}ai and {a mathematical formula}aj where no such relationship existed before. In real-world scenarios, such working relationships are facilitated by a range of mechanisms, such as team-building exercises. We assume that the organizer incurs a fixed cost, denoted by α, for every edge added.
+     </paragraph>
+     <paragraph>
+      Let {a mathematical formula}E+ be the set of edges that the organizer is adding to the graph, and {a mathematical formula}Enew be the set of edges of G after the addition done by the organizer, with corresponding weights {a mathematical formula}ωnew; that is:{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Many solution concepts have been developed for cooperative games, and we now describe how the most prominent of these may be adapted to our model (i.e., where coalition structures contain exactly k coalitions). To better understand our adaption, we first recall the standard definition of a blocking coalition.
+     </paragraph>
+     <paragraph label="Definition 1">
+      Let {a mathematical formula}P={C1,C2,…,Ck} be a coalition structure. A coalition {a mathematical formula}B⊆A is blocking if {a mathematical formula}∀a∈B:u(a,B)&gt;u(a,σP(a))
+     </paragraph>
+     <paragraph>
+      According to this definition, if a set of agents B forms a blocking coalition, it means that all of them prefer to deviate and form a new separate coalition, causing a deviation from {a mathematical formula}P={C1,C2,…,Ck} to {a mathematical formula}P′={B,C1∖B,C2∖B,…,Ck∖B}. Note that the resulting coalition structure {a mathematical formula}P′ may contain any number of coalitions between 1 and {a mathematical formula}k+1. For example, if B is the grand coalition, i.e., {a mathematical formula}∀i:Ci⊆B, then {a mathematical formula}P′={B}, a coalition structure containing exactly one coalition. On the other hand, if {a mathematical formula}∄i:Ci⊆B then {a mathematical formula}P′ will contain {a mathematical formula}k+1 coalitions, since {a mathematical formula}∀i:Ci∖B will be a non-empty coalition, and we add a new coalition B to {a mathematical formula}P′.
+     </paragraph>
+     <paragraph>
+      The situation where a deviation of a group of agents can result in any number of coalitions formed is exactly the situation we would like to preclude in our model. Therefore we define the k-blocking coalition with the requirement that the resulting coalition structure maintain its size of exactly k coalitions.
+     </paragraph>
+     <paragraph label="Definition 2">
+      (k-Blocking coalition) Let {a mathematical formula}P={C1,C2,…,Ck} be a coalition structure. A coalition B is k-blocking if {a mathematical formula}∀a∈B:u(a,B)&gt;u(a,σP(a)), and there exists exactly one coalition {a mathematical formula}Cm∈P such that {a mathematical formula}Cm⊂B.
+     </paragraph>
+     <paragraph>
+      We note that Definition 2 is a natural adaptation of the standard definition of a blocking coalition (Definition 1), where any deviation must result in a coalition structure containing exactly k coalitions. Therefore, a deviation is required to take the form of a group of agents who would prefer to join an existing coalition (i.e., {a mathematical formula}Cm). The requirement of exactly one coalition {a mathematical formula}Cm is important: if there are more than one such coalitions, the resulting coalition structure will consist of less than k coalitions. If there is less than one such coalition, the resulting coalition structure will consist of {a mathematical formula}k+1 coalitions. It is only when there is exactly one coalition {a mathematical formula}Cm that the deviation results in an extension of an existing coalition (implying that all of the members of the “root” coalition {a mathematical formula}Cm prefer the extension).
+     </paragraph>
+     <paragraph label="Definition 3">
+      Weakly k-blocking coalitionLet {a mathematical formula}P={C1,C2,…,Ck} be a coalition structure. A coalition B is weakly k-blocking if {a mathematical formula}∀a∈B:u(a,B)≥u(a,σP(a)), and there is at least one agent {a mathematical formula}ai∈B strictly benefiting such that {a mathematical formula}u(ai,B)&gt;u(a,σP(a)). In addition, there exists exactly one coalition {a mathematical formula}Cm∈P such that {a mathematical formula}Cm⊂B.
+     </paragraph>
+     <paragraph>
+      For simplicity, we will refer to a (weakly) k-blocking coalition simply as a (weakly) blocking coalition hereafter.
+     </paragraph>
+     <paragraph label="Definition 4">
+      Individually rationalA coalition structure P is individually rational if every agent does at least as well in P as it would do alone, i.e., for all {a mathematical formula}a∈A,u(a,σP(a))≥u(a,{a}).
+     </paragraph>
+     <paragraph label="Definition 5">
+      We are now ready to define the versions of the core which are suitable for our game, which we call the (strict) k-coalitions-core. k-coalitions-coreA coalition structure {a mathematical formula}P∈Πk(A) is in the k-coalitions-core if P admits no blocking coalition and P is individually rational.
+     </paragraph>
+     <paragraph label="Definition 6">
+      strict k-coalitions-coreA coalition structure {a mathematical formula}P∈Πk(A) is in the strict k-coalitions-core if P admits no weakly blocking coalition and P is individually rational. We note that although we did not allow for a blocking coalition to increase k, we still require that P be individually rational in order to prevent the case where there is an agent with a negative payoff who cannot leave his coalition (and the game).
+     </paragraph>
+     <paragraph>
+      An example that illustrates the concept of the k-coalitions-core is shown in Fig. 2. Note that {a mathematical formula}{C1,C2} is a member of the 2-coalitions-core. Indeed, only {a mathematical formula}a1 or {a mathematical formula}a2 can possibly deviate to {a mathematical formula}C2. In that case, the utility of {a mathematical formula}a1 will decrease by 10 and thus it will not deviate. The utility of {a mathematical formula}a2 will remain the same and thus it also will not be a member of a blocking coalition. Similarly, {a mathematical formula}{C1′,C2′} is a member of the 2-coalitions-core. However, a strict 2-coalitions-core does not exist in this example, since {a mathematical formula}C2′ is a weakly blocking coalition for the coalition structure {a mathematical formula}{C1,C2}, and {a mathematical formula}C1 is a weakly blocking coalition for the coalition structure {a mathematical formula}{C1′,C2′}. Notice that in this example both coalition structures have a social welfare of 20, which is also the maximal possible social welfare.
+     </paragraph>
+     <paragraph>
+      We also introduce a weaker stability concept, called group stability, which restricts the type of deviations that can occur. This definition is a natural generalization of inner stability [8], in which there does not exist a blocking that is contained in an existing coalition.
+     </paragraph>
+     <paragraph label="Definition 7">
+      Group stabilityA coalition structure {a mathematical formula}P∈Πk(A) is group stable if P admits no blocking coalition B such that {a mathematical formula}B⊂Ci∪Cj where {a mathematical formula}Ci,Cj∈P and {a mathematical formula}i≠j. That is, we only consider the case when a subset of agents from the same coalition benefits from merging into another coalition as a legitimate deviation. This solution concept is motivated by the assumption that it is sometimes only possible for deviating agents to coordinate within their coalition, instead of being able to coordinate across multiple coalitions. We also do not require that P be individually rational, since we want to capture the essence of deviations between coalitions. Note that since B is a blocking coalition, exactly one of {a mathematical formula}Ci or {a mathematical formula}Cj may be a subset of B, as required by Definition 2.
+     </paragraph>
+     <paragraph>
+      A table summarizing the most frequently used notation from the paper may be found in Appendix A.
+     </paragraph>
+    </section>
+    <section label="3">
+     <section-title>
+      Maximizing the social welfare
+     </section-title>
+     <paragraph>
+      In this section, we investigate the complexity of finding a coalition structure P that maximizes social welfare. We then consider the problem of an organizer who desires to construct a social-welfare maximizing coalition structure to perform k tasks, taking into account the costs incurred by adding edges to the graph.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Theoretical results
+      </section-title>
+      <paragraph label="Definition 8">
+       We begin by recalling the following standard graph theoretic definitions. A cut{a mathematical formula}C=(S1,S2) of a social network {a mathematical formula}G=(A,E) is a partition of the agents A into two disjoint non-empty sets.{sup:1} Where {a mathematical formula}(s,t)∈A2, we define an s-t-cut to be a cut where {a mathematical formula}s∈S1 and {a mathematical formula}t∈S2. A k-cut{a mathematical formula}Ck=(S1,S2,…,Sk) is simply a partition of A into k disjoint sets, i.e., an element of {a mathematical formula}Πk.
+      </paragraph>
+      <paragraph label="Definition 9">
+       The size of a cut (respectively s-t-cut or k-cut) is defined as the sum of the weights of the edges between each {a mathematical formula}Si,Sj∈C. The Minimum-Cut problem is to find a cut with a minimal size. The Maximum-Cut, Minimum-s-t-Cut and Minimum-k-Cut problems are defined in a similar way. We denote by Min-Cut, Max-Cut, Min-s-t-Cut and Min-k-Cut the decision versions of Minimum-Cut, Maximum-CutMinimum-s-t-Cut, and Minimum-k-Cut, respectively.
+      </paragraph>
+      <paragraph>
+       Brânzei and Larson in [8] refer to the problem of maximizing the social welfare over all possible coalition structures, where we consider maximization only over those of size k. Hence, solutions to these two problems exhibit some similar properties but also several fundamental differences. This will be the subject of discussion later on in this section. Now, as noted by [8], the coalition structure of size k which maximizes the social welfare is the one that minimizes the size of the k-cut. This is true because the sum of all edges is constant, so by minimizing the sum of the edges outside the coalitions, we are maximizing the sum of edges that are within coalitions – in other words, the social welfare. Thus we need to utilize an algorithm for Minimum-k-Cut in order to find the coalition structure that maximizes the social welfare. Note, however, that Min-k-Cut was shown to be NP-complete if the required partition size k is part of the input [23]. Moreover, [16] showed that Min-k-Cut is {a mathematical formula}W[1]-hard{sup:2} even if all weights are positive: this implies that the problem is unlikely to admit any algorithm with a complexity of {a mathematical formula}O(f(k)nc), where f is an arbitrary function and c is a constant. Hence, we assume that k is fixed. Even with a fixed k, Min-k-Cut is still hard when there are edges with negative weights by a simple reduction from Max-Cut which is NP-complete [25]. We show that if the number of edges with negative weights is small, then Min-k-Cut is in P.
+      </paragraph>
+      <paragraph label="Definition 10">
+       Nearly positive graphsLet {a mathematical formula}Eω− be the set of edges in E with negative weights. The cover number {a mathematical formula}c(G) is the smallest size of a node subset X such that each edge of {a mathematical formula}Eω− has an endpoint in X. We define a class of weighted undirected graphs {a mathematical formula}{Gi} as nearly positive if {a mathematical formula}c(Gi)∈O(log⁡n).
+      </paragraph>
+      <paragraph>
+       For example, if G is a star graph where all the edges are negative, then {a mathematical formula}c(G)=1. If G is a graph where the group of nodes connected by negative edges forms a clique with negative edges, i.e., between every two nodes in the group there is a negative edge, then {a mathematical formula}c(G)=|clique| − 1.
+      </paragraph>
+      <paragraph>
+       Although the consideration of nearly positive graphs imposes certain limitations, in the context of building cooperating teams for performing k tasks it is reasonable to assume that there should not be too many negative relations in the corresponding social network. Moreover, we did not impose any other restriction on the structure of the social network.
+      </paragraph>
+      <paragraph label="Proof">
+       Min-k-Cutis in P for nearly positive graphs and a fixed k.Consider Algorithm 3. We generalize the proof of Goldschmidt et al. [23], which showed that Min-k-Cut is in P on graphs with non-negative weights when k is fixed. The essence of their polynomial time algorithm is the recursive application of an algorithm for Minimum-s-t-Cut with multiple sources and sinks. In addition, McCormick et al. [30] showed how to solve the Minimum-s-t-Cut problem in polynomial time for nearly positive graphs. The pseudo-code is given in Algorithm 2, and note that it uses a solution to the Minimum-Negative-s-t-Cut as a subroutine (Algorithm 1). We generalize Algorithm 2 to multiple sources and sinks by adding a super-source node and a super-sink node, connected to the sources and sinks, respectively, where each of their edge weights is {a mathematical formula}Mω=1+∑(ai,aj)∈E|ω(ai,aj)| (Practically serving as ∞, ensuring that it is best that the nodes be in the same set). Therefore, by replacing the algorithm for Min-s-t-Cut with multiple sources and sinks used by [23] with the generalized version of the algorithm of [30] (Algorithm 3, line 11), we get a polynomial time algorithm for Minimum-k-Cut when k is fixed and the graph belongs to a family of nearly positive graphs, with a complexity of {a mathematical formula}O(nk2) (Algorithm 3).  □
+      </paragraph>
+      <paragraph>
+       Now, since finding a coalition structure that maximizes the social welfare is equivalent to finding the Minimum-k-Cut, we get the following corollary:
+      </paragraph>
+      <paragraph label="Corollary 2">
+       Finding the coalition structure that maximizes the social welfare can be done in polynomial time if k is fixed and G belongs to a family of nearly positive graphs.
+      </paragraph>
+      <paragraph>
+       The strength of this result is that we do not impose any restriction on the graph structure itself. On the other hand, if we want to do away with the assumption of bounded number of coalitions and with the restriction on the number of negative edges we have to impose some restrictions on the structure of the graph. We now show that when the graph is a forest, our problem is solvable in polynomial time, even without the assumption of bounded k and any restriction on the number of negative edges. A forest is an interesting graph to examine in the context of social networks, since it represents a hierarchical structure – a very natural form of organizational social structure. In section 4 we will further consider the restriction to forests with respect to the issue of stability.
+      </paragraph>
+      <paragraph label="Theorem 3">
+       Finding the coalition structure that maximizes the social welfare can be done in polynomial time if G is a forest.
+      </paragraph>
+      <paragraph label="Proof">
+       The intuition behind the proof is that cutting a single edge from a forest always yields two disjoint sets of nodes. We will thus cut all the negative edges (i.e., assign them to the k-cut) and then group all the resulting connected components into k coalitions with no negative edges within the coalitions. However, we need to consider several cases:
+       <list>
+        Case 1: there are exactly {a mathematical formula}k−1 negative edges. In this case we start with the grand coalition and iteratively increase the number of coalitions in the following manner. In each step we choose a negative edge {a mathematical formula}(ai,aj) which belongs to some coalition C to cut. We thus partition C into two new coalitions: {a mathematical formula}C1, which contains all the reachable nodes from {a mathematical formula}ai (without the edge {a mathematical formula}(ai,aj)), and {a mathematical formula}C2, which contains the rest of the nodes of C. Note that {a mathematical formula}C2 may contain nodes that are not reachable from {a mathematical formula}aj since C may contain disconnected components, and we arbitrarily assigned them to {a mathematical formula}C2. We perform this step until there are no more negative edges within members of the same coalition. Since there are exactly {a mathematical formula}k−1 negative edges we obtain exactly k coalitions, and since our k-cut is minimal we get a coalition structure that maximizes the social welfare.Case 2: there are less than {a mathematical formula}k−1 negative edges. We start similarly to case 1 and iteratively cut all the negative edges. However, we will now end up with less than k coalitions. We thus iteratively choose a disconnected component {a mathematical formula}C˜ that belong to some coalition C, and partition C into two new coalitions: {a mathematical formula}C˜, and {a mathematical formula}C∖C˜ (note that this partition does not change the value of the k-cut). We perform this step until there are k coalitions and we are done. However, if we are out of coalitions that contain disconnected components and there are still less than k coalitions we must add to the cut positive edges. Similarly to case 1, we iteratively cut positive edges, where the edges are selected according to their weight (ascending ordering), until we have k coalitions. As in case 1, since our k-cut is minimal we obtain a coalition structure that maximizes the social welfare.Case 3: there are more than {a mathematical formula}k−1 negative edges. Here we first perform edge contraction on every positive edge, until we reach a graph containing only negative edges between the merged nodes. Clearly, the resulting graph remains a forest. We then color the nodes of the graph using two colors (which is possible since forests are bipartite graphs and thus 2-Colorable). Now we are ready to insert all the negative edges to the cut as done in case 1. However, since there are more than {a mathematical formula}k−1 edges we end up with more than k coalitions, and we need to merge them such that there will not be two nodes that are connected with a negative edge within the same coalition. Thus, we iteratively merge two coalitions with the same color, until we end up with k coalitions. Note that the coloring prevents a merge between two nodes that are connected with a negative edge. Moreover, all the positive edges are excluded from the k-cut and thus the resulting coalition structure maximizes the social welfare.As for the complexity, creating the merged nodes is in
+       </list>
+       <paragraph>
+        {a mathematical formula}O(|E|⋅|V|), identifying connected components by BFS and the 2-coloring take at most {a mathematical formula}O(|E|+|V|), sorting the edges takes {a mathematical formula}O(|E|log⁡|E|), and partitioning the nodes into coalitions is in {a mathematical formula}O((|E|+k)⋅|V|).  □
+       </paragraph>
+      </paragraph>
+      <paragraph>
+       We proceed to examine some aspects of the stability of {a mathematical formula}P⁎, the coalition structure that maximizes the social welfare, on general graphs. Note that {a mathematical formula}P⁎ does not necessarily belong to the k-coalitions-core, as illustrated in Fig. 3. Even when all of the weights are non-negative, {a mathematical formula}P⁎ is not necessarily a member of the k-coalitions-core. However, it is sometimes natural to assume that the deviating agents cannot coordinate their deviation with all the agents from all the coalitions. Instead, the deviating agents can only coordinate within their coalition. This assumption is defined by the solution concept of group stability, and fortunately {a mathematical formula}P⁎ has this desirable property, as we show in the following theorem:
+      </paragraph>
+      <paragraph label="Theorem 4">
+       The coalition structure maximizing the social welfare is group stable.
+      </paragraph>
+      <paragraph label="Proof">
+       Let {a mathematical formula}P⁎={C1⁎,C2⁎,…,Ck⁎} be a coalition structure that maximizes the social welfare. Without loss of generality assume there exists {a mathematical formula}D⊂C1⁎ such that {a mathematical formula}C2⁎∪D is a blocking coalition. This is illustrated in Fig. 4. By definition, {a mathematical formula}∀a∈C2⁎∪D:u(a,C2⁎∪D)&gt;u(a,σP⁎(a)). In particular, this holds for every {a mathematical formula}d∈D. Therefore, for a specific {a mathematical formula}d∈D:{a mathematical formula} which implies: {a mathematical formula}∑aj∈C2⁎ω(d,aj)&gt;∑aj∈C1⁎∖Dω(d,aj)This is true for every {a mathematical formula}d∈D, and thus,{a mathematical formula}We calculate the utilities of the coalitions:{a mathematical formula}{a mathematical formula} Now, since {a mathematical formula}P⁎ maximizes the social welfare, it holds that: {a mathematical formula}V(C1⁎)+V(C2⁎)≥V(C1⁎∖D)+V(C2⁎∪D), since the rest of the coalitions remain unchanged. Using substitution, we get:{a mathematical formula}0≤V(C1⁎∖D)+2⋅∑aj∈C1⁎∖D,d∈Dω(d,aj)+2⋅∑aj∈D,d∈Dω(d,aj)+V(C2⁎)−V(C1⁎∖D)−V(C2⁎)−2⋅∑aj∈C2⁎,d∈Dω(d,aj)−2⋅∑aj∈D,d∈Dω(d,aj).After re-arrangement we get,{a mathematical formula} which contradicts (*). Therefore, there does not exist any such blocking coalition.  □
+      </paragraph>
+      <paragraph label="Corollary 5">
+       When k equals 2, the coalition structure maximizing the social welfare is a member of the k-coalitions-core.
+      </paragraph>
+      <paragraph>
+       Now, we would like to emphasize some inherent differences between our model and that of Brânzei and Larson [8]. In our model, if {a mathematical formula}P⁎={C1⁎,C2⁎,…,Ck⁎} is the coalition structure that maximizes the social welfare, then there might exist some coalition {a mathematical formula}Ci⁎∈P⁎, where a cut of {a mathematical formula}Ci⁎ is negative. For example, in a clique with negative edges, every coalition structure contains at least one coalition with a negative cut. Therefore, {a mathematical formula}P⁎ is not guaranteed to be individually rational. Similarly, the k-cut imposed by {a mathematical formula}P⁎ may contain positive edges. None of these properties holds in the model of [8]. Moreover, if there are only positive edges, the only coalition structure that maximizes the social welfare in the model of [8] is the grand coalition. In our model, in order to enable proper task execution there must be exactly k coalitions, and when k is not fixed finding the coalition structure that maximizes the social welfare is hard even when all of the edges are positive.
+      </paragraph>
+      <paragraph>
+       We move to address the problem faced by an organizer. This problem has two interconnected aspects. First, it involves improving social welfare by facilitating social relationships between agents, i.e., by adding edges to the social network. Second, it involves finding an optimal partition of the agents. Note that, in general these component problems cannot be considered in isolation: deciding which social relationships to facilitate will in part depend on the partition of agents chosen, and choosing the optimal partition of agents will depend on the social network in place. Thus, the overall problem faced by the organizer is captured by the following optimization problem:{a mathematical formula} For this general problem, we identify three cases:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        No cost: {a mathematical formula}α=0. Here, any social relationship can be facilitated at no cost.
+       </list-item>
+       <list-item label="2.">
+        Full cost: {a mathematical formula}α=2. Here, the cost of facilitating a social relationship equals the value of the affinity created.
+       </list-item>
+       <list-item label="3.">
+        Intermediate cost: {a mathematical formula}0&lt;α&lt;2.
+       </list-item>
+      </list>
+      <paragraph label="Proposition 3.1">
+       Now, we can immediately see that two of these cases are uninteresting: When{a mathematical formula}α=0, the optimal edges to add to G are such that{a mathematical formula}Enew={(ai,aj)|ai,aj∈A}=Kn, i.e., a complete graph.
+      </paragraph>
+      <paragraph label="Proposition 3.2">
+       When{a mathematical formula}a=2, adding edges is not beneficial.
+      </paragraph>
+      <paragraph label="Theorem 6">
+       This leaves the case where {a mathematical formula}0&lt;α&lt;2. We have: When{a mathematical formula}0&lt;α&lt;2, the organizer can solve the optimization problem{a mathematical formula}arg⁡maxEnew,P(SW(P,Enew)−α⋅|E+|)in polynomial time if k is fixed and G belongs to a family of nearly positive graphs.
+      </paragraph>
+      <paragraph label="Proof">
+       Using Algorithm 4, SN-max-SW. Intuitively, the algorithm builds a temporary graph, denoted {a mathematical formula}G′, by adding all the possible edges to the original graph (line 1). However, the new edges have adjusted weights in order to simulate the cost incurred to the organizer (α). The algorithm then finds the optimal coalition structure, denoted {a mathematical formula}P⁎, in the temporary graph (line 2), which is possible to do in polynomial time according to Corollary 2. The algorithm concludes that the optimal edges to add to G are all the edges that are within a coalition in {a mathematical formula}P⁎ (line 3), and the coalition structure that maximizes the social welfare in G after adding the edges in {a mathematical formula}E+ is {a mathematical formula}P⁎. In order to prove the correctness, we first show that {a mathematical formula}P⁎ is the coalition structure that maximizes the social welfare in G, after adding the edges in {a mathematical formula}E+. Indeed, given a coalition structure P in {a mathematical formula}G′, every edge from {a mathematical formula}E+′ within a coalition {a mathematical formula}C∈P contributes {a mathematical formula}2−α to the social welfare. Each such edge is also added to G with a weight of 1 (line 3). By definition, the rest of the edges from {a mathematical formula}E+′ do not contribute to the social welfare. Thus, {a mathematical formula}SW(P,Enew′)=SW(P,Enew)−α⋅|E+|. In particular, {a mathematical formula}SW(P⁎,Enew)−α⋅|E+|=SW(P⁎,Enew′)≥SW(P,Enew′)=SW(P,Enew)−α⋅|E+|, for every coalition structure P. That is, {a mathematical formula}P⁎ maximizes the social welfare in G after adding the edges in {a mathematical formula}E+, as required. Now we need to show that adding the edges from {a mathematical formula}E+ (as defined in line 3) is the optimal way of adding edges to G. Indeed, given any set of edges to add to G, {a mathematical formula}E+ˆ, we can build a temporary graph {a mathematical formula}G′ˆ with the set of edges {a mathematical formula}Enew′ˆ=E+ˆ∪E where every edge from {a mathematical formula}E+ˆ has a corresponding weight of {a mathematical formula}2−α2. Since {a mathematical formula}E+ˆ⊆E+, by an equivalent argument used in the proof to Theorem 3.1, we get that {a mathematical formula}SW(P,Enew′)≥SW(P,Enew′ˆ), for every coalition structure P. In particular, {a mathematical formula}SW(P⁎,Enew′)≥SW(P⁎ˆ,Enew′ˆ), where {a mathematical formula}P⁎ˆ is the coalition structure that maximizes the social welfare in {a mathematical formula}G′ after adding the edges in {a mathematical formula}Enew′ˆ. Therefore, {a mathematical formula}SW(P⁎,Enew)−α⋅|E+|=SW(P⁎,Enew′)≥SW(P⁎ˆ,Enew′ˆ)=SW(P⁎ˆ,Enewˆ)−α⋅|E+ˆ|, as required. As for the complexity, lines 1 and 2 take at most {a mathematical formula}O(n2) steps, and line 3 can be performed in {a mathematical formula}O(nk2) steps, as was shown in Theorem 1.  □
+      </paragraph>
+      <paragraph>
+       We conclude by noting that although Algorithm 4 assumes that the organizer is able to add edges with a weight of 1 and the cost α is between 0 and 2, it can be easily extended, since all the terms in the proof of Theorem 6 are additive. That is, if the organizer is able to add an edge with a weight of {a mathematical formula}ω1 (instead of 1) and the cost α is between 0 and {a mathematical formula}2⋅ω1, then the adjusted weight {a mathematical formula}ω′(ai,aj) (Algorithm 4, line 1) becomes {a mathematical formula}ω′(ai,aj)=2ω1−α2. In section 3.2 we perform additional experiments to examine this extension.
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Experiments: facilitating relationships on real networks
+      </section-title>
+      <paragraph>
+       To better understand the benefits of the adaptations made by the organizer, we sampled data from four different networks:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        The Slashdot network: This is a website where users can tag others as friends/foes (1 and −1 weights, respectively).{sup:3} Since Slashdot's dataset represents a directed network, we defined the undirected edge weight to be the sum of the two directed edges between the nodes. Therefore, the weights of the edges vary between −2 and 2.
+       </list-item>
+       <list-item label="2.">
+        The S1 network: A network of an organization collected from the Facebook pages of the employees. The dataset was collected by Fire et al. [19]. The S1 dataset represents an undirected network, with edge weights representing Facebook friendship: 1 for friendship, 0 otherwise.
+       </list-item>
+       <list-item label="3.">
+        Random: Here we generated random social networks. The graph was generated by assigning weights to all possible edges in a complete graph. Then, all the edges with a weight of 0 were removed from the graph. Overall, the edge weights were generated between −2 and 5. This was achieved by drawing random values from a normal distribution with a mean of zero and a standard deviation of one, then multiplying them by 5. Next, the distribution was adjusted to assign smaller probabilities to negative weights in comparison to positive weights (non-symmetric distribution). All values outside the range of −2 to 5 were mapped to 0 (i.e., the corresponding edge was removed).
+       </list-item>
+       <list-item label="4.">
+        Random Kronecker network: Kronecker graphs were first introduced by Leskovec et al. [29], as a way to model real networks, and are widely used, e.g, [37], [33], [20]. The method for generating the graphs is by constructing a sequence of graphs from a small initiator matrix (that contains probabilities) by iterating the Kronecker product. We used the matrix {a mathematical formula}[0.9,0.5;0.5,0.1] to generate the graph, simulating a collaboration network (see [29] for the details). Since the graph that is generated is unweighted, we assigned the weights from a normal distribution with a mean of 2 and a standard deviation of 1. However, we also wanted the graph to be nearly positive. Therefore, we uniformly chose roughly {a mathematical formula}O(log⁡n) nodes, denoted {a mathematical formula}V−, and for each such node v we uniformly chose a probability {a mathematical formula}pv. Then, for each edge that is connected to a node {a mathematical formula}v∈V− the weight was multiplied by −1 with probability {a mathematical formula}pv, independently.
+       </list-item>
+      </list>
+      <paragraph>
+       The details of our experimental setup are as follows:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        The experiment graphs were randomly sampled from the Slashdot and S1 networks using adjusted BFS. That is, since the original networks are very large, using a standard BFS may result in a star-like graph. We thus limited the number of new neighbors sampled for each node to be one third of the total sampled nodes. For the random network we generated the desired number of nodes. For Kronecker graph, which are generated in sizes that are a power of 2, we generated the closest graph size and used the adjusted BFS to create a sampled graph with the required size.
+       </list-item>
+       <list-item label="2.">
+        The number of agents varied between 12 and 16, where each sampling was performed 100 times. In addition, we performed sampling with the number of agents set to {a mathematical formula}10,20,30,40,50, where each sampling was performed 20 times, to examine the general trend lines.
+       </list-item>
+       <list-item label="3.">
+        The number of coalitions, k, was set to 3 or 4.
+       </list-item>
+       <list-item label="4.">
+        α was set to 0, 0.5, 1, 1.5, 2, when the organizer was only allowed to add edges with a weight of 1.
+       </list-item>
+       <list-item label="5.">
+        In another set of experiments we set α to be 2 and allowed the organizer to add edges with a weight of 2 (instead of 1).
+       </list-item>
+      </list>
+      <paragraph>
+       Our goal is to evaluate the performance of Algorithm 4, SN-max-SW, for facilitating relationships by adding edges to the network. This was done by examining the relative improvement of the social welfare after the addition of edges. We also tested the number of edges added by the algorithm out of the total number possible.
+      </paragraph>
+     </section>
+     <section label="3.3">
+      <section-title>
+       Results
+      </section-title>
+      <paragraph>
+       First, we evaluate the improvement with respect to the number of agents. Consider Fig. 5, which visualizes the improvement on different networks. The improvement is most significant for the Slashdot network, followed closely by S1, and by the random network by a large margin. For a different parameter choice, the result is similar. This is due to a difference in scales: Slashdot contains low positive and negative values. Therefore, the addition of new edges with a weight of 1 has a greater effect on the social network. In contrast, the random network contains edges with weights of up to 5, and therefore the improvement is less significant.
+      </paragraph>
+      <paragraph>
+       To somewhat normalize the effect of scaling we can observe Fig. 6, which considers the number of added edges to the graph. From this we see that the difference between the networks is less significant. These observations indicate that for all networks there is a positive trend line as the number of agents increases. This can be explained by the fact that there are more agents who are non-acquainted as the number of agents increases. Therefore, there is additional potential for improvement of the network, which is illustrated in Fig. 6.
+      </paragraph>
+      <paragraph>
+       Next we consider the effect of k on the results. In Fig. 7 we compare two different values of k. It seems that the improvement increases as k decreases, which is consistent across all networks. This could be explained as follows: as k decreases, there are fewer partitions in the network, and therefore more relationships can be facilitated.
+      </paragraph>
+      <paragraph>
+       Next, we examine the effect of the cost of adding edges. Consider Fig. 8, which illustrates the effect on the Slashdot network. Apart from scaling, the behavior (not reported here) is consistent across all networks. When the cost of adding edges is 2 there is no improvement, since each edge's contribution to the social welfare is eliminated by the cost. As could be expected, the improvement increases as the cost decreases. Furthermore, this increase is near linear with respect to the decrease in cost.
+      </paragraph>
+      <paragraph>
+       The effect of the cost on the ratio of added edges is illustrated in Fig. 9. The behavior is nearly consistent across networks. We can also observe that for all {a mathematical formula}0&lt;α&lt;2 the number of added edges is almost the same. That is, the given value of α has almost no effect on the decision of whether to add specific edges or not and therefore on the structure of the resulting graph. Thus, a higher value of α decreases the relative improvement in the social welfare (Fig. 8), but the organizer will still benefit by adding (almost) the same number of edges. In S1, because the weights are either 0 or 1, when the cost of adding edges is 0, it affects the coalition structure significantly compared to the higher edge costs. The graph is continuous up to the point where the cost of adding edges is 2, which is the point of indifference between adding the edges and not adding them.
+      </paragraph>
+      <paragraph>
+       We proceed to examine the running time and the general trend lines on a larger scale. As can be shown in Table 1, the running time of the algorithm on nearly positive graphs is consistent with the theoretical complexity analysis of {a mathematical formula}O(nk2). Therefore, on the Kronecker network with {a mathematical formula}k=3,α=1 and a cover number of 4, the average running time on graphs with 50 nodes was less than an hour. When {a mathematical formula}k=4 and the same α and cover number, the average running time was almost 62 hours on graphs with only 20 nodes. We thus set {a mathematical formula}k=3 when we proceeded to examine the improvement in the social welfare on a large scale, as depicted in Fig. 10. We can observe that the improvement is more significant for the Slashdot network than for S1 (as before), and the greatest improvement is for the Kronecker network. Generally, the relative improvement in the SW increases as the number of agents increases, but there are some cases where it decreases. In order to better understand this phenomenon, we depict in Fig. 11 the original optimal social welfare without the added edges. Note that original optimal social welfare is affected by the networks' weights and structure. The S1 network has the highest and monotonically increasing social welfare, as expected from a positive network. The Slashdot network, which contains negative edges but also higher weight scale, follows after. The Kronecker network has the lowest original social welfare values, since it is sparser then the other networks. Now, the correlation between Fig. 10, Fig. 11 shows that a decrease in the original social welfare or a modest increase results in higher relative improvement achieved by our algorithm. Indeed, since the edges added by the organizer have a high impact on the new social welfare when it is originally low, the relative improvement is higher. Thus, when we increase the number of agents the original social welfare increases, which results in a lower relative improvement. On the other hand, with each new agent in the network there are more possibilities to add edges, as we showed before. Hence, Fig. 10 actually shows the combined effect of increasing the number of agents, and it shows that the number of agents has usually a positive effect on the relative improvement of the social welfare by our algorithm.
+      </paragraph>
+      <paragraph>
+       Finally, we turn to evaluate the scenario when the organizer is able to add edges with a weight of 2 and the cost α equals 2. That is, each added edge according to Algorithm 4 contributes 2 to the social welfare. We compare the relative improvement in the SW with the original setting, where the organizer is able to add edges with a weight of 1 and the cost α equals 1, but we did not change the weights of the graph. As Fig. 12 shows, the improvement that is achieved is almost as twice as big. However, if we also increase the scale of the weights in the graph accordingly, i.e., creating a scaled network, Kronecker-scaled, where the mean of the distribution the weights were drawn from was increased by 2 but the structure remains the same, the organizer achieves almost the same performance. We conclude that the weight of the added edges by the organizer is relevant only with respect to the weights of the other edges in the network, and thus all of our results can be easily extended to different edge weights and costs.
+      </paragraph>
+      <paragraph>
+       In summary, our results illustrate the improvement obtained by applying the Algorithm SN-max-SW to real world and synthesized networks. The improvement is consistent, but its magnitude is affected by several parameters:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        The network's size: usually, the larger the network, the greater the improvement (Fig. 10).
+       </list-item>
+       <list-item label="2.">
+        The network's structure: the sparser the graph, the greater the improvement (Fig. 10).
+       </list-item>
+       <list-item label="3.">
+        Number of coalitions: the larger k, the lower the improvement, and the correlation is near linear (Fig. 7).
+       </list-item>
+       <list-item label="4.">
+        The weight scale: this is the ratio between the original edges' weights in the network and the weight of the edges that the organizer is allowed to add. The larger this ratio, the lower the improvement, and the correlation is near linear (Fig. 5, Fig. 12).
+       </list-item>
+       <list-item label="5.">
+        The cost scale: this is the difference between the weight of the edges the organizer is allowed to add and the cost α. The larger this difference, the greater the improvement, and the correlation is near linear (Fig. 8).
+       </list-item>
+      </list>
+      <paragraph>
+       Moreover, the number of added edges out of the possible number of edges to add is almost similar between all networks, and it ranges in our experiments between 40%–60% (Fig. 6). This shows that a naive algorithm, which facilitates all possible relationships, will be far from optimal.
+      </paragraph>
+     </section>
+     <section label="3.4">
+      <section-title>
+       Greedy heuristic
+      </section-title>
+      <paragraph>
+       In Section 3.3 we showed that the running time of the optimal algorithm on nearly positive graphs is consistent with the theoretical complexity analysis of {a mathematical formula}O(nk2), i.e., exponential in k. Moreover, as we have already explained, it is unlikely to find an optimal algorithm with a running time that is polynomial in k. From a practical standpoint, it is still important to find a good coalition structure even where k is not small. Therefore, in this section we propose a greedy heuristic that is polynomial in n and k and test its performance.
+      </paragraph>
+      <paragraph>
+       The heuristic is described by Algorithm 5, and it works as follows. It performs {a mathematical formula}k−1 consecutive cuts, and it thus ends with k coalitions. In each iteration the coalition that yields the minimum cut is greedily chosen to be partitioned into two new coalitions. Since only two new coalitions were created, in the next iteration the heuristic computes two min-cuts of the new coalitions and uses the precomputed cut values for the rest of the coalitions. Specifically, line 1 initializes an array cut that stores the min-cut of each coalition. A matching array w is initialized in line 2, to store the sizes of the min-cut for each coalition. {a mathematical formula}partitioned is the index of the coalition that was chosen to be partitioned, and it thus initialized to 1. {a mathematical formula}k′ represents the current iteration, which is also the current number of coalitions. In the first iteration there is one coalition – the grand coalition (line 4).
+      </paragraph>
+      <paragraph>
+       In each iteration the heuristic examines the two new coalitions that were created in the previous iteration (line 6), and their indexes are {a mathematical formula}partitioned and {a mathematical formula}k′. It computes a min-cut for the two coalitions (using Algorithm 3) and stores it along with its size in cut and w, respectively (lines 8–10). Then, the heuristic greedily chooses the coalition with the minimum min-cut size, and partitions it according to the min-cut. There are now two new coalitions; one gets the same index as the original coalition ({a mathematical formula}partitioned), and the other gets a new index, {a mathematical formula}k′+1. Note that, after the partition, the computed cut in index {a mathematical formula}partitioned is no longer valid (since the index refers to a new coalition), and the heuristic thus resets cut and w accordingly (lines 13–14).
+      </paragraph>
+      <paragraph>
+       Regarding the complexity, the for loop in line 5 executes {a mathematical formula}k−1 times. In each iteration the heuristic computes at most two min-cuts using Algorithm 3, which takes at most {a mathematical formula}O(n4). Computing the size of the cut takes at most {a mathematical formula}O(n2), thus the heuristic has a complexity of {a mathematical formula}O(k⋅n4), which is linear in k. We can then practically solve the organizer's problem; instead of optimally solving Minimum-k-Cut in line 2 of Algorithm 4, we can use the greedy heuristic.
+      </paragraph>
+      <paragraph>
+       Indeed, we tested the running time of the heuristic on a large scale. We used the Kronecker network with the number of agents varying between {a mathematical formula}10−100. We set α to {a mathematical formula}1,2 and k varied between 3 and 20. Each sampling was performed 20 times. Fig. 13 shows the running time of the heuristic when we fixed the number of coalitions k and increased the number of agents n. Fig. 14 shows the running time of the heuristic when we fixed the number of agents and increased the number of coalitions. As expected, in both cases the running time was consistent with the theoretical time complexity of {a mathematical formula}O(k⋅n4).
+      </paragraph>
+      <paragraph>
+       We proceed to examine the performance of the heuristic compared to the maximal social welfare that is found by the optimal algorithm. In most of the instances that we checked the heuristic found a coalition structure with the maximal social welfare. Specifically, we used the Slashdot, S1 and Kronecker networks. We set α to {a mathematical formula}1,2 and fixed k to be 3. We varied the number of agents between 10–50. Overall, we tested 600 different instances, and we found the following relative differences between the solution of the heuristic and the maximal social welfare:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        s1 – There were 3 instances where the differences were 0.11%, 0.56% and 9%. In all of the other 197 instances the heuristic found a coalition structure with the maximal social welfare.
+       </list-item>
+       <list-item label="2.">
+        Kronecker – There were 2 instances where the differences were 0.65% and 2.1%. In all of the other 198 instances the heuristic found a coalition structure with the maximal social welfare.
+       </list-item>
+       <list-item label="3.">
+        Slashdot – There were 6 instances where the differences were 0.36%, 1.80%, 1.90%, 2.70%, 3.10% and 35.50%. In all of the other 194 instances the heuristic found a coalition structure with the maximal social welfare.
+       </list-item>
+      </list>
+      <paragraph>
+       It is important to note that even though the heuristic performs well in practice in most cases, we found one case with a noticeable relative difference of 35.5%. Moreover, we show that in general the ratio between the optimal social welfare and the social welfare returned by the heuristic is unbounded. Consider the example in Fig. 15. In this example we set {a mathematical formula}R&gt;3, {a mathematical formula}k=3, and there is a clique of size {a mathematical formula}n−4 where the weight of every edge is 1. Note that this example can be generalized for any {a mathematical formula}n&gt;4 and there will always be only 3 negative edges. Therefore, the graph is nearly positive. Now, due to the negative edges {a mathematical formula}(a1,a3),(a2,a4), and {a mathematical formula}(a4,a3), the first cut of the greedy heuristic will create two coalitions where {a mathematical formula}a1,a4∈C1 and {a mathematical formula}a2,a3∈C2, and the unit edge weight clique will be in one of them. The next cut will create a new coalition that will contain the unit edge weight clique, and we will thus get a social welfare that is less than {a mathematical formula}6n2. However, an optimal solution will put {a mathematical formula}a4∈C1, {a mathematical formula}a3∈C2, {a mathematical formula}a1,a2∈C3, and the unit edge weight clique in one of them. This coalition structure results in a social welfare greater than {a mathematical formula}2n2R, and thus the ratio between the optimal social welfare and the social welfare of the solution returned by the heuristic is at least {a mathematical formula}R3. Since we can choose R such that {a mathematical formula}R3 is as high as we want, we prove that the ratio is indeed unbounded. Finally, we note that even where of all the edges are positive we can show that the difference between the optimal social welfare and the social welfare returned by the heuristic is unbounded, as demonstrated in Fig. 16.
+      </paragraph>
+      <paragraph>
+       In summary, our results demonstrate that the greedy heuristic is usable in practice even for large values of n and k, and it can thus find solutions for all instances where the running time of the optimal algorithm is too large. Even though the ratio between the quality of the heuristic solution and the optimal solution is unbounded, the heuristic performs well in practice since in many cases it finds the optimal solution, or a solution that is very close to optimal.
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     The k-coalitions-core
+     <section label="4.1">
+      <section-title>
+       The basic stability problems
+      </section-title>
+      <paragraph label="Definition 11">
+       We now turn our attention to problems relating to the k-coalitions core. First, let us state the three key decision problems relating to the k-coalitions-core: K-C-Exist: Given: {a mathematical formula}G=(A,E,ω), the social network (E may contain positive and negative edges), and a natural number k (the number of coalitions). Question: Is the k-coalitions-core of G non-empty?
+      </paragraph>
+      <paragraph label="Definition 12">
+       K-C-Membership: Given: {a mathematical formula}G=(A,E,ω), the social network (E may contain positive and negative edges), and a coalition structure {a mathematical formula}P∈Πk(A). Question: Is P a member of the k-coalitions-core?
+      </paragraph>
+      <paragraph label="Definition 13">
+       K-C-Find: Given: {a mathematical formula}G=(A,E,ω), the social network (E may contain positive and negative edges), and a natural number k (the number of coalitions). Output: A member of the k-coalitions-core, if such exists.
+      </paragraph>
+      <paragraph label="Definition 14">
+       In the analysis of these problems, we make use of the notion of a k-coloring of a graph [12]. A k-coloring of a graph G is a vertex coloring, that is an assignment of one of k possible colors to each vertex of G, such that no two adjacent vertices receive the same color.
+      </paragraph>
+      <paragraph>
+       Note that a graph may have a proper coloring with less than k colors. In this case we can arbitrarily assign each unused color to a vertex in order to achieve a coloring of exactly k colors. The key decision problem associated with k colorings, which is known to be in NP-complete [21], is as follows:
+      </paragraph>
+      <paragraph label="Definition 15">
+       K-coloring: Given: Graph {a mathematical formula}Gc with {a mathematical formula}nc vertices and natural number k. Question: Does G admit a proper vertex coloring with k colors?
+      </paragraph>
+      <paragraph>
+       We first consider the K-C-Exist problem. We show that, similar to the existence problem of the core for hedonic games with symmetric and additively separable preferences [3], the problem is NP-hard in the strong sense, even for a fixed k.
+      </paragraph>
+      <paragraph label="Theorem 7">
+       For a social network with negative and positive weights,K-C-Existis NP-hard, for every fixed{a mathematical formula}k&gt;2.
+      </paragraph>
+      <paragraph label="Proof">
+       The reduction is from K-coloring, when {a mathematical formula}k=3. That is, we prove that the 3-C-Exist is NP-hard by a reduction from the NP-hard 3-coloring problem.Given an instance of 3-coloring, {a mathematical formula}Gc=(Vc,Ec), we build an instance of 3-C-Exist such that {a mathematical formula}A=Vc, {a mathematical formula}E=Ec, and for every {a mathematical formula}(ai,aj)∈E,ω(ai,aj)=−1. Clearly, this construction can be performed in polynomial time. Now, assume there is a proper 3-coloring, and let {a mathematical formula}P=⋃i{Ci}, where {a mathematical formula}Ci={al| the color i assigned to {a mathematical formula}al}. We show that P is a member of the 3-coalitions-core. First, it is clear that P consists of exactly 3 coalitions, since the coloring uses 3 colors. None of the vertices with the same color are adjacent (since this is a proper coloring), therefore a vertex does not have any of its immediate neighbors in the same coalition. Hence, the utility of every agent is 0, which is the maximal value possible (since all weights are negative). Therefore, no agent can strictly benefit from moving to a different coalition or by leaving the game, which implies that P is a member of the 3-coalitions-core. For the other direction, assume that there exists a coalition structure P that is a member of the 3-coalitions-core. Moreover, assume that in P there are at least two adjacent vertices, {a mathematical formula}ai,aj, in the same coalition. Thus, the utility of {a mathematical formula}ai and {a mathematical formula}aj is necessarily negative, and they would benefit from leaving the game. That is, P is not individually rational – a contradiction. Hence, in all of the coalitions of P there are no two adjacent vertices. By assigning the same color to all of the vertices from the same coalition, we get a proper 3-coloring.  □
+      </paragraph>
+      <paragraph label="Corollary 8">
+       Theorem 7 immediately implies that: K-C-Findis NP-hard for every fixed{a mathematical formula}k&gt;2. We note that K-C-Exist and K-C-Find remain hard even if we consider the strict k-coalitions-core, since the hardness of these problems stems from the individual rationality requirement.
+      </paragraph>
+      <paragraph>
+       We also note that on nearly positive graphs K-C-Exist is still not trivial, since given a specific k, if G contains a sub-graph that is not k-colorable, then the k-coalitions-core does not exist, regardless of the size of the cover number. The reduction shows that even the question of the existence of a coalition structure with individual rationality is hard. However, even without the requirement of individual rationality the core may not exist, which means that every coalition structure has a blocking coalition. This is illustrated in Fig. 17, where other coalition structures have negative utilities for agents, and therefore are obviously blocked.
+      </paragraph>
+      <paragraph label="Definition 16">
+       We now turn to the K-C-Membership problem. For this problem, we make use of the well-known Clique problem. Clique: Input: Graph {a mathematical formula}Gc=(Vc,Ec) with {a mathematical formula}nc vertices and natural number s. Question: Does G contain a subset of nodes of size s, such that between every two nodes there exists an edge?
+      </paragraph>
+      <paragraph>
+       Similar to the Core-Membership problem in symmetric additively separable hedonic games, which is co-NP-complete [38], the following Theorem establishes that this is also the case with the k-coalitions-core. Below we will examine conditions under which K-C-Membership is in P.
+      </paragraph>
+      <paragraph label="Proof">
+       For a social network with general negative and positive weights,K-C-Membershipis co-NP-complete, for every fixed{a mathematical formula}k&gt;2.First we show membership in co-NP by showing that the complement problem, i.e., determining that P is not a member of the k-coalitions-core, is in NP. Indeed, given a deviating subgroup of agents, it is easy to verify that all of the members of the new coalition benefit from the deviation, and that the blocking coalition is valid (i.e., there are no more or less than k coalitions after the deviation).For hardness, we reduce the Clique problem to the complement of K-C-Membership. Let {a mathematical formula}(Gc,s) be an instance of Clique, where {a mathematical formula}Gc=(Vc,Ec) and {a mathematical formula}|Vc|=nc. We construct an instance of the complement of K-C-Membership as follows. We set {a mathematical formula}k=3, and define {a mathematical formula}A=V2∪V3∪{x1,x2,x3}, where {a mathematical formula}V2=V3=Vc. That is, A contains two matching nodes for every node in {a mathematical formula}Vc. For a node {a mathematical formula}i∈Vc we denote by {a mathematical formula}aji the matching agent in {a mathematical formula}Vj, for {a mathematical formula}j∈{2,3}. We define {a mathematical formula}P={C1,C2,C3} where {a mathematical formula}C1={x1},{a mathematical formula}C2={x2}∪V2,{a mathematical formula}C3={x3}∪V3.We would like to show that P is not a member of the 3-coalitions-core iff there exists a clique Q of size s in {a mathematical formula}Gc. Therefore, we set E such that the blocking coalitions can only be of a specific form which will indicate the existence of a clique, and vice versa. E is defined as follows: {a mathematical formula}x1,x2,x3 are connected by edges of weight {a mathematical formula}−Mω=−(2nc+3)2⋅(nc+s+1), practically serving as −∞, which ensures that they cannot be part of the same coalition, and that each of them will always be a member of a different coalition. That is,{a mathematical formula}ω(x1,x2)=−Mω,{a mathematical formula}ω(x1,x3)=−Mω,{a mathematical formula}ω(x2,x3)=−Mω.We connect {a mathematical formula}x1 to all of the agents of {a mathematical formula}V2 and {a mathematical formula}V3 with a weight of 1. In addition, we connect {a mathematical formula}x2 to all of the agents of {a mathematical formula}V3 with a weight of {a mathematical formula}−Mω, and respectively {a mathematical formula}x3 to all of the agents of {a mathematical formula}V2, to ensure that members of {a mathematical formula}C2 or {a mathematical formula}C3 will not deviate to each other's coalitions, and would only want to deviate to {a mathematical formula}C1. Thus,{a mathematical formula}∀a∈V2:ω(a,x3)=−Mω,{a mathematical formula}∀a∈V3:ω(a,x2)=−Mω,{a mathematical formula}∀a∈V2∪V3:ω(a,x1)=1.In addition, we connect all of the agents from {a mathematical formula}V2 and {a mathematical formula}V3 to {a mathematical formula}x2 and {a mathematical formula}x3, respectively, with the following weights:{a mathematical formula}∀a∈V2:ω(a,x2)=nc+s−1,{a mathematical formula}∀a∈V3:ω(a,x3)=nc+s−1.The rest of the edges with their corresponding weights connect the agents of {a mathematical formula}V2 and {a mathematical formula}V3 so that a blocking coalition may only be {a mathematical formula}C1 in conjunction with 2 replications of a clique of size s (one from {a mathematical formula}V2 in {a mathematical formula}C2 and one from {a mathematical formula}V3 in {a mathematical formula}C3):{a mathematical formula}∀(i,j)∉Ec:ω(a2i,a3j)=−Mω,{a mathematical formula}∀(i,j)∈Ec:ω(a2i,a3j)=1,{a mathematical formula}∀i∈Vc:ω(a2i,a3i)=nc.Note that there are no edges between agents from {a mathematical formula}V2 (respectively, between agents from {a mathematical formula}V3). An illustration of the reduction is depicted in Fig. 18.Now, assume there exists a clique Q of size s in {a mathematical formula}Gc. We show that P is not a member of the core by finding a blocking coalition, denoted B. We take B to be {a mathematical formula}x1 with the matching nodes to Q in A, meaning {a mathematical formula}|B|=2⋅s+1. Indeed, every agent in B benefits from the deviation: {a mathematical formula}u(x1,B)=2s&gt;0=u(x1,C1), and {a mathematical formula}∀a∈Q,a≠x1:u(a,B)=nc+s&gt;nc+s−1=u(a,Ci), for {a mathematical formula}i∈{2,3}. Therefore, P is not a member of the 3-coalitions-core.For the opposite direction, assume there is a blocking coalition, B. We show that there exists a clique Q in {a mathematical formula}Gc, with {a mathematical formula}|Q|≥s. Clearly, {a mathematical formula}{x1,x2}⊈B since {a mathematical formula}ω(x1,x2)=−Mω. Similarly, {a mathematical formula}{x1,x3}⊈B, and {a mathematical formula}{x3,x2}⊈B. In addition, {a mathematical formula}∀a∈V2,{a,x3}⊈B since {a mathematical formula}ω(a,x3)=−Mω. Similarly, {a mathematical formula}∀a∈V3,{a,x2}⊈B Finally, it cannot be that B contains only agents from {a mathematical formula}V2 and {a mathematical formula}x1, since {a mathematical formula}∀a∈V2,u(a,V2)=nc+s−1&gt;1=u(a,B). Similarly, it cannot be that B contains only agents from {a mathematical formula}V3 and {a mathematical formula}x1. From all this, we get that {a mathematical formula}B={x1}∪V2′∪V3′, where {a mathematical formula}V2′⊆V2 and {a mathematical formula}V3′⊆V3.Now, we take {a mathematical formula}Q={i|a3i∈V3′}. For a given agent {a mathematical formula}a2i∈V2′, {a mathematical formula}u(a2i,B)&gt;u(a2i,C2)=nc+s−1, since B is a blocking coalition. Recall that there are no edges between {a mathematical formula}a2i and the other agents from {a mathematical formula}V2, and the only edges with a weight of 1 are either those that connect {a mathematical formula}a2i with an agent {a mathematical formula}a3j∈V3 such that {a mathematical formula}(i,j)∈Ec, or the edge that connects it to {a mathematical formula}x1. Moreover, the only edge of {a mathematical formula}a2i with a weight of {a mathematical formula}nc is the one that connects it to the matching agent {a mathematical formula}a3i. Therefore, {a mathematical formula}a3i∈V3′ and there are at least {a mathematical formula}s−1 agents {a mathematical formula}a3j∈V3′ such that {a mathematical formula}(i,j)∈Ec. In addition, there is no agent {a mathematical formula}a3j∈V3′ such that {a mathematical formula}(i,j)∉Ec. Since this holds for all of the agents in {a mathematical formula}V2′, we get that {a mathematical formula}|V3′|≥s, and for every {a mathematical formula}i,j∈Q, {a mathematical formula}(i,j)∈Ec. Therefore, Q is a clique of at least size s.We note that in order to adjust the proof for the case of strict k-coalitions-core, we only change {a mathematical formula}ω(a,xj)=nc+s,∀a∈Vj for {a mathematical formula}j∈{2,3}, in order to ensure that there will be at least s agents for the clique in {a mathematical formula}V3′.  □
+      </paragraph>
+      <paragraph label="Theorem 10">
+       Let us now consider conditions under which K-C-Membership is in P. We show that when all the weights are non-negative and k is fixed, it is possible to iterate over all of the potential blocking coalitions in polynomial time. For a social network with only non-negative weights, and k is fixed, thenK-C-Membershipis in P.
+      </paragraph>
+      <paragraph label="Proof">
+       Consider Algorithm 6. Step (1) verifies that the coalition structure contains exactly k coalitions, otherwise it is easily not a member of the k-coalitions-core. Step (3) is performed in order to ensure that the possible deviating coalition structures are valid in a sense that they have exactly k coalitions. Therefore, we choose k agents, one from each coalition, that are forced to remain in their original coalitions when considering deviations. We consider every such possible selections of k agents.A possible blocking coalition is a subset of agents deviating to an existing coalition (since there should remain exactly k coalitions). Therefore in step (4) we start iterating over all the coalitions, each time considering a deviation of a subset of agents to a specific coalition.Now, we need to consider the subset of deviating agents. All agents in the subset must strictly benefit from the deviation, as well as the agents in the coalition that the subset joins. Therefore, in step (6) we initially check a deviation to coalition {a mathematical formula}Ci of all the agents (except the k chosen agents, to ensure k coalitions). Since all weights are non-negative, the utility function of an agent is monotonic in the sense that if an agent does not benefit from a certain coalition, it will not benefit from any of its sub-coalitions. Therefore, if there are some agents in the subset which do not benefit from the current deviation they cannot be a part of the deviating agents (since all other possible blocking coalitions deviating to {a mathematical formula}Ci are sub-coalitions of the current one), therefore we continue to check only the agents that did strictly benefit and that are potentially a part of a blocking coalition. If some agents in {a mathematical formula}Ci do not benefit from the deviation, it means that {a mathematical formula}Ci cannot be a part of the blocking coalition, and we need to consider the next possible coalition to deviate to: {a mathematical formula}Ci+1. If all of the agents in the deviation and in coalition {a mathematical formula}Ci strictly benefit from the deviation, then we found a blocking coalition, and therefore P is not a member of the k-coalitions-core. Thus, the algorithm enumerates all possible potentially blocking coalitions for P. If the algorithm did not discover such deviation, then P is guaranteed to be in the k-coalitions-core.As for the complexity, it is clear that step (1) can be performed in polynomial time. Step (3) contains redundant calculations, but even so, its complexity can be bounded by {a mathematical formula}(nk)=O(nk). Step (4) is performed k times and step (6) is performed at most n times. There are n agents, and calculating the utility for every agent at step (8) takes {a mathematical formula}O(n). In total, we get a complexity of {a mathematical formula}O(k⋅nk+3). Since k is fixed, this is a polynomial time algorithm.  □
+      </paragraph>
+      <paragraph label="Proof">
+       What about the case where we might have a small number of negative edges? As before, we formally capture the notion of a “small number” of negative edges via the family of nearly positive graphs. In the following proof we will use Algorithm 7, which is very similar to Algorithm 6. However, Algorithm 6 utilizes the advantage of having only non-negative weights. In that case, the utility function for every agent has a monotonicity property, in a sense that when an agent does not benefit from a coalition, she will not benefit from any of its sub-coalitions. Therefore, Algorithm 6 does not need to consider all possible sub-coalitions of agents but only a linear number of them. When negative weights are allowed, this property no longer holds true. Agents may well benefit from the removal of other agents with negative edges, thus the utility function is no longer monotonic. Nonetheless, when considering nearly positive graphs, we can still consider all possible subsets of the vertex cover of the negative edges, while using the monotonicity for the rest of the agents. Therefore, Algorithm 7 is able to maintain the polynomial time complexity. K-C-Membershipis in P for social networks that are nearly positive graphs and a fixed k.Consider Algorithm 7. Steps(1)–(7) are the same as in Algorithm 6 except for the fact that we now need to test for individual rationality as well. In step (8) we consider every possible subset of the vertex cover of {a mathematical formula}Eω− (the set of edges in E with negative weights), and use the fact that removing agent {a mathematical formula}ai∉V− will not improve the utility of an agent {a mathematical formula}aj∉V−. Indeed, there are three possible cases:
+       <list>
+        If {a mathematical formula}(ai,aj)∉E then clearly removing {a mathematical formula}ai will not affect {a mathematical formula}aj.If {a mathematical formula}ω(ai,aj)&gt;0 then on the contrary, {a mathematical formula}aj would suffer from the removal of {a mathematical formula}ai.{a mathematical formula}ω(ai,aj)&lt;0 is not possible, because it would mean that either {a mathematical formula}ai∈V−, or {a mathematical formula}aj∈V−.Now for the running time, in step (8) we go through all possible subsets of the vertex cover of
+       </list>
+       <paragraph>
+        {a mathematical formula}Eω−. Since we are not interested in the optimal (i.e., minimal) vertex cover, we can use one of the 2-factor approximation algorithms that finds a vertex cover [28], which still preserves the {a mathematical formula}O(log⁡n) size of the cover. Enumerating through all possibilities takes {a mathematical formula}O(2log⁡n)=O(n). Therefore, following a similar argument as in Algorithm 6, we get a total complexity of {a mathematical formula}O(k⋅nk+4).  □
+       </paragraph>
+      </paragraph>
+      <paragraph>
+       As in Section 3, we would like to analyze the complexity of our problem without the restriction on the number of negative edges. We now show that when the graph is a forest and k is fixed, strict K-C-membership, which is the strict k-coalitions-core variant of K-C-membership, is solvable in polynomial time.
+      </paragraph>
+      <paragraph label="Proof">
+       strict K-C-Membershipis in P when G is a forest and k is fixed.Consider Algorithm 8. Steps (1)–(6) are the same as in Algorithm 7. In step (7) we cut all of the negative edges that are not inside {a mathematical formula}Ci, and we isolate the agents {a mathematical formula}x1,x2,..,xi−1,xi+1,..,xk. We then partition the nodes of G into {a mathematical formula}r+k−1 connected component, where the r connected components that do not contain the agents {a mathematical formula}x1,x2,..,xi−1,xi+1,..,xk are denoted by {a mathematical formula}CC1,...,CCr. In steps (9)–(10) we iterate over all the connected components {a mathematical formula}CCh, {a mathematical formula}1≤h≤r, in order to check whether {a mathematical formula}C˜, which is the union of {a mathematical formula}Ci with {a mathematical formula}CCh, contains a blocking coalition. Since the graph now does not have negative edges (except for edges within {a mathematical formula}Ci, but they do not affect the utility of all the agents outside {a mathematical formula}Ci), we can use the same steps of Algorithm 6 to check if {a mathematical formula}C˜ contains a blocking coalition (steps (11)–(20)). Note that we have to add a boolean variable changed, which is necessary to preclude an infinite loop in which no agents are excluded from {a mathematical formula}C˜ but there is still no agent that strictly benefits from the deviation {a mathematical formula}C˜.Clearly, when Algorithm 8 returns true, there exist a blocking coalition and P is not a member of the strict k-coalitions-core. On the other hand, if there exist a blocking coalition then we need to show that the algorithm returns true. Indeed, we show that if there exists a blocking coalition then the algorithm is guaranteed to find a blocking coalition that is a sub-coalition of one of the {a mathematical formula}CCh∪Ci that it considers, and it thus returns true. Specifically, we show that if there exists a blocking coalition {a mathematical formula}C′ then there exists {a mathematical formula}1≤h≤r and {a mathematical formula}1≤i≤k such that {a mathematical formula}C˜=(CCh∩C′)∪Ci is a blocking coalition.First note that even after the deviation of the agents of {a mathematical formula}C′ we must have k coalitions. Therefore, there is a selection of agents {a mathematical formula}x1,x2,..,xi−1,xi+1,..,xk such that {a mathematical formula}C′ does not contain any of them, and we can thus ignore them when we consider the possible {a mathematical formula}C˜. Now, G is a forest, and by removing all the negative edges outside {a mathematical formula}Ci we create a partition of the nodes of G into connected components. Therefore, for every {a mathematical formula}1≤h≤r the utilities of all the agents in {a mathematical formula}CCh∩C′ are no lower than their utilities in {a mathematical formula}C′. In addition, since {a mathematical formula}C′ is a blocking coalition then for some {a mathematical formula}1≤i≤k, {a mathematical formula}Ci⊂C′ and for some {a mathematical formula}1≤h≤r there is an agent {a mathematical formula}a∈(CCh∩C′)∪Ci that strictly benefits from the deviation. Therefore, {a mathematical formula}C˜=(CCh∩C′)∪Ci is a blocking coalition and the algorithm will return true.As for the complexity, partitioning the graph takes at most {a mathematical formula}O(n2), and there are at most n connected components. We iterate over all the connected components and in each iteration we use the same steps of Algorithm 6. Therefore, following a similar argument as in Algorithm 6, we get a total complexity of {a mathematical formula}O(k⋅nk+4).  □
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Stability and social welfare
+      </section-title>
+      <paragraph>
+       We have shown that the coalition structure that maximizes the social welfare is not necessarily a member of the core. In other words, a stable coalition structure may incur a loss in the social welfare. In order to quantify this loss, we use the following measure:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       where {a mathematical formula}P⁎ is a coalition structure maximizing the social welfare.
+      </paragraph>
+      <paragraph>
+       Brânzei and Larson [8] also examined the bound on {a mathematical formula}Gapmin, when there is no limit on the number of coalitions. They proved that when the graph is symmetric with a non-empty core, {a mathematical formula}Gapmin is bounded by 2. In our model, it turns out that {a mathematical formula}Gapmin is unbounded, as shown by the example in Fig. 19. In this example, a member of the k-coalitions-core has a social welfare of zero, while the coalition structure that maximizes the social welfare has a social welfare of two. Clearly, in this case, {a mathematical formula}Gapmin is unbounded.
+      </paragraph>
+      <paragraph>
+       Since finding a member of the k-coalitions-core is proven to be a hard problem, and {a mathematical formula}Gapmin is shown to be unbounded, we provide a heuristic for finding a member of the k-coalitions-core that also guarantees a social welfare within a factor of 1/2 of the optimal social welfare. The heuristic is not guaranteed to find a solution, but when it finds a member of the k-coalitions-core we can prove a bound on its social welfare. The heuristic is a straightforward BFS of the following search space:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        State: A coalition structure {a mathematical formula}P∈Πk(A).
+       </list-item>
+       <list-item label="•">
+        Initial state: A coalition structure maximizing the social welfare, {a mathematical formula}P⁎.
+       </list-item>
+       <list-item label="•">
+        Goal test: A coalition structure that is a member of the k-coalitions-core is found, or the maximal number of iterations is reached.
+       </list-item>
+       <list-item label="•">
+        Operator: {a mathematical formula}Deviate(dev,Ci,P):P→P′, which represents a deviation of a group of agents dev, joining coalition {a mathematical formula}Ci∈P. Thus, the blocking coalition is {a mathematical formula}bc=Ci∪dev, and {a mathematical formula}P′={C1∖dev,C2∖dev,…,Ci∪dev,…,Ck∖dev}.We place the following constraints on {a mathematical formula}Deviate:
+       </list-item>
+      </list>
+      <paragraph>
+       We note that the heuristic uses BFS as way to search the exponential search space. This yields solutions that are closer to the coalition structure which maximizes the social welfare, i.e., solutions that require the smallest number of deviations from the initial state.
+      </paragraph>
+      <paragraph>
+       We also note that, although the search space does not contain all of the possible coalition structures, it is still exponential. Nevertheless, using the special deviation operator defined above, we can ensure that the social welfare of the coalition structure found by the heuristic has a social welfare of at least half of the maximal social welfare. The intuition is that a single deviation can affect the utility of only the following relevant agents: those that are part of the blocking coalition bc, and the neighbors of dev from their original coalitions. Other agents are clearly not affected. The utility of the relevant agents can be reduced at most by a factor of 1/2, since the members of bc get at least as high a utility as before, and the neighbors of dev from the original coalitions get a zero utility out of the agents of dev. Since we require that every deviation use a disjoint set of agents, we ensure that the total social welfare of the coalition structure that is found by the heuristic is still within this bound, as established by the following theorem.
+      </paragraph>
+      <paragraph label="Theorem 13">
+       The social welfare of the coalition structure returned by the heuristic is at least{a mathematical formula}SW⁎2, where{a mathematical formula}SW⁎is the maximal social welfare.
+      </paragraph>
+      <paragraph label="Proof">
+       The heuristic finds the coalition structure that maximizes the social welfare. If it is the member of the core we are done. Otherwise, the heuristics examines the next coalition structure using deviation of blocking coalitions according to BFS. Only agents that were not part of a blocking coalition are considered for future deviations. The heuristic continues until a member of the core is found, or the limit on the number of iterations is reached. In order to simplify the proof, we use the following notations:
+       <list>
+        {a mathematical formula}S(A,B)=Σa∈AΣb∈Bω(a,b) – the sum of weights between two sets of nodes, A and B. We use two sums since the set B may depend on the specific {a mathematical formula}a∈A.{a mathematical formula}Sa(B)=Σb∈Bω(a,b) – the sum of weights between a node a and all nodes in the set B.We begin by proving that the contribution to the social welfare of the edges that are changed by a deviation from one coalition structure,
+       </list>
+       <paragraph>
+        P, to another coalition structure, {a mathematical formula}P′, can be lowered at most by a factor of 1/2. Recall the following notations:
+       </paragraph>
+       <list>
+        <list-item label="•">
+         dev – the agents participating in a deviation, leaving their original coalitions.
+        </list-item>
+        <list-item label="•">
+         {a mathematical formula}σ(a) – the coalition of a in the P, meaning {a mathematical formula}a∈σ(a).
+        </list-item>
+        <list-item label="•">
+         C – the coalition into which the agents in dev join.
+        </list-item>
+        <list-item label="•">
+         bc – the blocking coalition of the deviation, {a mathematical formula}bc=C∪dev.
+        </list-item>
+       </list>
+       <paragraph>
+        A deviation may affect several edges. Let {a mathematical formula}Sum− be the contribution to the social welfare of P of edges that will not contribute to the social welfare of {a mathematical formula}P′, i.e., the edges between agents that will no longer be members of the same coalition after the deviation. Let {a mathematical formula}Sum+ be the contribution to the social welfare of {a mathematical formula}P′ of edges that are not contributing to the social welfare of P, i.e., the edges between agents that will become members of the same coalition after the deviation. We observe that:
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         {a mathematical formula}Sum−=2⋅∑a∈dev∑b∈σ(a)∖devω(a,b)=2⋅S(dev,σ(a)∖dev).
+        </list-item>
+        <list-item label="2.">
+         {a mathematical formula}Sum+=S(dev,dev∖σ(a))+2⋅S(dev,C).
+        </list-item>
+       </list>
+       <paragraph>
+        In addition, the following constraints must hold:
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         Every agent participating in the deviation must strictly benefit from it:{a mathematical formula}∀a∈dev: {a mathematical formula}Sa(σ(a)∖dev)&lt;Sa(bc∖σ(a)), which in turn equals {a mathematical formula}Sa(dev∖σ(a))+Sa(C). Thus, {a mathematical formula}Sa(σ(a)∖dev)&lt;Sa(dev∖σ(a))+Sa(C).If we sum over all the agents in dev we get,{a mathematical formula}S(dev,σ(a)∖dev)&lt;S(dev,dev∖σ(a))+S(dev,C).
+        </list-item>
+        <list-item label="2.">
+         Every agent in the coalition into which the agents in dev join must strictly benefit from the deviation:{a mathematical formula}∀b∈C:Sb(dev)&gt;0.If we sum over all the agents in C we get,{a mathematical formula}S(dev,C)&gt;0
+        </list-item>
+       </list>
+       <paragraph>
+        Adding constraint (1), we get:{a mathematical formula}Sum+−12⋅Sum−&gt;S(dev,σ(a)∖dev)−S(dev,C)+2⋅S(dev,C)−S(dev,σ(a)∖dev)=S(dev,C).However, {a mathematical formula}S(dev,C)&gt;0 according to constraint (2), thus we get that {a mathematical formula}Sum+&gt;12⋅Sum− as required.Let SW be the social welfare of the coalition structure found by the heuristic after t deviations. According to constraint (1) on the {a mathematical formula}Deviate operator, the status of an edge, i.e., whether the edge contributes to the social welfare or not, can be changed once at most. We can therefore write that {a mathematical formula}SW=Sum0+∑i=1tSumi+, where {a mathematical formula}Sumi+ is the {a mathematical formula}Sum+ of the i-th deviation, and {a mathematical formula}Sum0 is the contribution to the social welfare of all the edges whose status was not changed. Note that {a mathematical formula}Sum0 consists of either edges among agents that have not deviated or edges among agents that have deviated together from the same coalition. The contribution to the social welfare of the former is greater than zero, since the coalition structure that is found is a member of the k-coalitions-core which admits individual rationality. The contribution to the social welfare of the latter is also greater than zero, due to constraint (2) on the {a mathematical formula}Deviate operator which ensures that the utility of a deviating group within its original coalition is positive. Overall, we get that {a mathematical formula}Sum0&gt;0, and thus, {a mathematical formula}SW=Sum0+∑i=1tSumi+&gt;Sum0+12⋅∑i=1tSumi−&gt;12⋅∑i=0tSumi−=SW⁎2.We conclude by noting that the heuristic can also be used for finding a member of the strict-k-coalitions-core with the same guaranteed bound, and the proof is similar (the constraints on agent utilities just need to be updated to non-strict inequalities).  □
+       </paragraph>
+      </paragraph>
+      <paragraph>
+       To illustrate the performance of the heuristic, we ran simulations on the same {a mathematical formula}1,800 graphs that we used in the experiments from section 3.2. The experimental parameters were as follows: the number of agents varied between 12 and 16, with a step of 1, and between 10 and 50, with a step of 10. The number of coalitions ranged between 3 and 4, and the maximal number of iterations was limited to {a mathematical formula}10,000, which is exponentially less than the entire search space.
+      </paragraph>
+      <paragraph>
+       In all graphs tested, the core always existed, and the coalition structure maximizing the social welfare was a member of the core. This is consistent with the findings of [8]. In their simulations, the core was always non-empty, the ratio between the maximal social welfare and the maximal social welfare of a core member was very close to 1, and actually in many instances the core contained the social welfare maximizing coalition structure. Even though we have shown that in principle there exist instances where a coalition structure maximizing the social welfare is not a member of the k-coalitions-core, such instances did not in fact appear in our experiments. We hypothesize that this is because the negative weights are not usually structured in the specific way that prevents the coalition structure which maximizes the social welfare from being stable. Indeed, we conjecture that if all of the weights are positive then the core will always be not empty and a coalition structure which maximizes the social welfare will be a member of the core.
+      </paragraph>
+      <paragraph>
+       In contrast to the case of k coalitions core, in the case of strict k coalitions core, the coalition structure maximizing the social welfare produced by the algorithm was not always a member of the core. The results of running the heuristic are as follows:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Slashdot: A member of the strict k-coalitions-core was found in all of the cases. Moreover, even though in 16.66% of the cases the initial coalition structure was not a member of the core, the core member that was found did not maximize the social welfare in only 0.166% of the cases, and even then the difference was by less than 5%. The average number of iterations was 18 steps.
+       </list-item>
+       <list-item label="•">
+        S1: A member of the strict k-coalitions-core was found in all of the cases. Moreover, even though in 9.16% of the cases the initial coalition structure was not a member of the core, the heuristic always found a core member with the maximal social welfare. The average number of iterations was 5 steps.
+       </list-item>
+       <list-item label="•">
+        Random: In 97% of the cases a member of the strict k-coalitions-core was found within {a mathematical formula}10,000 iterations. In 11% of the cases the initial coalition structure was not a member of the core, but if a member of the core was found it also had the maximal social welfare. The average number of iterations was 36 steps.
+       </list-item>
+       <list-item label="•">
+        Kronecker: The initial coalition structure was a member of the strict k-coalitions-core in all of the cases.
+       </list-item>
+      </list>
+     </section>
+     <section label="4.3">
+      <section-title>
+       Facilitating relationships
+      </section-title>
+      <paragraph>
+       Consider an organizer that would like to add edges to the social network, in order to increase the social welfare of the k-coalitions-core. While adding edges to the social network causes a linear increase in the maximal social welfare, the impact on the k-coalitions-core is more complex. The addition of edges may cause a non-linear decrease or increase in the social welfare of the k-coalitions-core members, even without considering the cost of adding edges (α). This phenomenon is illustrated in Fig. 20. The original 3-coalitions-core member in 20(d) has a social welfare of 20, while the new 3-coalitions-core member after adding all of the edges has a social welfare of only 15.
+      </paragraph>
+      <paragraph>
+       A more interesting perspective will be to facilitate relationships in order to obtain stability. That is, the organizer needs to decide what the minimal number of edges to add to the network is in order to make a certain coalition structure stable. Adding edges to the social network in order to stabilize it is closely related to the cost of stability, which has been studied mainly in the context of transferable utility games, e.g., [6], [31]. In these games the problem is to stabilize a coalitional game by using external payments. A supplemental payment to agents in a specific coalition structure is given in order to persuade agents not to deviate and form a blocking coalition. The cost of stability is then the minimal external payment which stabilizes the coalition structure. In our model the external payment is modeled as facilitating relationships between agents, which will persuade them to work together and not deviate. As opposed to external payment, facilitating relationships as a type of payment has its limits: the organizer can only facilitate new relationships, and each such relationship adds the same weight to two agents.
+      </paragraph>
+      <paragraph>
+       We note that although it is easy to determine the required payment for every agent when examined separately, this does not yield the correct minimal payment required to stabilize the coalition structure as a whole (that is, the number of edges the organizer needs to add to each agent). This is because the incentives for agents to deviate in a blocking coalition are dependent. It is sufficient to eliminate the incentive of a single agent in the blocking coalition in order to eliminate the blocking coalition altogether. An algorithm for finding the minimal number of edges to add in order to stabilize a specific coalition structure needs to examine all agent incentives together, which unfortunately causes the problem to be NP-hard.
+      </paragraph>
+      <paragraph label="Definition 17">
+       K-C-Add: Given: {a mathematical formula}G=(A,E,ω), the social network (E may contain positive and negative edges), a coalition structure {a mathematical formula}P∈Πk(A) (that contains exactly k coalitions), and a natural number q. Question: Can at most q edges be added to the social network such that P is a member of the k-coalitions-core?
+      </paragraph>
+      <paragraph>
+       We will show that K-C-Add is hard, by a reduction from the known NP-hard problem, Hitting-Set[25].
+      </paragraph>
+      <paragraph label="Definition 18">
+       Hitting-Set: Given: A collection of subsets {a mathematical formula}D={d1,…,dn} of a finite subset S, and a natural number h. Question: Does there exist a hitting-set for D of size of at most h, i.e, a subset {a mathematical formula}S′⊆S such that {a mathematical formula}S′ contains at least one element from each subset in D, where {a mathematical formula}|S′|≤h?
+      </paragraph>
+      <paragraph label="Theorem 14">
+       K-C-Addis NP-hard.
+      </paragraph>
+      <paragraph label="Proof">
+       We are given an instance of the Hitting-Set problem: {a mathematical formula}(D,S,h). We construct an instance of the K-C-Add in the following manner: {a mathematical formula}G=(A,E,ω), where {a mathematical formula}A=Ad∪X∪Y: {a mathematical formula}Ad={aj|j∈di,i=1…n}, {a mathematical formula}X={xj|j∈di,i=1…n} and {a mathematical formula}Y={yi,j|j∈di,i=1…n}. This means that X and {a mathematical formula}Ad are sets of agents representing all the elements that are members of at least one subset {a mathematical formula}di. In contrast, Y contains replicas of agents for each subset of elements {a mathematical formula}di. E is defined as follows: {a mathematical formula}∀yi,j∈Y,aj∈Ad:ω(yi,j,aj)=1, and we set q to be h. Finally, we define the coalition structure P to be: {a mathematical formula}⋃j=1…|Ad|{{aj,xj}}∪⋃i=1…n{{yi,j|j∈di}}, i.e. k equals {a mathematical formula}|Ad|+|D|. This is illustrated in an example in Fig. 21, for {a mathematical formula}D={d1,d2}, {a mathematical formula}d1={1,2,3},d2={3}. We show that the instance of K-C-Add has a solution if and only if the instance of Hitting-set has a solution.We observe that there are exactly {a mathematical formula}|D| blocking coalitions: for each {a mathematical formula}i=1…n, there is a blocking coalition {a mathematical formula}{aj,yi,j|j∈di}. Note that all of the agents {a mathematical formula}aj such that {a mathematical formula}j∈di must be members of the blocking coalition, since otherwise there will be agents {a mathematical formula}yi,j that will not benefit from the deviation. In addition, such a blocking coalition cannot contain more members, since there are no other agents that will benefit from this deviation. Deviations are possible only to the coalitions of the form {a mathematical formula}{yi,j|j∈di}, since other coalitions contain agents from X which do not have edges to other agents and therefore will not benefit from the deviation. Therefore, since there are exactly {a mathematical formula}|D| blocking coalitions, which correspond to the elements of D, in order to stabilize the coalition structure P the organizer needs to add edges to the possibly deviating agents within their original coalitions, which means edges between agents {a mathematical formula}aj and {a mathematical formula}xj.Now, assume the organizer can stabilize P with at most h edges. Therefore, there is a set of agents {a mathematical formula}Ah⊆Ad, {a mathematical formula}|Ah|≤h, that are covered by new edges which eliminate their incentive to deviate. Since the resulting coalition structure is a member of the k-coalitions-core, it means that all {a mathematical formula}|D| blocking coalitions have been eliminated. That is, at least one agent from each blocking coalition no longer benefits from the deviation and therefore {a mathematical formula}S′={j|aj∈Ah} is a valid hitting set of size at most h.From the opposite direction, assume the organizer cannot add at most h edges to make the coalition structure stable. Therefore, for any addition of at most h edges between agents {a mathematical formula}aj and {a mathematical formula}xj (the only way to eliminate deviation incentive) there is at least one blocking coalition whose all members still have an incentive to deviate, meaning none of them was covered by a new edge. Since a blocking coalition is of the form: {a mathematical formula}{aj,yi,j|j∈di}, it means that ∃i such that none of the elements of {a mathematical formula}di is covered. Therefore, there is not a hitting set of size at most h.  □ Note that the proof of Theorem 14 can be easily generalized for the case where the organizer is able to add edges with a fixed weight of {a mathematical formula}ω1. The only change in the reduction is that we set {a mathematical formula}ω(yi,j,aj)=ω1 instead of 1.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Related work
+     </section-title>
+     <paragraph>
+      Coalition formation in the context of task allocations has been the subject of multiple studies in different disciplines [14], [2], [34], [5]. Some have modeled coalition formation using transferable utilities [34], but it is also very common to assume, as in our model, that the utilities are non-transferable [17].
+     </paragraph>
+     <paragraph>
+      Our model is a special case of symmetric additively separable hedonic games (symmetric ASHGs), which have been extensively studied in the field of multi-agent systems [10], [3]. However, we use the interpersonal relationships, as described by a social network, to define the utilities of the players in the coalition formation game. Brânzei and Larson [8] and Bachrach et al. [7] also defined the utilities is such a way. However, in [7] Bachrach et al. imposed some constraints on the structure of the social network, (such as planar, minor free and bounded degree graphs), in order to obtain constant factor approximations for the problem of maximizing the social welfare. We provide an exact algorithm using a constraint on the number of negative edges in the social network, but not on its structure. We also provide an exact algorithm without any constraint on the weight of the edges, where the social network is a forest. Brânzei and Larson [8] investigated properties of the coalition structure which maximizes the social welfare, the core, and the relationship between them, but did not provide algorithms to find them. In other work [9], Brânzei and Larson used the social network to define the utilities of players, but in a different way. A recently introduced model by Aziz et al. [4] of fractional hedonic games defines the utility of each agent as an average of the values an agent ascribes to the rest of the agents within its coalition. Voice et al. [39] proposed a generalization of the utility model we use, which they term the independence of disconnected members. They provided bounds on the complexity of maximizing the social welfare over general and minor-free graphs and derive linear time bounds for graphs of bounded treewidth.
+     </paragraph>
+     <paragraph>
+      None of these works considered the possible requirement of forming exactly k coalitions. As we discussed in Section 3, this restriction adds some unique properties to the coalition structure which maximizes the social welfare, and we also had to introduce a modification of the well-known core solution concept, which we called the k-coalitions-core. A similar model of group formation based on the assumption that individuals prefer to associate with people similar to them was studied by Milchtaich and Winter [32]. They also place an upper bound (though not exact) on the number of coalitions to prevent a trivial solution. In contrast to our work, their utility model is based on the distance between agents. Thereby, without the constraint on the number of coalitions, agents would prefer being alone or members of a homogeneous coalition. In addition, their proposed stability concept is Nash-stability, meaning only individual deviations are considered, which is less strong than the core concept.
+     </paragraph>
+     <paragraph>
+      In another branch of work, [2], [14] and [11] used a social network in coalition formation games as a constraint on possible collaborations, e.g., each coalition must form a connected component. In our model we do not use this constraint, since the organizer has the ability to facilitate relationships and make introductions between unacquainted agents. Similar to the problem that we have defined for the organizer who would like to improve social welfare by adding edges, the work of [22] considers a problem of rewiring the network to enable better team formation in agent organized networks (AON). The key difference is that in their model each agent is able to rewire its local neighborhood, while in our case there is a centralized organizer who can add edges throughout the entire network. Apart from applying local strategies, they also consider multiple iterations, as the agents adapt to the ongoing changes of the network. This direction is also pursued by [24] who consider the re-organization of agents by using temporary edge links between the deviations. We have also defined the K-C-Add problem, for the organizer who would like to stabilize a given coalition structure by adding edges. In the domain of network bargaining games [26] there were also works on stabilizing a given instance of the game, but they investigate the ability to remove agents [1] or edges of the graph [27].
+     </paragraph>
+    </section>
+    <section label="6">
+     <section-title>
+      Conclusions and future work
+     </section-title>
+     <paragraph>
+      We analyzed the problem of coalition formation with a fixed number of coalitions where, in addition, a central organizer can facilitate new relationships between agents at a certain cost. We examined this scenario from two aspects: maximizing social welfare and finding core stable solutions. We provided general results, and established that the problem of finding a coalition structure maximizing the social welfare is tractable only when both k and the number of negative edges are constrained. We provided a polynomial time algorithm in the case of fixed k and nearly positive graphs for computing the optimal coalition structure and the optimal set of edges the organizer should add to the network. We conducted experiments on 4 sample networks which clearly show the benefits of the proposed algorithm. To further improve the running time of the optimal algorithm, we provided an efficient greedy heuristic. We showed that even though the performance of the heuristic is unbounded in theory, it is near optimal in practice.
+     </paragraph>
+     <paragraph>
+      With respect to core stable solutions, we identified tractable instances and provided polynomial time algorithms for them. When a polynomial time algorithm was not available we provided a heuristic for finding a core stable solution. We also showed that stability may incur a cost in social welfare and that this ratio may be unbounded. We then proceeded to characterize the problem of facilitating relationships in order to stabilize a coalition structure which is closely related to the cost of stability problem. Unfortunately this problem proves to be NP-hard.
+     </paragraph>
+     <paragraph>
+      We foresee a variety of possible extensions of our work. First, it would be interesting to consider additional task related aspects. For example, suppose that there are different skills for the agents, and each task requires a specific subset of skills to be completed. The combination of a task aspect together with personal relationships will target a very realistic real world scenario [13]. The challenge would be to define a model that captures all of these aspects without increasing the computational complexity. Another potential direction is to relax our requirement of exactly k coalitions and consider coalition formation problems where the coalition structure contains at leastk coalitions. To eliminate trivial solutions, it is possible that a constraint on the minimal size of a coalition will need to be added. Lastly, we showed that the k-coalitions-core may be empty if the social network contains positive and negative edges (see Fig. 17). We conjecture that the k-coalitions-core is always non-empty if the social network does not contain negative edges, but this remains an open question.
+     </paragraph>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     <section-title>
+      Notational conventions
+     </section-title>
+     <paragraph>
+      {a mathematical formula}
+     </paragraph>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

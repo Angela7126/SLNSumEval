@@ -1,0 +1,396 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Resolving Lexical Ambiguity inTensor Regression Models of Meaning</title>
+<!--Generated on Wed Jun 11 17:42:36 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Resolving Lexical Ambiguity in
+<br class="ltx_break"/>Tensor Regression Models of Meaning</h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">Dimitri Kartsaklis 
+<br class="ltx_break"/>University of Oxford 
+<br class="ltx_break"/>Department of 
+<br class="ltx_break"/>Computer Science 
+<br class="ltx_break"/>Wolfson Bldg, Parks Road 
+<br class="ltx_break"/>Oxford, OX1 3QD, UK 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter ltx_font_footnote">dimitri.kartsaklis@cs.ox.ac.uk</span> 
+<br class="ltx_break"/>&amp;Nal Kalchbrenner 
+<br class="ltx_break"/>University of Oxford 
+<br class="ltx_break"/>Department of 
+<br class="ltx_break"/>Computer Science 
+<br class="ltx_break"/>Wolfson Bldg, Parks Road 
+<br class="ltx_break"/>Oxford, OX1 3QD, UK 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter ltx_font_footnote">nkalch@cs.ox.ac.uk</span> 
+<br class="ltx_break"/>&amp;Mehrnoosh Sadrzadeh 
+<br class="ltx_break"/>Queen Mary Univ. of London 
+<br class="ltx_break"/>School of Electronic Engineering 
+<br class="ltx_break"/>and Computer Science 
+<br class="ltx_break"/>Mile End Road 
+<br class="ltx_break"/>London, E1 4NS, UK 
+<br class="ltx_break"/><span class="ltx_text ltx_font_typewriter ltx_font_footnote">mehrnoosh.sadrzadeh@qmul.ac.uk</span>
+
+</span></span></div>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">This paper provides a method for improving tensor-based compositional distributional models of meaning by the addition of an explicit disambiguation step prior to composition. In contrast with previous research where this hypothesis has been successfully tested against relatively simple compositional models, in our work we use a robust model trained with linear regression. The results we get in two experiments show the superiority of the prior disambiguation method and suggest that the effectiveness of this approach is model-independent.</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">The provision of compositionality in distributional models of meaning, where a word is represented as a vector of co-occurrence counts with every other word in the vocabulary, offers a solution to the fact that no text corpus, regardless of its size, is capable of providing reliable co-occurrence statistics for anything but very short text constituents. By <span class="ltx_text ltx_font_italic">composing</span> the vectors for the words within a sentence, we are still able to create a vectorial representation for that sentence that is very useful in a variety of natural language processing tasks, such as paraphrase detection, sentiment analysis or machine translation. Hence, given a sentence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p1.m1" class="ltx_Math" alttext="w_{1}w_{2}\dots w_{n}" display="inline"><mrow><msub><mi>w</mi><mn>1</mn></msub><mo>⁢</mo><msub><mi>w</mi><mn>2</mn></msub><mo>⁢</mo><mi mathvariant="normal">…</mi><mo>⁢</mo><msub><mi>w</mi><mi>n</mi></msub></mrow></math>, a compositional distributional model provides a function <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p1.m2" class="ltx_Math" alttext="f" display="inline"><mi>f</mi></math> such that:</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<table id="S1.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.E1.m1" class="ltx_Math" alttext="\overrightarrow{s}=f(\overrightarrow{w_{1}},\overrightarrow{w_{2}},\dots,%&#10;\overrightarrow{w_{n}})" display="block"><mrow><mover accent="true"><mi>s</mi><mo>→</mo></mover><mo>=</mo><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mover accent="true"><msub><mi>w</mi><mn>1</mn></msub><mo>→</mo></mover><mo>,</mo><mover accent="true"><msub><mi>w</mi><mn>2</mn></msub><mo>→</mo></mover><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mover accent="true"><msub><mi>w</mi><mi>n</mi></msub><mo>→</mo></mover></mrow><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p3.m1" class="ltx_Math" alttext="\overrightarrow{w_{i}}" display="inline"><mover accent="true"><msub><mi>w</mi><mi>i</mi></msub><mo>→</mo></mover></math> is the distributional vector of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p3.m2" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math>th word in the sentence and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p3.m3" class="ltx_Math" alttext="\overrightarrow{s}" display="inline"><mover accent="true"><mi>s</mi><mo>→</mo></mover></math> the resulting composite sentential vector.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">An interesting question that has attracted the attention of researchers lately refers to the way in which these models affect ambiguous words; in other words, given a sentence such as “a man was waiting by the bank”, we are interested to know to what extent a composite vector can appropriately reflect the intended use of word ‘bank’ in that context, and how such a vector would differ, for example, from the vector of the sentence “a fisherman was waiting by the bank”.</p>
+</div>
+<div id="S1.p5" class="ltx_para">
+<p class="ltx_p">Recent experimental evidence <cite class="ltx_cite">[]</cite> suggests that for a number of compositional models the introduction of a disambiguation step <span class="ltx_text ltx_font_italic">prior</span> to the actual compositional process results in better composite representations. In other words, the suggestion is that Eq. <a href="#S1.E1" title="(1) ‣ 1 Introduction ‣ Resolving Lexical Ambiguity in Tensor Regression Models of Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> should be replaced by:</p>
+</div>
+<div id="S1.p6" class="ltx_para">
+<table id="S1.E2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.E2.m1" class="ltx_Math" alttext="\overrightarrow{s}=f(\phi(\overrightarrow{w_{1}}),\phi(\overrightarrow{w_{2}})%&#10;,\dots,\phi(\overrightarrow{w_{n}}))" display="block"><mrow><mover accent="true"><mi>s</mi><mo>→</mo></mover><mo>=</mo><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mi>ϕ</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><msub><mi>w</mi><mn>1</mn></msub><mo>→</mo></mover><mo>)</mo></mrow></mrow><mo>,</mo><mrow><mi>ϕ</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><msub><mi>w</mi><mn>2</mn></msub><mo>→</mo></mover><mo>)</mo></mrow></mrow><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mrow><mi>ϕ</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><msub><mi>w</mi><mi>n</mi></msub><mo>→</mo></mover><mo>)</mo></mrow></mrow></mrow><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+</div>
+<div id="S1.p7" class="ltx_para">
+<p class="ltx_p">where the purpose of function <math xmlns="http://www.w3.org/1998/Math/MathML" id="S1.p7.m1" class="ltx_Math" alttext="\phi" display="inline"><mi>ϕ</mi></math> is to return a disambiguated version of each word vector given the rest of the context (e.g. all the other words in the sentence). The composition operation, whatever that could be, is then applied on these unambiguous representations of the words, instead of the original distributional vectors.</p>
+</div>
+<div id="S1.p8" class="ltx_para">
+<p class="ltx_p">Until now this idea has been verified on relatively simple compositional functions, usually involving some form of element-wise operation between the word vectors, such as addition or multiplication. An exception to this is the work of Kartsaklis and Sadrzadeh <cite class="ltx_cite">[]</cite>, who apply Eq. <a href="#S1.E2" title="(2) ‣ 1 Introduction ‣ Resolving Lexical Ambiguity in Tensor Regression Models of Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> on <span class="ltx_text ltx_font_italic">partial</span> tensor-based compositional models. In a tensor-based model, relational words such as verbs and adjectives are represented by multi-linear maps; composition takes place as the application of those maps on vectors representing the arguments (usually nouns). What makes the models of the above work ‘partial’ is that the authors used simplified versions of the linear maps, projected onto spaces of order lower than that required by the theoretical framework. As a result, a certain amount of transformational power was traded off for efficiency.</p>
+</div>
+<div id="S1.p9" class="ltx_para">
+<p class="ltx_p">A potential explanation then for the effectiveness of the proposed prior disambiguation method can be sought on the limitations imposed by the compositional models under test. After all, the idea of having disambiguation emerge as a direct consequence of the compositional process, without the introduction of any explicit step, seems more natural and closer to the way the human mind resolves lexical ambiguities.</p>
+</div>
+<div id="S1.p10" class="ltx_para">
+<p class="ltx_p">The purpose of this paper is to investigate the hypothesis whether prior disambiguation is important in a pure tensor-based compositional model, where no simplifying assumptions have been made. We create such a model by using linear regression, and we explain how an explicit disambiguation step can be introduced to this model prior to composition. We then proceed by comparing the composite vectors produced by this approach with those produced by the model alone in a number of experiments. The results show a clear superiority of the priorly disambiguated models following Eq. <a href="#S1.E2" title="(2) ‣ 1 Introduction ‣ Resolving Lexical Ambiguity in Tensor Regression Models of Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>, confirming previous research and suggesting that the reasons behind the success of this approach are more fundamental than the form of the compositional function.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Composition in distributional models</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">Compositional distributional models of meaning vary in sophistication, from simple element-wise operations between vectors such as addition and multiplication <cite class="ltx_cite">[]</cite> to deep learning techniques based on neural networks <cite class="ltx_cite">[]</cite>. <span class="ltx_text ltx_font_italic">Tensor-based models</span>, formalized by Coecke et al. <cite class="ltx_cite">[]</cite>, comprise a third class of models lying somewhere in between these two extremes. Under this setting relational words such as verbs and adjectives are represented by multi-linear maps (tensors of various orders) acting on a number of arguments. An adjective for example is a linear map <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m1" class="ltx_Math" alttext="f:N\to N" display="inline"><mrow><mi>f</mi><mo>:</mo><mrow><mi>N</mi><mo>→</mo><mi>N</mi></mrow></mrow></math> (where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m2" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math> is our basic vector space for nouns), which takes as input a noun and returns a modified version of it. Since every map of this sort can be represented by a matrix living in the tensor product space <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m3" class="ltx_Math" alttext="N\otimes N" display="inline"><mrow><mi>N</mi><mo>⊗</mo><mi>N</mi></mrow></math>, we now see that the meaning of a phrase such as ‘red car’ is given by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m4" class="ltx_Math" alttext="\overline{red}\times\overrightarrow{car}" display="inline"><mrow><mover accent="true"><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>d</mi></mrow><mo>¯</mo></mover><mo>×</mo><mover accent="true"><mrow><mi>c</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>r</mi></mrow><mo>→</mo></mover></mrow></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m5" class="ltx_Math" alttext="\overline{red}" display="inline"><mover accent="true"><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>d</mi></mrow><mo>¯</mo></mover></math> is an adjective matrix and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p1.m6" class="ltx_Math" alttext="\times" display="inline"><mo>×</mo></math> indicates matrix multiplication. The same concept applies for functions of higher order, such as a transitive verb (a function of two arguments, so a tensor of order 3). For these cases, matrix multiplication generalizes to the more generic notion of <span class="ltx_text ltx_font_italic">tensor contraction</span>. The meaning of a sentence such as ‘kids play games’ is computed as:</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<table id="S2.E3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.E3.m1" class="ltx_Math" alttext="\overrightarrow{kids}^{\mathsf{T}}\times\overline{play}\times\overrightarrow{games}" display="block"><mrow><msup><mover accent="true"><mrow><mi>k</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mi>s</mi></mrow><mo>→</mo></mover><mi>𝖳</mi></msup><mo>×</mo><mover accent="true"><mrow><mi>p</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>y</mi></mrow><mo>¯</mo></mover><mo>×</mo><mover accent="true"><mrow><mi>g</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>s</mi></mrow><mo>→</mo></mover></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+</table>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m1" class="ltx_Math" alttext="\overline{play}" display="inline"><mover accent="true"><mrow><mi>p</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>y</mi></mrow><mo>¯</mo></mover></math> here is an order-3 tensor (a “cube”) and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S2.p3.m2" class="ltx_Math" alttext="\times" display="inline"><mo>×</mo></math> now represents tensor contraction. A concise introduction to compositional distributional models can be found in <cite class="ltx_cite">[]</cite>.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Disambiguation and composition</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">The idea of separating disambiguation from composition first appears in a work of Reddy et al. <cite class="ltx_cite">[]</cite>, where the authors show that the introduction of an explicit disambiguation step prior to simple element-wise composition is beneficial for noun-noun compounds. Subsequent work by Kartsaklis et al. <cite class="ltx_cite">[]</cite> reports very similar findings for verb-object structures, again on additive and multiplicative models. Finally, in <cite class="ltx_cite">[]</cite> these experiments were extended to include tensor-based models following the categorical framework of Coecke et al. <cite class="ltx_cite">[]</cite>, where again all “unambiguous” models present superior performance compared to their “ambiguous” versions.</p>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">However, in this last work one of the dimensions of the tensors was kept empty (filled in with zeros). This simplified the calculations but also weakened the effectiveness of the multi-linear maps. If, for example, instead of using an order-3 tensor for a transitive verb, one uses some of the matrix instantiations of Kartsaklis and Sadrzadeh, Eq. <a href="#S2.E3" title="(3) ‣ 2 Composition in distributional models ‣ Resolving Lexical Ambiguity in Tensor Regression Models of Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> is reduced to one of the following forms:</p>
+</div>
+<div id="S3.p3" class="ltx_para">
+<table id="Sx1.EGx1" class="ltx_equationgroup ltx_eqn_align">
+
+<tr id="S3.E4" class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_td ltx_align_right"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E4.m1" class="ltx_Math" alttext="\displaystyle\begin{split}\overline{play}\odot(\overrightarrow{kids}\otimes%&#10;\overrightarrow{games})~{}~{},~{}~{}\overrightarrow{kids}\odot(\overline{play}%&#10;\times\overrightarrow{games})\\&#10;(\overrightarrow{kids}^{\mathsf{T}}\times\overline{play})\odot\overrightarrow{%&#10;games}~{}~{}~{}~{}~{}~{}~{}~{}~{}~{}~{}~{}~{}~{}~{}~{}~{}~{}~{}~{}~{}~{}~{}\end{split}" display="inline"><mrow><mrow><mover accent="true"><mrow><mi>p</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>y</mi></mrow><mo>¯</mo></mover><mo>⊙</mo><mpadded width="+6.6pt"><mrow><mo>(</mo><mrow><mover accent="true"><mrow><mi>k</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mi>s</mi></mrow><mo>→</mo></mover><mo>⊗</mo><mover accent="true"><mrow><mi>g</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>s</mi></mrow><mo>→</mo></mover></mrow><mo>)</mo></mrow></mpadded></mrow><mo separator="true">, </mo><mrow><mrow><mrow><mover accent="true"><mrow><mi>k</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mi>s</mi></mrow><mo>→</mo></mover><mo>⊙</mo><mrow><mo>(</mo><mrow><mover accent="true"><mrow><mi>p</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>y</mi></mrow><mo>¯</mo></mover><mo>×</mo><mover accent="true"><mrow><mi>g</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>s</mi></mrow><mo>→</mo></mover></mrow><mo>)</mo></mrow></mrow><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mover accent="true"><mrow><mi>k</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>d</mi><mo>⁢</mo><mi>s</mi></mrow><mo>→</mo></mover><mi>𝖳</mi></msup><mo>×</mo><mover accent="true"><mrow><mi>p</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>y</mi></mrow><mo>¯</mo></mover></mrow><mo>)</mo></mrow></mrow><mo>⊙</mo><mpadded width="+79.2pt"><mover accent="true"><mrow><mi>g</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>s</mi></mrow><mo>→</mo></mover></mpadded></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(4)</span></td></tr>
+</table>
+</div>
+<div id="S3.p4" class="ltx_para">
+<p class="ltx_p">where symbol <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m1" class="ltx_Math" alttext="\odot" display="inline"><mo>⊙</mo></math> denotes element-wise multiplication and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p4.m2" class="ltx_Math" alttext="\overline{play}" display="inline"><mover accent="true"><mrow><mi>p</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>y</mi></mrow><mo>¯</mo></mover></math> is a matrix. Here, the model does not fully exploit the space provided by the theoretical framework (i.e. an order-3 tensor), which has two disadvantages: firstly, we lose space that could hold valuable information about the verb in this case and relational words in general; secondly, the generally non-commutative tensor contraction operation is now partly relying on element-wise multiplication, which is commutative, thus forgets (part of the) order of composition.</p>
+</div>
+<div id="S3.p5" class="ltx_para">
+<p class="ltx_p">In the next section we will see how to apply linear regression in order to create full tensors for verbs and use them for a compositional model that avoids these pitfalls.</p>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Creating tensors for verbs</h2>
+
+<div id="S4.p1" class="ltx_para">
+<p class="ltx_p">The essence of any tensor-based compositional model is the way we choose to create our sentence-producing maps, i.e. the verbs. In this paper we adopt a method proposed by Baroni and Zamparelli <cite class="ltx_cite">[]</cite> for building adjective matrices, which can be generally applied to any relational word. In order to create a matrix for, say, the intransitive verb ‘play’, we first collect all instances of the verb occurring with some subject in the training corpus, and then we create non-compositional holistic vectors for these elementary sentences following exactly the same methodology as if they were words. We now have a dataset with instances of the form <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.p1.m1" class="ltx_Math" alttext="\langle\overrightarrow{subj_{i}},\overrightarrow{subj_{i}~{}play}\rangle" display="inline"><mrow><mo>⟨</mo><mrow><mover accent="true"><mrow><mi>s</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><msub><mi>j</mi><mi>i</mi></msub></mrow><mo>→</mo></mover><mo>,</mo><mover accent="true"><mrow><mi>s</mi><mo>⁢</mo><mi>u</mi><mo>⁢</mo><mi>b</mi><mo>⁢</mo><mpadded width="+3.3pt"><msub><mi>j</mi><mi>i</mi></msub></mpadded><mo>⁢</mo><mi>p</mi><mo>⁢</mo><mi>l</mi><mo>⁢</mo><mi>a</mi><mo>⁢</mo><mi>y</mi></mrow><mo>→</mo></mover></mrow><mo>⟩</mo></mrow></math> (e.g. the vector of ‘kids’ paired with the holistic vector of ‘kids play’, and so on), that can be used to train a linear regression model in order to produce an appropriate matrix for verb ‘play’. The premise of a model like this is that the multiplication of the verb matrix with the vector of a new subject will produce a result that approximates the distributional behaviour of all these elementary two-word exemplars used in training.</p>
+</div>
+<div id="S4.p2" class="ltx_para">
+<p class="ltx_p">We present examples and experiments based on this method, constructing ambiguous and disambiguated tensors of order 2 (that is, matrices) for verbs taking one argument. In principle, our method is directly applicable to tensors of higher order, following a multi-step process similar to that of Grefenstette et al. <cite class="ltx_cite">[]</cite> who create order-3 tensors for transitive verbs using similar means. Instead of using subject-verb constructs as above we concentrate on elementary verb phrases of the form <span class="ltx_text ltx_font_italic">verb-object</span> (e.g. ‘play football’, ‘admit student’), since in general objects comprise stronger contexts for disambiguating the usage of a verb.</p>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Experimental setting</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">Our basic vector space is trained from the ukWaC corpus <cite class="ltx_cite">[]</cite>, originally using as a basis the 2,000 content words with the highest frequency (but excluding a list of stop words as well as the 50 most frequent content words since they exhibit low information content). We created vectors for all content words with at least 100 occurrences in the corpus. As context we considered a 5-word window from either side of the target word, while as our weighting scheme we used local mutual information (i.e. point-wise mutual information multiplied by raw counts). This initial semantic space achieved a score of 0.77 Spearman’s <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m1" class="ltx_Math" alttext="\rho" display="inline"><mi>ρ</mi></math> (and 0.71 Pearson’s <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m2" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math>) on the well-known benchmark dataset of Rubenstein and Goodenough <cite class="ltx_cite">[]</cite>. In order to reduce the time of regression training, our vector space was normalized and projected onto a 300-dimensional space using singular value decomposition (SVD). The performance of the reduced space on the R&amp;G dataset was again very satisfying, specifically 0.73 Spearman’s <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m3" class="ltx_Math" alttext="\rho" display="inline"><mi>ρ</mi></math> and 0.72 Pearson’s <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.p1.m4" class="ltx_Math" alttext="r" display="inline"><mi>r</mi></math>.</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">In order to create the vector space of the holistic verb phrase vectors, we first collected all instances where a verb participating in the experiments appeared at least 100 times in a verb-object relationship with some noun in the corpus. As context of a verb phrase we considered any content word that falls into a 5-word window from either side of the verb <span class="ltx_text ltx_font_italic">or</span> the object. For the 68 verbs participating in our experiments, this procedure resulted in 22k verb phrases, a vector space that again was projected into 300 dimensions using SVD.</p>
+</div>
+<div id="S5.SS0.SSS0.P1" class="ltx_paragraph">
+<h3 class="ltx_title ltx_title_paragraph">Linear regression</h3>
+
+<div id="S5.SS0.SSS0.P1.p1" class="ltx_para">
+<p class="ltx_p">For each verb we use simple linear regression with gradient descent directly applied on matrices <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS0.SSS0.P1.p1.m1" class="ltx_Math" alttext="\mathbf{X}" display="inline"><mi>𝐗</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS0.SSS0.P1.p1.m2" class="ltx_Math" alttext="\mathbf{Y}" display="inline"><mi>𝐘</mi></math>, where the rows of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS0.SSS0.P1.p1.m3" class="ltx_Math" alttext="\mathbf{X}" display="inline"><mi>𝐗</mi></math> correspond to vectors of the nouns that appear as objects for the given verb and the rows of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS0.SSS0.P1.p1.m4" class="ltx_Math" alttext="\mathbf{Y}" display="inline"><mi>𝐘</mi></math> to the holistic vectors of the corresponding verb phrases. Our objective function then becomes:</p>
+</div>
+<div id="S5.SS0.SSS0.P1.p2" class="ltx_para">
+<table id="S5.E5" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.E5.m1" class="ltx_Math" alttext="\hat{\mathbf{W}}=\underset{\mathbf{W}}{\arg\min}\frac{1}{2m}\left(\|\mathbf{W}%&#10;\mathbf{X}^{\mathsf{T}}-\mathbf{Y}^{\mathsf{T}}\|^{2}+\lambda\|\mathbf{W}\|^{2%&#10;}\right)" display="block"><mrow><mover accent="true"><mi>𝐖</mi><mo stretchy="false">^</mo></mover><mo>=</mo><mrow><munder accentunder="true"><mrow><mi>arg</mi><mo>⁢</mo><mo movablelimits="false">min</mo></mrow><mo>𝐖</mo></munder><mo>⁢</mo><mfrac><mn>1</mn><mrow><mn>2</mn><mo>⁢</mo><mi>m</mi></mrow></mfrac><mo>⁢</mo><mrow><mo>(</mo><mrow><msup><mrow><mo fence="true">∥</mo><mrow><msup><mi>𝐖𝐗</mi><mi>𝖳</mi></msup><mo>-</mo><msup><mi>𝐘</mi><mi>𝖳</mi></msup></mrow><mo fence="true">∥</mo></mrow><mn>2</mn></msup><mo>+</mo><mrow><mi>λ</mi><mo>⁢</mo><msup><mrow><mo fence="true">∥</mo><mi>𝐖</mi><mo fence="true">∥</mo></mrow><mn>2</mn></msup></mrow></mrow><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(5)</span></td></tr>
+</table>
+</div>
+<div id="S5.SS0.SSS0.P1.p3" class="ltx_para">
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS0.SSS0.P1.p3.m1" class="ltx_Math" alttext="m" display="inline"><mi>m</mi></math> is the number of training examples and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS0.SSS0.P1.p3.m2" class="ltx_Math" alttext="\lambda" display="inline"><mi>λ</mi></math> a regularization parameter. The matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S5.SS0.SSS0.P1.p3.m3" class="ltx_Math" alttext="\mathbf{W}" display="inline"><mi>𝐖</mi></math> is used as the tensor for the specific verb.</p>
+</div>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Supervised disambiguation</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">In our first experiment we test the effectiveness of a prior disambiguation step for a tensor-based model in a “sandbox” using supervised learning. The goal is to create composite vectors for a number of elementary verb phrases of the form <span class="ltx_text ltx_font_italic">verb-object</span> with and without an explicit disambiguation step, and evaluate which model approximates better the holistic vectors of these verb phrases.</p>
+</div>
+<div id="S6.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Verb</span></th>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Meaning 1</span></th>
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Meaning 2</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_text ltx_font_small">break</span></td>
+<td class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_text ltx_font_small">violate (56)</span></td>
+<td class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_text ltx_font_small">break (22)</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">catch</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">capture (28)</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">be on time (21)</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">play</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">musical instrument (47)</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">sports (29)</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">admit</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">permit to enter (12)</span></td>
+<td class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">acknowledge (25)</span></td></tr>
+<tr class="ltx_tr">
+<td class="ltx_td ltx_align_left ltx_border_b"><span class="ltx_text ltx_font_small">draw</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b"><span class="ltx_text ltx_font_small">attract (64)</span></td>
+<td class="ltx_td ltx_align_left ltx_border_b"><span class="ltx_text ltx_font_small">sketch (39)</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 1: </span>Ambiguous verbs for the supervised task. The numbers in parentheses refer to the collected training examples for each case.</div>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p class="ltx_p">The verb phrases of our dataset are based on the 5 ambiguous verbs of Table <a href="#S6.T1" title="Table 1 ‣ 6 Supervised disambiguation ‣ Resolving Lexical Ambiguity in Tensor Regression Models of Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>. Each verb has been combined with two different sets of nouns that appear in a verb-object relationship with that verb in the corpus (a total of 343 verb phrases). The nouns of each set have been manually selected in order to explicitly represent a different meaning of the verb. As an example, in the verb ‘play’ we impose the two distinct meanings of using a musical instrument and participating in a sport; so the first set of objects contains nouns such as ‘oboe’, ‘piano’, ‘guitar’, and so on, while in the second set we see nouns such as ‘football’, ’baseball” etc.</p>
+</div>
+<div id="S6.p3" class="ltx_para">
+<p class="ltx_p">In more detail, the creation of the dataset was done in the following way: First, all verb entries with more than one definition in the Oxford Junior Dictionary <cite class="ltx_cite">[]</cite> were collected into a list. Next, a linguist (native speaker of English) annotated the semantic difference between the definitions of each verb in a scale from 1 (similar) to 5 (distinct). Only verbs with definitions exhibiting completely distinct meanings (marked with 5) were kept for the next step. For each one of these verbs, a list was constructed with all the nouns that appear at least 50 times under a verb-object relationship in the corpus with the specific verb. Then, each object in the list was manually annotated as <span class="ltx_text ltx_font_italic">exclusively</span> belonging to one of the two senses; so, an object could be selected only if it was related to a single sense, but not both. For example, ‘attention’ was a valid object for the <span class="ltx_text ltx_font_italic">attract</span> sense of verb ‘draw’, since it is unrelated to the <span class="ltx_text ltx_font_italic">sketch</span> sense of that verb. On the other hand, ‘car’ is not an appropriate object for either sense of ‘draw’, since it could actually appear under both of them in different contexts. The verbs of Table <a href="#S6.T1" title="Table 1 ‣ 6 Supervised disambiguation ‣ Resolving Lexical Ambiguity in Tensor Regression Models of Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> were the ones with the highest numbers of exemplars per sense, creating a dataset of significant size for the intended task (each holistic vector is compared with 343 composite vectors).</p>
+</div>
+<div id="S6.p4" class="ltx_para">
+<p class="ltx_p">We proceed as follows: We apply linear regression in order to train verb matrices using jointly the object sets for both meanings of each verb, as well as separately—so in this latter case we get two matrices for each verb, one for each sense. For each verb phrase, we create a composite vector by matrix-multiplying the verb matrix with the vector of the specific object. Then we use 4-fold cross validation to evaluate which version of composite vectors (the one created by the ambiguous tensors or the one created by the unambiguous ones) approximates better the holistic vectors of the verb phrases in our test set. This is done by comparing each holistic vector with all the composite ones, and then evaluating the rank of the correct composite vector within the list of results.</p>
+</div>
+<div id="S6.p5" class="ltx_para">
+<p class="ltx_p">In order to get a proper mixing of objects from both senses of a verb in training and testing sets, we set the cross-validation process as follows: We first split both sets of objects in 4 parts. For each fold then, our training set is comprised by <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p5.m1" class="ltx_Math" alttext="\frac{3}{4}" display="inline"><mfrac><mn>3</mn><mn>4</mn></mfrac></math> of set #1 plus <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p5.m2" class="ltx_Math" alttext="\frac{3}{4}" display="inline"><mfrac><mn>3</mn><mn>4</mn></mfrac></math> of set #2, while the test set consists of the remaining <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p5.m3" class="ltx_Math" alttext="\frac{1}{4}" display="inline"><mfrac><mn>1</mn><mn>4</mn></mfrac></math> of set #1 plus <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p5.m4" class="ltx_Math" alttext="\frac{1}{4}" display="inline"><mfrac><mn>1</mn><mn>4</mn></mfrac></math> of set #2. The data points of the training set are presented in the learning algorithm in random order.</p>
+</div>
+<div id="S6.p6" class="ltx_para">
+<p class="ltx_p">We measure approximation in three different metrics. The first one, accuracy, is the strictest, and evaluates in how many cases the composite vector of a verb phrase is the closest one (the first one in the result list) to the corresponding holistic vector. A more relaxed and perhaps more representative method is to calculate the mean reciprocal rank (MRR), which is given by:</p>
+</div>
+<div id="S6.p7" class="ltx_para">
+<table id="S6.E6" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.E6.m1" class="ltx_Math" alttext="\text{MRR}=\frac{1}{m}\sum\limits_{i=1}^{m}\frac{1}{\textit{rank}_{i}}" display="block"><mrow><mtext>MRR</mtext><mo>=</mo><mrow><mfrac><mn>1</mn><mi>m</mi></mfrac><mo>⁢</mo><mrow><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>m</mi></munderover><mfrac><mn>1</mn><msub><mtext>𝑟𝑎𝑛𝑘</mtext><mi>i</mi></msub></mfrac></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(6)</span></td></tr>
+</table>
+</div>
+<div id="S6.p8" class="ltx_para">
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p8.m1" class="ltx_Math" alttext="m" display="inline"><mi>m</mi></math> is the number of objects and <span class="ltx_text ltx_font_italic">rank<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p8.m2" class="ltx_Math" alttext="{}_{i}" display="inline"><msub><mi/><mi>i</mi></msub></math></span> refers to the rank of the correct composite vector for the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p8.m3" class="ltx_Math" alttext="i" display="inline"><mi>i</mi></math>th object.</p>
+</div>
+<div id="S6.p9" class="ltx_para">
+<p class="ltx_p">Finally, a third way to evaluate the efficiency of each model is to simply calculate the average cosine similarity between every holistic vector and its corresponding composite vector.
+The results are presented in Table <a href="#S6.T2" title="Table 2 ‣ 6 Supervised disambiguation ‣ Resolving Lexical Ambiguity in Tensor Regression Models of Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>, reflecting a clear superiority (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S6.p9.m1" class="ltx_Math" alttext="p&lt;0.001" display="inline"><mrow><mi>p</mi><mo>&lt;</mo><mn>0.001</mn></mrow></math> for average cosine similarity) of the prior disambiguation method for every verb and every metric.</p>
+</div>
+<div id="S6.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r ltx_border_t"/>
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold ltx_font_small">Accuracy</span></th>
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold ltx_font_small">MRR</span></th>
+<th class="ltx_td ltx_align_center ltx_border_l ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold ltx_font_small">Avg Sim</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_border_r ltx_border_tt"/>
+<th class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">Amb.</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">Dis.</span></th>
+<th class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">Amb.</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">Dis.</span></th>
+<th class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">Amb.</span></th>
+<th class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">Dis.</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">break</span></th>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">0.19</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">0.28</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">0.41</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">0.50</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">0.41</span></td>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">0.43</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">catch</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.35</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.37</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.58</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.61</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.51</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.57</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">play</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.20</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.28</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.41</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.49</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.60</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.68</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_r"><span class="ltx_text ltx_font_small">admit</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.33</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.43</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.57</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">0.64</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.41</span></td>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.46</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">draw</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">0.24</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">0.29</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">0.45</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_small">0.51</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">0.40</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b"><span class="ltx_text ltx_font_small">0.44</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 2: </span>Results for the supervised task. ‘Amb.’ refers to models without the explicit disambiguation step, and ‘Dis.’ to models with that step.</div>
+</div>
+</div>
+<div id="S7" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">7 </span>Unsupervised disambiguation</h2>
+
+<div id="S7.p1" class="ltx_para">
+<p class="ltx_p">In Section <a href="#S6" title="6 Supervised disambiguation ‣ Resolving Lexical Ambiguity in Tensor Regression Models of Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">6</span></a> we used a controlled procedure to collect genuinely ambiguous verbs and we trained our models from manually annotated data. In this section we briefly outline how the process of creating tensors for distinct senses of a verb can be automated, and we test this idea on a generic verb phrase similarity task.</p>
+</div>
+<div id="S7.p2" class="ltx_para">
+<p class="ltx_p">First, we use unsupervised learning in order to detect the latent senses of each verb in the corpus, following a procedure first described by Schütze <cite class="ltx_cite">[]</cite>. For every occurrence of the verb, we create a vector representing the surrounding context by averaging the vectors of every other word in the same sentence. Then, we apply hierarchical agglomerative clustering (HAC) in order to cluster these context vectors, hoping that different groups of contexts will correspond to the different senses under which the word has been used in the corpus. The clustering algorithm uses Ward’s method as inter-cluster measure, and Pearson correlation for measuring the distance of vectors within a cluster. Since HAC returns a dendrogram embedding all possible groupings, we measure the quality of each partitioning by using the variance ratio criterion <cite class="ltx_cite">[]</cite> and we select the partitioning that achieves the best score (so the number of senses varies from verb to verb).</p>
+</div>
+<div id="S7.p3" class="ltx_para">
+<p class="ltx_p">The next step is to classify every noun that has been used as an object with that verb to the most probable verb sense, and then use these sets of nouns as before for training tensors for the various verb senses. Being equipped with a number of sense clusters created as above for every verb, the classification of each object to a relevant sense is based on the cosine distance of the object vector from the centroids of the clusters.<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>In general, our approach is quite close to the multi-prototype models of Reisinger and Mooney <cite class="ltx_cite">[]</cite>.</span></span></span> Every sense with less than 3 training exemplars is merged to the dominant sense of the verb. The union of all object sets is used for training a single unambiguous tensor for the verb. As usual, data points are presented to learning algorithm in random order. No objects in our test set are used for training.</p>
+</div>
+<div id="S7.p4" class="ltx_para">
+<p class="ltx_p">We test this system on a verb phase similarity task introduced in <cite class="ltx_cite">[]</cite>. The goal is to assess the similarity between pairs of short verb phrases (verb-object constructs) and evaluate the results against human annotations. The dataset consists of 72 verb phrases, paired in three different ways to form groups of various degrees of phrase similarity—a total of 108 verb phrase pairs.</p>
+</div>
+<div id="S7.p5" class="ltx_para">
+<p class="ltx_p">The experiment has the following form: For every pair of verb phrases, we construct composite vectors and then we evaluate their cosine similarity. For the ambiguous regression model, the composition is done by matrix-multiplying the ambiguous verb matrix (learned by the union of all object sets) with the vector of the noun. For the disambiguated version, we first detect the most probable sense of the verb given the noun, again by comparing the vector of the noun with the centroids of the verb clusters; then, we matrix-multiply the corresponding unambiguous tensor created exclusively from objects that have been classified as closer to this specific sense of the verb with the noun. We also test a number of baselines: the ‘verbs-only’ model is a non-compositional baseline where only the two verbs are compared; ‘additive’ and ‘multiplicative’ compose the word vectors of each phrase by applying simple element-wise operations.</p>
+</div>
+<div id="S7.T3" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Model</span></th>
+<th class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Spearman’s <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.T3.m1" class="ltx_Math" alttext="\rho" display="inline"><mi mathsize="normal" stretchy="false">ρ</mi></math></span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_tt"><span class="ltx_text ltx_font_small">Verbs-only</span></th>
+<td class="ltx_td ltx_align_center ltx_border_tt"><span class="ltx_text ltx_font_small">0.331</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Additive</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.379</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Multiplicative</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.301</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Linear regression (ambiguous)</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.349</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left"><span class="ltx_text ltx_font_small">Linear regression (disamb.)</span></th>
+<td class="ltx_td ltx_align_center"><span class="ltx_text ltx_font_small">0.399</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_t"><span class="ltx_text ltx_font_small">Holistic verb phrase vectors</span></th>
+<td class="ltx_td ltx_align_center ltx_border_t"><span class="ltx_text ltx_font_small">0.403</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_t"><span class="ltx_text ltx_font_small">Human agreement</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_t"><span class="ltx_text ltx_font_small">0.550</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_centering ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 3: </span>Results for the phrase similarity task. The difference between the ambiguous and the disambiguated version is s.s. with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S7.T3.m3" class="ltx_Math" alttext="p&lt;0.001" display="inline"><mrow><mi mathsize="normal" stretchy="false">p</mi><mo mathsize="normal" stretchy="false">&lt;</mo><mn mathsize="normal" stretchy="false">0.001</mn></mrow></math>.</div>
+</div>
+<div id="S7.p6" class="ltx_para">
+<p class="ltx_p">The results are presented in Table <a href="#S7.T3" title="Table 3 ‣ 7 Unsupervised disambiguation ‣ Resolving Lexical Ambiguity in Tensor Regression Models of Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>, where again the version with the prior disambiguation step shows performance superior to that of the ambiguous version. There are two interesting observations that can be made on the basis of Table <a href="#S7.T3" title="Table 3 ‣ 7 Unsupervised disambiguation ‣ Resolving Lexical Ambiguity in Tensor Regression Models of Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>. First of all, the regression model is based on the assumption that the holistic vectors of the exemplar verb phrases follow an ideal distributional behaviour that the model aims to approximate as close as possible. The results of Table <a href="#S7.T3" title="Table 3 ‣ 7 Unsupervised disambiguation ‣ Resolving Lexical Ambiguity in Tensor Regression Models of Meaning" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a> confirm this: using just the holistic vectors of the corresponding verb phrases (no composition is involved here) returns the best correlation with human annotations (0.403), providing a proof that the holistic vectors of the verb phrases are indeed reliable representations of each verb phrase’s meaning. Next, observe that the prior disambiguation model approximates this behaviour very closely (0.399) on unseen data, with a difference <span class="ltx_text ltx_font_italic">not</span> statistically significant. This is very important, since a regression model can only perform as well as its training dataset allows it; and in our case this is achieved to a very satisfactory level.</p>
+</div>
+</div>
+<div id="S8" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">8 </span>Conclusion and future work</h2>
+
+<div id="S8.p1" class="ltx_para">
+<p class="ltx_p">This paper adds to existing evidence from previous research that the introduction of an explicit disambiguation step before the composition improves the quality of the produced composed representations. The use of a robust regression model rejects the hypothesis that the proposed methodology is helpful only for relatively “weak” compositional approaches. As for future work, an interesting direction would be to see how a prior disambiguation step can affect deep learning compositional settings similar to <cite class="ltx_cite">[]</cite> and <cite class="ltx_cite">[]</cite>.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgements</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">We would like to thank the three anonymous reviewers for their fruitful comments. Support by EPSRC grant EP/F042728/1 is gratefully acknowledged by D. Kartsaklis and M. Sadrzadeh.</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Wed Jun 11 17:42:36 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

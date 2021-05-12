@@ -1,0 +1,830 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Parallelizing SMT solving: Lazy decomposition and conciliation.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Satisfiability is the fundamental problem of determining if a formula can be satisfied by an interpretation. A variety of problems involved with complex constraints, can be described in terms of satisfiability and solved efficiently, such as scheduling [1], design automation [2] and verification [3], [4]. Many of these problems are encoded in Boolean formulae and solved by Boolean satisfiability (SAT) solvers. Although SAT problem is proven to be NP-complete [5], modern SAT solvers (zChaff[6], MiniSAT[7], etc.) employ sophisticated and effective heuristics to handle problems of interest efficiently. SAT uses only propositional variables and operations, which leads to expensive encoding for problems natively modeled at a higher level of abstraction. In the past decades, Satisfiability Modulo Theories (SMT) has drawn wide attention where atomic formulae can be not only propositions but also predicates in background theories. Problems requiring expressiveness of equality, uninterpreted function symbols, arithmetic, recursive data structures and quantifiers can be handled naturally and efficiently by SMT solvers.
+     </paragraph>
+     <paragraph>
+      There are mainly two kinds of approaches for SMT solving [8]: the eager and the lazy approaches. The former involves translating an SMT problem into an equi-satisfiable Boolean formula and utilizing the power of optimized SAT solvers. Optimized heuristics focus on generating small SAT problems with relatively fair time expense. The example solvers include UCLID[9], STP[10] and Boolector[11]. The latter approach employs a layered framework where the Boolean skeleton of a formula and the theory related reasoning are separated and handled at different levels. In general the eager translation is ad-hoc and slower than the lazy approach [12]. Most of the state-of-the-art SMT solvers employ lazy approaches, such as Z3 [13], Yices[14], CVC4 [15] and MathSAT[16].
+     </paragraph>
+     <paragraph>
+      Traditional eager and lazy SMT solvers work in a sequential manner. Efficiency improvement relies on adjusting the algorithm that handles the Boolean skeleton or theory reasoning. However, SMT problem increases its size and complexity tremendously in real-world applications while the gains given by traditional algorithmic improvements fail to effectively respond to this challenge. With the evolution of parallel hardware, it is crucial to parallelize SMT solving to better utilize the capability of hardware.
+     </paragraph>
+     <paragraph>
+      In this paper, we propose the lazy decomposition and conciliation (LDC) framework for parallel SMT solving on multicore systems. An SMT problem is firstly decomposed into several smaller ones by distributing its clauses, and then solved by conciliating local and global reasoning. SMT solving can benefit from LDC in two aspects. First, the large and complex problem is decomposed into smaller and simpler subproblems that can be solved in parallel. In some cases, satisfiability of the original problem can be directly determined by satisfiability of subproblems. Second, lemmas derived from local reasoning on each subproblem are shared, thus the termination may reach faster than solving the whole problem sequentially. Being a high-level framework, LDC frees solver designers from adjusting low-level algorithm as it requires calling APIs provided by mature sequential solvers only. Moreover, LDC is general and can be applied to various underlying theories. We have instantiated LDC in the theory of equality with uninterpreted functions ({a mathematical formula}TE), and implemented a parallel solver named PZ3 based on Z3 [13], one of the state-of-the-art SMT solvers. Experiment results show the competitive efficiency of PZ3 over Z3. Particularly, PZ3 has drastic performance gains on sparse SMT problems.
+     </paragraph>
+     <paragraph>
+      Main contributions of this paper are summarized as follows:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       We propose a high-level and flexible framework LDC for parallelizing SMT solving on multicore systems, as (1) it can be built upon an existing SMT solver in a loosely-coupled manner without modifying complicated internal algorithms; (2) it is applicable to various practical theories. The soundness and completeness of LDC are also formally established.
+      </list-item>
+      <list-item label="•">
+       We present an instantiation of LDC in {a mathematical formula}TE. The decision procedure can be proven to terminate within a finite number of steps.
+      </list-item>
+      <list-item label="•">
+       We implement the instantiation of LDC in {a mathematical formula}TE as a prototype tool named PZ3 based on Z3. The experimental results show that PZ3 outperforms Z3 on various kinds of random or crafted problems, especially ones with sparse structures.
+      </list-item>
+     </list>
+     <paragraph>
+      The rest of the paper is organized as follows. Section 2 introduces formal preliminaries. In Section 3, we illustrate our framework by a motivating example. Section 4 presents LDC framework and Section 5 instantiates LDC in {a mathematical formula}TE. In Section 6, we prove some important properties of LDC and its instantiation in {a mathematical formula}TE. Section 7 demonstrates a detailed experimental evaluation of our parallelized solver PZ3. Finally, we survey some related work in Section 8 and conclude the paper in Section 9.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Preliminaries
+     </section-title>
+     <paragraph>
+      In this section, we introduce basic concepts and notations used in our paper.
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       First-order logic
+      </section-title>
+      <paragraph>
+       The signature Σ of a first-order language is a tuple {a mathematical formula}(ΣF,ΣP) where {a mathematical formula}ΣF and {a mathematical formula}ΣP are the sets of function and predicate symbols, respectively. Each symbol in Σ is associated with an arity, a non-negative number. In particular, we call 0-arity symbols in {a mathematical formula}ΣF constant symbols, and 0-arity symbols in {a mathematical formula}ΣP propositional symbols. A variable is a symbol denoting an arbitrary object. A Σ-term is a first-order term constructed using symbols in Σ. A Σ-atom is either an expression of the form {a mathematical formula}P(t1,…,tn) where {a mathematical formula}P∈ΣP and {a mathematical formula}t1,…,tn are Σ-terms, or an expression of the form {a mathematical formula}t1=t2 where = is the logical equality symbol and {a mathematical formula}t1,t2 are Σ-terms. A Σ-literal is a Σ-atom or its negation. A Σ-formula is a Boolean combination of Σ-literals. In particular, a Σ-clause is a disjunction of Σ-literals. Σ-sentences are Σ-formulae without free variables. In this paper we are interested in quantifier-free terms and formulae. For technical convenience, we treat variables in quantifier-free formula as constants in a suitable expansion of Σ.
+      </paragraph>
+      <paragraph>
+       A model (or an interpretation) M is a pair {a mathematical formula}(D,(_)M) where {a mathematical formula}D is a non-empty set and {a mathematical formula}(_)M is a map from symbols in Σ to concrete values in {a mathematical formula}D. {a mathematical formula}(_)M assigns each constant symbol {a mathematical formula}c∈ΣF to an element {a mathematical formula}cM∈D; each function symbol f of arity {a mathematical formula}n&gt;0 to a total function {a mathematical formula}fM:Dn→D; each propositional symbol p to an element {a mathematical formula}pM∈{true,false} and each predicate P of arity {a mathematical formula}n&gt;0 to a total function {a mathematical formula}PM:Dn→{true,false}. In the rest of this paper, we use the term “interpretation” instead of “model” because a “model” is defined over the whole Σ while an “interpretation” can be a valuation on a subset of symbols. The definition of interpretation can be extended naturally to terms and formulae. For a term t (or a formula ϕ), we denote {a mathematical formula}tM (or {a mathematical formula}ϕM) the value of t (or ϕ) under the interpretation M. We say Msatisfies (resp. falsifies) a formula ϕ if and only if {a mathematical formula}ϕM is {a mathematical formula}true (resp. {a mathematical formula}false).
+      </paragraph>
+      <paragraph>
+       A Σ-theory{a mathematical formula}T is defined by a set of Σ-sentences. A {a mathematical formula}T-interpretation M is a Σ-interpretation such that all Σ-sentences in {a mathematical formula}T are evaluated to be {a mathematical formula}true under M. Given a theory {a mathematical formula}T, a formula ϕ is (1) {a mathematical formula}T-valid ({a mathematical formula}⊨Tϕ) iff ϕ is satisfied by all {a mathematical formula}T-interpretations; (2) {a mathematical formula}T-satisfiable iff there is at least one {a mathematical formula}T-interpretation that satisfies ϕ; (3) {a mathematical formula}T-unsatisfiable iff ϕ is falsified by all {a mathematical formula}T-interpretations.
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       The theory of equality
+      </section-title>
+      <paragraph>
+       Equality over terms is expressed in the theory of equality, denoted by {a mathematical formula}TE. The signature of {a mathematical formula}TE consists of {a mathematical formula}ΣF={f,g,h,…} and {a mathematical formula}ΣP={=,P,Q,R,…}. {a mathematical formula}TE has four axioms: reflexivity, symmetry, transitivity and consistency. The first three axioms define the predicate “=” as an equivalence relation, while the last axiom guarantees that each input of a function or predicate is associated to exactly one output. All four axioms together make “=” a congruence relation. The other symbols in the signature are uninterpreted as {a mathematical formula}TE does not impose any assumptions on the their interpretations except for the requirement of consistency. Since we are mostly interested in uninterpreted symbols, we use the term “symbol” to refer to uninterpreted symbols in the rest of the paper.
+      </paragraph>
+      <paragraph>
+       Though the validity problem for {a mathematical formula}TE is undecidable due to the undecidability of first-order logic [17], its quantifier-free fragment is decidable in polynomial time using a procedure known as congruence closure [18]. Given a formula ϕ, this algorithm attempts to construct a congruence relation over subterms of ϕ, or to prove that such relation does not exist.
+      </paragraph>
+      <paragraph label="Example 1">
+       Consider a formula:{a mathematical formula} Subterms of ϕ are {a mathematical formula}Sϕ={a,b,f(a),f(b)}. By the congruence closure algorithm, we can construct a relation R of subterms given by the partition {a mathematical formula}Sϕ/R={{a},{b},{f(a),f(b)}}. Therefore, ϕ is {a mathematical formula}TE-satisfiable.
+      </paragraph>
+     </section>
+     <section label="2.3">
+      <section-title>
+       Craig interpolation
+      </section-title>
+      <paragraph>
+       A Craig interpolant ρ is a formula for an inconsistent pair of formulae {a mathematical formula}(ϕ,ψ) such that ρ is implied by ϕ, inconsistent with ψ and refers only to non-logical symbols occurring in both ϕ and ψ.{sup:1} By Craig's interpolation theorem [19], such interpolant ρ exists for an arbitrary inconsistent pair of formulae {a mathematical formula}(ϕ,ψ) in first-order logic. Interpolation was proposed for model checking, firstly in propositional logic [20]. Craig interpolation also holds for underlying theories [21]. Suppose an inconsistent pair of formulae {a mathematical formula}(ϕ,ψ) in theory {a mathematical formula}T, there exists an interpolant ρ such that (1) {a mathematical formula}ϕ→Tρ, which denotes that {a mathematical formula}ϕ→ρ holds under all the {a mathematical formula}T-interpretations; (2) ρ is inconsistent with ψ; (3) ρ refers only to non-logical symbols of ϕ and ψ in common. Eligible theories include equality [22], [23], linear real arithmetic [22], [24], Presburger arithmetic [24], [25], arrays without extensionality [24], [26], [27], etc.
+      </paragraph>
+      <paragraph>
+       There are two main kinds of approaches to compute interpolant. The first extracts interpolant from the proof derived from inconsistency [20], [22], [28], which is adopted by some important interpolating theorem provers such as Z3 [29] and MathSAT[16]. The latter involves reduction of the interpolation problem to constraint solving [23], [30].
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      A motivating example
+     </section-title>
+     <paragraph>
+      In this section we demonstrate our parallel SMT solving technique informally using a small example. Consider the following unsatisfiable {a mathematical formula}TE-formula ϕ:{a mathematical formula}ϕ is in CNF consisting of 13 clauses and contains 10 constant symbols. In what follows, we solve the satisfiability of ϕ using 3 threads {a mathematical formula}T0,T1,T2 in parallel.
+     </paragraph>
+     <paragraph>
+      Decomposition We distribute clauses of ϕ into 2 subformulae {a mathematical formula}ψ1, {a mathematical formula}ψ2. The first 8 clauses are distributed to {a mathematical formula}ψ1 and the others are distributed to {a mathematical formula}ψ2. Table 1 shows that {a mathematical formula}ψ1 contains 7 symbols and {a mathematical formula}ψ2 contains 5 symbols, while they share only 2 symbols.
+     </paragraph>
+     <paragraph>
+      Solving subformulae We check the satisfiability of {a mathematical formula}ψ1 on thread {a mathematical formula}T1 and {a mathematical formula}ψ2 on thread {a mathematical formula}T2. Both {a mathematical formula}ψ1 and {a mathematical formula}ψ2 are satisfiable, however, it is insufficient to conclude that {a mathematical formula}ψ1∧ψ2 is satisfiable because they may have inconsistent interpretations on the shared symbols. Then we compute an interpretation on shared symbols (namely shared interpretation) on the thread {a mathematical formula}T0 such that this interpretation is consistent with {a mathematical formula}ψ1 and {a mathematical formula}ψ2 simultaneously.
+     </paragraph>
+     <paragraph>
+      Conciliation We choose a candidate shared interpretation {a mathematical formula}MS arbitrarily, for example, one that corresponds to the congruence relation {a mathematical formula}{{x0},{x2}}. {a mathematical formula}MS can be characterized as the constraint {a mathematical formula}FS:x0≠x2. Next we check whether {a mathematical formula}FS is consistent with {a mathematical formula}ψ1 and {a mathematical formula}ψ2 on threads {a mathematical formula}T1,T2, respectively. It is found that {a mathematical formula}(ψ1,FS) is inconsistent while {a mathematical formula}(ψ2,FS) is consistent. Then an interpolant {a mathematical formula}i11:x2=x0 is derived from {a mathematical formula}(ψ1,FS). By definition, we have {a mathematical formula}ψ1→TEi11, thus {a mathematical formula}i11 is one of the logical consequences implied by ϕ. In other words, interpolants can guide the search for a feasible shared interpretation.
+     </paragraph>
+     <paragraph>
+      Then, we choose another shared interpretation {a mathematical formula}MS′ satisfying the constraint {a mathematical formula}i11 and it corresponds to the congruence relation {a mathematical formula}{{x0,x2}} which is characterized as the formula {a mathematical formula}FS′:x0=x2. From the inconsistency of {a mathematical formula}(ψ2,FS′), we derive an interpolant {a mathematical formula}i22:x2≠x0.
+     </paragraph>
+     <paragraph>
+      Next, we search for a shared interpretation {a mathematical formula}MS″ which satisfies {a mathematical formula}i11 and {a mathematical formula}i22. However, such interpretation does not exist because {a mathematical formula}i11 and {a mathematical formula}i22 are in conflict. Formally, we have {a mathematical formula}ϕ→TE(i11∧i22)→TE⊥ which implies that ϕ is falsified by all the {a mathematical formula}TE-interpretations. In other words, ϕ is unsatisfiable.
+     </paragraph>
+     <paragraph>
+      This example shows that our parallel SMT solving framework can be advantageous over the sequential DPLL({a mathematical formula}T) in two aspects: (1) the search space for interpretations is substantially reduced, as in this running example, the interpretation space for the original problem involves 10 constants while the space for shared interpretations involves only 2, thus the conflicts could be discovered faster, (2) parallel threads share derived interpolants, which enables multiple threads to prune the search space in different manners simultaneously.
+     </paragraph>
+    </section>
+    <section label="4">
+     <section-title>
+      The LDC framework
+     </section-title>
+     <paragraph>
+      The LDC framework encompasses two main steps: lazy decomposition and conciliation. First the input formula ϕ is decomposed into subformulae. If subformulae do not share symbols or any of them is unsatisfiable, (un)satisfiability of ϕ can be directly derived. Otherwise, local reasoning inside subformulae is conciliated by unifying their interpretations on shared symbols. Finally, we can either find an interpretation on shared symbols which is a witness of satisfiability of ϕ, or prove that such interpretation does not exist (thus ϕ is unsatisfiable). The complete procedure of LDC framework is shown in Algorithm 1.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Lazy decomposition
+      </section-title>
+      <paragraph>
+       Let {a mathematical formula}ϕ=ϕ1∧…∧ϕn be in CNF. A lazy decomposition{a mathematical formula}ψ={ψ1,…,ψk} is a partition of {a mathematical formula}{ϕ1,…,ϕn} into k disjoint subsets of clauses. Thus, {a mathematical formula}ψ1,…,ψk are k subformulae of ϕ. A symbol x is shared in decomposition ψ if it is contained in multiple subformulae. We use {a mathematical formula}Σψ to denote the set of all shared symbols in ψ. If {a mathematical formula}Σψ is empty, the satisfiability of ϕ is trivially implied (shown from line 2 to 6). Otherwise, the satisfiability of {a mathematical formula}ψ1,…,ψk can not imply the satisfiability of ϕ because interpretations of shared symbols by subformulae may be inconsistent. Our decomposition method is lazy because shared symbols are handled after solving each subformula. Laziness avoids expensive computations for resolving overlapping of subformulae directly on the formula level.
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Conciliation
+      </section-title>
+      <paragraph>
+       The conciliation step determines whether a global interpretation satisfying ϕ exists by searching for an interpretation {a mathematical formula}MS on shared symbols where {a mathematical formula}MS can be extended to a satisfying global interpretation. This step consists of iterations across lines 10–21. G denotes global invariant, which is a conjunction of formulae implied by ϕ. Before the first iteration, we pick an arbitrary shared interpretation {a mathematical formula}MS since G is {a mathematical formula}true (and thus there is no constraint on {a mathematical formula}MS). In each iteration, we firstly characterize {a mathematical formula}MS as a semantically equivalent formula {a mathematical formula}FS, and then check the consistency of {a mathematical formula}FS with each subformula {a mathematical formula}ψi by Interpolate, which returns an interpretation satisfying {a mathematical formula}ψi∧FS if {a mathematical formula}(ψi,FS) is consistent, or an interpolant {a mathematical formula}Ii such that {a mathematical formula}ψi→Ii→¬FS otherwise. The interpolant {a mathematical formula}Ii can be regarded as an over-approximation of {a mathematical formula}ψi with respect to {a mathematical formula}FS, and it is used to refine the global invariant G, as shown in line 14. Even if k pairs {a mathematical formula}(ψ1,FS),…,(ψk,FS) are all consistent, ϕ is not necessarily satisfiable because {a mathematical formula}M1,…,Mk may not be combinable into a global interpretation for ϕ. The following example demonstrates this point.
+      </paragraph>
+      <paragraph label="Example 2">
+       Consider the unsatisfiable formula ϕ in {a mathematical formula}TE along with the decomposition {a mathematical formula}ψ={ψ1,ψ2}:{a mathematical formula} By definition {a mathematical formula}Σψ={f,a}. We arbitrarily choose an interpretation {a mathematical formula}MS on {a mathematical formula}Σψ corresponding to the congruence relation {a mathematical formula}{{a},{f(a)}}. {a mathematical formula}MS is characterized as the formula {a mathematical formula}FS:f(a)≠a, which is consistent with both {a mathematical formula}ψ1 and {a mathematical formula}ψ2. However, {a mathematical formula}MS is not the witness of satisfiability because ϕ is unsatisfiable.
+      </paragraph>
+      <paragraph>
+       Thus, we check whether {a mathematical formula}M1,…,Mk are combinable by CombineInterp (line 16). If they are combinable, then ϕ is satisfiable as the combination of {a mathematical formula}M1,…,Mk is an interpretation that satisfies ϕ; otherwise {a mathematical formula}MS needs to be refined (line 17) for the next iteration.
+      </paragraph>
+      <paragraph>
+       If there exists an inconsistent pair {a mathematical formula}(ψi,FS), the global invariant G will be refined by new derived interpolants. Then we compute the new shared interpretation (line 21) for the next iteration by checking the satisfiability of G. If G is unsatisfiable, ϕ is concluded to be unsatisfiable (line 20).
+      </paragraph>
+      <paragraph>
+       The conciliation step does not guarantee termination in general. However, for some theories such as {a mathematical formula}TE we can instantiate it with the certain termination property.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     Instantiation in {a mathematical formula}TE
+     <paragraph>
+      To instantiate the LDC framework, one needs to carefully design the instantiations of 7 interfaces: Decompose, Solve, ComputeSharedInterp, Formulate, Interpolate, CombineInterp and RefineSharedInterp.
+     </paragraph>
+     <section label="5.1">
+      Decompose: make lazy decomposition
+      <paragraph>
+       Decompose distributes the clauses of the input formula to generate subformulae. The selection of decomposition heuristic could essentially influence the efficiency of the decision procedure since the decomposition schema determines the number of shared symbols and the complexities of subproblems. A desired decomposition ψ should have {a mathematical formula}Σψ of small size, because the conciliation step could terminate faster.
+      </paragraph>
+      <paragraph>
+       Decomposition can be modeled as the graph partition problem. The clause graph of formula ϕ is {a mathematical formula}Gϕ=(Vϕ,Eϕ), where the set of vertices {a mathematical formula}Vϕ corresponds to the set of clauses {a mathematical formula}{ϕ1,…,ϕn} and the set of edges {a mathematical formula}Eϕ⊆Vϕ×Vϕ×2Σ consists of labeled edges {a mathematical formula}(v1,v2,S) where the clauses {a mathematical formula}v1 and {a mathematical formula}v2 share the set of symbols S. Formally, the label function of edges {a mathematical formula}wϕ:Eϕ→Σ is defined as{a mathematical formula} where {a mathematical formula}Σvi denotes the set of symbols in the clause {a mathematical formula}vi ({a mathematical formula}i=1,2). To minimize the size of {a mathematical formula}Σψ, it suffices to find {a mathematical formula}{V1ϕ,…,Vkϕ}, a k-cut of {a mathematical formula}Vϕ that minimizes{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Finding the exact solution of this combinatorial optimization problem is generally NP-hard and computationally prohibitive in practice, especially when the size of ϕ is very large. Therefore a fast greedy approximation algorithm is employed instead.
+      </paragraph>
+      <paragraph>
+       Algorithm 2 illustrates our greedy decomposition. To decompose the input formula into k subformulae ({a mathematical formula}k&gt;1), the algorithm runs in {a mathematical formula}(k−1) iterations. In each iteration, we find a clause {a mathematical formula}v⁎ from {a mathematical formula}Vϕ with the minimum set of symbols, remove it from {a mathematical formula}Gϕ and distribute it to the current subformula {a mathematical formula}ψi. Next, we add symbols in distributed clause to the set S, and update the weight function {a mathematical formula}wϕ by eliminating symbols in S. Then all the isolated clauses (a clause {a mathematical formula}v∈Vϕ is isolated when {a mathematical formula}wϕ((v,v′))=∅ for any other clause {a mathematical formula}v′∈Vϕ) are distributed to {a mathematical formula}ψi. All the symbols contained in {a mathematical formula}ψi are added to S for the next iteration. After {a mathematical formula}(k−1) iterations, {a mathematical formula}(k−1) subformulae are generated and the remaining clauses form {a mathematical formula}ψk. When {a mathematical formula}Vϕ becomes empty, the remaining unassigned subformulae are {a mathematical formula}true.
+      </paragraph>
+      <paragraph label="Example 3">
+       Decompose the following formula ϕ into 3 subformulae.{a mathematical formula}First we construct the clause graph {a mathematical formula}Gϕ for input formula ϕ, shown in Fig. 1a. Notice that clause {a mathematical formula}v3 contains the fewest symbols, then we remove {a mathematical formula}v3 from {a mathematical formula}Gϕ and update weight function, shown in Fig. 1b. Now {a mathematical formula}v1 is an isolated node as it shares no symbols with any other clauses. Thus we remove {a mathematical formula}v1 and update the {a mathematical formula}Gϕ again. After the first iteration we have {a mathematical formula}ψ1:v1∧v3.Next we work on the clause graph shown in Fig. 1c to yield the second subformula {a mathematical formula}ψ2:v4. Finally, the remaining clause {a mathematical formula}v2 composes the third subformula {a mathematical formula}ψ3. The output decomposition is {a mathematical formula}ψ={ψ1,ψ2,ψ3} where {a mathematical formula}Σψ={c,e}.
+      </paragraph>
+      <paragraph>
+       The time complexity of Algorithm 2 is discussed as follows. First the construction of {a mathematical formula}Gϕ has {a mathematical formula}O(|Vϕ|2). For one iteration from line 3 to 15, finding {a mathematical formula}v⁎ (in line 6) takes {a mathematical formula}O(|Vϕ|) time, updating weight function (from line 10 to 11) takes {a mathematical formula}O(|Vϕ|2) time and distributing clauses for {a mathematical formula}ψi (from line 12 to 14) has {a mathematical formula}O(|Vϕ|2) time complexity. Hence, the overall worst-case time complexity of Algorithm 2 is {a mathematical formula}O(k|Vϕ|2) which is polynomial in the number of clauses of the input formula ϕ.
+      </paragraph>
+     </section>
+     <section label="5.2">
+      Solve and Interpolate
+      <paragraph>
+       Solve is to determine the satisfiability of a subformula by invoking an existing solver. Interpolate attempts to compute the interpolant between two formulae {a mathematical formula}ψi and {a mathematical formula}FS. If they are inconsistent, we compute an interpolant {a mathematical formula}Ii and set {a mathematical formula}flag to true; otherwise we derive an interpretation {a mathematical formula}Mi satisfying {a mathematical formula}ψi∧FS and set {a mathematical formula}flag to false. Existing interpolation engine, such as Z3, MathSAT, can be utilized to compute interpolant in various theories.
+      </paragraph>
+     </section>
+     <section label="5.3">
+      ComputeSharedInterp: compute a shared interpretation
+      <paragraph>
+       ComputeSharedInterp is to derive a shared interpretation satisfying the global invariant G. In the following, we define some concepts to serve as the vehicle for formalizing our discussion.
+      </paragraph>
+      <paragraph label="Definition 1">
+       {a mathematical formula}TE-interpretationGiven a congruence relation {a mathematical formula}{C1,…,Cn} where {a mathematical formula}C1,…,Cn are n congruence classes of terms, there is a {a mathematical formula}TE-interpretation {a mathematical formula}M=(D,(_)M) such that
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}D={μ1,…,μn} where {a mathematical formula}μ1,…,μn are labels for {a mathematical formula}C1,…,Cn respectively;
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}cM=μi if c is a constant symbol and {a mathematical formula}c∈Ci;
+       </list-item>
+       <list-item label="3.">
+        {a mathematical formula}fM(μi1,…,μik)=μj if there exists a term {a mathematical formula}f(t1¯,…,tk¯)∈Cj and {a mathematical formula}t1¯∈Ci1,…,tk¯∈Cik.
+       </list-item>
+      </list>
+      <paragraph label="Definition 2">
+       It is possible to assign a different set of labels as the domain of a {a mathematical formula}TE-interpretation. Thus, a congruence relation can be represented by many isomorphic interpretations. The isomorphism over {a mathematical formula}TE-interpretations is defined below. Isomorphism of {a mathematical formula}TE-interpretationsLet {a mathematical formula}M1 and {a mathematical formula}M2 be {a mathematical formula}TE-interpretations, {a mathematical formula}D1 and {a mathematical formula}D2 be the domains of {a mathematical formula}M1 and {a mathematical formula}M2 respectively. A map {a mathematical formula}h:D1→D2 is an isomorphism of {a mathematical formula}M1 into {a mathematical formula}M2 if the following condition holds:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        h is bijective;
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}h(cM1)=cM2 for each constant symbol {a mathematical formula}c∈Σ;
+       </list-item>
+       <list-item label="3.">
+        {a mathematical formula}h(fM1(d1,…,dn))=fM2(h(d1),…,h(dn)), for each n-ary function symbol {a mathematical formula}f∈Σ and {a mathematical formula}d1,…,dn∈D1.
+       </list-item>
+      </list>
+      <paragraph label="Definition 3">
+       Next we give a formal definition of shared interpretation. Shared interpretationGiven a formula ϕ and its decomposition {a mathematical formula}ψ={ψ1,…,ψk}, {a mathematical formula}MS is a shared interpretation if for each constant symbol {a mathematical formula}c∈⋃1≤i&lt;j≤k(Σψi∩Σψj), {a mathematical formula}cMS is defined.
+      </paragraph>
+      <paragraph>
+       The procedure of ComputeSharedInterp is shown in Algorithm 3. In essence, we derive a shared interpretation {a mathematical formula}MS by computing an interpretation M satisfying G using an existing SMT solver. For each constant c that is not interpreted by M, we specify an arbitrary value in the domain {a mathematical formula}D for c to refine M. Finally, the fully-refined M is {a mathematical formula}MS. It is necessary to address uninterpreted constants in this way because computing the shared interpretation is to complete a candidate interpretation for each {a mathematical formula}ψi ({a mathematical formula}1≤i≤k). The outcome is that either for each {a mathematical formula}ψi ({a mathematical formula}1≤i≤k) we luckily find an interpretation that satisfies each {a mathematical formula}ψi while {a mathematical formula}MS is possibly the witness of global satisfiability, or {a mathematical formula}MS helps to derive new interpolants which are logical consequences of ϕ.
+      </paragraph>
+     </section>
+     <section label="5.4">
+      Formulate: characterize interpretation as formula
+      <paragraph>
+       Formulate is to characterize an interpretation {a mathematical formula}MS as a semantically equivalent formula {a mathematical formula}FS. In {a mathematical formula}TE, an interpretation is associated with a congruence relation corresponding to a partition of terms, thus {a mathematical formula}FS consists of two kinds of clauses: (1) equalities over terms in each congruence class; (2) inequalities over the representatives of all the congruence classes. More specifically, let {a mathematical formula}MS be an interpretation corresponding to a congruence relation represented as{a mathematical formula} To characterize {a mathematical formula}MS as a formula {a mathematical formula}FS, follow the steps below:
+      </paragraph>
+      <paragraph>
+       (1) build n equalities for n congruence classes:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       (2) build a constraint expressing the distinction of n representatives:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       (3) conjunct {a mathematical formula}n+1 constraints to form {a mathematical formula}FS:{a mathematical formula}
+      </paragraph>
+     </section>
+     <section label="5.5">
+      CombineInterp: combine interpretations for subformulae
+      <paragraph>
+       This procedure checks whether k interpretations {a mathematical formula}M1,…,Mk are combinable under the shared interpretation {a mathematical formula}MS. Informally, {a mathematical formula}M1,…,Mk can be combined into an interpretation satisfying the input formula ϕ if their valuations on shared symbols are included in {a mathematical formula}MS. This is necessary when subformulae share function symbols of non-zero arity, as Example 2 illustrates.
+      </paragraph>
+      <paragraph>
+       Given an interpretation M with the domain {a mathematical formula}D, a function application is a pair {a mathematical formula}(f,d) where f is an n-ary ({a mathematical formula}n&gt;0) function symbol and {a mathematical formula}d∈Dn. In the context of LDC, we say {a mathematical formula}(f,d) is a shared function application if there exists {a mathematical formula}i,j ({a mathematical formula}1≤i&lt;j≤k) such that {a mathematical formula}fMi(d) and {a mathematical formula}fMj(d) are defined. The ExtractSFA procedure, shown in Algorithm 4, is to collect all the shared function applications which have no valuations in {a mathematical formula}MS. Before collecting function applications, ExtractSFA calls the Unify to unify each {a mathematical formula}Mi with {a mathematical formula}MS by substituting the certain domain elements in {a mathematical formula}Di of {a mathematical formula}Mi with the domain elements in {a mathematical formula}DS of {a mathematical formula}MS in order to make their interpretations on shared symbols consistent in literal.
+      </paragraph>
+      <paragraph>
+       The CombineInterp procedure, shown in Algorithm 5, is to call the ExtractSFA procedure and return whether the returned set F is empty. If F is empty, then all the shared function applications have valuations in {a mathematical formula}MS and thus {a mathematical formula}M1,…,Mk can be combined into an interpretation satisfying ϕ (in other words, {a mathematical formula}MS is the witness of global satisfiability).
+      </paragraph>
+      <paragraph>
+       Unify Elements in the domain {a mathematical formula}Di of each interpretation {a mathematical formula}Mi are unified with respect to {a mathematical formula}MS by substitution. The rules for element substitution are shown in Fig. 2. The notation {a mathematical formula}M[μ/ν] denotes a new interpretation with all the occurrences of ν in M substituted with μ, where ν is an element in the domain of M. Therefore, the substitution operations make changes to not only the domain of M, but also {a mathematical formula}(_)M. The Const-Sub rule substitutes the element ν in {a mathematical formula}Di with μ in {a mathematical formula}DS if there is a constant symbol c interpreted as μ and ν by {a mathematical formula}MS and {a mathematical formula}Mi, respectively. The Func-Sub rule is applied to function applications. Fig. 2 shows a special case of this rule for n-ary ({a mathematical formula}n&gt;0) function applications. The element ν in {a mathematical formula}Di is substituted as μ in {a mathematical formula}DS if {a mathematical formula}(d,ν)∈fMi and {a mathematical formula}(d,μ)∈fMS. To unify two interpretations {a mathematical formula}Mi and {a mathematical formula}MS, we first apply the Const-Sub rule until saturation and then apply the Func-Sub rule until saturation. We have the following lemmas on element substitution.
+      </paragraph>
+      <paragraph label="Proof">
+       Each element in{a mathematical formula}Dican be substituted for at most once.Let {a mathematical formula}ΣM denote the set of symbols interpreted by M. Consider an element {a mathematical formula}ν∈Di substituted as {a mathematical formula}μ∈DS, then there exists a term t which is constituted by the symbols in {a mathematical formula}(ΣMi∩ΣMS), such that {a mathematical formula}tMi=ν and {a mathematical formula}tMS=μ. Let {a mathematical formula}Mi′ be the new interpretation after element substitution, we have {a mathematical formula}tMi′=μ. If μ can be further substituted by {a mathematical formula}μ′∈DS where {a mathematical formula}μ≠μ′, then {a mathematical formula}tMS=μ′. Hence we have {a mathematical formula}(t=t)MS=(μ=μ′)=false, which is a contradiction. □
+      </paragraph>
+      <paragraph label="Proof">
+       Upon termination of theUnifyprocedure, none of the substitution rules are applicable.Assume the Const-Sub rule is applicable, then there exists a constant {a mathematical formula}c∈(ΣMi∩ΣMS) such that {a mathematical formula}cMS=μ,cMi=ν and {a mathematical formula}μ≠ν. If ν is the substituted element, then the assumption contradicts to Lemma 1. Otherwise, this element should be substituted before applying the Func-Sub rule. It is trivial that the Func-Sub rule is not applicable when the Unify procedure finishes. □
+      </paragraph>
+      <paragraph label="Example 4">
+       Consider the formula ϕ and its decomposition {a mathematical formula}ψ={ψ1,ψ2} in Example 2. We arbitrarily choose a shared interpretation {a mathematical formula}MS which corresponds to the congruence relation {a mathematical formula}{{a},{f(a)}}, and its semantically equivalent formula {a mathematical formula}FS is {a mathematical formula}a≠f(a). Let {a mathematical formula}M1 and {a mathematical formula}M2 be interpretations such that {a mathematical formula}M1⊨(ψ1∧FS) and {a mathematical formula}M2⊨(ψ2∧FS). The congruence relations of {a mathematical formula}M1 and {a mathematical formula}M2 are{a mathematical formula} We have {a mathematical formula}MS=(DS,(_)MS), {a mathematical formula}M1=(D1,(_)M1) and {a mathematical formula}M2=(D2,(_)M2), such that{a mathematical formula}To unify {a mathematical formula}M1 with respect to {a mathematical formula}MS, we have {a mathematical formula}D1←D1[μ1/ν3] by applying the Const-Sub rule, and {a mathematical formula}D1←D1[μ2/ν1] by applying the Func-Sub rule. As the result, the updated {a mathematical formula}M1 is as follows.{a mathematical formula} Analogously we have {a mathematical formula}M2←Unify({a mathematical formula}M2,{a mathematical formula}MS) such that:{a mathematical formula}Next, we collect the shared function applications that have no valuations in {a mathematical formula}MS by calling ExtractSFA({a mathematical formula}M1,{a mathematical formula}M2,{a mathematical formula}MS). There are two shared function applications: {a mathematical formula}(f,μ1) and {a mathematical formula}(f,μ2). Since {a mathematical formula}fMS(μ1) is defined, the resultant set F consists of one element {a mathematical formula}(f,μ2). Therefore, the CombineInterp procedure returns false.
+      </paragraph>
+     </section>
+     <section label="5.6">
+      RefineSharedInterp: refine the shared interpretation
+      <paragraph>
+       RefineSharedInterp refines the valuations of shared function symbols in {a mathematical formula}MS in order to make {a mathematical formula}MS have valuations on all the shared function applications over {a mathematical formula}M1,…,Mk. Algorithm 6 illustrates its procedure which is to specify arbitrary values for shared function applications that formerly have no valuations in {a mathematical formula}MS. The refined model {a mathematical formula}MS′ has an important property: {a mathematical formula}GMS=true⟹GMS′=true. This is because {a mathematical formula}MS′ contains all the information in {a mathematical formula}MS which is sufficient to interpret G as {a mathematical formula}true.
+      </paragraph>
+      <paragraph label="Example 5">
+       Consider the formula and its decomposition in Example 2. First, the ExtractSFA procedure derives the set of shared function applications {a mathematical formula}F={(f,μ2)}. Next, we can refine the {a mathematical formula}MS by specifying a value for {a mathematical formula}fMS(μ2). The refined {a mathematical formula}MS=(DS,(_)MS) is as follows.{a mathematical formula} And thus {a mathematical formula}MS can be characterized as the following formula:{a mathematical formula}
+      </paragraph>
+     </section>
+     <section label="5.7">
+      <section-title>
+       Running example
+      </section-title>
+      <paragraph>
+       We demonstrate the complete procedure of instantiated LDC using the following {a mathematical formula}TE-formula ϕ:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Assume that the decomposition is {a mathematical formula}ψ={ψ1,ψ2,ψ3}. Table 2 lists the detailed procedure of solving the satisfiability of ϕ. For the sake of clarity, we elaborate the step 6 as follows. After the Unify operation, {a mathematical formula}M1,M2,M3 are updated as{a mathematical formula} The ExtractSFA procedure returns the set {a mathematical formula}F={(f,μ1),(f,μ2)} of shared function applications that have no valuations in {a mathematical formula}MS. The values for {a mathematical formula}fMS(μ1) and {a mathematical formula}fMS(μ2) are then specified and the shared interpretation {a mathematical formula}MS is refined as follows.{a mathematical formula}
+      </paragraph>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Discussion
+     </section-title>
+     <paragraph>
+      In this section we analyze the LDC framework and its instantiation in {a mathematical formula}TE from a theoretical perspective. First we will show that LDC is sound and complete, i.e. it always returns correct results. Then, we will prove that the instantiation in {a mathematical formula}TE terminates after a finite number of steps. Finally, we discuss the generality of LDC.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       Soundness and completeness
+      </section-title>
+      <paragraph>
+       First, we begin with formal specifications of LDC interfaces.
+      </paragraph>
+      <paragraph>
+       Decompose is to make a k-decomposition of the formula ϕ, given ϕ and k:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Solve is to determine the satisfiability of input formula ϕ:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       ComputeSharedInterp derives a shared interpretation {a mathematical formula}MS such that the domain of {a mathematical formula}(_)MS is {a mathematical formula}Σψ and {a mathematical formula}MS satisfies the constraint G:{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Formulate is to convert the interpretation {a mathematical formula}MS into its semantically equivalent formula{a mathematical formula}FS. The concept of semantically equivalent formula is defined as follows.
+      </paragraph>
+      <paragraph label="Definition 4">
+       Given an interpretation M and a formula ϕ, we say ϕ is fully interpreted by M iff each sub-term of ϕ can be interpreted as an element in the domain of M. We use the notation {a mathematical formula}LM to denote the set of all the formulae which can be fully interpreted by M.
+      </paragraph>
+      <paragraph label="Definition 5">
+       Given an interpretation M, F is its semantically equivalent formula iff{a mathematical formula} We use the notation {a mathematical formula}M▷F to denote that the interpretation M and the formula F are semantically equivalent. Note that ▷ is non-commutative.
+      </paragraph>
+      <paragraph label="Proof">
+       Given an interpretation M and its semantically equivalent formula F, for a formula{a mathematical formula}ϕ∈LMsuch that{a mathematical formula}ϕM=true, we have{a mathematical formula}F→ϕ.By Definition 5, {a mathematical formula}(¬ϕ)M=false⟺(¬ϕ∧F) is unsatisfiable. Thus {a mathematical formula}(¬F∨ϕ) is valid, and we have {a mathematical formula}F→ϕ. □
+      </paragraph>
+      <paragraph>
+       Then, the formal specification of Formulate is as follows.{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Furthermore, given an interpretation M, its semantically equivalent formula always exists. Consider two sets of formulae {a mathematical formula}FM={ϕ|ϕM=true} and {a mathematical formula}FM¯={ϕ|ϕM=false}, then we have {a mathematical formula}F=(⋀ϕ∈FMϕ)∧(⋀ρ∈FM¯¬ρ) such that {a mathematical formula}M▷F holds.
+      </paragraph>
+      <paragraph>
+       Interpolate computes either an interpolant or an interpretation given two formulae.{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       CombineInterp is to check whether {a mathematical formula}M1,…,Mk are combinable with respect to the shared interpretation {a mathematical formula}MS where {a mathematical formula}MS▷FS and {a mathematical formula}Mi⊨(ψi∧FS) for each {a mathematical formula}1≤i≤k. It returns true if {a mathematical formula}M1,…,Mk are combinable, or false otherwise.{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       The interpretation combinability is formally defined as follows.
+      </paragraph>
+      <paragraph label="Definition 6">
+       Interpretation combinabilityk interpretations {a mathematical formula}M1,…,Mk are combinable under the shared interpretation {a mathematical formula}MS if there exists {a mathematical formula}M1′≅M1,…,Mk′≅Mk where {a mathematical formula}M1′=(D1,(_)M1′),…,Mk′=(Dk,(_)Mk′) such that:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}ΣMS=⋃1≤i&lt;j≤k(ΣMi∩ΣMj);
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}cMi′=cMj′=cMS for each constant {a mathematical formula}c∈ΣMi∩ΣMj ({a mathematical formula}1≤i&lt;j≤k);
+       </list-item>
+       <list-item label="3.">
+        for each n-ary ({a mathematical formula}n&gt;0) function symbol {a mathematical formula}f∈ΣMi∩ΣMj and {a mathematical formula}d∈(Di∩Dj)n ({a mathematical formula}1≤i&lt;j≤k), if {a mathematical formula}fMi′(d) and {a mathematical formula}fMj′(d) are defined, then {a mathematical formula}fMS(d) is also defined and we have {a mathematical formula}fMi′(d)=fMj′(d)=fMS(d).
+       </list-item>
+      </list>
+      <paragraph>
+       RefineSharedInterp is to compute a new shared interpretation by specifying values for shared function applications which are not specified by {a mathematical formula}MS. Let {a mathematical formula}MS′ be the result of {a mathematical formula}RefineSharedInterp({a mathematical formula}MS,{a mathematical formula}M1,…,Mk) and then we have:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}MS′≠MS;
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}ΣMS′=ΣMS;
+       </list-item>
+       <list-item label="3.">
+        for each constant {a mathematical formula}c∈ΣMS, {a mathematical formula}cMS=cMS′;
+       </list-item>
+       <list-item label="4.">
+        for each n-ary function {a mathematical formula}f∈ΣMS, {a mathematical formula}fMS⊆fMS′.
+       </list-item>
+      </list>
+      <paragraph>
+       In what follows, we will prove the soundness and completeness of LDC framework, i.e. the LDC procedure returns correct result given an arbitrary input formula ϕ and the size of decomposition k, on the premise that the procedure terminates.
+      </paragraph>
+      <paragraph label="Proof">
+       {a mathematical formula}ϕ→Gholds during the LDC procedure.G is initialized as {a mathematical formula}true on line 11 and trivially {a mathematical formula}ϕ→true holds. Since G is strengthened by conjoining interpolants which are logical consequences of ϕ, thus {a mathematical formula}ϕ→G holds. □
+      </paragraph>
+      <paragraph label="Proof">
+       The LDC framework is sound and complete, on the premise that the decision procedure terminates.We need to prove the following statement:{a mathematical formula} Then, given arbitrary formula ϕ and the size of decomposition k ({a mathematical formula}k&gt;0) such that {a mathematical formula}LDC(ϕ,k) terminates, we wish to prove the following two statements:{a mathematical formula} where the soundness statement can be equivalently transformed as:{a mathematical formula}Suppose {a mathematical formula}LDC(ϕ,k)=unsat holds. As Algorithm 1 shows, the procedure terminates on either line 5 or 20. In the former case, there exists a subformula {a mathematical formula}ψi which is unsatisfiable. Then ϕ, as well as {a mathematical formula}⋀j=1kψj, is also unsatisfiable. In the latter case, {a mathematical formula}G→⊥ holds. Since {a mathematical formula}ϕ→G holds by Lemma 4, we have {a mathematical formula}ϕ→⊥ and thus ϕ is unsatisfiable.Suppose {a mathematical formula}LDC(ϕ,k)=sat holds, then the procedure terminates on either line 6 or 16. In the former case, each {a mathematical formula}ψi is satisfiable and {a mathematical formula}Σψ=∅. Let {a mathematical formula}Mi⊨ψi for each i. Thus for two arbitrary interpretations {a mathematical formula}Mi,Mj ({a mathematical formula}1⩽i&lt;j⩽k), we can simply combine {a mathematical formula}Mi and {a mathematical formula}Mj since {a mathematical formula}ΣMi∩ΣMj=∅. Thus, we can also combine {a mathematical formula}M1,…,Mk into an interpretation M such that
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}M=(D,(_)M) where {a mathematical formula}D=⋃j=1kDj, {a mathematical formula}Dj is the domain of {a mathematical formula}Mj;
+       </list-item>
+       <list-item label="2.">
+        for each (constant or function) symbol {a mathematical formula}s∈(⋃j=1kΣMj), {a mathematical formula}sM=sMi if {a mathematical formula}s∈ΣMi.
+       </list-item>
+      </list>
+      <paragraph>
+       To establish the soundness and completeness of the instantiation of LDC in {a mathematical formula}TE, we need to prove (1) the soundness of 7 interfaces in {a mathematical formula}TE (as their behaviors meet their specifications), and (2) LDC in {a mathematical formula}TE terminates. In what follows, we focus on the former while the latter is discussed in Section 6.2. Decompose is sound as long as it produces k-decomposition, which is ensured by the decomposition algorithm. The soundness of Solve and Interpolate relies on the soundness of underlying SMT solver and interpolation engine, which is assumed. ComputeSharedInterp is also sound because (1) the underlying SMT solver is sound, and (2) {a mathematical formula}MS contains valuations for all the shared constants, which is ensured by Algorithm 3. The soundness for other interfaces, however, should be established carefully.
+      </paragraph>
+      <paragraph label="Lemma 6">
+       Formulatein{a mathematical formula}TEis sound.
+      </paragraph>
+      <paragraph>
+       We formalize the specifications for Unify and ExtractSFA before establishing the soundness of CombineInterp and RefineSharedInterp. First of all, we define equality of domain elements across two interpretations.
+      </paragraph>
+      <paragraph label="Definition 7">
+       Given two interpretations {a mathematical formula}M1 and {a mathematical formula}M2 with domains {a mathematical formula}D1 and {a mathematical formula}D2, respectively. We say {a mathematical formula}ν1∈D1 equals to {a mathematical formula}ν2∈D2 across {a mathematical formula}M1 and {a mathematical formula}M2 (denoted by {a mathematical formula}ν1∼ν2) if one of the following conditions holds:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}ν1=ν2;
+       </list-item>
+       <list-item label="2.">
+        there exists {a mathematical formula}c∈ΣM1∩ΣM2 such that {a mathematical formula}cM1=ν1 and {a mathematical formula}cM2=ν2;
+       </list-item>
+       <list-item label="3.">
+        there exists {a mathematical formula}f∈ΣM1∩ΣM2 where f is an n-ary ({a mathematical formula}n&gt;0) function symbol, such that {a mathematical formula}fM1(ν11,…,ν1n)=ν1 and {a mathematical formula}fM2(ν21,…,ν2n)=ν2 where {a mathematical formula}ν1i∼ν2i ({a mathematical formula}1≤i≤n).
+       </list-item>
+      </list>
+      <paragraph>
+       Unify is to convert an interpretation M into a new one {a mathematical formula}M′ with respect to the shared interpretation {a mathematical formula}MS, such that:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}M≅M′;
+       </list-item>
+       <list-item label="2.">
+        Let h be the isomorphism of M into {a mathematical formula}M′, {a mathematical formula}D and {a mathematical formula}DS be the domains of M and {a mathematical formula}MS, respectively. For each {a mathematical formula}ν∈D and {a mathematical formula}νS∈DS, we have {a mathematical formula}h(ν)=νS⟺ν∼νS.
+       </list-item>
+      </list>
+      <paragraph label="Lemma 7">
+       Unifyis sound.
+      </paragraph>
+      <paragraph>
+       Given {a mathematical formula}M1,…,Mk and the shared interpretation {a mathematical formula}MS, ExtractSFA returns a set F of shared function applications. All the function applications {a mathematical formula}(f,d) that meet the following requirements are in F.
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        f is an n-ary ({a mathematical formula}n&gt;0) function symbol, {a mathematical formula}f∈ΣMS and {a mathematical formula}d∈DSn;
+       </list-item>
+       <list-item label="2.">
+        there exists {a mathematical formula}1≤i&lt;j≤k such that:
+       </list-item>
+      </list>
+      <paragraph label="Lemma 8">
+       ExtractSFAis sound.
+      </paragraph>
+      <paragraph label="Lemma 9">
+       CombineInterpin{a mathematical formula}TEis sound.
+      </paragraph>
+      <paragraph>
+       The instantiation of RefineSharedInterp is also sound. It is trivial that the conditions 2, 3, 4 of its specification hold. Assume that {a mathematical formula}MS′=MS holds, then ExtractSFA would return ∅ on line 1 in Algorithm 6, and thus the previous CombineInterp returns true and RefineSharedInterp would not be reached. Hence condition 1 also holds.
+      </paragraph>
+      <paragraph>
+       By Theorem 5, we have the following conclusion.
+      </paragraph>
+      <paragraph label="Lemma 10">
+       LDC in{a mathematical formula}TEis sound and complete, on the premise that it terminates.
+      </paragraph>
+     </section>
+     <section label="6.2">
+      <section-title>
+       Termination
+      </section-title>
+      <paragraph>
+       In this subsection, we will prove that LDC in {a mathematical formula}TE terminates. Algorithm 1 contains a main loop from line 10 to 21. In each iteration of the main loop, we compute a new shared interpretation {a mathematical formula}MS which helps to complete interpretations satisfying subformulae or interpolants which are logical consequences of the input formula. Informally, {a mathematical formula}MS marks the progress in decision procedure and thus the computation of {a mathematical formula}MS provides the core of the termination argument.
+      </paragraph>
+      <paragraph>
+       Iterations of the main loop can be abstracted into a coarse-grained control-flow sequence shown in Fig. 3. Each iteration either calls ComputeSharedInterp when there exists an inconsistent pair {a mathematical formula}(ψi,FS), or calls RefineSharedInterp when every {a mathematical formula}(ψi,FS) is consistent and {a mathematical formula}MS is required to be refined. We use C-node to denote the iteration calling ComputeSharedInterp, and R-node to denote the iteration calling RefineSharedInterp. Thus, the control-flow sequence consists of C-nodes and R-nodes while the number of nodes is the number of iterations for the main loop. In what follows, we demonstrate that the sequence has finite length for any input formula ϕ as the following statements hold:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        between two neighboring C-nodes, there are a finite number of R-nodes;
+       </list-item>
+       <list-item label="2.">
+        there are a finite number of C-nodes in the sequence.
+       </list-item>
+      </list>
+      <paragraph>
+       An interpretation graph can be constructed for the shared interpretation {a mathematical formula}MS. Without loss of generality, {a mathematical formula}ΣMS consists of m constants {a mathematical formula}c1,…,cm and n unary functions {a mathematical formula}f1,…,fn. The interpretation graph of {a mathematical formula}MS is a pair {a mathematical formula}Gig=(Vig,Eig) of:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}Vig=DS where {a mathematical formula}DS is the domain of {a mathematical formula}MS;
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}Eig={(v1,v2,i)∈Vig×Vig×N|fiMS(v1)=v2}. For {a mathematical formula}(v1,v2,i)∈Eig, there is an edge from {a mathematical formula}v1 to {a mathematical formula}v2 with label i.
+       </list-item>
+      </list>
+      <paragraph>
+       By the definition above, the out-degree of each node is no more than n. Moreover, the following lemmas show some important properties of {a mathematical formula}Gig.
+      </paragraph>
+      <paragraph label="Proof">
+       Let{a mathematical formula}Gig=(Vig,Eig)be the interpretation graph of shared interpretation{a mathematical formula}MS, and{a mathematical formula}VC={v|cMS=v,c∈{c1,…,cm}}. Then, for each{a mathematical formula}v∈(Vig∖VC), there exists a path from one vertex in{a mathematical formula}VCto v.For each {a mathematical formula}v∈(Vig∖VC), there exists {a mathematical formula}v′∈Vig and {a mathematical formula}fi ({a mathematical formula}1⩽i⩽n) such that {a mathematical formula}fiMS(v′)=v. Thus, there should be a subterm {a mathematical formula}fi(t) of G where {a mathematical formula}(fi(t))MS=v and {a mathematical formula}tMS=v′. If t is a constant, then {a mathematical formula}P=〈v′,v〉 is the path. Otherwise, since t is finitely constructible, t has the form of {a mathematical formula}gh(…g1(c)…) where {a mathematical formula}g1,…,gh∈{f1,…,fn} and c is constant. If we have {a mathematical formula}cMS=v1⁎,g1MS(v1⁎)=v2⁎,…,ghMS(vh⁎)=v′ where {a mathematical formula}v1⁎,…,vh⁎∈Vig, then {a mathematical formula}P=〈v1⁎,…,vh⁎,v′,v〉 is the path. □
+      </paragraph>
+      <paragraph label="Proof">
+       If{a mathematical formula}|Vig|=1+m(∑i=0Nni), there exists{a mathematical formula}v∈(Vig∖VC),v′∈VCand the distance (i.e. length of the shortest path) from{a mathematical formula}v′to v is no less than{a mathematical formula}(N+1).We organize the vertices in {a mathematical formula}Vig in a stratified manner. First, we put all the vertices in {a mathematical formula}VC on the {a mathematical formula}l0 level. Then, all the vertices in {a mathematical formula}V1 are put on the {a mathematical formula}l1 level, where{a mathematical formula} Since {a mathematical formula}|VC|=m, {a mathematical formula}|V1|⩽n|VC|=mn. Analogously, we put all the vertices in {a mathematical formula}VN on the {a mathematical formula}lN level, where{a mathematical formula} Since {a mathematical formula}|VN|⩽n|VN−1|⩽…⩽nN|VC|=nNm, the number of vertices in {a mathematical formula}l0,…,lN is no more than {a mathematical formula}m(∑i=0Nni). Thus, there exists at least one vertex on the {a mathematical formula}lj level where {a mathematical formula}j&gt;N. □
+      </paragraph>
+      <paragraph>
+       When RefineSharedInterp refines the shared interpretation {a mathematical formula}MS, shared function applications are specified with values, which introduces new edges in the interpretation graph. The length of the path from a vertex in {a mathematical formula}VC to a vertex in {a mathematical formula}Vig∖VC is no more than {a mathematical formula}|Sψi| because ψ contains no more than {a mathematical formula}|Sψi| function application terms, each of which could extend the length of such path by 1. Let {a mathematical formula}N=max⁡{|Sψi‖1⩽i⩽k}, by Lemma 12 there should be no more than {a mathematical formula}m(∑i=0Nni) elements in {a mathematical formula}DS. Then, we have the following theorem.
+      </paragraph>
+      <paragraph label="Proof">
+       There are a finite number of R-nodes between two neighboring C-nodes.Since the distance for {a mathematical formula}(v′,v) is no more than N where {a mathematical formula}v′∈VC and {a mathematical formula}v∈(Vig∖VC), there are up to {a mathematical formula}m(∑i=1Nni) edges in the interpretation graph of {a mathematical formula}MS. Also, on an R-node, at least one new edge is introduced. Therefore the number of R-nodes between two neighboring C-nodes must be finite. □
+      </paragraph>
+      <paragraph>
+       On a C-node, there exists at least one inconsistent pair {a mathematical formula}(ψi,FS) from which we can derive an interpolant {a mathematical formula}Ii such that {a mathematical formula}ψi→Ii→¬FS. Hence, such inconsistency is prevented in the subsequent C-nodes because {a mathematical formula}IiMS=false. To prove that the number of C-nodes is finite, we will prove that there are a finite number of shared interpretations.
+      </paragraph>
+      <paragraph>
+       If t is a term, we denote with {a mathematical formula}d(t) the depth of function application, that is, {a mathematical formula}d(t)=0 if t is a constant; {a mathematical formula}d(t)=d(t′)+1 if t has the form {a mathematical formula}f(t′). Let {a mathematical formula}S=max⁡{d(t)|t is subterm of ϕ}, we have the following lemma.
+      </paragraph>
+      <paragraph label="Lemma 14">
+       For each subterm t of G,{a mathematical formula}d(t)⩽(N+1)Sholds.
+      </paragraph>
+      <paragraph>
+       Before proving this lemma, we introduce some concepts on interpolation. Let A and B be two formulae with respective signatures {a mathematical formula}ΣA and {a mathematical formula}ΣB, a symbol is A-colored if it is in {a mathematical formula}ΣA∖ΣB, B-colored if it is in {a mathematical formula}ΣB∖ΣA, and transparent if it is in {a mathematical formula}ΣA∩ΣB. A ground term t is: A-colored if it contains at least one A-colored symbol and others are transparent; B-colored if it contains at least one B-colored symbol and others are transparent; AB-mixed if it contains at least one A-colored symbol and one B-colored symbol; and transparent otherwise. Also, we use ≃ to denote equality at the meta-level.
+      </paragraph>
+      <paragraph label="Proof of Theorem 14">
+       Perform induction on C-nodes in the sequence. Let {a mathematical formula}P(F) amount that for each subterm t in the formula F, {a mathematical formula}d(t)⩽(N+1)S holds.Basis: On the first C-node, {a mathematical formula}FS consists of constants only. Thus for the interpolant {a mathematical formula}Ii derived from the inconsistent pair {a mathematical formula}(ψi,FS), {a mathematical formula}Ii also consists of constants. Since G is the conjunction of derived interpolants, {a mathematical formula}P(G) holds.Induction step: By hypothesis, {a mathematical formula}P(G) holds on the previous C-node, then {a mathematical formula}P(FS) also holds. If the previous R-nodes introduce new terms to {a mathematical formula}FS via RefineSharedInterp, we have {a mathematical formula}S⩾1 and for each new term t, {a mathematical formula}d(t)⩽N, thus {a mathematical formula}P(FS) still holds. For the inconsistent pair {a mathematical formula}(ψi,FS) and its interpolant {a mathematical formula}Ii, each subterm of {a mathematical formula}Ii is (1) subterm of {a mathematical formula}ψi or {a mathematical formula}FS; (2) a transparent term t such that {a mathematical formula}ψi∧FS⊢TEta≃t∧t≃tb where {a mathematical formula}ta is a {a mathematical formula}ψi-colored term, {a mathematical formula}tb is a {a mathematical formula}FS-colored term and {a mathematical formula}ψi∧FS⊢TEta≃tb holds, by equality-interpolating property [31]. Interpolant could introduce new terms, which belongs to the latter case. Let {a mathematical formula}TN be the set of all new introduced terms from interpolants. {a mathematical formula}ta≃tb can be derived by (1) transitivity rule; (2) congruence rule, if {a mathematical formula}ta≡fi(ta′), {a mathematical formula}tb≡fi(tb′) and {a mathematical formula}ψi∧FS⊢TEta′≃tb′. If there exists a transparent term {a mathematical formula}t′ ({a mathematical formula}t′∈TN or {a mathematical formula}t′ is a common subterm of {a mathematical formula}ψi and {a mathematical formula}FS) such that {a mathematical formula}ψi∧FS⊢TEta′≃t′∧t′≃tb′, t can be {a mathematical formula}fi(t′), which may be a new term to be added into {a mathematical formula}TN. Since new introduced terms are transparent, {a mathematical formula}ta and {a mathematical formula}tb could only be the subterm of {a mathematical formula}ψi and {a mathematical formula}FS respectively. For each {a mathematical formula}(ta,tb), congruence rule is applied for no more than S times because {a mathematical formula}d(ta)⩽S. The number of possible {a mathematical formula}ta is no more than N, thus congruence rule is applied for up to NS times to introduce auxiliary transparent terms. Since for each common subterm {a mathematical formula}tc of {a mathematical formula}ψi and {a mathematical formula}FS we have {a mathematical formula}d(tc)⩽S, the depths of new introduced terms are no more than {a mathematical formula}(N+1)S. Hence, {a mathematical formula}P(G) still holds. □
+      </paragraph>
+      <paragraph>
+       Therefore, on each C-node in the iteration sequence, the shared interpretation {a mathematical formula}MS derived by ComputeSharedInterp is the congruence relation on a subset of the term set {a mathematical formula}T={t|d(t)⩽(N+1)S}. Since each {a mathematical formula}t∈T is constructed by shared symbols (no more than m constants and n functions), {a mathematical formula}|T| is bounded. Hence, the number of possible shared interpretations is finite.
+      </paragraph>
+      <paragraph>
+       Our conclusion can be generalized for the case where the arity of function symbol is more than 1. Therefore, we have the following theorems.
+      </paragraph>
+      <paragraph label="Theorem 15">
+       There are a finite number of C-nodes in the sequence.
+      </paragraph>
+      <paragraph label="Theorem 16">
+       LDC in{a mathematical formula}TEterminates within finite steps.
+      </paragraph>
+      <paragraph label="Theorem 17">
+       LDC in{a mathematical formula}TEis sound and complete.
+      </paragraph>
+     </section>
+     <section label="6.3">
+      <section-title>
+       Generality
+      </section-title>
+      <paragraph>
+       The LDC framework is irrelevant to a specific theory or solver. In principle, we can instantiate LDC in any theory upon any sequential solver. However, there are several limitations on the generality.
+      </paragraph>
+      <paragraph>
+       First, the underlying theory (or theory combination) should admit quantifier-free interpolation. In the theory of integers ({a mathematical formula}TZ), interpolant could introduce quantifiers. For example, suppose {a mathematical formula}ϕ:y=2x and {a mathematical formula}ψ:y=2z+1, there does not exist an interpolant without quantifiers. Quantifier-free fragments of some theories, such as {a mathematical formula}TZ and the theory of array ({a mathematical formula}TA) [22], are not closed under Craig interpolation. By the fact that quantifier elimination implies quantifier-free interpolation [32], theories such as {a mathematical formula}TE, theory of reals ({a mathematical formula}TR), theory of rationals ({a mathematical formula}TQ), theory of integer difference logic ({a mathematical formula}TIDL) and theory of recursive data structure ({a mathematical formula}TRDS) admit quantifier-free interpolation. Bruttomesso et al. also show that strong amalgamability guarantees the modularity of quantifier-free interpolation [32], which guides the construction of theory combination admitting quantifier-free interpolation.
+      </paragraph>
+      <paragraph>
+       Second, it is difficult to guarantee that the instantiation terminates given a formula of finite size in some underlying theories.
+      </paragraph>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      Experimental evaluation
+     </section-title>
+     <paragraph>
+      The LDC framework is implemented as a parallel SMT solver PZ3, which is based on a widely used open-source SMT solver Z3 [13]. The following aspects of PZ3 are studied: (1) speed-up over Z3 on various problems; (2) parallel efficiency and its influence factors, especially the sparseness of input formulae; (3) comparison between LDC and the state-of-the-art portfolio approach [33].
+     </paragraph>
+     <section label="7.1">
+      <section-title>
+       Solver implementation
+      </section-title>
+      <paragraph>
+       PZ3 is implemented upon APIs provided by Z3 4.3.3, as Z3 exposes various functionalities such as satisfiability testing, interpolation and formula simplification via APIs. For now PZ3 only supports quantifier-free equality logic with uninterpreted functions. The parallelization is implemented using the POSIX threads library. The schematic overview of PZ3 is shown in Fig. 4. The input formula ϕ is decomposed into k subformulae, then k cores are used if possible while each of them runs a Z3 instance assigned with a subformula.{sup:2} Moreover, there is a coordinator thread that performs shared symbol reasoning, including derivation of shared interpretation and checking for interpretation combinability. The coordinator blocks all other threads when it is working, thus it can either work on a standalone core (if available) or core i ({a mathematical formula}1≤i≤k).
+      </paragraph>
+      <paragraph>
+       The source code, documents and evaluation data are all publicly available at http://git.io/hpZg.
+      </paragraph>
+     </section>
+     <section label="7.2">
+      <section-title>
+       Experimental setup
+      </section-title>
+      <paragraph>
+       The evaluation is conducted on a server under Ubuntu 16.04, using Intel(R) Xeon(R) CPU E5-2603v3@1.60GHz (with 12 cores) and 96GB memory. We assess PZ3 by answering the following research questions:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        Can PZ3 outperform its baseline Z3?
+       </list-item>
+       <list-item label="2.">
+        How does the parallel efficiency vary with (a) the number of cores, (b) the problem structure?
+       </list-item>
+       <list-item label="3.">
+        Where does the speed-up of PZ3 come from?
+       </list-item>
+       <list-item label="4.">
+        How are PZ3's time costs distributed to working phases and operations?
+       </list-item>
+       <list-item label="5.">
+        How effective is LDC compared to other parallelization approaches?
+       </list-item>
+      </list>
+      <paragraph>
+       To answer the questions above, 5 experiments are designed as listed in Table 3. The first experiment compares the performances of PZ3 and its baseline Z3 using different numbers of cores to evaluate PZ3's speed-up over Z3 and its scalability. The second one is to measure PZ3's parallel efficiency on a set of randomly generated problems in order to validate our hypothesis on the relationship between problem structure and PZ3's parallel efficiency. In the third experiment, we assess how (1) parallelism and (2) algorithmic effect (i.e. workload reduction by lazy decomposition and conciliation) contribute to PZ3's speed-up by running a special version of PZ3 (namely PZ3oc) with all its threads specified to a single core, along with the normal PZ3 and Z3. The fourth experiment runs time profiling for PZ3. In the final experiment, we choose PCVC4, a parallel solver of CVC4 [15] as the representative of portfolio-based solver to compare LDC with, as the portfolio approach [33] is the state-of-the-art.
+      </paragraph>
+      <paragraph>
+       All the experiments except the second one are based on the QF_UF benchmarks of SMT-LIB.{sup:3} The benchmark problems are originated from three application domains:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        minimum transitivity constraints (MTC): 100 hierarchical problems containing contradictory cycles [34];
+       </list-item>
+       <list-item label="2.">
+        automatic theorem proving (ATP): problems obtained by trying to find a finite model of first-order formulae. There are 3 subcategories: SEQ, PEQ and NEQ with respective 56, 47, 48 problems.
+       </list-item>
+       <list-item label="3.">
+        quasigroup (QG): problems in loop theory and quasigroup theory [35]. There are 4 subcategories: loops6, QG5, QG6 and QG7 with respective 448, 5286, 244, 418 problems.
+       </list-item>
+      </list>
+      <paragraph>
+       Details on the randomly generated problems for the second experiment are demonstrated in Section 7.4. In experiments, the timeout for each problem is set as 600 s by default.
+      </paragraph>
+     </section>
+     <section label="7.3">
+      <section-title>
+       Evaluation of parallel efficiency
+      </section-title>
+      <paragraph>
+       Basic concepts. The parallel efficiency of PZ3 is defined as:{a mathematical formula} where n is the number of cores in use, {a mathematical formula}Tseq and {a mathematical formula}Tpar refer to the solving time of Z3 and PZ3, respectively. The perfect parallelization has {a mathematical formula}η=1. If {a mathematical formula}η&lt;1n, Z3 outperforms PZ3. The speed-up is super-linear if {a mathematical formula}η&gt;1. Thus, PZ3 has good scalability if η keeps to be near 1.0 as the number of cores increases. The speed-up ratio of PZ3 is defined as {a mathematical formula}TseqTpar which does not take the number of cores into consideration.
+      </paragraph>
+      <paragraph>
+       On the set of problems {a mathematical formula}X, the parallel efficiency of PZ3 is computed by:{a mathematical formula} where {a mathematical formula}X′⊆X excludes problems on which both solvers run out of time (because it is indeterminable which solver is advantageous). {a mathematical formula}Tseqϕ and {a mathematical formula}Tparϕ denote the time costs of Z3 and PZ3 on the problem ϕ, respectively.
+      </paragraph>
+      <paragraph>
+       Experimental design. We run PZ3 and Z3 on the QF_UF benchmarks while PZ3 is configured to use 2–12 cores. To answer Question 1, we compare the time costs of PZ3 and Z3 on the benchmark problems. To answer Question 2 (a), we analyze how PZ3's parallel efficiency changes as the number of cores in use increases.
+      </paragraph>
+      <paragraph>
+       Results and discussion.Table 4 and Table 5 show the comparison results on the solving time and the number of solved problems, respectively. Furthermore, we use scatter plots in logarithmic scale shown in Fig. 5 to illustrate the detailed comparison results in three problem categories.
+      </paragraph>
+      <paragraph>
+       MTC:PZ3 shows significant superiority in this category using k ({a mathematical formula}k≥4) cores. Z3 can only solve 21 problems while PZ3 can solve all 100 problems when {a mathematical formula}k≥6. In particular, when {a mathematical formula}k=9, PZ3 uses only 5.13 s on each problem averagely. When {a mathematical formula}k=2,3, PZ3 fails to outperform Z3 because subformulae are still difficult to be solved. Fig. 5 also shows that for the problems solved by Z3 within 1 s, PZ3 generally takes more time. This is because they have low problem complexities and thus PZ3 can hardly benefit from decomposition on them.
+      </paragraph>
+      <paragraph>
+       ATP: In general, PZ3 is disadvantageous in this category as Z3 outperforms PZ3 on both the solving time and the number of solved problems. However, Fig. 5 shows that PZ3 has better performance than Z3 on a large portion of problems which are difficult for Z3 (more specifically, with more than 10{sup:4}s of time cost).
+      </paragraph>
+      <paragraph>
+       QG:Table 5 shows that both PZ3 and Z3 are capable to solve all the problems in this category. On the one hand, PZ3 is disadvantageous in the loops6 subcategory because the majority of its problems (332 out of 448) can be solved by Z3 within 300 ms while PZ3 has inherent overhead on decomposition and thread manipulation. On the other hand, PZ3 is generally more efficient in the QG5-QG7 subcategories. Furthermore, Fig. 5 also shows that PZ3 has an advantage on the problems difficult for Z3 (requiring more than 10{sup:4}s).
+      </paragraph>
+      <paragraph>
+       Table 6 lists the ratio of problems on which PZ3 has improved performance, with respect to the number of cores. Problems solved within 300 ms by both PZ3 and Z3 are not included because their differences can be substantially influenced by random errors in timing. The results show that PZ3 succeeds in achieving speed-up on more than one half of problems when the number of cores in use is 2, 4 or 5. Under other core configurations, the ratio ranges from 0.376 to 0.459.
+      </paragraph>
+      <paragraph>
+       Fig. 6 shows the parallel efficiency of PZ3 across 2–12 cores. The black base line illustrates the parallel efficiency {a mathematical formula}1n denoting that the time costs of PZ3 and Z3 are the same with respect to the number of cores n. Overall, PZ3 has super-linear speed-up in the MTC category and generally outperforms Z3 in subcategories QG5-7 (shown in solid lines). However, PZ3 is disadvantageous in other subcategories (shown in dashed lines). In general, the parallel efficiency decreases as n grows when n is sufficiently large. This can be explained as follows. First, larger n makes shared symbol reasoning more time-expensive in checking interpretation combinability and refining shared interpretation while shared symbol reasoning contributes to the unparallelized part of PZ3's execution. Second, larger n leads to a larger portion of shared symbols, thus more conciliation iterations are generally required. However, we also notice that, when {a mathematical formula}4≤n≤8, the parallel efficiency increases as n grows in the MTC category. This is because the difficulties of subproblems are substantially reduced compared to the original problem as the decomposition becomes more fine-grained.
+      </paragraph>
+      <paragraph>
+       Summary. For Question 1, PZ3 generally outperforms Z3 in 4 out of 8 subcategories of the QF_UF benchmarks. In particular, PZ3 is orders of magnitude faster than Z3 in the MTC category. For Question 2 (a), the parallel efficiency of PZ3 typically decreases as the number of cores grows. However, for problems with sparse structures such as problems in the MTC category, PZ3 can benefit from the extra cores when the number of cores is small.
+      </paragraph>
+      <paragraph>
+       Admittedly, PZ3 cannot outperform Z3 on all kinds of problems. However, in practice, one can always build a portfolio solver with one PZ3 instance and one Z3 instance. Two solver instances work on the input problem independently and the portfolio solver terminates once any solver instance terminates. Thus, the portfolio solver can take the advantage of PZ3 while preserving Z3's performance in the worst case. Furthermore, one can also measure the sparseness of the input formula (Section 7.4) to choose the appropriate solver favorable to the certain problem.
+      </paragraph>
+     </section>
+     <section label="7.4">
+      <section-title>
+       Speed-up and formula sparseness
+      </section-title>
+      <paragraph>
+       Basic concepts. We have an important observation from the experimental results in the previous subsection: PZ3 tends to have an advantage on problems with sparse structure (e.g. problems in the MTC category). Intuitively, a formula is sparse if, for its two arbitrary clauses, few symbols are shared. First of all, the term “sparse” needs to be defined formally.
+      </paragraph>
+      <paragraph label="Definition 8">
+       Equality graphLet ϕ be a {a mathematical formula}TE-formula without uninterpreted functions and {a mathematical formula}Eϕ be ϕ's literal set consisting of equalities and inequalities. The undirected graph {a mathematical formula}GϕE=(VϕE,EϕE) is the equality graph of ϕ where {a mathematical formula}VϕE is the set of constants in ϕ and {a mathematical formula}EϕE={(vi,vj)|vi,vj∈VϕE,(vi=vj),(vj=vi),(vi≠vj) or (vj≠vi) is in Eϕ}.
+      </paragraph>
+      <paragraph>
+       Note that the concept of equality graph here is different from the concept with the same name in [34] because ϕ is not required to be in NNF and we do not distinguish equality and inequality as two kinds of edges. If ϕ contains uninterpreted functions, we use Ackermann's reduction [36] to convert ϕ to an equi-satisfiable {a mathematical formula}TE-formula {a mathematical formula}ϕ′ with uninterpreted functions reduced, then we have {a mathematical formula}GϕE=Gϕ′E.
+      </paragraph>
+      <paragraph label="Definition 9">
+       Constant sparsenessLet ϕ be a {a mathematical formula}TE-formula in CNF: {a mathematical formula}ϕ1∧…∧ϕk. ϕ contains no uninterpreted functions and is simplified such that a clause does not contain multiple duplicated literals, or a literal and its negation simultaneously. The constant sparseness {a mathematical formula}γϕ of ϕ is defined as follows:{a mathematical formula} where {a mathematical formula}Vmax=2∑1≤i≤k|Eϕi| and {a mathematical formula}Vmin=⌈1+1+8|EϕE|2⌉.
+      </paragraph>
+      <paragraph>
+       Since ϕ contains {a mathematical formula}N=∑1≤i≤k|Eϕi| literals in total, then ϕ could contain at most 2N constants. Let M be the number of constants in {a mathematical formula}GEϕ, then we have {a mathematical formula}M(M−1)2≥|EϕE| where {a mathematical formula}M(M−1)2 is the largest number of different equalities over M constants. Thus {a mathematical formula}Vmin is the minimum number of constants possible for {a mathematical formula}GϕE.
+      </paragraph>
+      <paragraph>
+       We have {a mathematical formula}γϕ∈[0,1]. When {a mathematical formula}γϕ is near 0, clauses share a large portion of symbols in {a mathematical formula}Σϕ and thus PZ3 is probably disadvantageous because the search space of shared interpretations can be hardly reduced compared to the interpretation space of the original problem. When {a mathematical formula}γϕ is near 1, it is easier for PZ3 to find a decomposition with few shared symbols and thus the conciliation step can terminate fast.
+      </paragraph>
+      <paragraph label="Definition 10">
+       Equality sparsenessLet ϕ be a {a mathematical formula}TE-formula in CNF: {a mathematical formula}ϕ1∧…∧ϕk. ϕ contains no uninterpreted functions and is simplified. The equality sparseness {a mathematical formula}δϕ of ϕ is defined as follows:{a mathematical formula} where {a mathematical formula}Emax=∑1≤i≤k|Eϕi| and {a mathematical formula}Emin=max1≤i≤k⁡|Eϕi|.
+      </paragraph>
+      <paragraph>
+       Also, we have {a mathematical formula}δϕ∈[0,1]. When {a mathematical formula}δϕ is near 0, ϕ can probably be more efficiently solved by Z3 because it is easier for a lazy solver to perform theory propagation and clause learning by deciding truth values of some literals. When {a mathematical formula}δϕ is near 1, however, the solver has to traverse the whole interpretation space while theory propagation and clause learning are not effective.
+      </paragraph>
+      <paragraph>
+       Fig. 7 is a scatter plot showing the distribution of the problems in the QF_UF benchmarks for the two sparseness metrics. The x-axis refers to constant sparseness and it is in logarithmic scale. The y-axis refers to equality sparseness and it is linear.
+      </paragraph>
+      <paragraph>
+       MTC: Problems have large constant and equality sparseness. PZ3 can efficiently solve the most of them with decompositions with few shared symbols. Moreover, Z3 is inefficient on MTC problems because they are unsatisfiable problems with large equality sparseness, thus Z3 has to traverse exponential number of candidate interpretations while theory propagation and clause learning are not effective.
+      </paragraph>
+      <paragraph>
+       ATP and QG: Problems have generally low constant sparseness. This is because Ackermann's reduction introduces auxiliary constants along with additional constraints of function congruence for a large number of applications of uninterpreted functions, and thus the equality graph becomes dense. A possible explanation for the fact that PZ3 cannot substantially outperform Z3 on these problems is that the decomposition contains a large portion of shared symbols, thus more conciliation iterations are generally required to find a witness of global satisfiability or the inconsistency over the shared symbols. It is noteworthy that there are many factors that can influence PZ3's performance in addition to the sparseness, thus a large portion of QG problems can still be favorable to PZ3 (and we will give an explanation in Section 7.5).
+      </paragraph>
+      <paragraph>
+       Experimental design. Our hypothesis is that for a {a mathematical formula}TE-formula ϕ, PZ3 has more chance to outperform Z3 as {a mathematical formula}γϕ and {a mathematical formula}δϕ increase. To validate this hypothesis, we compare the performances of PZ3 (using 4 cores) and Z3 on a set of randomly generated problems with different sparseness values while other factors that could influence the solver's performance are carefully controlled. A generated problem is in CNF with {a mathematical formula}Nv constants, no uninterpreted functions and {a mathematical formula}Nc clauses, each clause consists of {a mathematical formula}Nl different literals. Problem generation is parametric as {a mathematical formula}Nc, {a mathematical formula}Nl, {a mathematical formula}γϕ and {a mathematical formula}δϕ need to be specified. In our experiment we have {a mathematical formula}Nc=3000 and {a mathematical formula}Nl=3. {a mathematical formula}γϕ=5×10−i where i is uniformly distributed over {a mathematical formula}[1,4] and {a mathematical formula}δϕ is uniformly distributed over {a mathematical formula}[0,1]. The problem generator constructs an equality graph {a mathematical formula}GϕE by the given {a mathematical formula}Nc, {a mathematical formula}Nl, {a mathematical formula}γϕ and {a mathematical formula}δϕ, then distributes (in)equalities represented by edges in {a mathematical formula}EϕE to the clauses. We generate totally 3600 random problems for evaluation.
+      </paragraph>
+      <paragraph>
+       Results and discussion.Fig. 8 is a heat map visualizing PZ3's parallel efficiency with respect to two sparseness metrics. For better visualization, we choose 96 cluster centers and then assign each problem to the nearest cluster center, next we compute the parallel efficiency for problems assigned to each cluster center. The coordinate of each cluster center is{a mathematical formula} In Fig. 8, a block is used to represent the problems assigned to the certain cluster center while its color represents PZ3's parallel efficiency on these problems. As the constant sparseness increases, PZ3 generally has better parallel efficiency because PZ3 can take advantage of decompositions with few shared constants. The color of block is closer to red as the equality sparseness decreases. This is mainly because the problems with smaller equality sparseness are more favorable to Z3 by taking advantage of theory propagation and clause learning. Moreover, it can be observed that PZ3 can achieve super-linear speed-up on problems with large equality and constant sparseness. All in all, the visualization results substantiate our hypothesis.
+      </paragraph>
+      <paragraph>
+       Summary. Given a {a mathematical formula}TE-formula ϕ, PZ3 has more chance to solve it faster than Z3 when ϕ has larger constant and equality sparseness.
+      </paragraph>
+      <paragraph>
+       Sparse problems are of practical concern. The majority of real-world software/hardware systems are organized in a modular manner. Modules are loosely-coupled as they interact with each other by sharing a few variables/signals. Thus a verification task on a real-world system, which is not feasible for existing sequential SMT solvers, is favorable to LDC because the inter-module logic can be handled efficiently via conciliation.
+      </paragraph>
+     </section>
+     <section label="7.5">
+      <section-title>
+       Speed-up factor analysis
+      </section-title>
+      <paragraph>
+       Basic concepts. The speed-up of PZ3 has two main sources: (1) parallelism and (2) the algorithmic effect of LDC. To quantify the contributions of these two sources, we run (1) Z3, (2) PZ3 with all the threads assigned to separated cores, and (3) PZ3oc with all the threads assigned to a single core on the same benchmarks and compare their performances. Let {a mathematical formula}T1,T2,T3 be the time costs of Z3, PZ3 and PZ3oc on the problem ϕ, respectively. Without regarding inherent overhead in thread manipulation, we have{a mathematical formula} where λ is the workload ratio on ϕ. If {a mathematical formula}λ&gt;1, solving ϕ by LDC has more workload than solving ϕ directly, and vice versa otherwise. We also have{a mathematical formula} where n is the number of cores in use and {a mathematical formula}ηc denotes canonical parallel efficiency, which is different from the previously defined parallel efficiency η as two time values to be compared are based on the same workload. Then, we have{a mathematical formula} where {a mathematical formula}ηc and λ measure the contributions of parallelism and the algorithmic effect, respectively. We say parallelism contributes more to the speed-up of PZ3 if {a mathematical formula}1ηc&lt;λ holds, while algorithmic effect contributes more if {a mathematical formula}1ηc&gt;λ.
+      </paragraph>
+      <paragraph>
+       Experimental design. We compare the performances of Z3, PZ3 and PZ3oc on the QF_UF benchmarks using 2, 4, 8 cores. When n cores are in use, the timeout for PZ3oc is set to 600n seconds. To precisely approximate workload of LDC-based solving, only problems on which none of three solvers run out of time are included in speed-up factor analysis.
+      </paragraph>
+      <paragraph>
+       Results and discussion.Table 7 summarizes the comparison results in different problem categories.
+      </paragraph>
+      <paragraph>
+       MTC:PZ3 has a significant speed-up over Z3 when the number of cores is 4 or 8, and algorithmic effect is the dominant factor contributing to the speed-up. This is because (1) subproblems are much easier to be solved than the whole problem, and (2) few symbols are shared over subproblems, thus the conciliation step is generally efficient.
+      </paragraph>
+      <paragraph>
+       ATP:PZ3 outperforms Z3 on every core configuration, and parallelism contributes more to the speed-up as LDC has more workload than direct SMT solving.
+      </paragraph>
+      <paragraph>
+       QG: Algorithmic effect of LDC has more influence on the speed-up when using 2 cores because for a large portion of problems, the unsatisfiability is derived directly from the unsatisfiability of a subproblem (see Table 8 for details). When the number of cores is 4 or 8, however, the speed-up is mainly contributed to by parallelism.
+      </paragraph>
+      <paragraph>
+       Table 7 also shows that in each category, the canonical parallel efficiency decreases as the number of cores grows, which implies that more time is wasted by idle threads. There are two main sources of thread idleness. First, workloads for subproblems are probably unbalanced since our decomposition is an approximate solution that minimizes the number of shared symbols, while balancing of subproblem complexity is not considered. Second, the coordinator contributes to the unparallelized part of PZ3's execution, as it blocks all other threads when performing shared symbol reasoning.
+      </paragraph>
+      <paragraph>
+       Summary. In the MTC category, algorithmic effect plays the dominant role in the speed-up of PZ3 as the decomposition substantially reduces the complexity of input problem. In the QG category, algorithmic effect contributes more to PZ3's speed-up because of the unsatisfiability of subproblems. In other cases, parallelism has more influences on PZ3's speed-up.
+      </paragraph>
+     </section>
+     <section label="7.6">
+      <section-title>
+       Profiling analysis
+      </section-title>
+      <paragraph>
+       Basic concepts. There are several bases for profiling PZ3, as Fig. 9 shows. Since the LDC algorithm (Algorithm 1) can be roughly divided into three major working phases: decomposition (line 2), subproblem solving (lines 3–6, 10–14) and shared symbol reasoning (lines 7–8, 15–21), PZ3's wall time can be profiled with respect to these phases. The last 2 rows in Fig. 9 provide two profiling bases in terms of actual CPU time which excludes the CPU time wasted by thread idleness. They are based on LDC interfaces and basic operations, respectively. The actual CPU time for the conciliation step is roughly the summation of that of Interpolate, Formulate, ComputeSharedInterp, CombineInterp and RefineSharedInterp. The LDC procedure roughly consists of 5 kinds of basic operations: decomposition, satisfiability checking, interpolant extraction, formulation and shared symbol reasoning. It is noteworthy that the procedure of Interpolate consists of satisfiability checking and optional interpolant extraction depending on whether the prior checking result is unsatisfiable.
+      </paragraph>
+      <paragraph>
+       Experimental design. We prepare two special versions of PZ3 for profiling analysis: one outputs wall time for each working phase while another outputs actual CPU time for each LDC interface and basic operation. The experiments are conducted on the QF_UF benchmarks using 2, 4 and 8 cores.
+      </paragraph>
+      <paragraph>
+       Results and discussion.Table 8 and Table 9 report the profiling results in terms of wall time and actual CPU time, respectively. Only the problems upon which PZ3 terminates within the default timeout (600 s) are included in the profiling analysis. The percentages of wall time for each working phase and actual CPU time for each LDC interface and basic operation are computed for each problem, and the average percentages over each problem category are included in the tables. The reason is that the problems with large time costs should be prevented from substantially influencing the profiling results. Fig. 10 illustrates the distribution of actual CPU time for each LDC interface and basic operation over the problems with conciliations. Note that the problems without conciliation (i.e. NC problems) are excluded because they could bring biases to the distribution results.
+      </paragraph>
+      <paragraph>
+       In the most cases (except the case in the QG category when 2 cores are used), Interpolate makes a dominant contribution to the total actual CPU time, which is consistent with the observation from Table 8 that subproblem solving is the most time-expensive working phase and also implies that the conciliation step is the main bottleneck of PZ3's performance. As the number of cores grows, Interpolate generally takes an increasing percentage of actual CPU time because more conciliation iterations are generally required as the number of shared symbols increases. It is noteworthy that satisfiability checking plays a crucial role in Interpolate based on the comparison results between the time percentages of Interpolate and interpolant extraction in Table 9. This is because an interpolant extraction is not performed when the prior satisfiability check returns a satisfiable result.
+      </paragraph>
+      <paragraph>
+       From the perspective of basic operations, satisfiability checking is generally the most time-consuming. Fig. 10 shows that when the number of cores grows, the average time percentage of Solve decreases while the average time percentage of satisfiability checking increases. This is because a more fine-grained decomposition (1) reduces the difficulties of subproblems; (2) leads to more conciliation iterations and thus a larger number of satisfiability checking operations, as the number of shared symbols possibly increases. In general, decomposition has low runtime overhead. The time cost of decomposition has connections with the number of clauses N in the input problem and the size of decomposition k, as (1) clause graph construction has the worst-case time complexity {a mathematical formula}O(N2), and (2) extracting k subproblems has the worst-case time complexity {a mathematical formula}O(kN2), based on the discussion in Section 5.1. In the QG category, decomposition is substantially more time-consuming because a large portion of QG problems contain an extensive number of clauses. The profiling results also show that shared symbol reasoning and formulation have limited contributions to the total actual CPU time, and their time percentages have no strong associations with the number of cores in use.
+      </paragraph>
+      <paragraph>
+       By comparing the profiling results on wall time (Table 8) and actual CPU time (Table 9), it can be observed that for the decomposition operation, its wall time ratio is generally lower than its ratio of actual CPU time. This is because the workloads of decomposition are well balanced over each working thread. Nevertheless, since the workloads of shared symbol reasoning are always assigned to the coordinator thread only while other threads are blocked, the wall time ratio of shared symbol reasoning is substantially higher than the corresponding ratio of actual CPU time.
+      </paragraph>
+      <paragraph>
+       Summary.PZ3's wall time is mostly contributed to by the subproblem solving phase. In terms of actual CPU time, Interpolate is the main contributor in the LDC interfaces while satisfiability checking is the main contributor in 5 kinds of basic operations.
+      </paragraph>
+     </section>
+     <section label="7.7">
+      <section-title>
+       Comparison with the portfolio approach
+      </section-title>
+      <paragraph>
+       Basic concepts. The state-of-the-art technique for parallel SMT solving is the portfolio approach [33]. A portfolio is a set of solvers with different heuristics, and their combination represents a set of orthogonal yet complementary strategies. Each solver instance handles the input problem separately and its derived lemmas are shared with other solver instances. Lemma sharing could drastically improve the performance of the solver portfolio over its individual components. In what follows, we compare our approach with the portfolio approach.
+      </paragraph>
+      <paragraph>
+       Experimental design. Since CVC4 [15] has an implementation of portfolio-based parallel SMT solver named PCVC4 as the competition contribution for SMT-COMP, we compare PZ3's parallel efficiency with PCVC4's using 4 cores on the QF_UF benchmarks. Table 10 summarizes the design of the PCVC4's portfolio. Solver instances (cores) have orthogonal configurations on random seed, random decision, restart policy and options related to uninterpreted functions (rows 6–9). The optimal portfolio is tuned by some pilot experiments. The maximum size of shared lemma is set to 8, which is consistent with the clause sharing policy employed by ManySAT[38].
+      </paragraph>
+      <paragraph>
+       Results and discussion.Fig. 11b shows the overall comparison between PCVC4 and CVC4. On the one hand, PCVC4 fails to outperform CVC4 on a large portion of problems because (1) they have negligible benefits from the portfolio and lemma sharing, and (2) lemma sharing introduces overhead by inter-thread communications. On the other hand, PCVC4 has good performance stability, as it would not be much slower than CVC4 in the worst case. This is because the workload of each solver instance consists of solving the input problem and lemma sharing, while the latter has much less time cost than the former in the most cases.
+      </paragraph>
+      <paragraph>
+       The comparison results between PZ3 and PCVC4 are illustrated in Fig. 11. Overall, PZ3's speed-up ratio and PCVC4's are 1.593 and 0.978, respectively. To guarantee the fairness of comparison, we (1) exclude the problems in the MTC category because CVC4 can efficiently solve them by exploiting property of contradictory cycle [34]; (2) omit the problems solved within 300 ms by both sequential and parallel solvers. Then the results show that (1) PZ3 succeeds in accelerating the solutions of 1726 out of 3265 (52.9%) problems while PCVC4 accelerates the solutions of 450 out of 2267 (19.9%) problems; (2) PZ3's speed-up ratio and PCVC4's are 0.9822 and 0.9820, respectively. Therefore, PZ3 has slightly better speed-up ratio and is capable to accelerate the solutions of a substantially larger portion of problems than PCVC4.
+      </paragraph>
+      <paragraph>
+       Summary. Overall, PZ3 achieves better speed-up on the QF_UF benchmarks. After excluding some problems that may hinder the fairness of comparison, two parallel solvers have almost the same speed-up ratios while PZ3 can accelerate the solutions of a larger portion of problems.
+      </paragraph>
+     </section>
+    </section>
+    <section label="8">
+     <section-title>
+      Related work
+     </section-title>
+     <paragraph>
+      SMT typically benefits from advances in SAT. There are generally four kinds of approaches for parallelizing SAT solving. The first is the guiding-path approach which parallelizes search in problem space based on dynamic space division. Related solvers include PSATO[39], Treengeling[40], etc. The main drawbacks of this approach are twofold. First, for a given SAT problem with hundreds of thousands of variables, it is very difficult to find the most relevant variable set for space partitioning. Second, it is challenging to partition problem space on the theory level, which is desired for lazy SMT solvers. The second is the portfolio approach, which parallelizes a solver by running multiple solver instances with different heuristics. Each solver instance handles the whole input problem separately while duplicated search is prevented by lemma sharing [41]. Solvers such as ManySAT[38], Plingeling[40] are based on this approach. Generally speaking, the portfolio approach is robust to various kinds of problems which are sensitive to heuristics. However, it cannot handle the problems surpassing the capability of a single solver, and a good portfolio requires elaborated parameter tuning. The third approach parallelizes unit propagation which is reported to typically take up over 80% of solving time. Riss[42] is a typical solver of this genre. This approach makes multiple decisions concurrently but handles conflicts sequentially. Empirical results show that achieved performance gains are limited because of insufficient implications and performance bottleneck on the shared clause database. The last one is the decomposition-based approach which is quite similar with LDC. This approach firstly divides the input formula into subformulae, and then conciliates interpretations of shared variables through Craig interpolation [43], [44]. To the best of our knowledge, the existing decomposition-based approaches are all based on propositional logic and miss necessary mechanisms for reasoning in the theory level, such as interpretation combinability check for uninterpreted functions and refinement of interpretations for shared uninterpreted function symbols.
+     </paragraph>
+     <paragraph>
+      There are few known work on parallelizing SMT solving directly on the level of theory reasoning. Wintersteiger et al. integrate portfolio approach with lemma sharing to Z3 and the parallel solver achieves speed-up on the QF_IDL (quantifier-free fragment of integer differential logic) benchmarks from SMT-LIB [33]. Portfolio-based SMT solvers also suffer from the limitations of portfolio-based SAT solvers.
+     </paragraph>
+     <paragraph>
+      LDC is essentially inspired by counterexample guided abstraction refinement (CEGAR) [45], [46], [47], [48] in program verification. Abstraction is a key to verify industrial programs as it substantially reduces the state space by removing or simplifying details irrelevant to properties to be checked. However, the information loss incurred in abstraction potentially leads to wrong results such as spurious counterexamples (an execution path that leads to the state that violates the property to be checked, but such path does not correspond to a concrete execution path). Therefore, designing abstraction is crucial and requires considerable creativity and insights. CEGAR generates an initial abstraction and refines it iteratively by analyzing the spurious counterexamples until the program is verified to be safe or a concrete counterexample is found. In [48], McMillan introduces Craig interpolation to refine the predicate abstraction. In the context of LDC, the abstraction is the global invariant, a spurious counterexample is a candidate shared interpretation inconsistent with subproblems and interpolants are used to refine the abstraction. The conciliation step is a CEGAR loop which does not terminate until a concrete counterexample (i.e. a witness of global satisfiability) is found, or no counterexamples exist (thus the input problem is unsatisfiable).
+     </paragraph>
+    </section>
+    <section label="9">
+     <section-title>
+      Conclusion and future work
+     </section-title>
+     <paragraph>
+      In this paper, we propose a high-level and flexible framework namely lazy decomposition and conciliation (LDC) for parallelizing SMT solving. An LDC based solver could be built upon an existing SMT solver without hacking its low-level implementation. LDC is flexible for various underlying theories supporting quantifier-free interpolation. We have designed a sound and complete instantiation of LDC in {a mathematical formula}TE and implemented PZ3, a parallelized version of Z3. Evaluation results substantiate the potential of LDC as PZ3 outperforms the sequential solver on a variety of random and benchmark problems. In particular, PZ3 generally takes an advantage on problems with sparse structures and it could achieve orders of magnitude speed-up over Z3 on these problems.
+     </paragraph>
+     <paragraph>
+      Our proposed framework opens some interesting directions for future research. It is possible to develop a new decomposition heuristic that takes subproblem complexity into consideration for better load balancing in parallel processing. Furthermore, it is worth instantiating LDC in other theories such as arithmetic, bit-vector and even theory combinations since they are relevant to many practical problems in verification and AI planning. Last but not the least, the implementation of LDC could be further optimized especially for dense problems. The work stealing mechanism could be integrated to improve the parallel efficiency. Some refutation compression techniques [49], [50], [51], [52] are potentially helpful for a more efficient interpolant extraction.
+     </paragraph>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix A">
+     <section-title>
+      Proofs for model isomorphism
+     </section-title>
+     <paragraph label="Proof">
+      ≅ is an equivalence relation over{a mathematical formula}M, where{a mathematical formula}Mis the set of all{a mathematical formula}TE-interpretations.We prove the reflexivity, symmetry and transitivity of ≅ on {a mathematical formula}M.Reflexivity: Let {a mathematical formula}M=(D,(_)M)∈M, and h be the identity function on {a mathematical formula}D. Then, for each constant symbol {a mathematical formula}c∈Σ we have {a mathematical formula}h(cM)=cM; for each n-ary ({a mathematical formula}n&gt;0) function symbol {a mathematical formula}f∈Σ and {a mathematical formula}d1,…,dn∈D we have {a mathematical formula}h(fM(d1,…,dn))=fM(d1,…,dn). Hence {a mathematical formula}M≅M holds.Symmetry: Let {a mathematical formula}M1=(D1,(_)M1) and {a mathematical formula}M2=(D2,(_)M2). If {a mathematical formula}M1≅M2 holds, there exists an isomorphism {a mathematical formula}h:D1→D2 of {a mathematical formula}M1 into {a mathematical formula}M2. Since h is bijective, {a mathematical formula}h−1:D2→D1 is also bijective. For each constant symbol {a mathematical formula}c∈Σ, {a mathematical formula}h−1(cM2)=cM1 holds. Since {a mathematical formula}h(fM1(d1,…,dn))=fM2(h(d1),…,h(dn)) holds for each n-ary function symbol {a mathematical formula}f∈Σ and {a mathematical formula}d1,…,dn∈D1, we have {a mathematical formula}h−1(fM2(d1′,…,dn′))=fM1(h−1(d1′),…,h−1(dn′)) where {a mathematical formula}d1′=h(d1),…,dn′=h(dn). Hence {a mathematical formula}h−1 is also an isomorphism of {a mathematical formula}M2 into {a mathematical formula}M1. {a mathematical formula}M2≅M1 holds.Transitivity: Let {a mathematical formula}M1=(D1,(_)M1), {a mathematical formula}M2=(D2,(_)M2) and {a mathematical formula}M3=(D3,(_)M3). Since {a mathematical formula}M1≅M2 and {a mathematical formula}M2≅M3 hold, there exists {a mathematical formula}ha:D1→D2 and {a mathematical formula}hb:D2→D3 be their isomorphisms respectively. Let h be {a mathematical formula}hb∘ha and check if h is the isomorphism of {a mathematical formula}M1 into {a mathematical formula}M3. First, h is bijective from {a mathematical formula}D1 to {a mathematical formula}D3. For each constant {a mathematical formula}c∈Σ, we have {a mathematical formula}h(cM1)=hb(cM2)=cM3. For each n-ary function {a mathematical formula}f∈Σ and {a mathematical formula}d1,…,dn∈D1, we have {a mathematical formula}h(fM1(d1,…,dn))=hb(fM2(ha(d1),…,ha(dn))=fM3(h(d1),…,h(dn). Therefore we have {a mathematical formula}M1≅M3. □
+     </paragraph>
+    </section>
+    <section label="Appendix B">
+     <section-title>
+      Proofs for the soundness of LDC interfaces
+     </section-title>
+     <section label="B.1">
+      Proof of Lemma 6
+      <paragraph label="Proof">
+       Let M be a {a mathematical formula}TE-interpretation, the congruence relation R of which is presented with the partition below.{a mathematical formula} Let F be the result of Formulate(M). {a mathematical formula}F=C1∧…∧Cn∧Cn+1, where{a mathematical formula}First we prove the statement: F is satisfiable and there exists only one congruence relation R over {a mathematical formula}SF that satisfies F. Clearly, we have {a mathematical formula}SF=Sϕ. Also, it is trivial to verify that R satisfies F. Assume that there is another congruence relation {a mathematical formula}R′ ({a mathematical formula}R′≠R) over {a mathematical formula}SF such that R satisfies F. Without loss of generality, there exists two terms {a mathematical formula}ta,tb∈SF such that {a mathematical formula}ta=Rtb and {a mathematical formula}ta≠R′tb. Thus, by {a mathematical formula}F→(ta=tb) and {a mathematical formula}(ta=tb)R′=false, F is falsified by {a mathematical formula}R′, which contradicts to the assumption.For an arbitrary {a mathematical formula}TE-formula {a mathematical formula}φ∈LM, if {a mathematical formula}φM=true, we have {a mathematical formula}(φ∧F)M=true, thus {a mathematical formula}φ∧F is satisfiable. Suppose {a mathematical formula}φM=false and assume {a mathematical formula}φ∧F is satisfiable, then there exists an interpretation {a mathematical formula}M′⊨(φ∧F). Since {a mathematical formula}FM′=true, thus M and {a mathematical formula}M′ associate with the same congruence relation R over {a mathematical formula}SF. However, {a mathematical formula}φM′=true≠φM, then there exists two terms {a mathematical formula}tx,ty∈Sφ such that {a mathematical formula}(tx=ty)M′≠(tx=ty)M. Thus (1) either {a mathematical formula}tx or {a mathematical formula}ty cannot be interpreted by M, implying {a mathematical formula}φ∉LM; (2) otherwise {a mathematical formula}(tx=ty)M′=(tx=ty)M, which contradicts to our assumption. □
+      </paragraph>
+     </section>
+     <section label="B.2">
+      Proof of Lemma 7
+      <paragraph label="Proof">
+       For the second statement, sufficiency and necessity are proved respectively.Sufficiency:(1) {a mathematical formula}ν=νS, the conclusion is trivial.(2) ν is substituted by applying either the Const-Sub rule or the Func-Sub rule. For the former case, there exists {a mathematical formula}c∈(ΣM∩ΣMS) such that {a mathematical formula}cM=ν and {a mathematical formula}cMS=νS, thus {a mathematical formula}ν∼νS. For the latter case, let {a mathematical formula}M″ be the intermediate interpretation derived from M where the certain Func-Sub rule for the n-ary ({a mathematical formula}n&gt;0) function symbol {a mathematical formula}f∈(ΣM∩ΣMS) is applicable, such that {a mathematical formula}fM″(ν1,…,νn)=ν, {a mathematical formula}fMS(ν1,…,νn)=νS. Since {a mathematical formula}M″ is derived from M with some symbols substituted, we have {a mathematical formula}fM(ν1′,…,νn′)=ν where {a mathematical formula}h(νi′)=νi for each {a mathematical formula}1≤i≤n. By the induction hypothesis, we have {a mathematical formula}νi′∼νi, thus {a mathematical formula}ν∼νS holds.Necessity:(1) {a mathematical formula}ν=νS, the conclusion is trivial.(2) There exists {a mathematical formula}c∈(ΣM∩ΣMS) such that {a mathematical formula}cM=ν and {a mathematical formula}cMS=νS, then ν is substituted by {a mathematical formula}νS by the Const-Sub rule.(3) There exists an n-ary ({a mathematical formula}n&gt;0) function symbol {a mathematical formula}f∈(ΣM∩ΣMS) such that {a mathematical formula}fM(ν1,…,νn)=ν and {a mathematical formula}fMS(ν1S,…,νnS)=νS where {a mathematical formula}νi∼νiS for each {a mathematical formula}1≤i≤n. By the induction hypothesis, we have {a mathematical formula}h(νi)=νiS. Let {a mathematical formula}M″ be the intermediate interpretation derived from M with {a mathematical formula}νi substituted by {a mathematical formula}νiS ({a mathematical formula}1≤i≤n, and it is possible that {a mathematical formula}νl=νlS for some {a mathematical formula}1≤l≤n). Then, we can apply the Func-Sub rule on {a mathematical formula}M″ to yield a new interpretation {a mathematical formula}M‴=M″[νS/ν]. Hence, ν is substituted by {a mathematical formula}νS in {a mathematical formula}M′, and thus {a mathematical formula}h(ν)=νS. □
+      </paragraph>
+     </section>
+     <section label="B.3">
+      Proof of Lemma 8
+      <paragraph label="Proof">
+       It is trivial that all the function applications in F meet the conditions. Consider an arbitrary function application {a mathematical formula}(f,d) that meets the conditions. Let {a mathematical formula}Mi′ and {a mathematical formula}Mj′ be the result of Unify({a mathematical formula}Mi,{a mathematical formula}MS) and Unify({a mathematical formula}Mj,{a mathematical formula}MS), respectively. By Lemma 7, we have {a mathematical formula}hi(νli)=νlS and {a mathematical formula}hj(νlj)=νlS, where {a mathematical formula}hi (resp. {a mathematical formula}hj) is the isomorphism of {a mathematical formula}Mi (resp. {a mathematical formula}Mj) into {a mathematical formula}Mi′ (resp. {a mathematical formula}Mj′), {a mathematical formula}d=(ν1S,…,νnS), {a mathematical formula}di=(ν1i,…,νni), {a mathematical formula}dj=(ν1j,…,νnj) and {a mathematical formula}1≤l≤n. Since both {a mathematical formula}fMi(di) and {a mathematical formula}fMj(dj) are defined, then both {a mathematical formula}fMi′(d) and {a mathematical formula}fMj′(d) are also defined. Since {a mathematical formula}fMS(d) is not defined, by Algorithm 4 we have {a mathematical formula}(f,d)∈F. □
+      </paragraph>
+     </section>
+     <section label="B.4">
+      Proof of Lemma 9
+      <paragraph label="Proof">
+       Let {a mathematical formula}Mi′ be the result of Unify({a mathematical formula}Mi,{a mathematical formula}MS) for each {a mathematical formula}1≤i≤k.Suppose CombineInterp returns true. Consider two arbitrary interpretations {a mathematical formula}Mi′,Mj′ ({a mathematical formula}1⩽i&lt;j⩽k), an n-ary ({a mathematical formula}n&gt;0) function {a mathematical formula}f∈ΣMi∩ΣMj and {a mathematical formula}d∈(Di′∩Dj′)n. If {a mathematical formula}fMi′(d) and {a mathematical formula}fMj′(d) are defined, {a mathematical formula}fMS(d) is also defined. By the Func-Sub rule, we have {a mathematical formula}fMi′(d)=fMj′(d)=fMS(d). Also, for each constant symbol {a mathematical formula}c∈ΣMi∩ΣMj, {a mathematical formula}cMi′=cMj′=cMS holds by the Const-Sub rule. Thus, k interpretations {a mathematical formula}M1,…,Mk are combinable under {a mathematical formula}MS.Suppose CombineInterp returns false, then there exists a function application {a mathematical formula}(f,d) such that {a mathematical formula}fMi′(d) and {a mathematical formula}fMj′(d) are defined but {a mathematical formula}fMS(d) is not defined. {a mathematical formula}fMi′(d) corresponds to a term {a mathematical formula}f(ti) which is a subterm of {a mathematical formula}(ψi∧FS) in the congruence closure, and we have {a mathematical formula}tiMi′=d. Analogously there exists {a mathematical formula}f(tj) which is a subterm of {a mathematical formula}(ψj∧FS) such that {a mathematical formula}tjMj′=d. Furthermore, since elements in d are shared by {a mathematical formula}Mi′ and {a mathematical formula}Mj′, the elements in the original domains {a mathematical formula}Di and {a mathematical formula}Dj are substituted by applying the Const-Sub or the Func-Sub rules. Thus, there exists (1) {a mathematical formula}(ti1,…,tin)Mi′=d where each {a mathematical formula}tix ({a mathematical formula}1⩽x⩽n) is built from symbols in {a mathematical formula}(ΣMi∩ΣMS); (2) {a mathematical formula}(tj1,…,tjn)Mj′=d where each {a mathematical formula}tjx ({a mathematical formula}1⩽x⩽n) is built from symbols in {a mathematical formula}(ΣMj∩ΣMS).Assume {a mathematical formula}M1,…,Mk are combinable under {a mathematical formula}MS, thus {a mathematical formula}M1,…,Mk have isomorphic interpretations {a mathematical formula}M1″,…,Mk″ respectively that satisfy the condition (2) and (3) in Definition 6. By performing structural induction on term, we have{a mathematical formula} Also, the following two equations hold.{a mathematical formula} Since {a mathematical formula}Mi≅Mi′ (by Lemma 7) and {a mathematical formula}Mi≅Mi″ (by the assumption) hold, we have {a mathematical formula}Mi′≅Mi″. Similarly {a mathematical formula}Mj′≅Mj″ holds. Thus we have {a mathematical formula}tiMi″=tjMj″=d, then {a mathematical formula}fMi″(d) and {a mathematical formula}fMj″(d) are both defined. However, {a mathematical formula}fMS(d) is not defined, which contradicts to the assumption. □
+      </paragraph>
+     </section>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

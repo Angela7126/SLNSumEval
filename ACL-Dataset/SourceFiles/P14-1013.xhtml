@@ -1,0 +1,941 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research.</title>
+<!--Generated on Tue Jun 10 17:17:16 2014 by LaTeXML (version 0.8.0) http://dlmf.nist.gov/LaTeXML/.-->
+<!--Document created on .-->
+
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8"/>
+<link rel="stylesheet" href="LaTeXML.css" type="text/css"/>
+<link rel="stylesheet" href="ltx-article.css" type="text/css"/>
+</head>
+<body>
+<div class="ltx_page_main">
+<div class="ltx_page_content">
+<div class="ltx_document ltx_authors_1line">
+<h1 class="ltx_title ltx_title_document">Learning Topic Representation for SMT with Neural Networks<span class="ltx_note ltx_role_thanks"><sup class="ltx_note_mark">†</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">†</sup><span class="ltx_note_type">thanks: </span>This work was done while the first and fourth authors were visiting Microsoft Research.</span></span></span></h1>
+<div class="ltx_authors">
+<span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">[
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">[
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">[
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">[
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">[
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">[
+</span></span>
+<span class="ltx_author_before">  </span><span class="ltx_creator ltx_role_author">
+<span class="ltx_personname">[
+</span></span></div>
+<div class="ltx_date ltx_role_creation"/>
+
+<div class="ltx_abstract"><h6 class="ltx_title ltx_title_abstract">Abstract</h6>
+<p class="ltx_p">Statistical Machine Translation (SMT) usually utilizes contextual information to disambiguate translation candidates. However, it is often limited to contexts within sentence boundaries, hence broader topical information cannot be leveraged. In this paper, we propose a novel approach to learning topic representation for parallel data using a neural network architecture, where abundant topical contexts are embedded via topic relevant monolingual data. By associating each translation rule with the topic representation, topic relevant rules are selected according to the distributional similarity with the source text during SMT decoding. Experimental results show that our method significantly improves translation accuracy in the NIST Chinese-to-English translation task compared to a state-of-the-art baseline.</p>
+</div>
+<div id="p1" class="ltx_para">
+<p class="ltx_p">1]<span class="ltx_text ltx_font_bold">LeiCui</span>2]<span class="ltx_text ltx_font_bold">DongdongZhang</span>2]<span class="ltx_text ltx_font_bold">ShujieLiu</span>3]<span class="ltx_text ltx_font_bold">QimingChen</span>2]<span class="ltx_text ltx_font_bold">MuLi</span>2]<span class="ltx_text ltx_font_bold">MingZhou</span>1]<span class="ltx_text ltx_font_bold">MuyunYang<span class="ltx_ERROR undefined">\affil</span></span>[1]SchoolofComputerScienceandTechnology,HarbinInstituteofTechnology,Harbin,P.R.China<span class="ltx_ERROR undefined">\authorcr</span><span class="ltx_text ltx_font_typewriter">leicui@hit.edu.cn,ymy@mtlab.hit.edu.cn<span class="ltx_ERROR undefined">\affil</span></span>[2]MicrosoftResearch,Beijing,P.R.China<span class="ltx_ERROR undefined">\authorcr</span>{<span class="ltx_text ltx_font_typewriter">dozhang,shujliu,muli,mingzhou</span>}<span class="ltx_text ltx_font_typewriter">@microsoft.com<span class="ltx_ERROR undefined">\affil</span></span>[3]ShanghaiJiaoTongUniversity,Shanghai,P.R.China<span class="ltx_ERROR undefined">\authorcr</span><span class="ltx_text ltx_font_typewriter">simoncqm@gmail.com</span></p>
+</div><span class="ltx_ERROR undefined">{CJK}</span>
+<div id="p2" class="ltx_para">
+<p class="ltx_p">UTF8gkai</p>
+</div>
+<div id="S1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Introduction</h2>
+
+<div id="S1.p1" class="ltx_para">
+<p class="ltx_p">Making translation decisions is a difficult task in many Statistical Machine Translation (SMT) systems. Current translation modeling approaches usually use context dependent information to disambiguate translation candidates. For example, translation sense disambiguation approaches <cite class="ltx_cite">[<a href="#bib.bib68" title="Word sense disambiguation vs. statistical machine translation" class="ltx_ref">4</a>, <a href="#bib.bib62" title="Context-dependent phrasal translation lexicons for statistical machine translation" class="ltx_ref">5</a>]</cite> are proposed for phrase-based SMT systems. Meanwhile, for hierarchical phrase-based or syntax-based SMT systems, there is also much work involving rich contexts to guide rule selection <cite class="ltx_cite">[<a href="#bib.bib64" title="Improving statistical machine translation using lexicalized rule selection" class="ltx_ref">15</a>, <a href="#bib.bib63" title="Maximum entropy based rule selection model for syntax-based statistical machine translation" class="ltx_ref">21</a>, <a href="#bib.bib65" title="Soft syntactic constraints for hierarchical phrased-based translation" class="ltx_ref">23</a>, <a href="#bib.bib66" title="A syntax-driven bracketing model for phrase-based translation" class="ltx_ref">35</a>]</cite>. Although these methods are effective and proven successful in many SMT systems, they only leverage within-sentence contexts which are insufficient in exploring broader information. For example, the word <span class="ltx_text ltx_font_italic">driver</span> often means “the operator of a motor vehicle” in common texts. But in the sentence “Finally, we write the user response to the buffer, i.e., pass it to our driver”, we understand that <span class="ltx_text ltx_font_italic">driver</span> means “computer program”. In this case, people understand the meaning because of the IT topical context which goes beyond sentence-level analysis and requires more relevant knowledge. Therefore, it is important to leverage topic information to learn smarter translation models and achieve better translation performance.</p>
+</div>
+<div id="S1.p2" class="ltx_para">
+<p class="ltx_p">Topic modeling is a useful mechanism for discovering and characterizing various semantic concepts embedded in a collection of documents. Attempts on topic-based translation modeling include topic-specific lexicon translation models <cite class="ltx_cite">[<a href="#bib.bib38" title="BiTAM: bilingual topic admixture models for word alignment" class="ltx_ref">37</a>, <a href="#bib.bib39" title="HM-bitam: bilingual topic exploration, word alignment, and translation" class="ltx_ref">38</a>]</cite>, topic similarity models for synchronous rules <cite class="ltx_cite">[<a href="#bib.bib41" title="A topic similarity model for hierarchical phrase-based translation" class="ltx_ref">34</a>]</cite>, and document-level translation with topic coherence <cite class="ltx_cite">[<a href="#bib.bib42" title="A topic-based coherence model for statistical machine translation" class="ltx_ref">36</a>]</cite>. In addition, topic-based approaches have been used in domain adaptation for SMT <cite class="ltx_cite">[<a href="#bib.bib40" title="Bilingual lsa-based adaptation for statistical machine translation" class="ltx_ref">31</a>, <a href="#bib.bib43" title="Translation model adaptation for statistical machine translation with monolingual topic information" class="ltx_ref">30</a>]</cite>, where they view different topics as different domains. One typical property of these approaches in common is that they only utilize parallel data where document boundaries are explicitly given. In this way, the topic of a sentence can be inferred with document-level information using off-the-shelf topic modeling toolkits such as Latent Dirichlet Allocation (LDA) <cite class="ltx_cite">[<a href="#bib.bib44" title="Latent dirichlet allocation" class="ltx_ref">3</a>]</cite> or Hidden Topic Markov Model (HTMM) <cite class="ltx_cite">[<a href="#bib.bib45" title="Hidden topic markov models" class="ltx_ref">14</a>]</cite>. Most of them also assume that the input must be in document level. However, this situation does not always happen since there is considerable amount of parallel data which does not have document boundaries. In addition, contemporary SMT systems often works on sentence level rather than document level due to the efficiency. Although we can easily apply LDA at the sentence level, it is quite difficult to infer the topic accurately with only a few words in the sentence. This makes previous approaches inefficient when applied them in real-world commercial SMT systems. Therefore, we need to devise a systematical approach to enriching the sentence and inferring its topic more accurately.</p>
+</div>
+<div id="S1.p3" class="ltx_para">
+<p class="ltx_p">In this paper, we propose a novel approach to learning topic representations for sentences. Since the information within the sentence is insufficient for topic modeling, we first enrich sentence contexts via Information Retrieval (IR) methods using content words in the sentence as queries, so that topic-related monolingual documents can be collected. These topic-related documents are utilized to learn a specific topic representation for each sentence using a neural network based approach. Neural network is an effective technique for learning different levels of data representations. The levels inferred from neural network correspond to distinct levels of concepts, where high-level representations are obtained from low-level bag-of-words input. It is able to detect correlations among any subset of input features through non-linear transformations, which demonstrates the superiority of eliminating the effect of noisy words which are irrelevant to the topic. Our problem fits well into the neural network framework and we expect that it can further improve inferring the topic representations for sentences.</p>
+</div>
+<div id="S1.p4" class="ltx_para">
+<p class="ltx_p">To incorporate topic representations as translation knowledge into SMT, our neural network based approach directly optimizes similarities between the source language and target language in a compact topic space. This underlying topic space is learned from sentence-level parallel data in order to share topic information across the source and target languages as much as possible. Additionally, our model can be discriminatively trained with a large number of training instances, without expensive sampling methods such as in LDA or HTMM, thus it is more practicable and scalable. Finally, we associate the learned representation to each bilingual translation rule. Topic-related rules are selected according to distributional similarity with the source text, which helps hypotheses generation in SMT decoding. We integrate topic similarity features in the log-linear model and evaluate the performance on the NIST Chinese-to-English translation task. Experimental results demonstrate that our model significantly improves translation accuracy over a state-of-the-art baseline.</p>
+</div>
+</div>
+<div id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Background: Deep Learning</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p class="ltx_p">Deep learning is an active topic in recent years which has triumphed in many machine learning research areas. This technique began raising public awareness in the mid-2000s after researchers showed how a multi-layer feed-forward neural network can be effectively trained. The training procedure often involves two phases: a layer-wise unsupervised pre-training phase and a supervised fine-tuning phase. For pre-training, Restricted Boltzmann Machine (RBM) <cite class="ltx_cite">[<a href="#bib.bib50" title="A fast learning algorithm for deep belief nets" class="ltx_ref">16</a>]</cite>, auto-encoding <cite class="ltx_cite">[<a href="#bib.bib51" title="Greedy layer-wise training of deep networks" class="ltx_ref">1</a>]</cite> and sparse coding <cite class="ltx_cite">[<a href="#bib.bib52" title="Efficient sparse coding algorithms" class="ltx_ref">20</a>]</cite> are most frequently used. Unsupervised pre-training trains the network one layer at a time and helps guide the parameters of the layer towards better regions in parameter space <cite class="ltx_cite">[<a href="#bib.bib53" title="Learning deep architectures for ai" class="ltx_ref">2</a>]</cite>. Followed by fine-tuning in this parameter region, deep learning is able to achieve state-of-the-art performance in various research areas, including breakthrough results on the ImageNet dataset for objective recognition <cite class="ltx_cite">[<a href="#bib.bib54" title="ImageNet classification with deep convolutional neural networks" class="ltx_ref">19</a>]</cite>, significant error reduction in speech recognition <cite class="ltx_cite">[<a href="#bib.bib55" title="Context-dependent pre-trained deep neural networks for large-vocabulary speech recognition" class="ltx_ref">10</a>]</cite>, etc.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p class="ltx_p">Deep learning has also been successfully applied in a variety of NLP tasks such as part-of-speech tagging, chunking, named entity recognition, semantic role labeling <cite class="ltx_cite">[<a href="#bib.bib46" title="Natural language processing (almost) from scratch" class="ltx_ref">8</a>]</cite>, parsing <cite class="ltx_cite">[<a href="#bib.bib47" title="Parsing Natural Scenes and Natural Language with Recursive Neural Networks" class="ltx_ref">28</a>]</cite>, sentiment analysis <cite class="ltx_cite">[<a href="#bib.bib48" title="Semi-supervised recursive autoencoders for predicting sentiment distributions" class="ltx_ref">29</a>]</cite>, etc. Most NLP research converts a high-dimensional and sparse binary representation into a low-dimensional and real-valued representation. This low-dimensional representation is usually learned from huge amount of monolingual texts in the pre-training phase, and then fine-tuned towards task-specific criterion. Inspired by previous successful research, we first learn sentence representations using topic-related monolingual texts in the pre-training phase, and then optimize the bilingual similarity by leveraging sentence-level parallel data in the fine-tuning phase.</p>
+</div>
+</div>
+<div id="S3" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">3 </span>Topic Similarity Model with Neural Network</h2>
+
+<div id="S3.p1" class="ltx_para">
+<p class="ltx_p">In this section, we explain our neural network based topic similarity model in detail, as well as how to incorporate the topic similarity features into SMT decoding procedure. Figure <a href="#S3.F1" title="Figure 1 ‣ 3 Topic Similarity Model with Neural Network ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> sketches the high-level overview which illustrates how to learn topic representations using sentence-level parallel data. Given a parallel sentence pair <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m1" class="ltx_Math" alttext="\langle f,e\rangle" display="inline"><mrow><mo>⟨</mo><mrow><mi>f</mi><mo>,</mo><mi>e</mi></mrow><mo>⟩</mo></mrow></math>, the first step is to treat <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m2" class="ltx_Math" alttext="f" display="inline"><mi>f</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m3" class="ltx_Math" alttext="e" display="inline"><mi>e</mi></math> as queries, and use IR methods to retrieve relevant documents to enrich contextual information for them. Specifically, the ranking model we used is a Vector Space Model (VSM), where the query and document are converted into tf-idf weighted vectors. The most relevant <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m4" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math> documents <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m5" class="ltx_Math" alttext="\textbf{d}_{f}" display="inline"><msub><mtext>𝐝</mtext><mi>f</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m6" class="ltx_Math" alttext="\textbf{d}_{e}" display="inline"><msub><mtext>𝐝</mtext><mi>e</mi></msub></math> are retrieved and converted to a high-dimensional, bag-of-words input <span class="ltx_text ltx_markedasmath ltx_font_bold">f</span> and <span class="ltx_text ltx_markedasmath ltx_font_bold">e</span> for the representation learning<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>We use <span class="ltx_text ltx_markedasmath ltx_font_bold">f</span> and <span class="ltx_text ltx_markedasmath ltx_font_bold">e</span> to denote the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m11" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-of-<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.p1.m12" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math> vector converted from the retrieved documents.</span></span></span>.</p>
+</div>
+<div id="S3.F1" class="ltx_figure"><img src="P14-1013/image001.png" id="S3.F1.g1" class="ltx_graphics ltx_centering" width="338" height="253" alt=""/>
+<br class="ltx_break ltx_centering"/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Overview of neural network based topic similarity model.</div>
+</div>
+<div id="S3.p2" class="ltx_para">
+<p class="ltx_p">There are two phases in our neural network training process: pre-training and fine-tuning. In the pre-training phase (Section 3.1), we build two neural networks with the same structure but different parameters to learn a low-dimensional representation for sentences in two different languages. Then, in the fine-tuning phase (Section 3.2), our model directly optimizes the similarity of two low-dimensional representations, so that it highly correlates to SMT decoding. Finally, the learned representation is used to calculate similarities which are integrated as features in SMT decoding procedure (Section 3.3).</p>
+</div>
+<div id="S3.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.1 </span>Pre-training using denoising auto-encoder</h3>
+
+<div id="S3.SS1.p1" class="ltx_para">
+<p class="ltx_p">In the pre-training phase, we leverage neural network structures to transform high-dimensional sparse vectors to low-dimensional dense vectors. The topic similarity is calculated on top of the learned dense vectors. This dense representation should preserve the information from the bag-of-words input, meanwhile alleviate data sparse problem. Therefore, we use a specially designed mechanism called auto-encoder to solve this problem. Auto-encoder <cite class="ltx_cite">[<a href="#bib.bib51" title="Greedy layer-wise training of deep networks" class="ltx_ref">1</a>]</cite> is one of the basic building blocks of deep learning. Assuming that the input is a <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m1" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-of-<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m2" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math> binary vector <span class="ltx_text ltx_font_bold">x</span> representing the bag-of-words (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m3" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math> is the vocabulary size), an auto-encoder consists of an encoding process <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m4" class="ltx_Math" alttext="g(\textbf{x})" display="inline"><mrow><mi>g</mi><mo>⁢</mo><mrow><mo>(</mo><mtext>𝐱</mtext><mo>)</mo></mrow></mrow></math> and a decoding process <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m5" class="ltx_Math" alttext="h(g(\textbf{x}))" display="inline"><mrow><mi>h</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>g</mi><mo>⁢</mo><mrow><mo>(</mo><mtext>𝐱</mtext><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></math>. The objective of the auto-encoder is to minimize the reconstruction error <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m6" class="ltx_Math" alttext="\mathcal{L}(h(g(\textbf{x})),\textbf{x})" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">ℒ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mi>h</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>g</mi><mo>⁢</mo><mrow><mo>(</mo><mtext>𝐱</mtext><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow><mo>,</mo><mtext>𝐱</mtext></mrow><mo>)</mo></mrow></mrow></math>. Our goal is to learn a low-dimensional vector which can preserve information from the original <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m7" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-of-<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p1.m8" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math> vector.</p>
+</div>
+<div id="S3.SS1.p2" class="ltx_para">
+<p class="ltx_p">One problem with auto-encoder is that it treats all words in the same way, making no distinguishment between function words and content words. The representation learned by auto-encoders tends to be influenced by the function words, thereby it is not robust. To alleviate this problem, <cite class="ltx_cite">Vincent<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib56" title="Extracting and composing robust features with denoising autoencoders" class="ltx_ref">2008</a>)</cite> proposed the Denoising Auto-Encoder (DAE), which aims to reconstruct a clean, “repaired” input from a corrupted, partially destroyed vector. This is done by corrupting the initial input <span class="ltx_text ltx_font_bold">x</span> to get a partially destroyed version <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m1" class="ltx_Math" alttext="\tilde{\textbf{x}}" display="inline"><mover accent="true"><mtext>𝐱</mtext><mo stretchy="false">~</mo></mover></math>. DAE is capable of capturing the global structure of the input while ignoring the noise. In our task, for each sentence, we treat the retrieved <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m2" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math> relevant documents as a single large document and convert it to a bag-of-words vector <span class="ltx_text ltx_markedasmath ltx_font_bold">x</span> in Figure <a href="#S3.F2" title="Figure 2 ‣ 3.1 Pre-training using denoising auto-encoder ‣ 3 Topic Similarity Model with Neural Network ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>. With DAE, the input <span class="ltx_text ltx_markedasmath ltx_font_bold">x</span> is manually corrupted by applying masking noise (randomly mask 1 to 0) and getting <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p2.m5" class="ltx_Math" alttext="\tilde{\textbf{x}}" display="inline"><mover accent="true"><mtext>𝐱</mtext><mo stretchy="false">~</mo></mover></math>. Denoising training is considered as “filling in the blanks” <cite class="ltx_cite">[<a href="#bib.bib57" title="Stacked denoising autoencoders: learning useful representations in a deep network with a local denoising criterion" class="ltx_ref">33</a>]</cite>, which means the masking components can be recovered from the non-corrupted components. For example, in IT related texts, if the word <span class="ltx_text ltx_font_italic">driver</span> is masked, it should be predicted through hidden units in neural networks by active signals such as “buffer”, “user response”, etc.</p>
+</div>
+<div id="S3.F2" class="ltx_figure"><img src="P14-1013/image002.png" id="S3.F2.g1" class="ltx_graphics ltx_centering" width="338" height="253" alt=""/>
+<br class="ltx_break ltx_centering"/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>Denoising auto-encoder with a bag-of-words input.</div>
+</div>
+<div id="S3.SS1.p3" class="ltx_para">
+<p class="ltx_p">In our case, the encoding process transforms the corrupted input <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m1" class="ltx_Math" alttext="\tilde{\textbf{x}}" display="inline"><mover accent="true"><mtext>𝐱</mtext><mo stretchy="false">~</mo></mover></math> into <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m2" class="ltx_Math" alttext="g(\tilde{\textbf{x}})" display="inline"><mrow><mi>g</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mtext>𝐱</mtext><mo stretchy="false">~</mo></mover><mo>)</mo></mrow></mrow></math> with two layers: a linear layer connected with a non-linear layer. Assuming that the dimension of the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m3" class="ltx_Math" alttext="g(\tilde{\textbf{x}})" display="inline"><mrow><mi>g</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mtext>𝐱</mtext><mo stretchy="false">~</mo></mover><mo>)</mo></mrow></mrow></math> is <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m4" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math>, the linear layer forms a <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m5" class="ltx_Math" alttext="L\times V" display="inline"><mrow><mi>L</mi><mo>×</mo><mi>V</mi></mrow></math> matrix <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m6" class="ltx_Math" alttext="W" display="inline"><mi>W</mi></math> which projects the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m7" class="ltx_Math" alttext="n" display="inline"><mi>n</mi></math>-of-<math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m8" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math> vector to a <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m9" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math>-dimensional hidden layer. After the bag-of-words input has been transformed, they are fed into a subsequent layer to model the highly non-linear relations among words:</p>
+<table id="S3.E1" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E1.m1" class="ltx_Math" alttext="\textbf{z}=f(W\tilde{\textbf{x}}+\textbf{b})" display="block"><mrow><mtext>𝐳</mtext><mo>=</mo><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mi>W</mi><mo>⁢</mo><mover accent="true"><mtext>𝐱</mtext><mo stretchy="false">~</mo></mover></mrow><mo>+</mo><mtext>𝐛</mtext></mrow><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(1)</span></td></tr>
+</table>
+<p class="ltx_p">where <span class="ltx_text ltx_markedasmath ltx_font_bold">z</span> is the output of the non-linear layer, <span class="ltx_text ltx_markedasmath ltx_font_bold">b</span> is a <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m12" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math>-length bias vector. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p3.m13" class="ltx_Math" alttext="f(\cdot)" display="inline"><mrow><mi>f</mi><mo>⁢</mo><mrow><mo>(</mo><mo>⋅</mo><mo>)</mo></mrow></mrow></math> is a non-linear function, where common choices include sigmoid function, hyperbolic function, “hard” hyperbolic function, rectifier function, etc. In this work, we use the rectifier function as our non-linear function due to its efficiency and better performance <cite class="ltx_cite">[<a href="#bib.bib69" title="Deep sparse rectifier networks" class="ltx_ref">13</a>]</cite>:</p>
+<table id="S3.E2" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E2.m1" class="ltx_Math" alttext="rec(x)=\begin{cases}x&amp;\text{if $x&gt;0$}\\&#10;0&amp;\text{otherwise}\end{cases}" display="block"><mrow><mrow><mi>r</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>c</mi><mo>⁢</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mo>{</mo><mtable columnspacing="0.4em" rowspacing="0.2ex"><mtr><mtd columnalign="left"><mi>x</mi></mtd><mtd columnalign="left"><mrow><mtext>if </mtext><mrow><mi>x</mi><mo>&gt;</mo><mn>0</mn></mrow></mrow></mtd></mtr><mtr><mtd columnalign="left"><mn>0</mn></mtd><mtd columnalign="left"><mtext>otherwise</mtext></mtd></mtr></mtable></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(2)</span></td></tr>
+</table>
+</div>
+<div id="S3.SS1.p4" class="ltx_para">
+<p class="ltx_p">The decoding process consists of a linear layer and a non-linear layer with similar network structures, but different parameters. It transforms the <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m1" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math>-dimensional vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m2" class="ltx_Math" alttext="g(\tilde{\textbf{x}})" display="inline"><mrow><mi>g</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mtext>𝐱</mtext><mo stretchy="false">~</mo></mover><mo>)</mo></mrow></mrow></math> to a <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m3" class="ltx_Math" alttext="V" display="inline"><mi>V</mi></math>-dimensional vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m4" class="ltx_Math" alttext="h(g(\tilde{\textbf{x}}))" display="inline"><mrow><mi>h</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>g</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mtext>𝐱</mtext><mo stretchy="false">~</mo></mover><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow></math>. To minimize reconstruction error with respect to <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS1.p4.m5" class="ltx_Math" alttext="\tilde{\textbf{x}}" display="inline"><mover accent="true"><mtext>𝐱</mtext><mo stretchy="false">~</mo></mover></math>, we define the loss function as the L2-norm of the difference between the uncorrupted input and reconstructed input:</p>
+<table id="S3.E3" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E3.m1" class="ltx_Math" alttext="\mathcal{L}(h(g(\tilde{\textbf{x}})),\textbf{x})=\|h(g(\tilde{\textbf{x}}))-%&#10;\textbf{x}\|_{2}" display="block"><mrow><mrow><mi class="ltx_font_mathcaligraphic">ℒ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mrow><mi>h</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>g</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mtext>𝐱</mtext><mo stretchy="false">~</mo></mover><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow><mo>,</mo><mtext>𝐱</mtext></mrow><mo>)</mo></mrow></mrow><mo>=</mo><msub><mrow><mo fence="true">∥</mo><mrow><mrow><mi>h</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>g</mi><mo>⁢</mo><mrow><mo>(</mo><mover accent="true"><mtext>𝐱</mtext><mo stretchy="false">~</mo></mover><mo>)</mo></mrow></mrow><mo>)</mo></mrow></mrow><mo>-</mo><mtext>𝐱</mtext></mrow><mo fence="true">∥</mo></mrow><mn>2</mn></msub></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(3)</span></td></tr>
+</table>
+</div>
+<div id="S3.SS1.p5" class="ltx_para">
+<p class="ltx_p">Multi-layer neural networks are trained with the standard back-propagation algorithm <cite class="ltx_cite">[<a href="#bib.bib58" title="Neurocomputing: foundations of research" class="ltx_ref">26</a>]</cite>. The gradient of the loss function is calculated and back-propagated to the previous layer to update its parameters. Training neural networks involves many factors such as the learning rate and the length of hidden layers. We will discuss the optimization of these parameters in Section 4.</p>
+</div>
+</div>
+<div id="S3.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.2 </span>Fine-tuning with parallel data</h3>
+
+<div id="S3.SS2.p1" class="ltx_para">
+<p class="ltx_p">In the fine-tuning phase, we stack another layer on top of the two low-dimensional vectors to maximize the similarity between source and target languages. The similarity scores are integrated into the standard log-linear model for making translation decisions. Since the vectors from DAE are trained using information from monolingual training data independently, these vectors may be inadequate to measure bilingual topic similarity due to their different topic spaces. Therefore, in this stage, parallel sentence pairs are used to help connecting the vectors from different languages because they express the same topic. In fact, the objective of fine-tuning is to discover a latent topic space which is shared by both languages as much as possible. This shared topic space is particularly useful when the SMT decoder tries to match the source texts and translation candidates in the target language.</p>
+</div>
+<div id="S3.SS2.p2" class="ltx_para">
+<p class="ltx_p">Given a parallel sentence pair <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m1" class="ltx_Math" alttext="\langle f,e\rangle" display="inline"><mrow><mo>⟨</mo><mrow><mi>f</mi><mo>,</mo><mi>e</mi></mrow><mo>⟩</mo></mrow></math>, the DAE learns representations for <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m2" class="ltx_Math" alttext="f" display="inline"><mi>f</mi></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m3" class="ltx_Math" alttext="e" display="inline"><mi>e</mi></math> respectively, as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m4" class="ltx_Math" alttext="\textbf{z}_{f}=g(\textbf{f})" display="inline"><mrow><msub><mtext>𝐳</mtext><mi>f</mi></msub><mo>=</mo><mrow><mi>g</mi><mo>⁢</mo><mrow><mo>(</mo><mtext>𝐟</mtext><mo>)</mo></mrow></mrow></mrow></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m5" class="ltx_Math" alttext="\textbf{z}_{e}=g(\textbf{e})" display="inline"><mrow><msub><mtext>𝐳</mtext><mi>e</mi></msub><mo>=</mo><mrow><mi>g</mi><mo>⁢</mo><mrow><mo>(</mo><mtext>𝐞</mtext><mo>)</mo></mrow></mrow></mrow></math> in Figure <a href="#S3.F1" title="Figure 1 ‣ 3 Topic Similarity Model with Neural Network ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>. We then take two vectors as the input to calculate their similarity. Consequently, the whole neural network can be fine-tuned towards the supervised criteria with the help of parallel data. The similarity score of the representation pair <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p2.m6" class="ltx_Math" alttext="\langle\textbf{z}_{f},\textbf{z}_{e}\rangle" display="inline"><mrow><mo>⟨</mo><mrow><msub><mtext>𝐳</mtext><mi>f</mi></msub><mo>,</mo><msub><mtext>𝐳</mtext><mi>e</mi></msub></mrow><mo>⟩</mo></mrow></math> is defined as the cosine similarity of the two vectors:</p>
+<table id="S3.E4" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E4.m1" class="ltx_Math" alttext="\begin{split}sim(f,e)&amp;=\cos(\textbf{z}_{f},\textbf{z}_{e})\\&#10;&amp;=\frac{\textbf{z}_{f}\cdot\textbf{z}_{e}}{\|\textbf{z}_{f}\|\|\textbf{z}_{e}%&#10;\|}\end{split}" display="block"><mrow><mrow><mi>s</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>f</mi><mo>,</mo><mi>e</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mi>cos</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><msub><mtext>𝐳</mtext><mi>f</mi></msub><mo>,</mo><msub><mtext>𝐳</mtext><mi>e</mi></msub></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mfrac><mrow><msub><mtext>𝐳</mtext><mi>f</mi></msub><mo>⋅</mo><msub><mtext>𝐳</mtext><mi>e</mi></msub></mrow><mrow><mrow><mo fence="true">∥</mo><msub><mtext>𝐳</mtext><mi>f</mi></msub><mo fence="true">∥</mo></mrow><mo>⁢</mo><mrow><mo fence="true">∥</mo><msub><mtext>𝐳</mtext><mi>e</mi></msub><mo fence="true">∥</mo></mrow></mrow></mfrac></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(4)</span></td></tr>
+</table>
+</div>
+<div id="S3.SS2.p3" class="ltx_para">
+<p class="ltx_p">Since a parallel sentence pair should have the same topic, our goal is to maximize the similarity score between the source sentence and target sentence. Inspired by the contrastive estimation method <cite class="ltx_cite">[<a href="#bib.bib59" title="Contrastive estimation: training log-linear models on unlabeled data" class="ltx_ref">27</a>]</cite>, for each parallel sentence pair <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m1" class="ltx_Math" alttext="\langle f,e\rangle" display="inline"><mrow><mo>⟨</mo><mrow><mi>f</mi><mo>,</mo><mi>e</mi></mrow><mo>⟩</mo></mrow></math> as a positive instance, we select another sentence pair <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m2" class="ltx_Math" alttext="\langle f^{\prime},e^{\prime}\rangle" display="inline"><mrow><mo>⟨</mo><mrow><msup><mi>f</mi><mo>′</mo></msup><mo>,</mo><msup><mi>e</mi><mo>′</mo></msup></mrow><mo>⟩</mo></mrow></math> from the training data and treat <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m3" class="ltx_Math" alttext="\langle f,e^{\prime}\rangle" display="inline"><mrow><mo>⟨</mo><mrow><mi>f</mi><mo>,</mo><msup><mi>e</mi><mo>′</mo></msup></mrow><mo>⟩</mo></mrow></math> as a negative instance. To make the similarity of the positive instance larger than the negative instance by some margin <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m4" class="ltx_Math" alttext="\eta" display="inline"><mi>η</mi></math>, we utilize the following pairwise ranking loss:</p>
+<table id="S3.E5" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E5.m1" class="ltx_Math" alttext="\mathcal{L}(f,e)=\max\{0,\eta-sim(f,e)+sim(f,e^{\prime})\}" display="block"><mrow><mrow><mi class="ltx_font_mathcaligraphic">ℒ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>f</mi><mo>,</mo><mi>e</mi></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mo movablelimits="false">max</mo><mo>⁡</mo><mrow><mo>{</mo><mrow><mn>0</mn><mo>,</mo><mrow><mi>η</mi><mo>-</mo><mrow><mi>s</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>f</mi><mo>,</mo><mi>e</mi></mrow><mo>)</mo></mrow></mrow><mo>+</mo><mrow><mi>s</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>f</mi><mo>,</mo><msup><mi>e</mi><mo>′</mo></msup></mrow><mo>)</mo></mrow></mrow></mrow></mrow><mo>}</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(5)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m5" class="ltx_Math" alttext="\eta=\frac{1}{2}-sim(f,f^{\prime})" display="inline"><mrow><mi>η</mi><mo>=</mo><mrow><mfrac><mn>1</mn><mn>2</mn></mfrac><mo>-</mo><mrow><mi>s</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>f</mi><mo>,</mo><msup><mi>f</mi><mo>′</mo></msup></mrow><mo>)</mo></mrow></mrow></mrow></mrow></math>. The rationale behind this criterion is, the smaller <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p3.m6" class="ltx_Math" alttext="sim(f,f^{\prime})" display="inline"><mrow><mi>s</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>f</mi><mo>,</mo><msup><mi>f</mi><mo>′</mo></msup></mrow><mo>)</mo></mrow></mrow></math> is, the more we should penalize negative instances.</p>
+</div>
+<div id="S3.SS2.p4" class="ltx_para">
+<p class="ltx_p">To effectively train the model in this task, negative instances must be selected carefully. Since different sentences may have very similar topic distributions, we select negative instances that are dissimilar with the positive instances based on the following criteria:</p>
+</div>
+<div id="S3.SS2.p5" class="ltx_para">
+<ol id="I1" class="ltx_enumerate">
+<li id="I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">1.</span> 
+<div id="I1.i1.p1" class="ltx_para">
+<p class="ltx_p">For each positive instance <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i1.p1.m1" class="ltx_Math" alttext="\langle f,e\rangle" display="inline"><mrow><mo>⟨</mo><mrow><mi>f</mi><mo>,</mo><mi>e</mi></mrow><mo>⟩</mo></mrow></math>, we select <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i1.p1.m2" class="ltx_Math" alttext="e^{\prime}" display="inline"><msup><mi>e</mi><mo>′</mo></msup></math> which contains at least 30% different content words from <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i1.p1.m3" class="ltx_Math" alttext="e" display="inline"><mi>e</mi></math>.</p>
+</div></li>
+<li id="I1.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_enumerate">2.</span> 
+<div id="I1.i2.p1" class="ltx_para">
+<p class="ltx_p">If we cannot find such <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i2.p1.m1" class="ltx_Math" alttext="e^{\prime}" display="inline"><msup><mi>e</mi><mo>′</mo></msup></math>, remove <math xmlns="http://www.w3.org/1998/Math/MathML" id="I1.i2.p1.m2" class="ltx_Math" alttext="\langle f,e\rangle" display="inline"><mrow><mo>⟨</mo><mrow><mi>f</mi><mo>,</mo><mi>e</mi></mrow><mo>⟩</mo></mrow></math> from the training instances for network learning.</p>
+</div></li>
+</ol>
+</div>
+<div id="S3.SS2.p6" class="ltx_para">
+<p class="ltx_p">The model minimizes the pairwise ranking loss across all training instances:</p>
+<table id="S3.E6" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E6.m1" class="ltx_Math" alttext="\mathcal{L}=\sum_{\langle f,e\rangle}{\mathcal{L}(f,e)}" display="block"><mrow><mi class="ltx_font_mathcaligraphic">ℒ</mi><mo>=</mo><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mo>⟨</mo><mrow><mi>f</mi><mo>,</mo><mi>e</mi></mrow><mo>⟩</mo></mrow></munder><mrow><mi class="ltx_font_mathcaligraphic">ℒ</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>f</mi><mo>,</mo><mi>e</mi></mrow><mo>)</mo></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(6)</span></td></tr>
+</table>
+</div>
+<div id="S3.SS2.p7" class="ltx_para">
+<p class="ltx_p">We used standard back-propagation algorithm to further fine-tune the neural network parameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS2.p7.m1" class="ltx_Math" alttext="W" display="inline"><mi>W</mi></math> and <span class="ltx_text ltx_markedasmath ltx_font_bold">b</span> in Equation (1). The learned neural networks are used to obtain sentence topic representations, which will be further leveraged to infer topic representations of bilingual translation rules.</p>
+</div>
+</div>
+<div id="S3.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">3.3 </span>Integration into SMT decoding</h3>
+
+<div id="S3.SS3.p1" class="ltx_para">
+<p class="ltx_p">We incorporate the learned topic similarity scores into the standard log-linear framework for SMT. When a synchronous rule <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m1" class="ltx_Math" alttext="\langle\alpha,\gamma\rangle" display="inline"><mrow><mo>⟨</mo><mrow><mi>α</mi><mo>,</mo><mi>γ</mi></mrow><mo>⟩</mo></mrow></math> is extracted from a sentence pair <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m2" class="ltx_Math" alttext="\langle f,e\rangle" display="inline"><mrow><mo>⟨</mo><mrow><mi>f</mi><mo>,</mo><mi>e</mi></mrow><mo>⟩</mo></mrow></math>, a triple instance <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m3" class="ltx_Math" alttext="\mathcal{I}=(\langle\alpha,\gamma\rangle,\langle f,e\rangle,c)" display="inline"><mrow><mi class="ltx_font_mathcaligraphic">ℐ</mi><mo>=</mo><mrow><mo>(</mo><mrow><mrow><mo>⟨</mo><mrow><mi>α</mi><mo>,</mo><mi>γ</mi></mrow><mo>⟩</mo></mrow><mo>,</mo><mrow><mo>⟨</mo><mrow><mi>f</mi><mo>,</mo><mi>e</mi></mrow><mo>⟩</mo></mrow><mo>,</mo><mi>c</mi></mrow><mo>)</mo></mrow></mrow></math> is collected for inferring the topic representation of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m4" class="ltx_Math" alttext="\langle\alpha,\gamma\rangle" display="inline"><mrow><mo>⟨</mo><mrow><mi>α</mi><mo>,</mo><mi>γ</mi></mrow><mo>⟩</mo></mrow></math>, where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m5" class="ltx_Math" alttext="c" display="inline"><mi>c</mi></math> is the count of rule occurrence. Following <cite class="ltx_cite">[<a href="#bib.bib15" title="Hierarchical phrase-based translation" class="ltx_ref">7</a>]</cite>, we give a count of one for each phrase pair occurrence and a fractional count for each hierarchical phrase pair. The topic representation of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m6" class="ltx_Math" alttext="\langle\alpha,\gamma\rangle" display="inline"><mrow><mo>⟨</mo><mrow><mi>α</mi><mo>,</mo><mi>γ</mi></mrow><mo>⟩</mo></mrow></math> is then calculated as the weighted average:</p>
+<table id="S3.E7" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E7.m1" class="ltx_Math" alttext="\textbf{z}_{\alpha}=\frac{\sum_{(\langle\alpha,\gamma\rangle,\langle f,e%&#10;\rangle,c)\in\mathcal{T}}{\{c\times\textbf{z}_{f}\}}}{\sum_{(\langle\alpha,%&#10;\gamma\rangle,\langle f,e\rangle,c)\in\mathcal{T}}{\{c\}}}" display="block"><mrow><msub><mtext>𝐳</mtext><mi>α</mi></msub><mo>=</mo><mfrac><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mrow><mrow><mo>(</mo><mrow><mrow><mo>⟨</mo><mrow><mi>α</mi><mo>,</mo><mi>γ</mi></mrow><mo>⟩</mo></mrow><mo>,</mo><mrow><mo>⟨</mo><mrow><mi>f</mi><mo>,</mo><mi>e</mi></mrow><mo>⟩</mo></mrow><mo>,</mo><mi>c</mi></mrow><mo>)</mo></mrow><mo>∈</mo><mi class="ltx_font_mathcaligraphic">𝒯</mi></mrow></msub><mrow><mo>{</mo><mrow><mi>c</mi><mo>×</mo><msub><mtext>𝐳</mtext><mi>f</mi></msub></mrow><mo>}</mo></mrow></mrow><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mrow><mrow><mo>(</mo><mrow><mrow><mo>⟨</mo><mrow><mi>α</mi><mo>,</mo><mi>γ</mi></mrow><mo>⟩</mo></mrow><mo>,</mo><mrow><mo>⟨</mo><mrow><mi>f</mi><mo>,</mo><mi>e</mi></mrow><mo>⟩</mo></mrow><mo>,</mo><mi>c</mi></mrow><mo>)</mo></mrow><mo>∈</mo><mi class="ltx_font_mathcaligraphic">𝒯</mi></mrow></msub><mrow><mo>{</mo><mi>c</mi><mo>}</mo></mrow></mrow></mfrac></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(7)</span></td></tr>
+</table>
+<table id="S3.E8" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E8.m1" class="ltx_Math" alttext="\textbf{z}_{\gamma}=\frac{\sum_{(\langle\alpha,\gamma\rangle,\langle f,e%&#10;\rangle,c)\in\mathcal{T}}{\{c\times\textbf{z}_{e}\}}}{\sum_{(\langle\alpha,%&#10;\gamma\rangle,\langle f,e\rangle,c)\in\mathcal{T}}{\{c\}}}" display="block"><mrow><msub><mtext>𝐳</mtext><mi>γ</mi></msub><mo>=</mo><mfrac><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mrow><mrow><mo>(</mo><mrow><mrow><mo>⟨</mo><mrow><mi>α</mi><mo>,</mo><mi>γ</mi></mrow><mo>⟩</mo></mrow><mo>,</mo><mrow><mo>⟨</mo><mrow><mi>f</mi><mo>,</mo><mi>e</mi></mrow><mo>⟩</mo></mrow><mo>,</mo><mi>c</mi></mrow><mo>)</mo></mrow><mo>∈</mo><mi class="ltx_font_mathcaligraphic">𝒯</mi></mrow></msub><mrow><mo>{</mo><mrow><mi>c</mi><mo>×</mo><msub><mtext>𝐳</mtext><mi>e</mi></msub></mrow><mo>}</mo></mrow></mrow><mrow><msub><mo largeop="true" symmetric="true">∑</mo><mrow><mrow><mo>(</mo><mrow><mrow><mo>⟨</mo><mrow><mi>α</mi><mo>,</mo><mi>γ</mi></mrow><mo>⟩</mo></mrow><mo>,</mo><mrow><mo>⟨</mo><mrow><mi>f</mi><mo>,</mo><mi>e</mi></mrow><mo>⟩</mo></mrow><mo>,</mo><mi>c</mi></mrow><mo>)</mo></mrow><mo>∈</mo><mi class="ltx_font_mathcaligraphic">𝒯</mi></mrow></msub><mrow><mo>{</mo><mi>c</mi><mo>}</mo></mrow></mrow></mfrac></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(8)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m7" class="ltx_Math" alttext="\mathcal{T}" display="inline"><mi class="ltx_font_mathcaligraphic">𝒯</mi></math> denotes all instances for the rule <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m8" class="ltx_Math" alttext="\langle\alpha,\gamma\rangle" display="inline"><mrow><mo>⟨</mo><mrow><mi>α</mi><mo>,</mo><mi>γ</mi></mrow><mo>⟩</mo></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m9" class="ltx_Math" alttext="\textbf{z}_{\alpha}" display="inline"><msub><mtext>𝐳</mtext><mi>α</mi></msub></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p1.m10" class="ltx_Math" alttext="\textbf{z}_{\gamma}" display="inline"><msub><mtext>𝐳</mtext><mi>γ</mi></msub></math> are the source-side and target-side topic vectors respectively.</p>
+</div>
+<div id="S3.SS3.p2" class="ltx_para">
+<p class="ltx_p">By measuring the similarity between the source texts and bilingual translation rules, the SMT decoder is able to encourage topic relevant translation candidates and penalize topic irrelevant candidates. Therefore, it helps to train a smarter translation model with the embedded topic information. Given a source sentence <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m1" class="ltx_Math" alttext="s" display="inline"><mi>s</mi></math> to be translated, we define the similarity as follows:</p>
+<table id="S3.E9" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E9.m1" class="ltx_Math" alttext="Sim(\textbf{z}_{s},\textbf{z}_{\alpha})=\cos(\textbf{z}_{s},\textbf{z}_{\alpha})" display="block"><mrow><mrow><mi>S</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mtext>𝐳</mtext><mi>s</mi></msub><mo>,</mo><msub><mtext>𝐳</mtext><mi>α</mi></msub></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mi>cos</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><msub><mtext>𝐳</mtext><mi>s</mi></msub><mo>,</mo><msub><mtext>𝐳</mtext><mi>α</mi></msub></mrow><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(9)</span></td></tr>
+</table>
+<table id="S3.E10" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E10.m1" class="ltx_Math" alttext="Sim(\textbf{z}_{s},\textbf{z}_{\gamma})=\cos(\textbf{z}_{s},\textbf{z}_{\gamma})" display="block"><mrow><mrow><mi>S</mi><mo>⁢</mo><mi>i</mi><mo>⁢</mo><mi>m</mi><mo>⁢</mo><mrow><mo>(</mo><mrow><msub><mtext>𝐳</mtext><mi>s</mi></msub><mo>,</mo><msub><mtext>𝐳</mtext><mi>γ</mi></msub></mrow><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mi>cos</mi><mo>⁡</mo><mrow><mo>(</mo><mrow><msub><mtext>𝐳</mtext><mi>s</mi></msub><mo>,</mo><msub><mtext>𝐳</mtext><mi>γ</mi></msub></mrow><mo>)</mo></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(10)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m2" class="ltx_Math" alttext="\textbf{z}_{s}" display="inline"><msub><mtext>𝐳</mtext><mi>s</mi></msub></math> is the topic representation of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m3" class="ltx_Math" alttext="s" display="inline"><mi>s</mi></math>. The similarity calculated against <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m4" class="ltx_Math" alttext="\textbf{z}_{\alpha}" display="inline"><msub><mtext>𝐳</mtext><mi>α</mi></msub></math> or <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p2.m5" class="ltx_Math" alttext="\textbf{z}_{\gamma}" display="inline"><msub><mtext>𝐳</mtext><mi>γ</mi></msub></math> denotes the source-to-source or the source-to-target similarity.</p>
+</div>
+<div id="S3.SS3.p3" class="ltx_para">
+<p class="ltx_p">We also consider the topic sensitivity estimation since general rules have flatter distributions while topic-specific rules have sharper distributions. A standard entropy metric is used to measure the sensitivity of the source-side of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m1" class="ltx_Math" alttext="\langle\alpha,\gamma\rangle" display="inline"><mrow><mo>⟨</mo><mrow><mi>α</mi><mo>,</mo><mi>γ</mi></mrow><mo>⟩</mo></mrow></math> as:</p>
+<table id="S3.E11" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E11.m1" class="ltx_Math" alttext="Sen(\alpha)=-\sum_{i=1}^{|\textbf{z}_{\alpha}|}{z_{\alpha i}\times\log z_{%&#10;\alpha i}}" display="block"><mrow><mrow><mi>S</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mrow><mo>(</mo><mi>α</mi><mo>)</mo></mrow></mrow><mo>=</mo><mrow><mo>-</mo><mrow><munderover><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mrow><mo fence="true">|</mo><msub><mtext>𝐳</mtext><mi>α</mi></msub><mo fence="true">|</mo></mrow></munderover><mrow><msub><mi>z</mi><mrow><mi>α</mi><mo>⁢</mo><mi>i</mi></mrow></msub><mo>×</mo><mrow><mi>log</mi><mo>⁡</mo><msub><mi>z</mi><mrow><mi>α</mi><mo>⁢</mo><mi>i</mi></mrow></msub></mrow></mrow></mrow></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(11)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m2" class="ltx_Math" alttext="z_{\alpha i}" display="inline"><msub><mi>z</mi><mrow><mi>α</mi><mo>⁢</mo><mi>i</mi></mrow></msub></math> is a component in the vector <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m3" class="ltx_Math" alttext="\textbf{z}_{\alpha}" display="inline"><msub><mtext>𝐳</mtext><mi>α</mi></msub></math>. The target-side sensitivity <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p3.m4" class="ltx_Math" alttext="Sen(\gamma)" display="inline"><mrow><mi>S</mi><mo>⁢</mo><mi>e</mi><mo>⁢</mo><mi>n</mi><mo>⁢</mo><mrow><mo>(</mo><mi>γ</mi><mo>)</mo></mrow></mrow></math> can be calculated in a similar way. The larger the sensitivity is, the more topic-specific the rule manifests.</p>
+</div>
+<div id="S3.SS3.p4" class="ltx_para">
+<p class="ltx_p">In addition to traditional SMT features, we add new topic-related features into the standard log-linear framework. For the SMT system, the best translation candidate <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p4.m1" class="ltx_Math" alttext="\hat{e}" display="inline"><mover accent="true"><mi>e</mi><mo stretchy="false">^</mo></mover></math> is given by:</p>
+<table id="S3.E12" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E12.m1" class="ltx_Math" alttext="\hat{e}=\operatorname*{arg\,max}_{e}{P(e|f)}" display="block"><mrow><mover accent="true"><mi>e</mi><mo stretchy="false">^</mo></mover><mo>=</mo><msub><mrow><mpadded width="+1.7pt"><mi>arg</mi></mpadded><mo>⁢</mo><mi>max</mi></mrow><mi>e</mi></msub><mi>P</mi><mrow><mo>(</mo><mi>e</mi><mo>|</mo><mi>f</mi><mo>)</mo></mrow></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(12)</span></td></tr>
+</table>
+<p class="ltx_p">where the translation probability is given by:</p>
+<table id="S3.E13" class="ltx_equation">
+
+<tr class="ltx_equation ltx_align_baseline">
+<td class="ltx_eqn_center_padleft"/>
+<td class="ltx_align_center"><math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.E13.m1" class="ltx_Math" alttext="\begin{split}P(e|f)&amp;\propto\sum_{i}w_{i}\cdot\log\phi_{i}(f,e)\\&#10;&amp;=\underbrace{\sum_{j}w_{j}\cdot\log\phi_{j}(f,e)}_{\textrm{Standard}}+%&#10;\underbrace{\sum_{k}w_{k}\cdot\log\phi_{k}(f,e)}_{\textrm{Topic related}}\end{split}" display="block"><mrow><mi>P</mi><mrow><mo>(</mo><mi>e</mi><mo>|</mo><mi>f</mi><mo>)</mo></mrow><mo>∝</mo><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>i</mi></munder><msub><mi>w</mi><mi>i</mi></msub><mo>⋅</mo><mi>log</mi><msub><mi>ϕ</mi><mi>i</mi></msub><mrow><mo>(</mo><mi>f</mi><mo>,</mo><mi>e</mi><mo>)</mo></mrow><mo>=</mo><munder><munder accentunder="true"><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>j</mi></munder><mrow><mrow><msub><mi>w</mi><mi>j</mi></msub><mo movablelimits="false">⋅</mo><mrow><mi>log</mi><mo movablelimits="false">⁡</mo><msub><mi>ϕ</mi><mi>j</mi></msub></mrow></mrow><mo movablelimits="false">⁢</mo><mrow><mo movablelimits="false">(</mo><mrow><mi>f</mi><mo movablelimits="false">,</mo><mi>e</mi></mrow><mo movablelimits="false">)</mo></mrow></mrow></mrow><mo movablelimits="false">︸</mo></munder><mtext>Standard</mtext></munder><mo>+</mo><munder><munder accentunder="true"><mrow><munder><mo largeop="true" movablelimits="false" symmetric="true">∑</mo><mi>k</mi></munder><mrow><mrow><msub><mi>w</mi><mi>k</mi></msub><mo movablelimits="false">⋅</mo><mrow><mi>log</mi><mo movablelimits="false">⁡</mo><msub><mi>ϕ</mi><mi>k</mi></msub></mrow></mrow><mo movablelimits="false">⁢</mo><mrow><mo movablelimits="false">(</mo><mrow><mi>f</mi><mo movablelimits="false">,</mo><mi>e</mi></mrow><mo movablelimits="false">)</mo></mrow></mrow></mrow><mo movablelimits="false">︸</mo></munder><mtext>Topic related</mtext></munder></mrow></math></td>
+<td class="ltx_eqn_center_padright"/>
+<td rowspan="1" class="ltx_align_middle ltx_align_right"><span class="ltx_tag ltx_tag_equation">(13)</span></td></tr>
+</table>
+<p class="ltx_p">where <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p4.m2" class="ltx_Math" alttext="\phi_{j}(f,e)" display="inline"><mrow><msub><mi>ϕ</mi><mi>j</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>f</mi><mo>,</mo><mi>e</mi></mrow><mo>)</mo></mrow></mrow></math> is the standard feature function and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p4.m3" class="ltx_Math" alttext="w_{j}" display="inline"><msub><mi>w</mi><mi>j</mi></msub></math> is the corresponding feature weight. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p4.m4" class="ltx_Math" alttext="\phi_{k}(f,e)" display="inline"><mrow><msub><mi>ϕ</mi><mi>k</mi></msub><mo>⁢</mo><mrow><mo>(</mo><mrow><mi>f</mi><mo>,</mo><mi>e</mi></mrow><mo>)</mo></mrow></mrow></math> is the topic-related feature function and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S3.SS3.p4.m5" class="ltx_Math" alttext="w_{k}" display="inline"><msub><mi>w</mi><mi>k</mi></msub></math> is the feature weight. The detailed feature description is as follows:</p>
+</div>
+<div id="S3.SS3.p5" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Standard features</span>: Translation model, including translation probabilities and lexical weights for both directions (4 features), 5-gram language model (1 feature), word count (1 feature), phrase count (1 feature), NULL penalty (1 feature), number of hierarchical rules used (1 feature).</p>
+</div>
+<div id="S3.SS3.p6" class="ltx_para">
+<p class="ltx_p"><span class="ltx_text ltx_font_bold">Topic-related features</span>: rule similarity scores (2 features), rule sensitivity scores (2 features).</p>
+</div>
+</div>
+</div>
+<div id="S4" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">4 </span>Experiments</h2>
+
+<div id="S4.SS1" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.1 </span>Setup</h3>
+
+<div id="S4.SS1.p1" class="ltx_para">
+<p class="ltx_p">We evaluate the performance of our neural network based topic similarity model on a Chinese-to-English machine translation task. In neural network training, a large number of monolingual documents are collected in both source and target languages. The documents are mainly from two domains: news and weblog. We use Chinese and English Gigaword corpus (Version 5) which are mainly from news domain. In addition, we also collect weblog documents with a variety of topics from the web. The total data statistics are presented in Table <a href="#S4.T1" title="Table 1 ‣ 4.1 Setup ‣ 4 Experiments ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>. These documents are built in the format of inverted index using Lucene<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>http://lucene.apache.org/</span></span></span>, which can be efficiently retrieved by the parallel sentence pairs. The most relevant <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m1" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math> documents are collected, where we experiment with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p1.m2" class="ltx_Math" alttext="N=\{1,5,10,20,50\}" display="inline"><mrow><mi>N</mi><mo>=</mo><mrow><mo>{</mo><mrow><mn>1</mn><mo>,</mo><mn>5</mn><mo>,</mo><mn>10</mn><mo>,</mo><mn>20</mn><mo>,</mo><mn>50</mn></mrow><mo>}</mo></mrow></mrow></math>.</p>
+</div>
+<div id="S4.T1" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t" rowspan="2"><span class="ltx_text ltx_font_bold ltx_font_small">Domain</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold ltx_font_small">Chinese</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t" colspan="2"><span class="ltx_text ltx_font_bold ltx_font_small">English</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Docs</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Words</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Docs</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Words</span></th></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_bold ltx_font_small">News</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">5.7M</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">5.4B</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">9.9M</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">25.6B</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Weblog</span></th>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">2.1M</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">8B</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">1.2M</span></td>
+<td class="ltx_td ltx_align_right ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">2.9B</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Total</span></th>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">7.8M</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">13.4B</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">11.1M</span></td>
+<td class="ltx_td ltx_align_right ltx_border_b ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_small">28.5B</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 1: </span>Statistics of monolingual data, in numbers of documents and words (main content). “M” refers to million and “B” refers to billion.</div>
+</div>
+<div id="S4.SS1.p2" class="ltx_para">
+<p class="ltx_p">We implement a distributed framework to speed up the training process of neural networks. The network is learned with mini-batch asynchronous gradient descent with the adaptive learning rate procedure called AdaGrad <cite class="ltx_cite">[<a href="#bib.bib60" title="Adaptive subgradient methods for online learning and stochastic optimization" class="ltx_ref">11</a>]</cite>. We use 32 model replicas in each iteration during the training. The model parameters are averaged after each iteration and sent to each replica for the next iteration. The vocabulary size for the input layer is 100,000, and we choose different lengths for the hidden layer as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m1" class="ltx_Math" alttext="L=\{100,300,600,1000\}" display="inline"><mrow><mi>L</mi><mo>=</mo><mrow><mo>{</mo><mrow><mn>100</mn><mo>,</mo><mn>300</mn><mo>,</mo><mn>600</mn><mo>,</mo><mn>1000</mn></mrow><mo>}</mo></mrow></mrow></math> in the experiments. In the pre-training phase, all parallel data is fed into two neural networks respectively for DAE training, where network parameters <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS1.p2.m2" class="ltx_Math" alttext="W" display="inline"><mi>W</mi></math> and <span class="ltx_text ltx_markedasmath ltx_font_bold">b</span> are randomly initialized. In the fine-tuning phase, for each parallel sentence pair, we randomly select other ten sentence pairs which satisfy the criterion as negative instances. These training instances are leveraged to optimize the similarity of two vectors.</p>
+</div>
+<div id="S4.SS1.p3" class="ltx_para">
+<p class="ltx_p">In SMT training, an in-house hierarchical phrase-based SMT decoder is implemented for our experiments. The CKY decoding algorithm is used and cube pruning is performed with the same default parameter settings as in <cite class="ltx_cite">Chiang (<a href="#bib.bib15" title="Hierarchical phrase-based translation" class="ltx_ref">2007</a>)</cite>. The parallel data we use is released by LDC<span class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">3</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">3</sup>LDC2003E14, LDC2002E18, LDC2003E07, LDC2005T06, LDC2005T10, LDC2005E83, LDC2006E34, LDC2006E85, LDC2006E92, LDC2006E26, LDC2007T09</span></span></span>. In total, the datasets contain nearly 1.1 million sentence pairs. Translation models are trained over the parallel data that is automatically word-aligned using GIZA++ in both directions, and the diag-grow-final heuristic is used to refine symmetric word alignment. An in-house language modeling toolkit is used to train the 5-gram language model with modified Kneser-Ney smoothing <cite class="ltx_cite">[<a href="#bib.bib17" title="Improved backing-off for m-gram language modeling" class="ltx_ref">17</a>]</cite>. The English monolingual data used for language modeling is the same as in Table <a href="#S4.T1" title="Table 1 ‣ 4.1 Setup ‣ 4 Experiments ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>. The NIST 2003 dataset is the development data. The testing data consists of NIST 2004, 2005, 2006 and 2008 datasets. The evaluation metric for the overall translation quality is case-insensitive BLEU4 <cite class="ltx_cite">[<a href="#bib.bib18" title="Bleu: a method for automatic evaluation of machine translation" class="ltx_ref">25</a>]</cite>. The reported BLEU scores are averaged over 5 times of running MERT <cite class="ltx_cite">[<a href="#bib.bib19" title="Minimum error rate training in statistical machine translation" class="ltx_ref">24</a>]</cite>. A statistical significance test is performed using the bootstrap re-sampling method <cite class="ltx_cite">[<a href="#bib.bib25" title="Statistical significance tests for machine translation evaluation" class="ltx_ref">18</a>]</cite>.</p>
+</div>
+</div>
+<div id="S4.SS2" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.2 </span>Baseline</h3>
+
+<div id="S4.F3" class="ltx_figure"><img src="P14-1013/image003.png" id="S4.F3.g1" class="ltx_graphics ltx_centering" width="676" height="331" alt=""/>
+<br class="ltx_break ltx_centering"/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 3: </span>End-to-end translation results (BLEU%) using all standard and topic-related features, with different settings on the number of retrieved documents <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.F3.m3" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math> and the length of hidden layers <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.F3.m4" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math>.</div>
+</div>
+<div id="S4.SS2.p1" class="ltx_para">
+<p class="ltx_p">The baseline is a re-implementation of the Hiero system <cite class="ltx_cite">[<a href="#bib.bib15" title="Hierarchical phrase-based translation" class="ltx_ref">7</a>]</cite>. The phrase pairs that appear only once in the parallel data are discarded because most of them are noisy. We also use the fix-discount method in <cite class="ltx_cite">Foster<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib32" title="Phrasetable smoothing for statistical machine translation" class="ltx_ref">2006</a>)</cite> for phrase table smoothing. This implementation makes the system perform much better and the translation model size is much smaller.</p>
+</div>
+<div id="S4.SS2.p2" class="ltx_para">
+<p class="ltx_p">We compare our method with the LDA-based approach proposed by <cite class="ltx_cite">Xiao<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib41" title="A topic similarity model for hierarchical phrase-based translation" class="ltx_ref">2012</a>)</cite>. In <cite class="ltx_cite">[<a href="#bib.bib41" title="A topic similarity model for hierarchical phrase-based translation" class="ltx_ref">34</a>]</cite>, the topic of each sentence pair is exactly the same as the document it belongs to. Since some of our parallel data does not have document-level information, we rely on the IR method to retrieve the most relevant document and simulate this approach. The PLDA toolkit <cite class="ltx_cite">[<a href="#bib.bib67" title="PLDA+: parallel latent dirichlet allocation with data placement and pipeline processing" class="ltx_ref">22</a>]</cite> is used to infer topic distributions, which takes 34.5 hours to finish.</p>
+</div>
+</div>
+<div id="S4.SS3" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.3 </span>Effect of retrieved documents and length of hidden layers</h3>
+
+<div id="S4.SS3.p1" class="ltx_para">
+<p class="ltx_p">We illustrate the relationship among translation accuracy (BLEU), the number of retrieved documents (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p1.m1" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math>) and the length of hidden layers (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p1.m2" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math>) on different testing datasets. The results are shown in Figure <a href="#S4.F3" title="Figure 3 ‣ 4.2 Baseline ‣ 4 Experiments ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>. The best translation accuracy is achieved when <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p1.m3" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math>=10 for most settings. This confirms that enriching the source text with topic-related documents is very useful in determining topic representations, thereby help to guide the synchronous rule selection. However, we find that as <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p1.m4" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math> becomes larger in the experiments, e.g. <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p1.m5" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math>=50, the translation accuracy drops drastically. As more documents are retrieved, less relevant information is also used to train the neural networks. Irrelevant documents bring so many unrelated topic words hence degrade neural network learning performance.</p>
+</div>
+<div id="S4.SS3.p2" class="ltx_para">
+<p class="ltx_p">Another important factor is the length of hidden layers <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m1" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math> in the network. In deep learning, this parameter is often empirically tuned with human efforts. As shown in Figure <a href="#S4.F3" title="Figure 3 ‣ 4.2 Baseline ‣ 4 Experiments ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>, the translation accuracy is better when <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m2" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math> is relatively small. Actually, there is no obvious distinction of the performance when <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m3" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math> is less than 600. However, when <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m4" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math> equals 1,000, the translation accuracy is inferior to other settings. The main reason is that parameters in the neural networks are too many to be effectively trained. As we know when <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m5" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math>=1000, there are a total of <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS3.p2.m6" class="ltx_Math" alttext="100,000\times 1,000" display="inline"><mrow><mn>100</mn><mo>,</mo><mrow><mn>000</mn><mo>×</mo><mn>1</mn></mrow><mo>,</mo><mn>000</mn></mrow></math> parameters between the linear and non-linear layers in the network. Limited training data prevents the model from getting close to the global optimum. Therefore, the model is likely to fall in local optima and lead to unacceptable representations.</p>
+</div>
+</div>
+<div id="S4.SS4" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.4 </span>Effect of topic related features</h3>
+
+<div id="S4.T2" class="ltx_table">
+<table class="ltx_tabular ltx_centering ltx_align_middle">
+<thead class="ltx_thead">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Settings</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">NIST 2004</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">NIST 2005</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">NIST 2006</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">NIST 2008</span></th>
+<th class="ltx_td ltx_align_center ltx_border_r ltx_border_t"><span class="ltx_text ltx_font_bold ltx_font_small">Average</span></th></tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">Baseline</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">42.25</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">41.21</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">38.05</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">31.16</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">38.17</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><cite class="ltx_cite"><span class="ltx_text ltx_font_small">[</span><a href="#bib.bib41" title="A topic similarity model for hierarchical phrase-based translation" class="ltx_ref">34</a><span class="ltx_text ltx_font_small">]</span></cite></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">42.58</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">41.61</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">38.39</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">31.58</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">38.54</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">Sim(Src)</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">42.51</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">41.55</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">38.53</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">31.57</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r ltx_border_tt"><span class="ltx_text ltx_font_small">38.54</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">Sim(Trg)</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">42.43</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">41.48</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">38.4</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">31.49</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">38.45</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">Sim(Src+Trg)</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">42.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">41.66</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">38.66</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">31.66</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">38.67</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">Sim(Src+Trg)+Sen(Src)</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">42.77</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">41.81</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">38.85</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">31.73</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">38.79</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">Sim(Src+Trg)+Sen(Trg)</span></th>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">42.85</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">41.79</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">38.76</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">31.7</span></td>
+<td class="ltx_td ltx_align_center ltx_border_r"><span class="ltx_text ltx_font_small">38.78</span></td></tr>
+<tr class="ltx_tr">
+<th class="ltx_td ltx_align_left ltx_border_b ltx_border_l ltx_border_r"><span class="ltx_text ltx_font_small">Sim(Src+Trg)+Sen(Src+Trg)</span></th>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">42.95</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">41.97</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">38.91</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">31.88</span></td>
+<td class="ltx_td ltx_align_center ltx_border_b ltx_border_r"><span class="ltx_text ltx_font_bold ltx_font_small">38.93</span></td></tr>
+</tbody>
+</table>
+<div class="ltx_caption ltx_font_small"><span class="ltx_tag ltx_tag_table">Table 2: </span>Effectiveness of different features in BLEU% (<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m4" class="ltx_Math" alttext="\textit{p}&lt;0.05" display="inline"><mrow><mtext mathsize="small" stretchy="false">𝑝</mtext><mo mathsize="normal" stretchy="false">&lt;</mo><mn mathsize="normal" stretchy="false">0.05</mn></mrow></math>), with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m5" class="ltx_Math" alttext="N" display="inline"><mi mathsize="normal" stretchy="false">N</mi></math>=10 and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.T2.m6" class="ltx_Math" alttext="L" display="inline"><mi mathsize="normal" stretchy="false">L</mi></math>=100. “Sim” denotes the rule similarity feature and “Sen” denotes rule sensitivity feature. “Src” and “Trg” means utilizing source-side/target-side rule topic vectors to calculate similarity or sensitivity, respectively. The “Average” setting is the averaged result of four datasets.</div>
+</div>
+<div id="S4.SS4.p1" class="ltx_para">
+<p class="ltx_p">We evaluate the performance of adding new topic-related features to the log-linear model and compare the translation accuracy with the method in <cite class="ltx_cite">[<a href="#bib.bib41" title="A topic similarity model for hierarchical phrase-based translation" class="ltx_ref">34</a>]</cite>. To make different methods comparable, we set the dimension of topic representation as 100 for all settings. This takes 10 hours in pre-training phase and 22 hours in fine-tuning phase. Table <a href="#S4.T2" title="Table 2 ‣ 4.4 Effect of topic related features ‣ 4 Experiments ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> shows how the accuracy is improved with more features added. The results confirm that topic information is indispensable for SMT since both <cite class="ltx_cite">[<a href="#bib.bib41" title="A topic similarity model for hierarchical phrase-based translation" class="ltx_ref">34</a>]</cite> and our neural network based method significantly outperforms the baseline system. Our method improves 0.86 BLEU points at most and 0.76 BLEU points on average over the baseline. We observe that source-side similarity is more effective than target-side similarity, but their contributions are cumulative. This proves that bilingually induced topic representation with neural network helps the SMT system disambiguate translation candidates. Furthermore, rule sensitivity features improve SMT performance compared with only using similarity features. Because topic-specific rules usually have a larger sensitivity score, they can beat general rules when they obtain the same similarity score against the input sentence. Finally, when all new features are integrated, the performance is the best, preforming substantially better than <cite class="ltx_cite">[<a href="#bib.bib41" title="A topic similarity model for hierarchical phrase-based translation" class="ltx_ref">34</a>]</cite> with 0.39 BLEU points on average.</p>
+</div>
+<div id="S4.SS4.p2" class="ltx_para">
+<p class="ltx_p">It is worth mentioning that the performance of <cite class="ltx_cite">[<a href="#bib.bib41" title="A topic similarity model for hierarchical phrase-based translation" class="ltx_ref">34</a>]</cite> is similar to the settings with <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p2.m1" class="ltx_Math" alttext="N" display="inline"><mi>N</mi></math>=1 and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS4.p2.m2" class="ltx_Math" alttext="L" display="inline"><mi>L</mi></math>=100 in Figure <a href="#S4.F3" title="Figure 3 ‣ 4.2 Baseline ‣ 4 Experiments ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>. This is not simply coincidence since we can interpret their approach as a special case in our neural network method: when a parallel sentence pair has document-level information, that document will be retrieved for training; otherwise, the most relevant document will be retrieved from the monolingual data. Therefore, our method can be viewed as a more general framework than previous LDA-based approaches.</p>
+</div>
+</div>
+<div id="S4.SS5" class="ltx_subsection">
+<h3 class="ltx_title ltx_title_subsection"><span class="ltx_tag ltx_tag_subsection">4.5 </span>Discussion</h3>
+
+<div id="S4.SS5.p1" class="ltx_para">
+<p class="ltx_p">In this section, we give a case study to explain why our method works. An example of translation rule disambiguation for a sentence from the NIST 2005 dataset is shown in Figure <a href="#S4.F4" title="Figure 4 ‣ 4.5 Discussion ‣ 4 Experiments ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>. We find that the topic of this sentence is about “rescue after a natural disaster”. Under this topic, the Chinese rule “åé X” should be translated to “deliver X” or “distribute X”. However, the baseline system prefers “send X” rather than those two candidates. Although the translation probability of “send X” is much higher, it is inappropriate in this context since it is usually used in IT texts. For example, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS5.p1.m1" class="ltx_Math" alttext="\langle" display="inline"><mo>⟨</mo></math>åéé®ä»¶, send emails<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS5.p1.m2" class="ltx_Math" alttext="\rangle" display="inline"><mo>⟩</mo></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS5.p1.m3" class="ltx_Math" alttext="\langle" display="inline"><mo>⟨</mo></math>åéä¿¡æ¯, send messages<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS5.p1.m4" class="ltx_Math" alttext="\rangle" display="inline"><mo>⟩</mo></math> and <math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS5.p1.m5" class="ltx_Math" alttext="\langle" display="inline"><mo>⟨</mo></math>åéæ°æ®, send data<math xmlns="http://www.w3.org/1998/Math/MathML" id="S4.SS5.p1.m6" class="ltx_Math" alttext="\rangle" display="inline"><mo>⟩</mo></math>. In contrast, with our neural network based approach, the learned topic distributions of “deliver X” or “distribute X” are more similar with the input sentence than “send X”, which is shown in Figure <a href="#S4.F4" title="Figure 4 ‣ 4.5 Discussion ‣ 4 Experiments ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>. The similarity scores indicate that “deliver X” and “distribute X” are more appropriate to translate the sentence. Therefore, adding topic-related features is able to keep the topic consistency and substantially improve the translation accuracy.</p>
+</div>
+<div id="S4.F4" class="ltx_figure"><img src="P14-1013/image004.png" id="S4.F4.g1" class="ltx_graphics ltx_centering" width="607" height="686" alt=""/>
+<br class="ltx_break ltx_centering"/>
+<div class="ltx_caption ltx_centering"><span class="ltx_tag ltx_tag_figure">Figure 4: </span>An example from the NIST 2005 dataset. We illustrate the normalized topic representations of the source sentence and three ambiguous synchronous rules. Details are explained in Section 4.5.</div>
+</div>
+</div>
+</div>
+<div id="S5" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">5 </span>Related Work</h2>
+
+<div id="S5.p1" class="ltx_para">
+<p class="ltx_p">Topic modeling was first leveraged to improve SMT performance in <cite class="ltx_cite">[<a href="#bib.bib38" title="BiTAM: bilingual topic admixture models for word alignment" class="ltx_ref">37</a>, <a href="#bib.bib39" title="HM-bitam: bilingual topic exploration, word alignment, and translation" class="ltx_ref">38</a>]</cite>. They proposed a bilingual topical admixture approach for word alignment and assumed that each word-pair follows a topic-specific model. They reported extensive empirical analysis and improved word alignment accuracy as well as translation quality. Following this work, <cite class="ltx_cite">[<a href="#bib.bib41" title="A topic similarity model for hierarchical phrase-based translation" class="ltx_ref">34</a>]</cite> extended topic-specific lexicon translation models to hierarchical phrase-based translation models, where the topic information of synchronous rules was directly inferred with the help of document-level information. Experiments show that their approach not only achieved better translation performance but also provided a faster decoding speed compared with previous lexicon-based LDA methods.</p>
+</div>
+<div id="S5.p2" class="ltx_para">
+<p class="ltx_p">Another direction of approaches leveraged topic modeling techniques for domain adaptation. <cite class="ltx_cite">Tam<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib40" title="Bilingual lsa-based adaptation for statistical machine translation" class="ltx_ref">2007</a>)</cite> used bilingual LSA to learn latent topic distributions across different languages and enforce one-to-one topic correspondence during model training. They incorporated the bilingual topic information into language model adaptation and lexicon translation model adaptation, achieving significant improvements in the large-scale evaluation. <cite class="ltx_cite">[<a href="#bib.bib43" title="Translation model adaptation for statistical machine translation with monolingual topic information" class="ltx_ref">30</a>]</cite> investigated the relationship between out-of-domain bilingual data and in-domain monolingual data via topic mapping using HTMM methods. They estimated phrase-topic distributions in translation model adaptation and generated better translation quality. Recently, <cite class="ltx_cite">Chen<span class="ltx_text ltx_bib_etal"> et al.</span> (<a href="#bib.bib70" title="Vector space model for adaptation in statistical machine translation" class="ltx_ref">2013</a>)</cite> proposed using vector space model for adaptation where genre resemblance is leveraged to improve translation accuracy. We also investigated multi-domain adaptation where explicit topic information is used to train domain specific models <cite class="ltx_cite">[<a href="#bib.bib71" title="Multi-domain adaptation for SMT using multi-task learning" class="ltx_ref">9</a>]</cite>.</p>
+</div>
+<div id="S5.p3" class="ltx_para">
+<p class="ltx_p">Generally, most previous research has leveraged conventional topic modeling techniques such as LDA or HTMM. In our work, a novel neural network based approach is proposed to infer topic representations for parallel data. The advantage of our method is that it is applicable to both sentence-level and document-level SMT, since we do not place any restrictions on the input. In addition, our method directly maximizes the similarity between parallel sentence pairs, which is ideal for SMT decoding. Compared to document-level topic
+modeling which uses the topic of a document for all sentences
+within the document <cite class="ltx_cite">[<a href="#bib.bib41" title="A topic similarity model for hierarchical phrase-based translation" class="ltx_ref">34</a>]</cite>, our contributions are:</p>
+<ul id="I2" class="ltx_itemize">
+<li id="I2.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i1.p1" class="ltx_para">
+<p class="ltx_p">We proposed a more general approach to leveraging topic information for SMT by using IR methods to get a collection of related documents, regardless of whether or not document boundaries are explicitly given.</p>
+</div></li>
+<li id="I2.i2" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i2.p1" class="ltx_para">
+<p class="ltx_p">We used neural networks to learn topic representations more accurately, with more practicable and scalable modeling techniques.</p>
+</div></li>
+<li id="I2.i3" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_itemize">•</span> 
+<div id="I2.i3.p1" class="ltx_para">
+<p class="ltx_p">We directly optimized bilingual topic similarity in the deep learning framework with the help of sentence-level parallel data, so that the learned representation could be easily used in SMT decoding procedure.</p>
+</div></li>
+</ul>
+</div>
+</div>
+<div id="S6" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">6 </span>Conclusion and Future Work</h2>
+
+<div id="S6.p1" class="ltx_para">
+<p class="ltx_p">In this paper, we propose a neural network based approach to learning bilingual topic representation for SMT. We enrich contexts of parallel sentence pairs with topic related monolingual data and obtain a set of documents to represent sentences. These documents are converted to a bag-of-words input and fed into neural networks. The learned low-dimensional vector is used to obtain the topic representations of synchronous rules. In SMT decoding, appropriate rules are selected to best match source texts according to their similarity in the topic space. Experimental results show that our approach is promising for SMT systems to learn a better translation model. It is a significant improvement over the state-of-the-art Hiero system, as well as a conventional LDA-based method.</p>
+</div>
+<div id="S6.p2" class="ltx_para">
+<p class="ltx_p">In the future research, we will extend our neural network methods to address document-level translation, where topic transition between sentences is a crucial problem to be solved. Since the translation of the current sentence is usually influenced by the topic of previous sentences, we plan to leverage recurrent neural networks to model this phenomenon, where the history translation information is naturally combined in the model.</p>
+</div>
+</div>
+<div id="Sx1" class="ltx_section">
+<h2 class="ltx_title ltx_title_section">Acknowledgments</h2>
+
+<div id="Sx1.p1" class="ltx_para">
+<p class="ltx_p">We are grateful to the anonymous reviewers for their insightful comments. We also thank Fei Huang (BBN), Nan Yang, Yajuan Duan, Hong Sun and Duyu Tang for the helpful discussions. This work is supported by the National Natural Science Foundation of China (Granted No. 61272384)</p>
+</div>
+</div>
+<div id="bib" class="ltx_bibliography">
+<h2 class="ltx_title ltx_title_bibliography">References</h2>
+
+<ul id="L1" class="ltx_biblist">
+<li id="bib.bib51" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Bengio, P. Lamblin, D. Popovici and H. Larochelle</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Greedy layer-wise training of deep networks</span>.
+</span>
+<span class="ltx_bibblock">in <span class="ltx_text ltx_bib_editor">B. Schölkopf, J. Platt and T. Hoffman (Eds.)</span>, <span class="ltx_text ltx_bib_inbook">Advances in Neural Information Processing Systems 19</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 153–160</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Background: Deep Learning ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S3.SS1.p1" title="3.1 Pre-training using denoising auto-encoder ‣ 3 Topic Similarity Model with Neural Network ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib53" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Bengio</span><span class="ltx_text ltx_bib_year">(2009-01)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Learning deep architectures for ai</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Found. Trends Mach. Learn.</span> <span class="ltx_text ltx_bib_volume">2</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 1–127</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text issn ltx_bib_external">ISSN 1935-8237</span>,
+<a href="http://dx.doi.org/10.1561/2200000006" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1561/2200000006" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Background: Deep Learning ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib44" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. M. Blei, A. Y. Ng and M. I. Jordan</span><span class="ltx_text ltx_bib_year">(2003-03)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Latent dirichlet allocation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">J. Mach. Learn. Res.</span> <span class="ltx_text ltx_bib_volume">3</span>, <span class="ltx_text ltx_bib_pages"> pp. 993–1022</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text issn ltx_bib_external">ISSN 1532-4435</span>,
+<a href="http://dl.acm.org/citation.cfm?id=944919.944937" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib68" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[4]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Carpuat and D. Wu</span><span class="ltx_text ltx_bib_year">(2005-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Word sense disambiguation vs. statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Ann Arbor, Michigan</span>, <span class="ltx_text ltx_bib_pages"> pp. 387–394</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P05-1048" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.3115/1219840.1219888" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib62" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[5]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">M. Carpuat and D. Wu</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Context-dependent phrasal translation lexicons for statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Proceedings of Machine Translation Summit XI</span>, <span class="ltx_text ltx_bib_pages"> pp. 73–80</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib70" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[6]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Chen, R. Kuhn and G. Foster</span><span class="ltx_text ltx_bib_year">(2013-08)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Vector space model for adaptation in statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sofia, Bulgaria</span>, <span class="ltx_text ltx_bib_pages"> pp. 1285–1293</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P13-1126" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p2" title="5 Related Work ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib15" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[7]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Chiang</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Hierarchical phrase-based translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Computational Linguistics</span> <span class="ltx_text ltx_bib_volume">33</span> (<span class="ltx_text ltx_bib_number">2</span>), <span class="ltx_text ltx_bib_pages"> pp. 201–228</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS3.p1" title="3.3 Integration into SMT decoding ‣ 3 Topic Similarity Model with Neural Network ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.3</span></a>,
+<a href="#S4.SS1.p3" title="4.1 Setup ‣ 4 Experiments ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>,
+<a href="#S4.SS2.p1" title="4.2 Baseline ‣ 4 Experiments ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib46" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[8]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Collobert, J. Weston, L. Bottou, M. Karlen, K. Kavukcuoglu and P. Kuksa</span><span class="ltx_text ltx_bib_year">(2011-11)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Natural language processing (almost) from scratch</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">J. Mach. Learn. Res.</span> <span class="ltx_text ltx_bib_volume">12</span>, <span class="ltx_text ltx_bib_pages"> pp. 2493–2537</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text issn ltx_bib_external">ISSN 1532-4435</span>,
+<a href="http://dl.acm.org/citation.cfm?id=1953048.2078186" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Background: Deep Learning ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib71" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[9]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">L. Cui, X. Chen, D. Zhang, S. Liu, M. Li and M. Zhou</span><span class="ltx_text ltx_bib_year">(2013-10)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Multi-domain adaptation for SMT using multi-task learning</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Seattle, Washington, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 1055–1065</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/D13-1107" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S5.p2" title="5 Related Work ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib55" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[10]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. E. Dahl, D. Yu, L. Deng and A. Acero</span><span class="ltx_text ltx_bib_year">(2012-01)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Context-dependent pre-trained deep neural networks for large-vocabulary speech recognition</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">IEEE Transactions on Audio, Speech and Language Processing</span> <span class="ltx_text ltx_bib_volume">20</span> (<span class="ltx_text ltx_bib_number">1</span>), <span class="ltx_text ltx_bib_pages"> pp. 30–42</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text issn ltx_bib_external">ISSN 1558-7916</span>,
+<a href="http://dx.doi.org/10.1109/TASL.2011.2134090" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1109/TASL.2011.2134090" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Background: Deep Learning ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib60" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[11]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Duchi, E. Hazan and Y. Singer</span><span class="ltx_text ltx_bib_year">(2011-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Adaptive subgradient methods for online learning and stochastic optimization</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">J. Mach. Learn. Res.</span> <span class="ltx_text ltx_bib_volume">12</span>, <span class="ltx_text ltx_bib_pages"> pp. 2121–2159</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text issn ltx_bib_external">ISSN 1532-4435</span>,
+<a href="http://dl.acm.org/citation.cfm?id=1953048.2021068" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.p2" title="4.1 Setup ‣ 4 Experiments ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib32" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[12]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. Foster, R. Kuhn and H. Johnson</span><span class="ltx_text ltx_bib_year">(2006-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Phrasetable smoothing for statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sydney, Australia</span>, <span class="ltx_text ltx_bib_pages"> pp. 53–61</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/W/W06/W06-1607" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p1" title="4.2 Baseline ‣ 4 Experiments ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib69" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[13]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">X. Glorot, A. Bordes and Y. Bengio</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Deep sparse rectifier networks</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">15</span>, <span class="ltx_text ltx_bib_pages"> pp. 315–323</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p3" title="3.1 Pre-training using denoising auto-encoder ‣ 3 Topic Similarity Model with Neural Network ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib45" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[14]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Gruber, M. Rosen-zvi and Y. Weiss</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Hidden topic markov models</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib64" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[15]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Z. He, Q. Liu and S. Lin</span><span class="ltx_text ltx_bib_year">(2008-08)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Improving statistical machine translation using lexicalized rule selection</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Manchester, UK</span>, <span class="ltx_text ltx_bib_pages"> pp. 321–328</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/C08-1041" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib50" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[16]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">G. E. Hinton, S. Osindero and Y. Teh</span><span class="ltx_text ltx_bib_year">(2006-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A fast learning algorithm for deep belief nets</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Neural Comput.</span> <span class="ltx_text ltx_bib_volume">18</span> (<span class="ltx_text ltx_bib_number">7</span>), <span class="ltx_text ltx_bib_pages"> pp. 1527–1554</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text issn ltx_bib_external">ISSN 0899-7667</span>,
+<a href="http://dx.doi.org/10.1162/neco.2006.18.7.1527" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1162/neco.2006.18.7.1527" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Background: Deep Learning ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib17" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[17]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Kneser and H. Ney</span><span class="ltx_text ltx_bib_year">(1995)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Improved backing-off for m-gram language modeling</span>.
+</span>
+<span class="ltx_bibblock">Vol. <span class="ltx_text ltx_bib_volume">1</span>, <span class="ltx_text ltx_bib_pages"> pp. 181–184</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.p3" title="4.1 Setup ‣ 4 Experiments ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib25" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[18]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Koehn</span><span class="ltx_text ltx_bib_year">(2004-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Statistical significance tests for machine translation evaluation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Barcelona, Spain</span>, <span class="ltx_text ltx_bib_pages"> pp. 388–395</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.p3" title="4.1 Setup ‣ 4 Experiments ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib54" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[19]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">A. Krizhevsky, I. Sutskever and G. Hinton</span><span class="ltx_text ltx_bib_year">(2012)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">ImageNet classification with deep convolutional neural networks</span>.
+</span>
+<span class="ltx_bibblock">in <span class="ltx_text ltx_bib_editor">P. Bartlett, F.C.N. Pereira, C.J.C. Burges, L. Bottou and K.Q. Weinberger (Eds.)</span>, <span class="ltx_text ltx_bib_inbook">Advances in Neural Information Processing Systems 25</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1106–1114</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://books.nips.cc/papers/files/nips25/NIPS2012_0534.pdf" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Background: Deep Learning ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib52" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[20]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">H. Lee, A. Battle, R. Raina and A. Y. Ng</span><span class="ltx_text ltx_bib_year">(2006)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Efficient sparse coding algorithms</span>.
+</span>
+<span class="ltx_bibblock">in <span class="ltx_text ltx_bib_editor">B. Schölkopf, J. Platt and T. Hoffman (Eds.)</span>, <span class="ltx_text ltx_bib_inbook">Advances in Neural Information Processing Systems 19</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 801–808</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p1" title="2 Background: Deep Learning ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib63" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[21]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Q. Liu, Z. He, Y. Liu and S. Lin</span><span class="ltx_text ltx_bib_year">(2008-10)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Maximum entropy based rule selection model for syntax-based statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Honolulu, Hawaii</span>, <span class="ltx_text ltx_bib_pages"> pp. 89–97</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/D08-1010" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib67" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[22]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Z. Liu, Y. Zhang, E. Y. Chang and M. Sun</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">PLDA+: parallel latent dirichlet allocation with data placement and pipeline processing</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">ACM Transactions on Intelligent Systems and Technology, special issue on Large Scale Machine Learning</span>.
+</span>
+<span class="ltx_bibblock">Note: <span class="ltx_text ltx_bib_note">Software available at <span class="ltx_ERROR undefined">\url</span>http://code.google.com/p/plda</span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS2.p2" title="4.2 Baseline ‣ 4 Experiments ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>.
+</span></li>
+<li id="bib.bib65" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[23]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Marton and P. Resnik</span><span class="ltx_text ltx_bib_year">(2008-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Soft syntactic constraints for hierarchical phrased-based translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Columbus, Ohio</span>, <span class="ltx_text ltx_bib_pages"> pp. 1003–1011</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P/P08/P08-1114" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib19" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[24]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">F. J. Och</span><span class="ltx_text ltx_bib_year">(2003-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Minimum error rate training in statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sapporo, Japan</span>, <span class="ltx_text ltx_bib_pages"> pp. 160–167</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P03-1021" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.3115/1075096.1075117" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.p3" title="4.1 Setup ‣ 4 Experiments ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib18" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[25]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">K. Papineni, S. Roukos, T. Ward and W. Zhu</span><span class="ltx_text ltx_bib_year">(2002-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Bleu: a method for automatic evaluation of machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Philadelphia, Pennsylvania, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 311–318</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P02-1040" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.3115/1073083.1073135" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S4.SS1.p3" title="4.1 Setup ‣ 4 Experiments ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.1</span></a>.
+</span></li>
+<li id="bib.bib58" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[26]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. E. Rumelhart, G. E. Hinton and R. J. Williams</span><span class="ltx_text ltx_bib_year">(1988)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Neurocomputing: foundations of research</span>.
+</span>
+<span class="ltx_bibblock">in <span class="ltx_text ltx_bib_editor">J. A. Anderson and E. Rosenfeld (Eds.)</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 696–699</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 0-262-01097-6</span>,
+<a href="http://dl.acm.org/citation.cfm?id=65669.104451" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p5" title="3.1 Pre-training using denoising auto-encoder ‣ 3 Topic Similarity Model with Neural Network ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib59" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[27]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">N. A. Smith and J. Eisner</span><span class="ltx_text ltx_bib_year">(2005-06)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Contrastive estimation: training log-linear models on unlabeled data</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Ann Arbor, Michigan</span>, <span class="ltx_text ltx_bib_pages"> pp. 354–362</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P05-1044" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.3115/1219840.1219884" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS2.p3" title="3.2 Fine-tuning with parallel data ‣ 3 Topic Similarity Model with Neural Network ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.2</span></a>.
+</span></li>
+<li id="bib.bib47" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[28]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Socher, C. C. Lin, A. Y. Ng and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2011)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Parsing Natural Scenes and Natural Language with Recursive Neural Networks</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Background: Deep Learning ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib48" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[29]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">R. Socher, J. Pennington, E. H. Huang, A. Y. Ng and C. D. Manning</span><span class="ltx_text ltx_bib_year">(2011-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Semi-supervised recursive autoencoders for predicting sentiment distributions</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Edinburgh, Scotland, UK.</span>, <span class="ltx_text ltx_bib_pages"> pp. 151–161</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/D11-1014" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S2.p2" title="2 Background: Deep Learning ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>.
+</span></li>
+<li id="bib.bib43" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[30]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">J. Su, H. Wu, H. Wang, Y. Chen, X. Shi, H. Dong and Q. Liu</span><span class="ltx_text ltx_bib_year">(2012-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Translation model adaptation for statistical machine translation with monolingual topic information</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Jeju Island, Korea</span>, <span class="ltx_text ltx_bib_pages"> pp. 459–468</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P12-1048" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S5.p2" title="5 Related Work ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib40" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[31]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Y. Tam, I. Lane and T. Schultz</span><span class="ltx_text ltx_bib_year">(2007-12)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Bilingual lsa-based adaptation for statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Machine Translation</span> <span class="ltx_text ltx_bib_volume">21</span> (<span class="ltx_text ltx_bib_number">4</span>), <span class="ltx_text ltx_bib_pages"> pp. 187–207</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text issn ltx_bib_external">ISSN 0922-6567</span>,
+<a href="http://dx.doi.org/10.1007/s10590-008-9045-2" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1007/s10590-008-9045-2" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S5.p2" title="5 Related Work ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib56" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[32]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Vincent, H. Larochelle, Y. Bengio and P. Manzagol</span><span class="ltx_text ltx_bib_year">(2008)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Extracting and composing robust features with denoising autoencoders</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_series">ICML ’08</span>, <span class="ltx_text ltx_bib_place">New York, NY, USA</span>, <span class="ltx_text ltx_bib_pages"> pp. 1096–1103</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text isbn ltx_bib_external">ISBN 978-1-60558-205-4</span>,
+<a href="http://doi.acm.org/10.1145/1390156.1390294" title="" class="ltx_ref ltx_bib_external">Link</a>,
+<a href="http://dx.doi.org/10.1145/1390156.1390294" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p2" title="3.1 Pre-training using denoising auto-encoder ‣ 3 Topic Similarity Model with Neural Network ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib57" class="ltx_bibitem ltx_bib_article"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[33]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">P. Vincent, H. Larochelle, I. Lajoie, Y. Bengio and P. Manzagol</span><span class="ltx_text ltx_bib_year">(2010-12)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Stacked denoising autoencoders: learning useful representations in a deep network with a local denoising criterion</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">J. Mach. Learn. Res.</span> <span class="ltx_text ltx_bib_volume">11</span>, <span class="ltx_text ltx_bib_pages"> pp. 3371–3408</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><span class="ltx_text issn ltx_bib_external">ISSN 1532-4435</span>,
+<a href="http://dl.acm.org/citation.cfm?id=1756006.1953039" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S3.SS1.p2" title="3.1 Pre-training using denoising auto-encoder ‣ 3 Topic Similarity Model with Neural Network ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">3.1</span></a>.
+</span></li>
+<li id="bib.bib41" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[34]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">X. Xiao, D. Xiong, M. Zhang, Q. Liu and S. Lin</span><span class="ltx_text ltx_bib_year">(2012-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A topic similarity model for hierarchical phrase-based translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Jeju Island, Korea</span>, <span class="ltx_text ltx_bib_pages"> pp. 750–758</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P12-1079" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S4.SS2.p2" title="4.2 Baseline ‣ 4 Experiments ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.2</span></a>,
+<a href="#S4.SS4.p1" title="4.4 Effect of topic related features ‣ 4 Experiments ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.4</span></a>,
+<a href="#S4.SS4.p2" title="4.4 Effect of topic related features ‣ 4 Experiments ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">4.4</span></a>,
+<a href="#S4.T2" title="Table 2 ‣ 4.4 Effect of topic related features ‣ 4 Experiments ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a>,
+<a href="#S5.p1" title="5 Related Work ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>,
+<a href="#S5.p3" title="5 Related Work ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib66" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[35]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Xiong, M. Zhang, A. Aw and H. Li</span><span class="ltx_text ltx_bib_year">(2009-08)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A syntax-driven bracketing model for phrase-based translation</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Suntec, Singapore</span>, <span class="ltx_text ltx_bib_pages"> pp. 315–323</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P/P09/P09-1036" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p1" title="1 Introduction ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib42" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[36]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">D. Xiong and M. Zhang</span><span class="ltx_text ltx_bib_year">(2013)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">A topic-based coherence model for statistical machine translation</span>.
+</span>
+<span class="ltx_bibblock">See <span class="ltx_text ltx_bib_crossref"><cite class="ltx_cite"/></span>,
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>.
+</span></li>
+<li id="bib.bib38" class="ltx_bibitem ltx_bib_inproceedings"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[37]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Zhao and E. P. Xing</span><span class="ltx_text ltx_bib_year">(2006-07)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">BiTAM: bilingual topic admixture models for word alignment</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_place">Sydney, Australia</span>, <span class="ltx_text ltx_bib_pages"> pp. 969–976</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="http://www.aclweb.org/anthology/P/P06/P06-2124" title="" class="ltx_ref ltx_bib_external">Link</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S5.p1" title="5 Related Work ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+<li id="bib.bib39" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_bibtag ltx_bib_key ltx_role_refnum">[38]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">B. Zhao and E. P. Xing</span><span class="ltx_text ltx_bib_year">(2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">HM-bitam: bilingual topic exploration, word alignment, and translation</span>.
+</span>
+<span class="ltx_bibblock">in <span class="ltx_text ltx_bib_editor">J.C. Platt, D. Koller, Y. Singer and S. Roweis (Eds.)</span>, <span class="ltx_text ltx_bib_inbook">Advances in Neural Information Processing Systems 20</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_pages"> pp. 1689–1696</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#S1.p2" title="1 Introduction ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a>,
+<a href="#S5.p1" title="5 Related Work ‣ Learning Topic Representation for SMT with Neural NetworksThis work was done while the first and fourth authors were visiting Microsoft Research." class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>.
+</span></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="ltx_page_footer">
+<div class="ltx_page_logo">Generated  on Tue Jun 10 17:17:16 2014 by <a href="http://dlmf.nist.gov/LaTeXML/">LaTeXML <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==" alt="[LOGO]"/></a></div></div>
+</div>
+</body>
+</html>

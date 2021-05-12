@@ -1,0 +1,16 @@
+<html>
+<head>
+<meta name="TextLength" content="SENT_NUM:9, WORD_NUM:188">
+</head>
+<body bgcolor="white">
+<a href="#0" id="0">We present a multilingual Named Entity Recognition approach based on a robust and general set of features across languages and datasets.</a>
+<a href="#1" id="1">Our system combines shallow local information with clustering semi-supervised features induced on large amounts of unlabeled text.</a>
+<a href="#2" id="2">Understanding via empirical experimentation how to effectively combine various types of clustering features allows us to seamlessly export our system to other datasets and languages.</a>
+<a href="#3" id="3">The result is a simple but highly competitive system which obtains state of the art results across five languages and twelve datasets.</a>
+<a href="#4" id="4">The results are reported on standard shared task evaluation data such as CoNLL for English, Spanish and Dutch.</a>
+<a href="#5" id="5">Furthermore, and despite the lack of linguistically motivated features, we also report best results for languages such as Basque and German.</a>
+<a href="#6" id="6">In addition, we demonstrate that our method also obtains very competitive results even when the amount of supervised data is cut by half, alleviating the dependency on manually annotated data.</a>
+<a href="#7" id="7">Finally, the results show that our emphasis on clustering features is crucial to develop robust out-of-domain models.</a>
+<a href="#8" id="8">The system and models are freely available to facilitate its use and guarantee the reproducibility of results.</a>
+</body>
+</html>

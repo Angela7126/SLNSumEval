@@ -1,0 +1,25 @@
+<html>
+<head>
+<meta name="TextLength" content="SENT_NUM:18, WORD_NUM:585">
+</head>
+<body bgcolor="white">
+<a href="#0" id="0">In this article, we investigated the widely studied qualitative spatial representation language known as {a mathematical formula}RCC8.</a>
+<a href="#1" id="1">This language allows us to write qualitative descriptions of spatial configurations in the form of networks of atomic constraints, with variables ranging over spatial regions, usually modelled as regular closed sets of some topological space.</a>
+<a href="#2" id="2">The satisfiability problem for this language is known to be largely independent of the topological space in question, and to have low computational complexity.</a>
+<a href="#3" id="3">Algorithms for solving this problem based on constraint satisfaction techniques have been known for some time, and their behaviour investigated in detail.</a>
+<a href="#4" id="4">Our point of departure was the observation that this formalism does not allow us to state that regions are connected (i.e. consist of a single piece), and we asked what would happen if such a facility were added.</a>
+<a href="#5" id="5">We considered two extensions of {a mathematical formula}RCC8: {a mathematical formula}RCC8c, in which we can state that a region is connected, and {a mathematical formula}RCC8c∘, in which we can instead state that a region has a connected interior.</a>
+<a href="#6" id="6">And we investigated the satisfiability problems for these languages over regular closed sets of low-dimensional Euclidean spaces.</a>
+<a href="#7" id="7">The work reported here is similar in spirit to Davis, Gotts and Cohn's analogous extension of {a mathematical formula}RCC8 by means of a convexity predicate [26], and partly relies on the remarkable results of Schaefer, Sedgwick and Štefankovič [24], [25] on the satisfiability problem for {a mathematical formula}RCC8 interpreted over the collection of disc-homeomorphs in the plane.</a>
+<a href="#8" id="8">It is easy to see that, for both {a mathematical formula}RCC8c and {a mathematical formula}RCC8c∘, the satisfiability problem over the regular closed sets of {a mathematical formula}Rn depends on n, for {a mathematical formula}n≤3, but is identical for all {a mathematical formula}n≥3.</a>
+<a href="#9" id="9">Less obviously, we showed that, in the case of {a mathematical formula}RCC8c∘, there exist finite sets of constraints that are satisfiable over {a mathematical formula}RC+(R2), but only by ‘wild’ regions having no possible physical meaning.</a>
+<a href="#10" id="10">This prompted us to consider interpretations over the more restrictive domain of non-empty, regular closed, polyhedral sets, {a mathematical formula}RCP+(Rn).</a>
+<a href="#11" id="11">We found that the satisfiability problems for {a mathematical formula}RCC8c (equivalently, {a mathematical formula}RCC8c∘) over {a mathematical formula}RC+(R) and {a mathematical formula}RCP+(R) are distinct and both NP-complete; the satisfiability problems for {a mathematical formula}RCC8c over {a mathematical formula}RC+(R2) and {a mathematical formula}RCP+(R2) are identical and NP-complete; and the satisfiability problems for {a mathematical formula}RCC8c∘ over {a mathematical formula}RC+(R2) and {a mathematical formula}RCP+(R2) are distinct, with the latter being NP-complete.</a>
+<a href="#12" id="12">Decidability of the satisfiability problem for {a mathematical formula}RCC8c∘ over {a mathematical formula}RC+(R2) remains open.</a>
+<a href="#13" id="13">For {a mathematical formula}n≥3, {a mathematical formula}RCC8c and {a mathematical formula}RCC8c∘ are not interestingly different from {a mathematical formula}RCC8.</a>
+<a href="#14" id="14">The obtained separation and complexity results are collected in Table 1.</a>
+<a href="#15" id="15">We finished by answering the following question: given that a set of {a mathematical formula}RCC8cor {a mathematical formula}RCC8c∘-constraints is satisfiable over {a mathematical formula}RC+(Rn) or {a mathematical formula}RCP+(Rn), how complex is the simplest satisfying assignment?</a>
+<a href="#16" id="16">For both languages, we exhibited a sequence of constraints {a mathematical formula}Φn, satisfiable over {a mathematical formula}RCP+(R2), such that the size of {a mathematical formula}Φn grows polynomially in n, while the smallest configuration of polygons satisfying {a mathematical formula}Φn cuts the plane into a number of pieces that grows exponentially.</a>
+<a href="#17" id="17">Over {a mathematical formula}RC+(R2), the situation is still more dramatic: we showed that, over {a mathematical formula}RC+(R2), {a mathematical formula}RCC8c again requires exponentially large satisfying diagrams, while {a mathematical formula}RCC8c∘ can force regions in satisfying configurations to have infinitely many components.</a>
+</body>
+</html>

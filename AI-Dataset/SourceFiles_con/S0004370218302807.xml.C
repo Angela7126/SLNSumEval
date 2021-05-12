@@ -1,0 +1,1048 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Classical logic, argument and dialectic.
+   </title>
+   <abstract>
+    A well studied instantiation of Dung's abstract theory of argumentation yields argumentation-based characterisations of non-monotonic inference over possibly inconsistent sets of classical formulae. This provides for single-agent reasoning in terms of argument and counter-argument, and distributed non-monotonic reasoning in the form of dialogues between computational and/or human agents. However, features of existing formalisations of classical logic argumentation (Cl-Arg) that ensure satisfaction of rationality postulates, preclude applications of Cl-Arg that account for real-world dialectical uses of arguments by resource-bounded agents. This paper formalises dialectical classical logic argumentation that both satisfies these practical desiderata and is provably rational. In contrast to standard approaches to Cl-Arg we: 1) draw an epistemic distinction between an argument's premises accepted as true, and those assumed true for the sake of argument, so formalising the dialectical move whereby arguments' premises are shown to be inconsistent, and avoiding the foreign commitment problem that arises in dialogical applications; 2) provide an account of Cl-Arg suitable for real-world use by eschewing the need to check that an argument's premises are subset minimal and consistent, and identifying a minimal set of assumptions as to the arguments that must be constructed from a set of formulae in order to ensure that the outcome of evaluation is rational. We then illustrate our approach with a natural deduction proof theory for propositional classical logic that allows measurement of the ‘depth’ of an argument, such that the construction of depth-bounded arguments is a tractable problem, and each increase in depth naturally equates with an increase in the inferential capabilities of real-world agents. We also provide a resource-bounded argumentative characterisation of non-monotonic inference as defined by Brewka's Preferred Subtheories.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Argumentation is a form of reasoning that makes explicit the reasons for the conclusions that are drawn and how conflicts between reasons are resolved. While informal studies of argumentation have a rich tradition, recent years have witnessed intensive study of logic-based models of argumentation and their use in formalising agent reasoning, decision making, and inter-agent dialogue [11], [53]. Much of this work builds on Dung's seminal theory of abstract argumentation [26], and the theory's provision of argumentative characterisations of nonmonotonic inference. Given a possibly inconsistent set of logical formulae (base) one defines the arguments and a binary attack relation denoting that one argument is a counter-argument to another. Various developments of Dung's theory additionally accommodate a preference relation over arguments, which is used to determine which attacks succeed as defeats [1], [9], [43]. The resulting directed graph of arguments related by defeats, referred to as an argumentation framework (AF), is then said to be ‘instantiated’ by the base. Evaluation of the justified arguments is then based on the intuitive principle that an argument is justified if all its defeaters are themselves defeated by justified arguments. The conclusions of justified arguments identify the ‘argumentation defined’ non-monotonic inferences from the instantiating base.
+     </paragraph>
+     <paragraph>
+      The widespread impact of Dung's theory is in large part due to this characterisation of non-monotonic inference in terms of the dialectical use of arguments and counter-arguments familiar in everyday reasoning and debate. The theory thus provides foundations for reasoning by individual computational and human agents, and distributed non-monotonic reasoning involving agents resolving conflicts amongst beliefs or deciding amongst alternative actions, or negotiating allocations of resources (e.g., [2], [3], [8], [38], [40], [44], [45], [48], [58]). These ‘monological’ and ‘dialogical’ applications have motivated the study of rationality postulates for logical instantiations of AFs [15], [16], as well as desiderata for practical applications [27], [44].
+     </paragraph>
+     <paragraph>
+      This paper focuses on classical logic instantiations of AFs (Cl-Arg) [1], [33], [43]. Features of the current paradigm have been shown to provide sufficient conditions for satisfaction of the rationality postulates. However, these features preclude satisfaction of practical desiderata that account for modelling real-world uses of arguments by resource-bounded agents. This paper therefore aims at an account of Cl-Arg that satisfies both practical desiderata and the rationality postulates.
+     </paragraph>
+     <paragraph>
+      In Section 2 we review Dung's theory, Cl-Arg, and the rationality postulates. In Section 3 we argue that monological and dialogical applications of Dung's theory require formalisation of real-world uses of argument suitable for resource-bounded agents. However, current approaches to Cl-Arg tacitly assume that all arguments defined by a base can be constructed and included in an AF, and that prior to inclusion the legitimacy of each constructed argument is verified by checking that its premises are consistent and not redundant in the strong sense that their conclusion is not entailed by any proper subset of the premises. These assumptions are computationally unfeasible (even in the propositional case) for real-world uses of argument by resource-bounded agents. However, they are proposed as sufficient conditions for satisfaction of the consistency and closure postulates [15] for first order Cl-Arg with preferences [43],{sup:1} and of the ‘non-contamination’ postulates [16] for propositional Cl-Arg without preferences. Moreover, checking the legitimacy of arguments prior to inclusion in an AF fails to account for real-world uses of argument. Firstly, in real-world uses the inconsistency of arguments' premises is typically demonstrated dialectically. Secondly, agents do not interrogate premises for subset minimality. Rather, it is the specific proof-theoretic means for constructing arguments that determines whether or not premises are redundantly used in deriving the conclusion; that is, redundant in the obvious sense that they are syntactically disjoint from the remaining premises and the conclusion.
+     </paragraph>
+     <paragraph>
+      Section 3 then presents a new account of first order Cl-Arg that satisfies practical desiderata. Our approach introduces a new notion of argument that distinguishes amongst the premises accepted as true and those supposed true ‘for the sake of argument’. We can therefore model a ubiquitous feature of dialectical practice, whereby the inconsistency of a set of premises Γ is shown dialectically, by defeats from arguments that claim that a contradiction is implied if one supposes (for the sake of argument) the truth of Γ. The distinction also solves the so called foreign commitment problem that arises in dialogical applications when agents are forced to commit to the premises of their interlocutors in order to challenge their arguments [17]. We also drop the computationally demanding checks on the legitimacy of arguments, and define ‘partially instantiated’ AFs that include subsets of the arguments defined by a base. We thus accommodate real-world uses of argument in which agents do not (or may not have sufficient resources to) construct all arguments from a base when determining whether arguments are justified. We show that our account satisfies standard properties of Dung's theory. We also show that despite dropping the legitimacy checks on arguments and making minimal assumptions as to the arguments defined by a base for inclusion in an AF, the consistency and closure postulates are satisfied (where the latter are adapted to account for the fact that not all defined arguments may be included in the AF). Moreover, in contrast with [43], these postulates are satisfied assuming any preference relation over arguments.
+     </paragraph>
+     <paragraph>
+      Finally, in Section 3 we identify the notion of an argument whose use of obviously redundant (in the sense described above) premises can be excluded proof-theoretically, in contrast with the use of impractical subset-minimality checks We generalise the ‘non-contamination’ postulates defined for propositional instantiations of AFs in [16], to first order instantiations. We then show that despite dropping consistency and subset minimality checks on arguments' premises, our account of first order Cl-Arg satisfies these postulates under the assumption that preference relations are ‘coherent’.
+     </paragraph>
+     <paragraph>
+      Standard accounts of Cl-Arg typically leave implicit the specific proof theoretic means by which one entails a conclusion from a set of premises. In Section 4 we illustrate use of our dialectical account of argumentation by formalising arguments as intelim trees: a new natural deduction formalism for propositional classical logic [20], [21] that allows measurement of the ‘depth’ of an argument such that the construction of depth-bounded arguments is a tractable problem, and each increase in depth naturally equates with an increase in the inferential capabilities of real-world agents. We then show that AFs instantiated by arguments up to any given depth satisfy the rationality postulates and practical desiderata. Furthermore, intelim natural deduction allows for a notion of proof that excludes arguments that use obviously redundant premises. Section 4 also develops a resource-bounded argumentative characterisation of non-monotonic reasoning in Brewka's Preferred Subtheories [13].
+     </paragraph>
+     <paragraph>
+      Section 5 reviews related work; in particular the practical desiderata described in [27], and works [34], [61] that exclude arguments that make use of inconsistent formulae so as to ensure satisfaction of [16]'s non-contamination postulates. We then conclude in Section 6 and outline directions for future work.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Background
+     </section-title>
+     <section label="2.1">
+      <section-title>
+       Classical logic instantiations of Dung's argumentation theory
+      </section-title>
+      <paragraph label="Definition 1">
+       We first recapitulate Dung's argumentation theory [26]. Dung framework, conflict free and acceptabilityA Dung argumentation framework (AF) is a tuple ({a mathematical formula}A,C), where {a mathematical formula}A is a set of arguments and {a mathematical formula}C⊆A×A is a binary attack relation defined over {a mathematical formula}A. Let {a mathematical formula}S⊆A. Then:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        S is conflict free iff {a mathematical formula}∀X,Y∈S: ({a mathematical formula}X,Y) {a mathematical formula}∉C.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}X∈A is acceptable with respect to S iff {a mathematical formula}∀Y∈A such that {a mathematical formula}(Y,X)∈C : {a mathematical formula}∃Z∈S such that {a mathematical formula}(Z,Y)∈C.
+       </list-item>
+      </list>
+      <paragraph label="Definition 2">
+       Dung semanticsLet ({a mathematical formula}A,C) be an AF, and {a mathematical formula}S⊆A conflict free. Then S is an admissible extension iff {a mathematical formula}X∈S implies X is acceptable w.r.t. S.
+       <list>
+        An admissible extension S is a complete extension iff {a mathematical formula}∀X∈A : X is acceptable w.r.t. S implies {a mathematical formula}X∈S;S is a preferred extension iff it is a set inclusion maximal complete extension;S is the grounded extension iff it is the set inclusion minimal complete extension;S is a stable extension iff {a mathematical formula}∀Y∈A, if {a mathematical formula}Y∉S then {a mathematical formula}∃X∈S s.t. ({a mathematical formula}X,Y) {a mathematical formula}∈C.For
+       </list>
+       <paragraph>
+        {a mathematical formula}T∈{complete, preferred, grounded, stable}, X is sceptically, respectively credulously justified under the T semantics if X belongs to all, respectively at least one, T extension.
+       </paragraph>
+      </paragraph>
+      <paragraph>
+       Extensions can also be defined in terms of an AF's characteristic function {a mathematical formula}F(A,C): {a mathematical formula}F(A,C)(S)={X|X is acceptable w.r.t. S}, where {a mathematical formula}S⊆A. Then for any conflict free {a mathematical formula}S⊆A, S is: admissible iff {a mathematical formula}S⊆F(A,C)(S); complete iff {a mathematical formula}S=F(A,C)(S) (i.e., S is a fixed point of {a mathematical formula}F(A,C)); grounded iff S is the least fixed point of {a mathematical formula}F(A,C); preferred iff S is a maximal fixed point of {a mathematical formula}F(A,C).
+      </paragraph>
+      <paragraph>
+       Dung explicitly considered ‘instantiations’ of AFs by sets of logical formulae Δ, and showed that his theory provides a general framework for various species of non-monotonic reasoning. Given Δ in some logic L, the conclusions of the justified arguments (i.e., the argumentation defined inferences from the instantiating Δ) are exactly those obtained from Δ by the inference relation of the logic. Dung thus provides argumentation based characterisations of logic programming, Reiter's Default Logic [54] and Pollock's Inductive Defeasible logic [47].
+      </paragraph>
+      <paragraph>
+       We now review classical logic instantiations of AFs (Cl-Arg). We assume a full first order language {a mathematical formula}L consisting of the usual logical operators {a mathematical formula}∧,∨,→,¬,∀,∃, a countable set of individual variables, a (possibly empty) set of function symbols of various arities, where as usual function symbols of arity 0 are interpreted as constant symbols, and a non-empty set of predicate symbols of various arities that includes the 0-ary symbol ⋏ interpreted as a patently false atomic formula (i.e. one that is always false under any interpretation of the language). A term is an individual variable or constant, or a functional expression {a mathematical formula}f(t1,…,tn) where each {a mathematical formula}ti is a term. The wffs of {a mathematical formula}L are defined in the usual way. We shall use lower case Greek letters to refer to arbitrary wffs, and upper case Greek letters, possibly with subscripts, to refer to sets of classical wffs. The language of propositional classical logic is then defined as a sub-language of {a mathematical formula}L that consists only of the usual logical connectives and predicate symbols of arity 0 (i.e., ‘propositional atomic formulae’) {a mathematical formula}⋏,a,b,c,…,z. We also assume the first order classical consequence relation {a mathematical formula}⊢c, and write {a mathematical formula}Cn(Δ) to denote {a mathematical formula}{α|Δ⊢cα}. If {a mathematical formula}Cn(Δ)=L we say that Δ is inconsistent; else Δ is consistent. We will make use of the following notions of a complement function and ‘symbols’ in a set of wff.
+      </paragraph>
+      <paragraph label="Definition 3">
+       Complement functionLet {a mathematical formula}ϕ,ψ be classical wff. Then {a mathematical formula}ϕ‾=ψ if {a mathematical formula}ϕ=¬ψ; else {a mathematical formula}ϕ‾=¬ϕ.
+      </paragraph>
+      <paragraph label="Definition 4">
+       SymbolsLet Δ be a set of classical formulae. Then {a mathematical formula}symbols(Δ)={P|P is either a predicate or functionsymbolin Δ}.
+      </paragraph>
+      <paragraph>
+       Note that in case Δ is a set of propositional formulae, {a mathematical formula}symbols(Δ) consists of all the propositional atomic formulae in Δ, whereas if Δ is an arbitrary set of first order formulae, {a mathematical formula}symbols(Δ) consists of the predicate, function and constant symbols in Δ. By defining symbols in arbitrary sets of first order formulae in this way, we are able to generalise the non-contamination postulates defined for propositional argumentation in [16], to the first order case (see later in Section 2.2).
+      </paragraph>
+      <paragraph>
+       Arguments are defined with respect to a set or ‘base’ {a mathematical formula}B of classical formulae, which we assume does not contain ⋏; in the sequel ⋏ will be exclusively used to express that an inconsistency has been reached when constructing an argument.
+      </paragraph>
+      <paragraph label="Definition 5">
+       BaseA base{a mathematical formula}B is a finite set of classical wff such that {a mathematical formula}⋏∉symbols(B).
+      </paragraph>
+      <paragraph label="Definition 6">
+       Classical logic arguments[1], [12], [33]{a mathematical formula}(Δ,ϕ) is an argument defined by a base {a mathematical formula}B, if {a mathematical formula}Δ⊆B, and:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}Δ⊢cϕ
+       </list-item>
+       <list-item label="2.">
+        {a mathematical formula}Cn(Δ)≠L (Δ is consistent)
+       </list-item>
+       <list-item label="3.">
+        {a mathematical formula}¬∃Δ′⊂Δ such that {a mathematical formula}Δ′⊢cϕ (Δ is said to be ‘subset minimal’).
+       </list-item>
+      </list>
+      <paragraph>
+       [33] studies propositional classical logic instantiations of AFs, identifying attack relations which ensure satisfaction of postulates closely related to [15]'s consistency postulates. For well-behaved attack relations, the premises of arguments in stable extensions of an AF instantiated by {a mathematical formula}B are simply the maximal (under set inclusion) consistent subsets of {a mathematical formula}B. Hence, [1], [43] employ preferences over arguments to enable argumentation based arbitration of conflicts in a classical base. X successfully attacks (defeats) Y iff X attacks Y and Y is not strictly preferred to X. In this way, a defeat relation {a mathematical formula}D⊆C is defined. The notions of conflict freeness, acceptability of arguments, and extensions are then defined exactly as in Definition 1, Definition 2 above (with {a mathematical formula}D replacing {a mathematical formula}C).
+      </paragraph>
+      <paragraph label="Definition 7">
+       In [43], a general framework – ASPIC{sup:+} (building on ASPIC[15]) – for instantiating AFs is defined. ASPIC{sup:+} identifies properties of preference relations and logical instantiations of AFs that use strict (deductive) and defeasible inference rules, such that these properties ensure satisfaction of [15]'s consistency and closure rationality postulates. ASPIC{sup:+} studies first order classical logic instantiations in which arguments are built from premises in a given base {a mathematical formula}B, and strict inference rules {a mathematical formula}{ϕ1,…,ϕn→ϕ|ϕ∈Cn({ϕ1,…,ϕn}}. Hence arguments can be represented as in Definition 6, where an argument's premises entail an argument's conclusion through application of a single strict inference rule encoding the entailment condition 1 in Definition 6. (Note that the consistency check on an argument's premises is enforced in [43], whereas the subset minimality check (condition 3 in Definition 6) is not enforced; we comment on this later.) Then: Undermine attacks{a mathematical formula}(Δ,ϕ)undermine attacks{a mathematical formula}(Δ′,ϕ′) on ψ if {a mathematical formula}ϕ=ψ‾ for some {a mathematical formula}ψ∈Δ′.
+      </paragraph>
+      <paragraph>
+       Henceforth we may say that X ‘undermines’ rather than ‘undermine attacks’ Y.
+      </paragraph>
+      <paragraph label="Definition 8">
+       Elementary argumentsLet Δ be a set of classical wff. Then {a mathematical formula}∀α∈Δ, {a mathematical formula}({α},α) is said to be the ‘elementary argument’ defined by α. Undermine attacks only target premises, and as illustrated in the example below, can equivalently be said to target the ‘elementary arguments’ defined by such premises. Henceforth, we will for the sake of simplicity restrict ourselves to propositional examples.
+      </paragraph>
+      <paragraph label="Example 1">
+       Let {a mathematical formula}B be a base {a mathematical formula}{a,b,¬a∨¬b}. A subset {a mathematical formula}A′ of the arguments defined by {a mathematical formula}B are shown in Fig. 1i). Undermine attacks are indicated with solid arrows. For example, F attacks A on the premise a (i.e., F attacks A on the elementary argument A), and F attacks H on a (i.e., F attacks H on A). H attacks F on {a mathematical formula}¬a∨¬b (i.e., on C), and G attacks H on b (i.e., on B). There are three stable extensions – call them {a mathematical formula}E1,E2 and E3 – such that {a mathematical formula}{G,A,C}⊆E1, {a mathematical formula}{F,B,C}{a mathematical formula}⊆E2 and {a mathematical formula}{H,A,B}⊆E3. The premises (and conclusions) of arguments in each extension correspond to the maximal consistent subsets of {a mathematical formula}B (and their consequences). Hence, for example, {a mathematical formula}(Δ,α)∈E3 iff {a mathematical formula}α∈Cn({a,b}).
+      </paragraph>
+      <paragraph>
+       ASPIC{sup:+}[43] studies extensions of AFs consisting of arguments, and defeats obtained from attacks and a preference relation. It is then shown in [43] that [15]'s consistency and closure postulates are satisfied only if preferences are used to compare the attacker and the targeted elementary argument (premise).
+      </paragraph>
+      <paragraph label="Example 2">
+       DefeatsLet ({a mathematical formula}A,C) be an AF where {a mathematical formula}A and {a mathematical formula}C are the arguments and undermine attacks defined by {a mathematical formula}B, and {a mathematical formula}≺⊆A×A a strict partial ordering.Let {a mathematical formula}(Y,X)∈C, where Y undermine attacks X on ψ (i.e., on {a mathematical formula}X′=({ψ},ψ)). Then {a mathematical formula}(Y,X)∈D (YdefeatsX) if {a mathematical formula}Y⊀X′. Modgil and Prakken [43] study specific preference relations. For example, given a partial ordering ≤ over {a mathematical formula}B (with &lt; and ≈ defined in the usual way), then the ‘Elitist’ preference is defined as: {a mathematical formula}(Γ,ϕ)≺E(Δ,θ) iff {a mathematical formula}∃α∈Γ such that {a mathematical formula}∀β∈Δ, {a mathematical formula}α&lt;β  (Elitist Preference)Referring to Fig. 1, suppose {a mathematical formula}¬a∨¬b&lt;a≈b. Then {a mathematical formula}F≺EA, {a mathematical formula}G≺EB, and so F does not defeat A, or H or G (on A), and G does not defeat B, or H or F (on B). We obtain the AF with defeats in Fig. 1ii). This AF's single stable and preferred extension contains {a mathematical formula}A,B,H. Suppose instead {a mathematical formula}¬a∨¬b&lt;a. Then only {a mathematical formula}F≺EA. Now G's attacks on B, H and F succeed as defeats (Fig. 1iii)), and we have two stable and preferred extensions; one containing {a mathematical formula}A,B and H, the other {a mathematical formula}A,C and G.
+      </paragraph>
+      <paragraph>
+       Refs. [4], [43], [57] show that one can obtain an argumentation-based characterisation of non-monotonic inference defined by Brewka's Preferred Subtheories [13]. The latter starts with a totally ordered {a mathematical formula}B partitioned into equivalence classes {a mathematical formula}(B1,…,Bn) such that {a mathematical formula}∀α∈Bi,∀β∈Bj, {a mathematical formula}i&lt;j iff {a mathematical formula}β&lt;α. A ‘preferred subtheory’ (ps) is obtained by taking a maximal (under set inclusion) consistent subset of {a mathematical formula}B1, maximally extended with a subset of {a mathematical formula}B2, and so on. Multiple ps may be constructed, and [43] shows that with undermine attacks defined over the arguments {a mathematical formula}A defined by {a mathematical formula}B, and the defeats {a mathematical formula}D obtained using the Elitist preference, then each ps corresponds to the premises of arguments in a stable extension of ({a mathematical formula}A,D). Hence, α is classically entailed from a ps iff α is the conclusion of an argument in a stable extension. Then α is a sceptical (credulous) ps-inference iff α is entailed by all (respectively at least one) ps, iff α is a sceptical (credulous) argumentation defined inference (i.e., α is the conclusion of an argument in all, respectively at least one, stable extension(s)). Preferences over arguments can of course be defined by criteria other than the Elitist comparison, and neither are preferences necessarily based on an ordering over {a mathematical formula}B. For example, preferences may be based on the relative importance of values promoted [9], or the goals realised [51], by actions whose justifying rationales are encoded in the arguments. Hence inference relations other than those corresponding to Preferred Subtheories can be defined by classical logic instantiations of AFs with preferences.
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       Rationality postulates for argumentation
+      </section-title>
+      <paragraph>
+       The consistency and closure postulates [15] identify rational properties that one would want to hold of the complete (and hence grounded, preferred and stable) extensions of an instantiated AF. ASPIC[15] also identified sufficient conditions on logical instantiations which ensure satisfaction of these postulates. ASPIC{sup:+}[43] then identified conditions for a broader range of instantiations while additionally accounting for the use of preferences. We now review these postulates as they apply to classical logic argumentation (sufficient conditions for satisfying these postulates will be reviewed in Section 3.2). Note that we will use the notation {a mathematical formula}conc(E) to denote the set of conclusions of arguments in an extension E.
+      </paragraph>
+      <paragraph>
+       Recall that ASPIC and ASPIC{sup:+} are general frameworks for defining instantiations of AFs. They assume an arbitrary language, and arguments are built from premises and (strict/defeasible) inference rules. An argument X is a tree whose root node is the argument's conclusion, the leaves are its premises, and any non-leaf node is the consequent ϕ of an inference rule r where {a mathematical formula}ϕ′ is a child node of ϕ iff {a mathematical formula}ϕ′ is a formula in the antecedent of r. Sub-arguments of X are identified as sub-trees of X, and the sub-argument closure postulate states that if X is in a complete extension E then all sub-arguments of X are in E. The standard representation of classical logic arguments consists only of premises paired with the entailed conclusion, and so a classical logic argument in ASPIC{sup:+} applies a single strict inference rule to a set of premises (as described in Section 2.1), yielding a tree whose root node – the argument's conclusion – has child leaf nodes that are the premises. Thus, the sub-trees are simply the premises in the leaf nodes, and the sub-arguments are the elementary arguments associated with premises. Hence for Cl-Arg{sup:2}:
+      </paragraph>
+      <paragraph>
+       – Closure under sub-arguments amounts to stating that (in the remainder of this section we assume complete extensions {a mathematical formula}E,E′…): Let {a mathematical formula}X=(Δ,ϕ) ∈E. If {a mathematical formula}α∈Δ then {a mathematical formula}({α},α)∈E – Closure under strict rules states that if a strict rule with consequent ϕ can be applied to the conclusions of arguments in a complete extension, then there is an argument in that extension that concludes ϕ. For Cl-Arg: If {a mathematical formula}conc(E)⊢cϕ, then {a mathematical formula}ϕ∈conc(E) – Direct and indirect consistency respectively state that the conclusions of arguments in a complete extension, and their closure under strict rules, do not conflict: {a mathematical formula}∀α,β∈conc(E) : {a mathematical formula}α≠β‾ and {a mathematical formula}∀α,β∈Cn(conc(E)) : {a mathematical formula}α≠β‾ Clearly, closure under strict rules and direct consistency imply indirect consistency.
+      </paragraph>
+      <paragraph>
+       More recently, two further rationality postulates were proposed for instantiations of AFs based on propositional languages [16]. We introduce notation that (together with Definition 4) allows us to generalise these postulates to first order instantiations. This generalization can be seen as a modest contribution to the specification of rationality postulates for logic-based argumentation.
+      </paragraph>
+      <paragraph label="Notation 3">
+       Let Sy denote a set of symbols (recall Definition 4).{sup:3} Then {a mathematical formula}B|Sy={α∈B|symbols({α})⊆Sy}, e.g., {a mathematical formula}{¬a∨¬b,c∧a}|{a,b}={¬a∨¬b} and {a mathematical formula}{∀xP(x)→Q(x),∃zP(z)∧R(z)}|{P,Q}={∀xP(x)→Q(x)}. Also, {a mathematical formula}B‖B′ denotes that {a mathematical formula}symbols(B) ∩ {a mathematical formula}symbols(B′)=∅, and {a mathematical formula}B and {a mathematical formula}B′ are said to be syntactically disjoint. Hence two sets of first order formulae are syntactically disjoint if they share no predicate or function (including constant) symbols (in the propositional case this equates to no shared propositional atomic formulae). – Non-interference states that for any {a mathematical formula}B composed of two independent (i.e., syntactically disjoint) bases {a mathematical formula}B1 and {a mathematical formula}B2, neither should ‘influence’ each other's argumentation defined inferences. That is to say, given frameworks AF and {a mathematical formula}AF′ instantiated respectively by {a mathematical formula}B1 and {a mathematical formula}B1∪B2, where {a mathematical formula}B1‖B2, then: E is an extension of AF iff there is an extension {a mathematical formula}E′ of {a mathematical formula}AF′, where {a mathematical formula}conc(E)|symbols(B1)=conc(E′)|symbols(B1) – Crash resistance states that there is no ‘contaminating’ {a mathematical formula}B1 that when merged with an unrelated {a mathematical formula}B2, makes the latter irrelevant. That is to say, given frameworks AF and {a mathematical formula}AF′ instantiated respectively by {a mathematical formula}B1 and {a mathematical formula}B1∪B2, where {a mathematical formula}B1‖B2, then: {a mathematical formula}{conc(E)|E is an extension of {a mathematical formula}AF}≠{conc(E)|E is an extension of {a mathematical formula}AF′}
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      Dialectical classical logic argumentation
+     </section-title>
+     <paragraph>
+      In this section we propose practical desiderata for applications of logical instantiations of Dung's theory. We also discuss why features of standard approaches to Cl-Arg preclude satisfaction of these desiderata, while at the same time being proposed as sufficient conditions for satisfaction of the rationality postulates. We then formalise a provably rational account of Cl-Arg that satisfies practical desiderata.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       Applications and practical desiderata
+      </section-title>
+      <paragraph>
+       Section 2.1 reviewed the definition of argumentation-based inference relations over logical (in particular classical logic) bases instantiating AFs. Formalisations of ‘instantiated argumentation’ have thus been widely advocated for individual agent reasoning over uncertain and conflicting beliefs (e.g., [15], [39]) and decision making in which practical arguments for alternative actions attack each other. In the latter case preferences may be based on the prioritisation of agent goals or the values promoted by actions, and are used to arbitrate amongst these practical arguments (e.g., [3], [8], [39], [51]).
+      </paragraph>
+      <paragraph label="Example 4">
+       Argumentation's dialectical characterisation of non-monotonic inference provides for generalisation of the above ‘monological’ applications to dialogues involving both computational and human agents. Argumentation-based dialogues enable distributed reasoning amongst agents communicating to persuade one another of the truth of a proposition, decide amongst alternative action options, or negotiate allocations of resources (e.g., [2], [38], [45], [48], [58]). Agents submit locutions consisting of arguments and counter-arguments, as well as locutions that implicitly define arguments (e.g., when an agent asserts a claim, and subsequently asserts supporting reasons in response to another agent challenging the claim). The contents of locutions are incrementally included in a public commitment store{a mathematical formula}Bp[60], and agents can submit arguments constructed from their private distinct bases and{a mathematical formula}Bp. At any point in the dialogue, an agent can be said to ‘win the dialogue’ – i.e., successfully establish the dialogue ‘topic’ α which may be a belief or decision option – by countering arguments moved by his interlocutor, effectively showing (under the assumption of ‘logically perfect’ play, as discussed in the example below) that an argument X claiming α is in an admissible extension E of the AF instantiated by {a mathematical formula}Bp[31], [48]. These dialogues can be seen as generalising argument game proof theories (e.g. [42]) for monological applications in which an agent shows that a given argument X is justified by successfully countering defeating arguments that the agent can construct from his base (in this case the base, and hence instantiated AF, is assumed fixed rather than being incrementally updated). As in these argument games, dialogue rules regulating legal moves can then be varied to establish that the admissible E is a subset of an extension under different semantics.{sup:4}Consider Example 1. Suppose {a mathematical formula}Ag1 submits A constructed from its own base {a mathematical formula}B1. A is countered by {a mathematical formula}Ag2 submitting F, constructed from her base {a mathematical formula}B2. At this point {a mathematical formula}Ag2 is winning the dialogue. However note that A is in an admissible extension of the AF instantiated by the committed premises {a mathematical formula}a,b,¬a∨¬b. The agents have not played in a ‘logically perfect’ way [48]: {a mathematical formula}Ag1 can construct and submit G.{sup:5}
+      </paragraph>
+      <paragraph>
+       Another key reason for the impact of Dung's theory is that evaluation of justified arguments is essentially based on the intuitive and familiar ‘reinstatement principle’ whereby an argument is defended if all its defeaters are themselves defeated. The theory's compatibility with human modes of reasoning and debate has prompted empirical studies of human uses of the reinstatement principle [52], and development of theories and applications supporting both computational and human reasoning and dialogue [44]. For example, computational models of dialogue for normatively guiding human–human [58] and human–computer [37] dialogue. Hence, real-world modes of dialectical reasoning have been formalised,{sup:6} often drawing on insights from philosophical and informal logic. For example, the notion of an ‘audience’ [46] to whom an argument is addressed, has been modelled in extensions to Dung's theory [10] and in making classical logic arguments more believable [35]. Dung's theory has also been extended to accommodate other real-world uses of argument, such as arguments supporting arguments (see [40] for a review) and the weighing up of arguments for and against claims (accrual) [41], [49]. The above monological and dialogical applications involving computational and/or human agents, warrant consideration of two key practical desiderata for formalisations of argumentation:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        One needs to account for the fact that real-world computational and human agents are resource-bounded.
+       </list-item>
+       <list-item label="2.">
+        Formalisations should be compatible with real-world modes of dialectical reasoning.
+       </list-item>
+      </list>
+      <paragraph>
+       We now review the extent to which standard features of Cl-Arg preclude satisfaction of these practical desiderata.
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Practicality versus rationality
+      </section-title>
+      <paragraph>
+       Both [1], [33], and ASPIC{sup:+}'s formalisation of Cl-Arg with preferences [43], assume instantiation of an AF by all arguments defined by a base {a mathematical formula}B (which will in general be infinite).{sup:7} This is clearly unfeasible for agents with limited resources, given the undecidability of first order classical logic, and that even in the propositional case, deciding whether {a mathematical formula}Δ⊢cα is in general NP-hard, and therefore most likely intractable. Moreover, for each argument constructed, one must not only check consistency of the premises but also that they are subset-minimal; a problem in the second level of the polynomial hierarchy [30], so that in the worst case, for every constructed argument {a mathematical formula}(Δ,α) one needs to verify that {a mathematical formula}∀Δ′⊂Δ, {a mathematical formula}Δ′⊬cα. Hence, to accommodate uses by resource-bounded agents, one needs to study the outcomes of argument evaluation assuming AFs that may include only a subset of the arguments defined by a base (which henceforth we refer to as partially instantiatedAFs) and avoid enforcing checks on the legitimacy of arguments before inclusion in an AF.
+      </paragraph>
+      <paragraph>
+       Standard formalisations of Cl-Arg are also incompatible with real-world modes of dialectical reasoning. Firstly, in both monological and dialogical applications in which an agent attempts to establish whether an argument X is justified, agents may simply not construct all arguments defined by a base (be it an individual agent's base or one incrementally constructed by the dialogue). Agents pragmatically operate on the basis of beliefs or chosen actions that are provisionally acceptable, until later seeking further counter-arguments from a given base, or from a base that is subsequently augmented with newly acquired information. Moreover, it may not be necessary to construct all arguments, given that in argument game proof theories and dialogues, it may suffice to show membership of X in an admissible extension (and hence an extension under other semantics depending on the rules regulating legal moves). In other words, in practice agents are not logically perfect for pragmatic reasons other than that they are resource limited, further testifying to the need for studying partially instantiated AFs.
+      </paragraph>
+      <paragraph>
+       Secondly, establishing whether an individual argument's premises are consistent, is a special case of establishing the mutual consistency of a set of arguments' premises, and this is addressed dialectically in real-world dialogues. For example, an often used dialectical move illustrated in the Socratic Elenchus[59] involves showing that an opponent's arguments collectively make use of inconsistent premises, by constructing an argument from these premises to show that the opponent contradicts himself.
+      </paragraph>
+      <paragraph>
+       Thirdly, accounts of Cl-Arg typically make no reference to specific proof theories for constructing arguments, and so the subset minimality check is imposed as a somewhat blunt instrument for ensuring that no premises are redundant with respect to deriving the argument's conclusion.{sup:8} However, in practice agents do not interrogate premises for subset minimality. Rather, the exclusion of trivially redundant premises is determined by the proof theoretic means used to derive the conclusion from the premises.
+      </paragraph>
+      <paragraph>
+       Fourthly, the exclusive targeting of premises by defeating arguments leads to the so called ‘foreign commitment’ problem in dialogues. Agents may be forced to commit to the truth of interlocutors' premises for which they have insufficient reasons to believe (see [17] for a concrete example of this problem), and may be subsequently obligated to defend [60]. Consider Example 4. After A is attacked by F, {a mathematical formula}Ag1 cannot counter with A, as attacks cannot target conclusions of arguments. {a mathematical formula}Ag1 has to counter F with either G or H, and so commit to {a mathematical formula}Ag2's premise {a mathematical formula}¬a∨¬b, respectively b. Suppose then that another agent {a mathematical formula}Ag3 were to attack {a mathematical formula}Ag1's argument H on B, requiring that {a mathematical formula}Ag1 now defend {a mathematical formula}Ag2's argument B.
+      </paragraph>
+      <paragraph>
+       We have argued that standard features of Cl-Arg preclude its suitability for use by real-world resource-bounded agents. However, dispensing with these features may result in violation of the rationality postulates. Dropping the consistency check on premises may lead to violation of non-interference and crash-resistance. Consider the syntactically disjoint {a mathematical formula}B1={s} and {a mathematical formula}B2={p,¬p}. Assuming all attacks succeed as defeats, then {a mathematical formula}({s},s) is in the grounded extension of the AF based on {a mathematical formula}B1. However ∅ is the grounded extension of the {a mathematical formula}AF′ based on {a mathematical formula}B1∪B2, since in {a mathematical formula}AF′ every argument is defeated by arguments {a mathematical formula}({p,¬p},ϕ) ({a mathematical formula}ϕ∈L),{sup:9} and it is well known that the grounded extension is empty if there are no un-defeated arguments. Hence non-interference is violated. Moreover, {a mathematical formula}B2 is contaminating as the grounded extension of the framework based on {a mathematical formula}B2 is ∅, and for any{a mathematical formula}B1 (e.g., {a mathematical formula}B1={s}) ∅ is the grounded extension of the {a mathematical formula}AF′ based on {a mathematical formula}B1∪B2. Hence crash resistance is violated. Thus, arguments with inconsistent premises are said to be contaminating as they may attack arguments with syntactically unrelated premises.
+      </paragraph>
+      <paragraph>
+       As for the subset minimality check, we show in Section 3.7 that allowing non-subset minimal arguments may also result in violation of non-interference. That this is the case is suggested by a result shown for ASPIC{sup:+}'s formulation of Cl-Arg[43]. The authors show that if one were to allow non-subset minimal arguments, then the argumentation defined inferences remain unchanged only if one assumes preference relations that do not strengthen subset minimal arguments by adding premises. That is to say, if A is subset minimal and a non-subset minimal {a mathematical formula}A′ is obtained by adding premises to the support of A, then {a mathematical formula}A≺B implies {a mathematical formula}A′≺B. (Intuitively, one would not want the strength of an argument to depend on premises that are redundantly used in deriving the conclusion.) Indeed, by definition, the Elitist preference (see Section 2) satisfies this property. Thus one can dispense with subset minimality checks. But for preference relations that do not satisfy this property (e.g., the Democratic preference relation studied in [43]), one needs to identify subset minimal arguments and impose this constraint on the preference relation. However this would not be necessary if one can identify a notion of non-redundancy enforceable by proof theories for constructing arguments, and such that the proof theoretic exclusion of arguments that use redundant premises suffices to ensure satisfaction of non-interference and crash resistance independently of the preference relation used. (We revisit this issue in Section 4.)
+      </paragraph>
+      <paragraph>
+       The rationality postulates are shown to hold [15], [43] under the assumption that all arguments defined by a base are included in an AF. Consider the following example uses of argumentation. Suppose that in attempting to defend an argument, an agent constructs arguments {a mathematical formula}P=({p,p→¬q},¬q) and {a mathematical formula}Q=({p,p→q},q). To ensure that no complete extension E can include P and Q and so violate direct consistency (i.e., that no such irrational defense is possible), one needs to assume that the AF, by virtue of including all defined arguments, includes the arguments {a mathematical formula}X,Y and Z, where:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}X=({p,p→q},¬(p→¬q)) attacks {a mathematical formula}A=({p→¬q},p→¬q);
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}Y=({p,p→¬q},¬(p→q)) attacks {a mathematical formula}B=({p→q},p→q);
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}Z=({p→q,p→¬q},¬p) attacks {a mathematical formula}C=({p},p).
+       </list-item>
+      </list>
+      <paragraph>
+       Then [43] shows that direct consistency is satisfied under the assumption that the preference relation used is ‘reasonable’ ([43] shows that the Elitist preference relation is reasonable), which in this example means that either {a mathematical formula}X⊀A or {a mathematical formula}Y⊀B or {a mathematical formula}Z⊀C. Now, suppose {a mathematical formula}X≺A and {a mathematical formula}Y≺B and ≺ is reasonable. Then it must be that {a mathematical formula}Z⊀C. This means that the agent cannot use P and Q in its attempted defense, since Z will defeat both P and Q on C, and so to defend against Z, will mean including in its attempted defense (i.e., E), some {a mathematical formula}V∈E that defeats Z. But any such V must then defeat {a mathematical formula}P∈E or {a mathematical formula}Q∈E, contradicting the admissibility of E.
+      </paragraph>
+      <paragraph>
+       However, if the agent does not construct all arguments then direct consistency may be violated. For example, resources may not suffice to construct Z; indeed, in the resource bounded proof theory presented in Section 4, we show that construction of Z assumes a higher bound on inferential capabilities than construction of X or Y.
+      </paragraph>
+      <paragraph>
+       Consider also a variation of the above example in which an agent {a mathematical formula}Ag1, in the course of a persuasion dialogue with {a mathematical formula}Ag2, submits arguments that make use of premises p, {a mathematical formula}p→q and {a mathematical formula}p→¬q (without as yet having constructed and submitted arguments P and Q). Again, one must assume a reasonable preference relation and that {a mathematical formula}Ag2 can construct from these premises the arguments X, Y and Z, to prevent {a mathematical formula}Ag1 winning the dialogue by forcing {a mathematical formula}Ag1 to move some V that defeats one of {a mathematical formula}Ag1's own arguments (i.e., {a mathematical formula}Ag2 effectively shows that {a mathematical formula}Ag1 is indirectly inconsistent).
+      </paragraph>
+      <paragraph>
+       We therefore want that the consistency postulates are satisfied by partially instantiatedAFs. Moreover, one would intuitively expect that having explicitly recognised the inconsistency of premises (e.g., {a mathematical formula}p,p→q,p→¬q) in an extension E, through construction of arguments with conflicting conclusions (e.g., {a mathematical formula}P,Q) then this should suffice to ensure that E cannot be rationally accepted as a defendable set of arguments, without needing to assume construction of the additional arguments X, Y and Z, or any properties of preference relations.{sup:10} Also note that the closure under strict rules postulate also assumes construction of all arguments defined by a base, and so assumes an idealised notion of an agent that is clearly unrealistic in its assumption of logical omniscience[56]. We therefore later modify this closure postulate to account for partially instantiated AFs.
+      </paragraph>
+      <paragraph>
+       Finally, suppose one were to avoid the foreign commitment problem by allowing attacks on conclusions, as indicated by the dotted arrows in Fig. 1. Then {a mathematical formula}E′={A,B,C} is now admissible and so a subset of a complete extension E. However E cannot be closed (neither F, G or H can be in E since E would not then be conflict free). Also E would be indirectly inconsistent.
+      </paragraph>
+      <paragraph>
+       We now formalise an account of Cl-Arg that drops the consistency and subset minimality checks on arguments, formalises the dialectical demonstration that the premises of an argument, or set of arguments, is inconsistent, and solves the foreign commitment problem. We then show that despite dropping checks on the legitimacy of arguments, and making only minimal assumptions as to the arguments included in a partially instantiated AF, the closure (we will modify closure under strict rules to account for partially instantiated frameworks) and consistency postulates are satisfied assuming any preference relation over arguments. We also show that the non-interference and contamination postulates, generalised here so as to apply to first order instantiations of AFs, are satisfied under the assumption that preference relations are ‘coherent’.
+      </paragraph>
+     </section>
+     <section label="3.3">
+      <section-title>
+       Dialectical frameworks and acceptability
+      </section-title>
+      <paragraph>
+       We begin by observing that interlocutors in dialogues typically distinguish their own premises, namely those that they accept as true, from the premises that their opponent commits to and that they want to criticise: “on the basis of the premises I regard to be true, and supposing for the sake of argument what you regard to be true, then I can show some conclusion that contradicts one of your premises” or “I can show that your premises are inconsistent”. This pattern is pervasive in real argumentation practice,{sup:11} and motivates a dialectical ‘ontology’ for classical logic arguments that explicitly differentiates between an argument's assumptions that are premises regarded as true, and those supposed true for the sake of argument (the argument's suppositions). We also drop the subset minimality and consistency checks. Hence, arguments with inconsistent assumptions can now conclude ⋏.
+      </paragraph>
+      <paragraph label="Definition 10">
+       Dialectical arguments{a mathematical formula}X=(Δ,Γ,α) is a dialectical argument defined by a base {a mathematical formula}B, if {a mathematical formula}(Δ∪Γ)⊆B, {a mathematical formula}Δ∩Γ=∅, and {a mathematical formula}Δ∪Γ⊢cα.If {a mathematical formula}α=⋏ then X is said to be a falsum argument. If {a mathematical formula}Γ=∅ then X is said to be unconditional; else X is conditional. Finally, if {a mathematical formula}Δ=∅ then X is said to be unassailable (since X cannot then be attacked).
+      </paragraph>
+      <paragraph label="Notation 5">
+       Let {a mathematical formula}X=(Δ,Γ,α) be a dialectical argument, S a set of dialectical arguments.
+      </paragraph>
+      <list>
+       <list-item label="•">
+        Δ, Γ and α are, respectively, X's premises, suppositions and conclusion, denoted {a mathematical formula}prem(X), {a mathematical formula}suppositions(X) and {a mathematical formula}conclusion(X). Also, {a mathematical formula}assumptions(X) denotes {a mathematical formula}prem(X)∪suppositions(X).
+       </list-item>
+       <list-item label="•">
+        Generalising the above notation to sets of arguments in the obvious way: {a mathematical formula}prem(S)=⋃X∈Sprem(X); {a mathematical formula}suppositions(S)=⋃X∈Ssuppositions(X); {a mathematical formula}assumptions(S)=prem(S)∪suppositions(S); {a mathematical formula}conclusion(S)=⋃X∈Sconclusion(X).
+       </list-item>
+      </list>
+      <paragraph label="Example 6">
+       The dialectical arguments {a mathematical formula}A defined by {a mathematical formula}B={a,b,¬a∨¬b} include:{a mathematical formula}
+      </paragraph>
+      <paragraph label="Definition 11">
+       As in [43], we interpret an attack between two arguments as declaratively denoting that the conclusion of the attacking argument conflicts with some element in the attacked argument. In particular, we here formalise undermine attacks, denoting that the conclusion of the attacking argument conflicts with an assumption in the attacked argument that is a premise regarded as true. Preferences are then applied to determine the defeat relation, which is interpreted dialectically, in that it denotes the use of the defeating argument as a counter-argument to the defeated argument. We will then utilise the distinction between premises and suppositions when accounting for the dialectical use of defeats in determining the acceptability of arguments. Intuitively, when an agent constructs a candidate set of admissible arguments S, the agent commits to the premises of arguments in S. Any of these premises can then be supposed true when challenging the acceptability of some Y w.r.t. S. That is to say, when moving some X as a defeat on Y, X's suppositions can include premises of any arguments in S. In turn, when defending Y by some {a mathematical formula}Z∈S that defeats X, Z's suppositions can include any of X's premises. In the latter case, Z supposes for the sake of argument only X's premises, since in order to invalidate the admissibility of S, it suffices that only one such defeat by some X on {a mathematical formula}Y∈S be undefended (rather than having to construct some candidate set of arguments {a mathematical formula}S′ that includes X). Note that a defeat by a falsum argument {a mathematical formula}X=(Δ,Γ,⋏) on Y indicates that under the assumption that the premises Δ is true, the ‘supposed premises’ (i.e., suppositions) Γ in S are inconsistent, and Y in particular is targeted since at least one of the suppositions in Γ is also a premise of Y. AttacksLet {a mathematical formula}A be a set of dialectical arguments defined by {a mathematical formula}B. The attack relation {a mathematical formula}C⊆A×A is defined as follows. For any {a mathematical formula}X=(Δ,Γ,α),Y=(Π,Σ,β)∈A: {a mathematical formula}(X,Y)∈C (which we may denote by writing {a mathematical formula}X→Y) iff exactly one of the following holds:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}α≠⋏ and {a mathematical formula}α‾∈Π (we say that XattacksYon{a mathematical formula}α‾, equivalently on {a mathematical formula}Y′=({α‾},∅,α‾));
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}α=⋏ and {a mathematical formula}Γ∩Π≠∅ (we say that XattacksYon any {a mathematical formula}ϕ∈Γ∩Π, equivalently on any {a mathematical formula}Y′=({ϕ},∅,ϕ)).
+       </list-item>
+      </list>
+      <paragraph>
+       Notice that Definition 11 adapts the notion of an undermine attack (Definition 7) in the sense that the premises of an attacked argument are targeted by the attacking argument. We thus also adapt the term ‘elementary argument’ (Definition 8) to refer to {a mathematical formula}Y′=({α‾},∅,α‾) in the above definition, and say that X is equivalently said to attack Y on {a mathematical formula}Y′ (recall the comment after Definition 8).
+      </paragraph>
+      <paragraph>
+       Notice that by definition, no argument in any set S can be attacked with unconditional falsum arguments {a mathematical formula}(Δ,∅,⋏). Indeed, it would be insensible to allow such attacks, since an agent would be irrationally attacking with an argument that she herself recognises as based on inconsistent premises.{sup:12}
+      </paragraph>
+      <paragraph>
+       We now define the defeat relation. Firstly, recall that the distinction between Δ and Γ in {a mathematical formula}X=(Δ,Γ,ϕ) is an epistemic distinction between assumptions one commits to as being true and supposed true for the sake of argument. Logically, X is equivalent to any {a mathematical formula}X′=(Δ′,Γ′,ϕ) where {a mathematical formula}Δ′∪Γ′=Δ∪Γ. Hence {a mathematical formula}G1 and {a mathematical formula}G2 in Example 6 are logically equivalent. We consider the strength (and hence relative preference) of an argument to be independent of whether assumptions are regarded as true or supposed true. To illustrate, suppose the Elitist preference relation (Section 2.1) defined on the basis of the well known temporal ordering over rules in the legal domain, such that later rules override earlier rules [50]. Suppose such an ordering on conflicting legal rules: {a mathematical formula}a→b&lt;a→¬b, so that {a mathematical formula}X=({a,a→b},∅,¬(a→¬b)) does not defeat {a mathematical formula}Y=({a→¬b},∅,a→¬b) since {a mathematical formula}X≺EY. In dialogical applications, the only distinction between X and {a mathematical formula}X′=({a},{a→b},¬(a→¬b)) is that in {a mathematical formula}X′{a mathematical formula}a→b is a premise that an interlocutor commits to. (Clearly, no such distinction arises in monological applications.) Thus, one still uses the temporal ordering to conclude that {a mathematical formula}X′≺EY; the fact that {a mathematical formula}a→b is a premise used by an interlocutor is irrelevant to defining the temporal based preference. Henceforth, we therefore assume preferences over arguments are invariant modulo logical equivalence:
+      </paragraph>
+      <paragraph label="Definition 12">
+       Logically equivalent argumentsLet {a mathematical formula}A be the dialectical arguments defined by {a mathematical formula}B and ≺ a strict partial ordering over {a mathematical formula}A. Let {a mathematical formula}X=(Δ,Γ,α)∈A. Then:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}[X]={X′=(Δ′,Γ′,α)|Δ′∪Γ′=Δ∪Γ}.{a mathematical formula}∀Y,Z∈[X] we say that Y and Z are logically equivalent.
+       </list-item>
+       <list-item label="•">
+        ≺ is said to be invariant modulo logical equivalence (imle) if {a mathematical formula}∀Y′∈[Y], {a mathematical formula}∀X′∈[X] : {a mathematical formula}Y≺X iff {a mathematical formula}Y′≺X′.
+       </list-item>
+      </list>
+      <paragraph>
+       In the case that {a mathematical formula}X=(∅,Γ,⋏) attacks Y, the attack dialectically demonstrates that the proponent of Y commits to the inconsistent premises Γ, either because {a mathematical formula}Γ⊆prem(Y), or {a mathematical formula}Γ⊆prem(Y)∪prem(E) when challenging the acceptability of Y w.r.t. E. It would clearly be incoherent to use preferences to reject such an attack.
+      </paragraph>
+      <paragraph label="Definition 13">
+       DefeatsLet {a mathematical formula}A be a set of dialectical arguments, {a mathematical formula}C the attack relation, and ≺ a strict partial ordering, over {a mathematical formula}A. Then {a mathematical formula}∀(X,Y)∈C,(X,Y)∈D (XdefeatsY) iff exactly one of the following holds:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        X is an argument of the form {a mathematical formula}(∅,Γ,⋏){sup:13};
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}∃α∈prem(X) s.t. {a mathematical formula}Y→X on α, and {a mathematical formula}Y⊀({α},∅,α).
+       </list-item>
+      </list>
+      <paragraph>
+       Recall that we are interested in AFs that do not necessarily include all arguments defined by a base. Hence, we define the notion of a dialecticalAF that includes any subset of the arguments defined by a base. We will then identify (in this section and in Section 3.7) sufficient conditions on the arguments that must be included in order to ensure satisfaction of the rationality postulates.
+      </paragraph>
+      <paragraph label="Definition 14">
+       Dialectical AF instantiated by a baseLet {a mathematical formula}A be any subset of the set of dialectical arguments defined by a base {a mathematical formula}B, and {a mathematical formula}D the defeat relation defined by the attack relation {a mathematical formula}C, and a strict partial ordering ≺ over {a mathematical formula}A. Then {a mathematical formula}(A,D) is a dialectical AF defined by {a mathematical formula}B and ≺.
+      </paragraph>
+      <paragraph>
+       Recall that the suppositions of an argument X can suppose for the sake of argument the premises of arguments in S when challenging the acceptability of some Y w.r.t. S. Then {a mathematical formula}Z∈S can suppose the premises of X when defeating X in order to defend Y.
+      </paragraph>
+      <paragraph label="Definition 15">
+       Dung semantics for dialectical AFsLet {a mathematical formula}(A,D) be a dialectical AF, and {a mathematical formula}S⊆A, {a mathematical formula}X,Y∈A. Then:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        X defeats Ywith respect toS, denoted {a mathematical formula}X⇒SY, if {a mathematical formula}(X,Y)∈D and {a mathematical formula}suppositions(X)⊆prem(S∪{Y}).
+       </list-item>
+       <list-item label="•">
+        S is conflict free if {a mathematical formula}∀Z,Y∈S, {a mathematical formula}Z⇏SY.
+       </list-item>
+       <list-item label="•">
+        Y is acceptable w.r.t. S if ∀X s.t. {a mathematical formula}X⇒SY,{sup:14}{a mathematical formula}∃Z∈S s.t. {a mathematical formula}Z⇒{X}X.
+       </list-item>
+       <list-item label="•">
+        Let S be conflict free. Then S is: an admissible extension iff {a mathematical formula}X∈S implies X is acceptable w.r.t. S; a complete extension iff S is admissible and if X is acceptable w.r.t. S then {a mathematical formula}X∈S; a preferred extension iff it is a set inclusion maximal complete extension; the grounded extension iff it is the set inclusion minimal complete extension; a stable extension iff {a mathematical formula}∀Y∉S, {a mathematical formula}∃X∈S s.t. {a mathematical formula}X⇒{Y}Y.
+       </list-item>
+       <list-item label="•">
+        For {a mathematical formula}T∈{complete, preferred, grounded, stable}, X is sceptically, respectively credulously justified under the T semantics if X belongs to all, respectively at least one, T extension.
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}F(A,D)(S)={X|X is acceptable w.r.t. S}.
+       </list-item>
+      </list>
+      <paragraph>
+       Notice that every stable extension of a dialectical AF is a preferred (and hence complete) extension. This result is shown in exactly the same way as for Dung AFs.{sup:15}
+      </paragraph>
+      <paragraph>
+       In Section 2.1, the argumentation defined inferences are obtained by detaching the conclusions of arguments in extensions. However, the extensions of dialectical AFs may contain conditional arguments that suppose the truth of assumptions when used dialectically. Once the extensions are defined, we detach only the conclusions (which we call ‘claims’) of unconditional arguments all of whose assumptions are premises presumed true.
+      </paragraph>
+      <paragraph label="Definition 16">
+       Conclusions (‘claims’) of an extensionLet E be an extension of a dialectical AF. Then {a mathematical formula}claims(E)={ϕ|(Δ,∅,ϕ){a mathematical formula}∈E}. The dialectical ontology for arguments solves the foreign commitment problem described in Section 3.2. Recall that {a mathematical formula}Ag1 submits A and {a mathematical formula}Ag2 counters with F. Then to defend A, {a mathematical formula}Ag1 must defeat F with either G or H, respectively committing to {a mathematical formula}Ag2's premise b or {a mathematical formula}¬a∨¬b in {a mathematical formula}Ag2's argument F. Now suppose the following continuation of Example 6.
+      </paragraph>
+      <paragraph label="Remark 8">
+       Consider E in Fig. 2. Suppose {a mathematical formula}∀V∈{F1,Z1,Z2,X3}, {a mathematical formula}V⊀A1. Then for each V we have that {a mathematical formula}V⇒EA1, and {a mathematical formula}V⇒EG2 on {a mathematical formula}A1, {a mathematical formula}V⇒EH2 on {a mathematical formula}A1. Suppose also that {a mathematical formula}G1≺B1, {a mathematical formula}H1⊀C1, and since ≺ is imle, {a mathematical formula}G2≺B1 and {a mathematical formula}H2⊀C1. Hence {a mathematical formula}∀V∈{F1,X3,Z1,Z2}, {a mathematical formula}G2⇏{V}V and {a mathematical formula}H2⇒{V}V (on {a mathematical formula}C1).E is admissible, despite {a mathematical formula}Ag1 not having to commit to either {a mathematical formula}¬a∨¬b or b as premises, since {a mathematical formula}G2 and {a mathematical formula}H2 respectively include {a mathematical formula}¬a∨¬b and b as suppositions. {a mathematical formula}H2 defends against each of V's defeats on members of E (where {a mathematical formula}H2's assumption b is only supposed true for the sake of argument).Suppose a dialectical AF containing exactly the arguments in Example 6. No admissible extension E can contain the arguments {a mathematical formula}X2 and {a mathematical formula}Z1, both of whose premises are inconsistent, since {a mathematical formula}X1⇒EX2 ({a mathematical formula}X1⇒EZ1), and the unassailable {a mathematical formula}X1 cannot be defeated by virtue of its premises being empty. Hence {a mathematical formula}X2 ({a mathematical formula}Z1) cannot be defended and so cannot be acceptable w.r.t. E. Moreover, no admissible (and not just complete) extension E can contain arguments with conflicting conclusions. Suppose E contains {a mathematical formula}A1 and {a mathematical formula}F1. But then {a mathematical formula}X1⇒EA1 on {a mathematical formula}A1, and {a mathematical formula}X1⇒EF1 on both {a mathematical formula}B1 and {a mathematical formula}C1, indicating that the proponent of arguments in E has committed to inconsistent premises. No argument in E can defend against {a mathematical formula}X1, and so E cannot be admissible. In contrast with Example 1, which assumes the standard ontology for arguments, Remark 8 highlights that one does not require that all arguments (i.e., {a mathematical formula}G1 and {a mathematical formula}H1) can be constructed in order to guarantee satisfaction of the direct consistency postulate. It suffices that the assumptions of arguments with conflicting conclusions (i.e., {a mathematical formula}A1 and {a mathematical formula}F1) be combined to yield a falsum argument (i.e., {a mathematical formula}X1), which we argue is a less demanding, and indeed more intuitive assumption as to the arguments that an agent can construct.
+      </paragraph>
+      <paragraph label="Definition 17">
+       In general, if the inconsistency of a set of premises is recognised by constructing at least two arguments from these premises with conflicting conclusions, then this guarantees consistency of extensions under the assumption that one combines their assumptions to yield an argument concluding ⋏. Of course, if either of the two arguments is constructed from inconsistent premises, and this is recognisable through construction of an argument from those premises that concludes ⋏, then it is not necessary to assume that one combines their assumptions. This points to properties of any set {a mathematical formula}A of arguments in a dialectical AF that suffice to ensure satisfaction of the consistency and closure postulates: Properties of sets of arguments in dialectical AFsLet {a mathematical formula}(A,D) be a dialectical AF. We define properties that {a mathematical formula}A may satisfy:
+      </paragraph>
+      <list>
+       <list-item label="(P1)">
+        {a mathematical formula}∀X∈A: {a mathematical formula}α∈prem(X) implies {a mathematical formula}({α},∅,α)∈A.
+       </list-item>
+       <list-item label="(P2)">
+        {a mathematical formula}∀X∈A: {a mathematical formula}X′∈[X] implies {a mathematical formula}X′∈A.
+       </list-item>
+       <list-item label="(P3)">
+        If {a mathematical formula}(Δ,∅,α)∈A and {a mathematical formula}(Γ,∅,α‾)∈A, then either {a mathematical formula}(Δ,∅,⋏)∈A or {a mathematical formula}(Γ,∅,⋏)∈A or {a mathematical formula}(Δ∪Γ,∅,⋏)∈A.
+       </list-item>
+      </list>
+      <paragraph>
+       We believe that requiring that {a mathematical formula}A satisfies P1, P2 and P3 would impose minimally restrictive assumptions as to the arguments that agents should be able to construct. P3 is discussed above. P1 is a kind of reflexivity property, and states that for any premise α of an argument in {a mathematical formula}A, the corresponding ‘elementary’ argument {a mathematical formula}({α},∅,α) is also in {a mathematical formula}A. P2 says that if {a mathematical formula}X∈A, then {a mathematical formula}A contains all logically equivalent arguments that are distinct only in the epistemic distinction between premises and suppositions. Note that P2 does not imply use of additional resources in constructing arguments. Rather, given a constructed argument {a mathematical formula}(Δ,Γ,α), the practical meaning of P2 is that any differential labelling of the assumptions in {a mathematical formula}Δ∪Γ is accessible to an agent when using the argument dialectically. Of course there is a distinct issue with respect to the computational effort required to list all logically equivalent arguments (which for each given argument are exponential in the number of assumptions). However, we suggest that in practice this will not be necessary. An interesting topic for future work would be to identify (given an AF instantiated by dialectical arguments moved in monological and dialogical applications) the minimal set of logically equivalent arguments that need to be listed to ensure satisfaction of the rationality postulates (e.g., given arguments {a mathematical formula}(Δ,Γ,α) and {a mathematical formula}(Δ′,Γ′,¬α), it may suffice to list only {a mathematical formula}(Γ∪Γ′,Δ∪Δ′,⋏)).
+      </paragraph>
+     </section>
+     <section label="3.4">
+      <section-title>
+       Closure and consistency postulates
+      </section-title>
+      <paragraph label="Proof">
+       We prove closure and consistency postulates for dialectical AFs that include any subset of the arguments defined by a base, subject to the above assumptions P1–P3. We first show the following lemmas: Let E be a complete extension of a dialectical AF{a mathematical formula}(A,D)where{a mathematical formula}Asatisfies P1. Then{a mathematical formula}∀X∈Asuch that{a mathematical formula}prem(X)⊆prem(E),{a mathematical formula}X∈E.By definition, a complete extension E is an admissible (and hence conflict free) set such that all arguments acceptable w.r.t. E are in E. Hence we need to show that X is acceptable w.r.t. E and {a mathematical formula}E∪{X} is conflict free.– Suppose {a mathematical formula}Y⇒EX on some {a mathematical formula}X′=({α},∅,α), {a mathematical formula}Y=(Δ,Γ,ϕ) ({a mathematical formula}ϕ=⋏ or {a mathematical formula}ϕ=α‾).{sup:16} Since {a mathematical formula}prem(X)⊆prem(E), then {a mathematical formula}Γ⊆prem(E). Since {a mathematical formula}α∈prem(X)⊆prem(E), {a mathematical formula}∃X″∈E s.t. {a mathematical formula}Y⇒EX″ on {a mathematical formula}X′. Since E is complete {a mathematical formula}∃Z∈E s.t. {a mathematical formula}Z⇒{Y}Y. Hence X is acceptable w.r.t. E.– Suppose for contradiction that {a mathematical formula}E∪{X} is not conflict free. Then either:1. {a mathematical formula}Y∈E,Z∈E, {a mathematical formula}Y≠X,Z≠X, and {a mathematical formula}Y⇒E∪{X}Z. Hence {a mathematical formula}Y⇒EZ, contradicting E is complete and so conflict free.2. {a mathematical formula}Y∈E and {a mathematical formula}Y⇒E∪{X}X. Hence {a mathematical formula}Y⇒EX. Since X acceptable w.r.t. E, {a mathematical formula}∃Z∈E, {a mathematical formula}Z⇒{Y}Y. Hence {a mathematical formula}Z⇒EY, contradicting E is complete and so conflict free.3. {a mathematical formula}Y∈E and {a mathematical formula}X⇒E∪{X}Y. Hence {a mathematical formula}X⇒EY. Since E is complete, {a mathematical formula}∃Z∈E, {a mathematical formula}Z⇒{X}X. Hence {a mathematical formula}Z⇒EX. Since X is acceptable w.r.t. E, {a mathematical formula}∃W∈E, {a mathematical formula}W⇒{Z}Z and so {a mathematical formula}W⇒EZ, contradicting E is complete and so conflict free.4. {a mathematical formula}X⇒E∪{X}X. Hence {a mathematical formula}X⇒EX. Since X acceptable w.r.t. E, {a mathematical formula}∃Y∈E, {a mathematical formula}Y⇒{X}X. Hence {a mathematical formula}Y⇒EX, and so {a mathematical formula}∃Z∈E, {a mathematical formula}Z⇒{Y}Y and {a mathematical formula}Z⇒EY, contradicting E is complete and so conflict free.  □
+      </paragraph>
+      <paragraph>
+       Recall that for Cl-Arg, the sub-argument postulate states that if X is in a complete extension E then all the elementary arguments associated with its premises are in E.
+      </paragraph>
+      <paragraph label="Proof">
+       Sub-argument closureLet E be a complete extension of a dialectical AF{a mathematical formula}(A,D)such that{a mathematical formula}Asatisfies P1. Let{a mathematical formula}X∈E. Then if{a mathematical formula}α∈prem(X)then{a mathematical formula}({α},∅,α)∈E.By P1, {a mathematical formula}X′=({α},∅,α)∈A. Since {a mathematical formula}X∈E, {a mathematical formula}prem(X′)⊆prem(E). By Lemma 9, {a mathematical formula}X′∈E.  □
+      </paragraph>
+      <paragraph label="Theorem 11">
+       Direct consistency (see Section 2.2) states that no arguments in a complete extension have conflicting conclusions. Since we allow arguments concluding ⋏, we show that {a mathematical formula}claims(E) (recall that these are the conclusions of unconditional arguments that make no suppositions for the sake of argument) neither contains ⋏ nor conflicting conclusions, for the more general case of admissible extensions.Direct consistencyLet E be an admissible extension of a dialectical AF{a mathematical formula}(A,D). If{a mathematical formula}Asatisfies P1, P2 and P3, then{a mathematical formula}∀α,β∈claims(E),{a mathematical formula}α≠⋏and{a mathematical formula}β≠α‾.
+      </paragraph>
+      <paragraph label="Proof">
+       Case 1: Suppose {a mathematical formula}X=(Δ,∅,⋏)∈E. By P2, {a mathematical formula}X′=(∅,Δ,⋏)∈A. {a mathematical formula}X′ attacks X on every {a mathematical formula}α∈Δ. Recall (Definition 13) that since {a mathematical formula}X′ is an unassailable falsum argument, every such attack succeeds as a defeat. Moreover, {a mathematical formula}X′ cannot be defeated, contradicting X is acceptable w.r.t. E.Case 2: {a mathematical formula}X,Y∈E, {a mathematical formula}X=(Δ,∅,α),Y=(Γ,∅,α‾). If either {a mathematical formula}X′=(Δ,∅,⋏)∈A or {a mathematical formula}Y′=(Γ,∅,⋏)∈A, then (given P2) either {a mathematical formula}(∅,Δ,⋏)⇒EX or {a mathematical formula}(∅,Γ,⋏)⇒EY, contradicting X (Y) is acceptable w.r.t. E as in case 1). Else, by P3, {a mathematical formula}Z=(Δ∪Γ,∅,⋏)∈A. By P2, {a mathematical formula}Z′=(∅,Δ∪Γ,⋏)∈A. Since {a mathematical formula}Δ∪Γ⊆prem(E), {a mathematical formula}Z′⇒EX (on all {a mathematical formula}δ∈Δ) and {a mathematical formula}Z′⇒EY (on all {a mathematical formula}γ∈Γ). Since {a mathematical formula}Z′ is unassailable, this contradicts {a mathematical formula}X,Y acceptable w.r.t. E.  □
+      </paragraph>
+      <paragraph>
+       Satisfaction of direct consistency for admissible (and not just complete) extensions is a desirable property for both monological and dialogical applications. As discussed in Sections 3.1 (see also footnote 4) and 3.2, in both application types it often suffices that an agent identify an admissible extension E containing the argument X whose status is to be established. Clearly, agents do not then proceed to include all arguments that can be defended by E so as to define a complete extension. Hence one would want that direct consistency holds for admissible extensions. Of course, in real-world applications an agent may simply refrain from submitting any arguments with conflicting conclusions, whereas an agent may unwittingly commit to arguments whose premises are mutually inconsistent (e.g., the example in Section 3.2 in which {a mathematical formula}Ag1 commits to premises {a mathematical formula}p,p→q and {a mathematical formula}p→¬q, and the dialogue referred to in footnote 11). However, no admissible E can contain arguments with premises whose inconsistency is recognised by the construction (from those premises) of an argument concluding ⋏, or a pair of arguments with directly conflicting conclusions.
+      </paragraph>
+      <paragraph label="Proof">
+       Premise consistencyLet{a mathematical formula}(A,D)be a dialectical AF such that{a mathematical formula}Asatisfies P2. If for some{a mathematical formula}Δ⊆prem(E):(Δ,∅,⋏)∈A, then E cannot be an admissible extension of{a mathematical formula}(A,D).Suppose for contradiction that {a mathematical formula}∃Δ⊆prem(E) s.t. {a mathematical formula}(Δ,∅,⋏)∈A, and E is admissible. By P2, {a mathematical formula}Z=(∅,Δ,⋏)∈A, and so for all {a mathematical formula}β∈Δ, {a mathematical formula}∃X∈E s.t. {a mathematical formula}β∈prem(X) and {a mathematical formula}Z⇒EX, contradicting E is admissible.  □
+      </paragraph>
+      <paragraph>
+       Note of course that under the assumption that P3 holds, a sufficient condition for satisfaction of premise consistency would be that for some {a mathematical formula}Δ,Γ⊆prem(E): {a mathematical formula}∃(Δ,∅,α)∈A and {a mathematical formula}∃(Γ,∅,¬α)∈A.
+      </paragraph>
+      <paragraph>
+       We now adapt the closure under strict rules postulate to account for the fact that it may be that not all arguments defined by a base are included in a dialectical AF. In general, even though {a mathematical formula}claims(E)⊢cα, it may not be that there exists an {a mathematical formula}X∈E such that X concludes α, given that agents are not logically omniscient and do not construct all arguments from a base (e.g., because of insufficient resources). However, if α is entailed by the claims of arguments {a mathematical formula}E′⊆E, and there is an argument X that, from the premises in {a mathematical formula}E′, concludes α, then X is in E.
+      </paragraph>
+      <paragraph label="Proof">
+       Closure under strict rules for dialectical AFsLet E be a complete extension of{a mathematical formula}(A,D), where{a mathematical formula}Asatisfies P1. Let{a mathematical formula}E′⊆Eand{a mathematical formula}claims(E)′⊢cα. If there exists an{a mathematical formula}X=(Δ,∅,α)∈Asuch that{a mathematical formula}Δ=prem(E′), then{a mathematical formula}X∈E.Follows immediately from Lemma 9.  □
+      </paragraph>
+      <paragraph>
+       We have shown satisfaction of the consistency and (modified) closure postulates under the assumption that agents only construct possibly finite subsets of the set of all arguments defined by a base (provided the subsets satisfy P1, P2 and P3). Moreover, unlike the ASPIC{sup:+} framework [43], the postulates have been shown to hold without making any assumptions as to the properties of the preference relation used to determine whether attacks succeed as defeats (recall that ASPIC{sup:+} assumes ‘reasonable’ preference relations that satisfy a number of properties; see Section 3.2), and both consistency of conclusions and premises is shown for admissible extensions.
+      </paragraph>
+     </section>
+     <section label="3.5">
+      <section-title>
+       The fundamental lemma and monotonicity of the characteristic function
+      </section-title>
+      <paragraph>
+       Two key properties of Dung AFs are the Fundamental Lemma (FL) [26, p. 7] – if X and {a mathematical formula}X′ are acceptable w.r.t. an admissible E, then {a mathematical formula}E∪{X} is admissible and {a mathematical formula}X′ is acceptable w.r.t. {a mathematical formula}E∪{X} – and monotonicity of an AF's characteristic function [26, p. 9]: {a mathematical formula}E⊆E′ implies {a mathematical formula}F(E)⊆F(E′). The FL implies that any admissible extension is a subset of a preferred extension. Monotonicity of {a mathematical formula}F allows one to show that {a mathematical formula}F has a unique least fixed point that is the grounded extension, and that iterating {a mathematical formula}F (starting with ∅) yields the grounded extension.
+      </paragraph>
+      <paragraph>
+       Both these properties can straightforwardly be shown for Dung AFs, since when determining the acceptability of X w.r.t. E, the defeats on X are independent of the set E under consideration. However for dialectical AFs, the defeats on X w.r.t. E may be a subset of the defeats on X w.r.t. {a mathematical formula}E′⊃E (since the additional premises committed to in {a mathematical formula}E′ can now be suppositions in arguments that did not defeat X w.r.t. E). However, these properties can be shown by focusing on sets of arguments that are ‘epistemically maximal’. Intuitively, if {a mathematical formula}X=(Δ,Γ,α)∈E, and some supposition {a mathematical formula}β∈Γ is also a premise of an argument in E, then commitment to the truth of the premise β also implies a commitment to the logically equivalent {a mathematical formula}X′=(Δ∪{β},Γ∖{β},α).
+      </paragraph>
+      <paragraph label="Definition 18">
+       Epistemically maximal setsLet {a mathematical formula}(A,D) be a dialectical AF. Then {a mathematical formula}E⊆A is epistemically maximal (em) iff:If {a mathematical formula}X=(Δ,Γ,α)∈E, {a mathematical formula}Γ′⊆(Γ∩prem(E)), then {a mathematical formula}X′=(Δ∪Γ′,Γ∖Γ′,α)∈E.The function {a mathematical formula}Clem:2A↦2A maps any E to its epistemically maximal set:{a mathematical formula}Clem(E)=E∪{X′|X∈E,X′∈[X],prem(X)⊆prem(X′),prem(X′)⊆prem(E)}
+      </paragraph>
+      <paragraph>
+       We now show some straightforward results (note that when referring to the characteristic function {a mathematical formula}F(A,D) we will omit the subscript). Henceforth we assume that the arguments {a mathematical formula}A in a dialectical AF satisfy P1, P2 and P3 (Definition 17).
+      </paragraph>
+      <paragraph label="Proof">
+       Let{a mathematical formula}(A,D)be a dialectical AF. Then{a mathematical formula}∀S⊆A:{a mathematical formula}Clem(S)⊆A.The result follows immediately from P2, which states that if {a mathematical formula}X∈A then all arguments logically equivalent to X are in {a mathematical formula}A.  □
+      </paragraph>
+      <paragraph label="Lemma 15">
+       Let{a mathematical formula}Fbe the characteristic function of{a mathematical formula}(A,D), and{a mathematical formula}E⊆Aa fixed point of{a mathematical formula}F(i.e.,{a mathematical formula}E=F(E)). Then E is epistemically maximal.
+      </paragraph>
+      <paragraph label="Proof">
+       Suppose for contradiction that E is not em, hence {a mathematical formula}∃X′∈Clem(E)∖E. Since {a mathematical formula}prem(X′)⊆prem(E) and E is complete, {a mathematical formula}X′∈E by Lemma 9. Contradiction.  □
+      </paragraph>
+      <paragraph label="Lemma 16">
+       Let{a mathematical formula}E′=Clem(E), and{a mathematical formula}∀X∈E, X is acceptable w.r.t.{a mathematical formula}E′. Then{a mathematical formula}∀Y∈E′∖E, Y is acceptable w.r.t.{a mathematical formula}E′.
+      </paragraph>
+      <paragraph label="Proof">
+       Suppose {a mathematical formula}Y∈E′∖E, {a mathematical formula}Z⇒E′Y on α. Hence {a mathematical formula}Z⊀({α},∅,α). Since {a mathematical formula}E′=Clem(E), then {a mathematical formula}prem(E′)=prem(E), {a mathematical formula}α∈prem(E), and so {a mathematical formula}∃X∈E, {a mathematical formula}α∈prem(X), and {a mathematical formula}Z⇒E′X on α. By assumption of X acceptable w.r.t. {a mathematical formula}E′, {a mathematical formula}∃Q∈E′, {a mathematical formula}Q⇒{Z}Z. Hence Y is acceptable w.r.t. {a mathematical formula}E′.  □
+      </paragraph>
+      <section label="3.5.1">
+       <section-title>
+        Proving a variant of the fundamental lemma and implied properties
+       </section-title>
+       <paragraph>
+        We now present results for use in proving a variant of the fundamental lemma.
+       </paragraph>
+       <paragraph label="Proof">
+        Let{a mathematical formula}E⊆Asuch that every argument in E is acceptable w.r.t. E, and{a mathematical formula}Asatisfies P1, P2 and P3. Then E is conflict free.Suppose for contradiction that {a mathematical formula}X,Y∈E, {a mathematical formula}X⇒EY on α, where {a mathematical formula}X=(Δ,Γ,ϕ), {a mathematical formula}ϕ=⋏ or {a mathematical formula}ϕ=α‾.1) Suppose {a mathematical formula}ϕ=⋏. Then (by Definition 11) it must be that {a mathematical formula}Γ≠∅. By P2, {a mathematical formula}Z=(∅,Δ∪Γ,⋏)∈A. Since {a mathematical formula}Δ∪Γ⊆prem(E), then {a mathematical formula}∀β∈Δ∪Γ, {a mathematical formula}∃W∈E s.t. {a mathematical formula}Z⇒EW on β, contradicting W is acceptable w.r.t. E.2) Suppose {a mathematical formula}ϕ=α‾. By P2, {a mathematical formula}X′=(Δ∪Γ,∅,α‾)∈A. By P1 {a mathematical formula}({α},∅,α)∈A. By P3, either:• {a mathematical formula}(Δ∪Γ,∅,⋏)∈A (in which case {a mathematical formula}Δ∪Γ≠∅) and {a mathematical formula}Δ∪Γ⊆prem(E), so that {a mathematical formula}∀β∈Δ∪Γ, {a mathematical formula}∃W∈E s.t. {a mathematical formula}(∅,Δ∪Γ,⋏)⇒EW on β, contradicting W is acceptable w.r.t. E, or• {a mathematical formula}({α},∅,⋏)∈A, and since {a mathematical formula}α∈prem(E), {a mathematical formula}(∅,{α},⋏)⇒EY on α, contradicting Y is acceptable w.r.t. E, or• {a mathematical formula}(Δ∪Γ∪{α},⋏)∈A. By P2, {a mathematical formula}Z=(∅,Δ∪Γ∪{α},⋏)∈A. Since {a mathematical formula}Δ∪Γ∪{α}⊆prem(E), {a mathematical formula}Z⇒EY on α and {a mathematical formula}∀β∈Δ∪Γ, {a mathematical formula}∃W∈E s.t. {a mathematical formula}Z⇒EW on β, contradicting {a mathematical formula}Y,W acceptable w.r.t. E.  □
+       </paragraph>
+       <paragraph label="Lemma 18">
+        Let{a mathematical formula}E′⊆A,{a mathematical formula}Z=(Δ,Γ,ϕ)and{a mathematical formula}Z⇒E′Yon α. Let{a mathematical formula}Γ′=Γ∩prem(E∪{Y})where{a mathematical formula}E⊆E′. Then{a mathematical formula}Z′=(Δ∪(Γ∖Γ′),Γ′,ϕ)∈Aand{a mathematical formula}Z′⇒EY.
+       </paragraph>
+       <paragraph label="Proof">
+        By P2, {a mathematical formula}Z′∈A. Since {a mathematical formula}Z⇒E′Y on α and ≺ is imle: {a mathematical formula}Z′⊀({α},∅,α).Suppose {a mathematical formula}ϕ=α‾. By definition, {a mathematical formula}Γ′⊆prem(E∪{Y}). Hence {a mathematical formula}Z′⇒EY.Suppose {a mathematical formula}ϕ=⋏. Then {a mathematical formula}α∈Γ, and by definition {a mathematical formula}α∈Γ′. Since {a mathematical formula}Γ′⊆prem(E∪{Y}), {a mathematical formula}Z′⇒EX.  □
+       </paragraph>
+       <paragraph>
+        We now prove a variant of the fundamental lemma:
+       </paragraph>
+       <paragraph label="Lemma 19">
+        Let{a mathematical formula}X,X′be acceptable w.r.t. an admissible extension E of{a mathematical formula}(A,D). Then: 1){a mathematical formula}Clem(E∪{X})is admissible, and 2){a mathematical formula}X′is acceptable w.r.t.{a mathematical formula}Clem(E∪{X}).
+       </paragraph>
+       <paragraph label="Proof">
+        Let {a mathematical formula}E′=E∪{X} and {a mathematical formula}E″=Clem(E′). Note that {a mathematical formula}prem(E′)=prem(E″).Proof of 1). We show that every argument in {a mathematical formula}E″ is acceptable w.r.t. {a mathematical formula}E″.We first show that every argument in {a mathematical formula}E′ is acceptable w.r.t. {a mathematical formula}E″. Suppose for contradiction that {a mathematical formula}Y∈E′ is not acceptable w.r.t. {a mathematical formula}E″. Then {a mathematical formula}∃Z=(Δ,Γ,ϕ) ({a mathematical formula}ϕ=⋏ or {a mathematical formula}α‾) s.t. {a mathematical formula}Z⇒E″Y on {a mathematical formula}Y′=({α},∅,α) (hence {a mathematical formula}Z⊀Y′), and:{a mathematical formula} Suppose {a mathematical formula}Y=X. Since {a mathematical formula}prem(E∪{X})=prem(E′)=prem(E″), {a mathematical formula}Z⇒EX. By assumption of X acceptable w.r.t. E, {a mathematical formula}∃Q∈E (and so {a mathematical formula}Q∈E″) {a mathematical formula}Q⇒{Z}Z, contradicting Eq. (1).Suppose {a mathematical formula}Y≠X. Let {a mathematical formula}Γ′=Γ∩prem(E∪{Y}) (and so {a mathematical formula}Γ∖Γ′ are premises of X that are not premises in E or Y). By Lemma 18, {a mathematical formula}Z′=(Δ∪(Γ∖Γ′),Γ′,ϕ), {a mathematical formula}Z′⇒EY.By assumption of E admissible and so every Y in E acceptable w.r.t. E:{a mathematical formula} on {a mathematical formula}β∈Δ∪(Γ∖Γ′), where {a mathematical formula}W⊀({β},∅,β), {a mathematical formula}Σ⊆Δ∪(Γ∖Γ′). Consider two cases:
+        <list>
+         Suppose {a mathematical formula}β∈(Γ∖Γ′) (in which case {a mathematical formula}β∈prem(X) and if {a mathematical formula}ψ=⋏ then {a mathematical formula}β∈Σ∩(Γ∖Γ′)).Let {a mathematical formula}W′ be the logically equivalent {a mathematical formula}(Σ∩Δ,Π∪(Σ∩(Γ∖Γ′)),ψ). Since {a mathematical formula}Π⊆prem(E) and {a mathematical formula}(Σ∩(Γ∖Γ′))⊆prem(X), and {a mathematical formula}W′⊀({β},∅,β), then {a mathematical formula}W′⇒EX. By assumption of the acceptability of X w.r.t. E, {a mathematical formula}∃Q∈E s.t. {a mathematical formula}Q⇒{W′}W′. Since {a mathematical formula}prem(W′)⊆prem(Z), {a mathematical formula}Q⇒{Z}Z, contradicting Eq. (1).Suppose {a mathematical formula}β∈Δ, (hence {a mathematical formula}β∈prem(Z) and if {a mathematical formula}ψ=⋏ then {a mathematical formula}β∈Σ∩Δ). Let {a mathematical formula}W′ be the logically equivalent {a mathematical formula}(Π∪(Σ∩(Γ∖Γ′)),Σ∩Δ,ψ). Since {a mathematical formula}prem(W′)⊆prem(E′), then {a mathematical formula}W′ is in the epistemic closure {a mathematical formula}E″ of {a mathematical formula}E′. Since {a mathematical formula}W′⊀({β},∅,β), {a mathematical formula}W′⇒{Z}Z, contradicting Eq. (1).Proof of 2)
+        </list>
+        <paragraph>
+         Suppose for contradiction that {a mathematical formula}X′ is not acceptable w.r.t. {a mathematical formula}E″. Then {a mathematical formula}Z⇒E″X′ on {a mathematical formula}({α},∅,α), {a mathematical formula}Z⊀({α},∅,α) and {a mathematical formula}¬∃Q∈E″ s.t. {a mathematical formula}Q⇒{Z}Z.Let {a mathematical formula}Z=(Δ,Γ,ϕ) ({a mathematical formula}ϕ=⋏ or {a mathematical formula}α‾), {a mathematical formula}Γ′=Γ∩prem(E∪{X′}) (and so {a mathematical formula}Γ∖Γ′ are premises in X that are not premises in E or {a mathematical formula}X′).By Lemma 18, {a mathematical formula}Z′=(Δ∪(Γ∖Γ′),Γ′,ϕ), {a mathematical formula}Z′⇒EX′.By assumption of the acceptability of {a mathematical formula}X′ w.r.t. E, {a mathematical formula}∃W=(Π,Σ,ψ)∈E, {a mathematical formula}W⇒{Z′}Z′ on {a mathematical formula}({β},∅,β), where {a mathematical formula}W⊀({β},∅,β) and {a mathematical formula}Σ⊆Δ∪(Γ∖Γ′). We can now reason as in 1) above, contradicting {a mathematical formula}¬∃Q∈E″ s.t. {a mathematical formula}Q⇒{Z}Z.  □
+        </paragraph>
+       </paragraph>
+       <paragraph>
+        Assuming the admissible set E in Lemma 19 is epistemically maximal, it immediately follows that:
+       </paragraph>
+       <paragraph label="Corollary 20">
+        The set of all epistemically maximal admissible extensions of a dialectical AF form a complete partial order w.r.t. set inclusion.
+       </paragraph>
+       <paragraph label="Lemma 21">
+        Let E be an admissible extension of{a mathematical formula}(A,D). Then{a mathematical formula}E⊆F(E)and{a mathematical formula}Clem(F(E))is admissible.
+       </paragraph>
+       <paragraph label="Proof">
+        By assumption of the admissibility of E, {a mathematical formula}E⊆F(E). To show {a mathematical formula}Clem(F(E)) is admissible, we make use of the function: {a mathematical formula}F⁎(E,X)=Clem(E∪{X}).Let {a mathematical formula}F(E)∖E be the possibly countably infinite set {a mathematical formula}{X1,…,Xn,…}, and let: {a mathematical formula}F1⁎=F⁎(E,X1), {a mathematical formula}F2⁎=F⁎(F1⁎,X2), … , {a mathematical formula}Fi⁎=F⁎(Fi−1⁎,Xi), … That is to say, the sequence obtained by adding, one by one, the arguments {a mathematical formula}X1,…,Xn, …, whereupon after each argument is added, the set is closed to obtain an em set. One can straightforwardly show that:{a mathematical formula} That is to say, adding all arguments up to some i, and then closing, yields the same result as adding each argument one by one and closing prior to each subsequent addition.Given Eq. (3), it suffices to show that {a mathematical formula}∀Fi⁎ in the above sequence, {a mathematical formula}Fi⁎ is admissible:Base case: By assumption of the acceptability of {a mathematical formula}X1 w.r.t. E, and Lemma 19-1), {a mathematical formula}F1⁎=F⁎(E,X1) is admissible. By Lemma 19-2), {a mathematical formula}X2,…,Xi are acceptable w.r.t. {a mathematical formula}F1⁎.General case: By inductive hypothesis, {a mathematical formula}Fi−1⁎ is admissible, and {a mathematical formula}Xi is acceptable w.r.t. {a mathematical formula}Fi−1⁎. By Lemma 19-1), {a mathematical formula}Fi⁎ is admissible.  □
+       </paragraph>
+       <paragraph>
+        We can now show the following key result:
+       </paragraph>
+       <paragraph label="Proposition 22">
+        Every admissible extension of a dialectical AF is a subset of a preferred extension.
+       </paragraph>
+       <paragraph label="Proof">
+        Let E be an admissible extension. We consider two cases:
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         Suppose {a mathematical formula}E=F(E). By Lemma 15, E is epistemically maximal.
+        </list-item>
+        <list-item label="2.">
+         Suppose {a mathematical formula}E≠F(E). By Lemma 21, {a mathematical formula}E⊆F(E), and {a mathematical formula}E′=Clem(F(E)) is admissible, where trivially, {a mathematical formula}E⊆E′.
+        </list-item>
+       </list>
+       <paragraph>
+        The importance of Proposition 22 for monological and dialogical applications, is that it suffices to show that an argument X is in an admissible extension, in order to show that X is credulously justified under the preferred semantics.
+       </paragraph>
+      </section>
+      <section label="3.5.2">
+       <section-title>
+        Monotonicity and a constructive definition of the grounded extension
+       </section-title>
+       <paragraph>
+        We now show monotonicity of a dialectical AF's characteristic function, restricted to the domain of epistemically maximal admissible sets.
+       </paragraph>
+       <paragraph label="Proof">
+        Let{a mathematical formula}E,E′be two em admissible extensions such that{a mathematical formula}E⊆E′. Then{a mathematical formula}F(E)⊆F(E′).We show that X acceptable w.r.t. E ({a mathematical formula}X∈F(E)) implies X acceptable w.r.t. {a mathematical formula}E′ ({a mathematical formula}X∈F(E′)). Suppose {a mathematical formula}X∈F(E), {a mathematical formula}Z=(Δ,Γ,ϕ) ({a mathematical formula}ϕ=⋏ or {a mathematical formula}α‾), and {a mathematical formula}Z⇒E′X on {a mathematical formula}X′=({α},∅,α), and so {a mathematical formula}Z⊀X′.1) Suppose {a mathematical formula}Z⇒EX. Since {a mathematical formula}X∈F(E), {a mathematical formula}∃Y∈E s.t. {a mathematical formula}Y⇒{Z}Z. Since {a mathematical formula}E⊆E′, {a mathematical formula}Y∈E′, and so {a mathematical formula}X∈F(E′).2) Suppose {a mathematical formula}Z⇏EX. We show {a mathematical formula}X∈F(E′), by showing an argument in {a mathematical formula}E′ that defeats {a mathematical formula}Z=(Δ,Γ,ϕ).Let {a mathematical formula}Γ′=Γ∩prem(E∪{X}) ({a mathematical formula}Γ∖Γ′ are premises in {a mathematical formula}E′ that are not in {a mathematical formula}E∪{X}).By Lemma 18, {a mathematical formula}Z′=(Δ∪Γ∖Γ′,Γ′,ϕ), {a mathematical formula}Z′⇒EX. Since X is acceptable w.r.t. E:{a mathematical formula}∃W=(Π,Σ,ψ)∈E ({a mathematical formula}ψ=⋏ or {a mathematical formula}β‾), {a mathematical formula}W⇒{Z′}Z′ on {a mathematical formula}({β},∅,β) and {a mathematical formula}W⊀({β},∅,β).
+       </paragraph>
+       <list>
+        <list-item label="•">
+         Suppose {a mathematical formula}β∈Γ∖Γ′ (where if {a mathematical formula}ψ=⋏ then {a mathematical formula}β∈Σ∩(Γ∖Γ′)). Hence {a mathematical formula}∃X′∈E′∖E∪{X} s.t. {a mathematical formula}β∈prem(X′).Given {a mathematical formula}Σ⊆Δ∪(Γ∖Γ′), let {a mathematical formula}W′=(Σ∩Δ,Π∪(Σ∩(Γ∖Γ′)),ψ). Since {a mathematical formula}W∈E, then {a mathematical formula}Π⊆prem(E). Since {a mathematical formula}Σ∩(Γ∖Γ′)⊆prem(E′), {a mathematical formula}W′⇒E′X′ on {a mathematical formula}({β},∅,β). By assumption of admissibility of {a mathematical formula}E′, {a mathematical formula}∃Q∈E′ s.t. {a mathematical formula}Q⇒{W′}W′. Since {a mathematical formula}prem(W′)⊆prem(Z), {a mathematical formula}Q⇒{Z}Z.
+        </list-item>
+        <list-item label="•">
+         Suppose {a mathematical formula}β∈Δ (if {a mathematical formula}ψ=⋏, {a mathematical formula}β∈Σ∩Δ). Let {a mathematical formula}W′=(Π∪(Σ∩(Γ∖Γ′)),Σ∩Δ,ψ). By assumption of {a mathematical formula}E′ being em, {a mathematical formula}W′∈E′. Since {a mathematical formula}Σ∩Δ⊆prem(Z), {a mathematical formula}W′⇒{Z}Z.  □
+        </list-item>
+       </list>
+       <paragraph>
+        By definition of {a mathematical formula}Clem, for any {a mathematical formula}S⊆S′, {a mathematical formula}Clem(S)⊆Clem(S′). Hence Lemma 23 immediately implies that:
+       </paragraph>
+       <paragraph label="Corollary 24">
+        Let{a mathematical formula}E,E′be two em admissible extensions such that{a mathematical formula}E⊆E′. Then{a mathematical formula}Clem(F(E))⊆Clem(F(E′)).
+       </paragraph>
+       <paragraph>
+        Consider now a characteristic function {a mathematical formula}Fp whose domain is sets E that are em admissible, and that returns {a mathematical formula}Clem(F(E)). By Lemma 21, {a mathematical formula}Fp returns a em admissible set. We then show that the fixed points of {a mathematical formula}F and {a mathematical formula}Fp coincide. Corollary 24 then guarantees existence of a least fixed point of {a mathematical formula}Fp and hence {a mathematical formula}F. Formally:
+       </paragraph>
+       <paragraph label="Definition 19">
+        Let {a mathematical formula}(A,D) be a dialectical AF and {a mathematical formula}Ap2 the set of all em admissible subsets of {a mathematical formula}A. Then {a mathematical formula}Fp:Ap2↦Ap2, where {a mathematical formula}Fp(E)=Clem(F(E)).
+       </paragraph>
+       <paragraph label="Proof">
+        Let{a mathematical formula}(A,D)be a dialectical AF. Then there exists a least fixed point of{a mathematical formula}F(A,D).Firstly, let E be a fixed point of {a mathematical formula}Fp. Since E is admissible, {a mathematical formula}E⊆F(E). By definition of {a mathematical formula}Clem, {a mathematical formula}F(E)⊆Clem(F(E)). Hence since {a mathematical formula}E=Fp(E)=Clem(F(E)), then it must be that {a mathematical formula}E=F(E).Secondly, let E be a fixed point of {a mathematical formula}F ({a mathematical formula}E=F(E)). By Lemma 15, {a mathematical formula}E=F(E) is em. By definition of {a mathematical formula}Clem, if S is em then {a mathematical formula}Clem(S)=S. Hence {a mathematical formula}E=F(E)=Clem(F(E)). That is, E is a fixed point of {a mathematical formula}Fp. We have shown:{a mathematical formula} By Corollary 24, {a mathematical formula}Fp is monotonic, and so there exists a least fixed point of {a mathematical formula}Fp, which given Eq. (4) is a least fixed point of {a mathematical formula}F.  □
+       </paragraph>
+       <paragraph>
+        We can therefore identify the grounded extension of a dialectical AF as the least fixed point of the framework's characteristic function. If we define a sequence, starting with the empty set, and iteratively applying {a mathematical formula}Fp, the monotonically increasing sequence approximates, and in the case of a finitary dialectical AF (see below) constructs, the least fixed point (lfp) of {a mathematical formula}Fp, i.e., the grounded extension.
+       </paragraph>
+       <paragraph label="Proposition 26">
+        Let{a mathematical formula}(A,D)be a dialectical AF, and{a mathematical formula}F0=∅,{a mathematical formula}Fi+1=Fp(Fi). Let E be the grounded extension of{a mathematical formula}(A,D). Then:
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         E ⊆ {a mathematical formula}⋃i=0∞(Fi).
+        </list-item>
+        <list-item label="2.">
+         If{a mathematical formula}(A,D)is finitary, i.e.,{a mathematical formula}∀X∈A, the set{a mathematical formula}{Y|(Y,X)∈D}is finite, then{a mathematical formula}E=⋃i=0∞(Fi).
+        </list-item>
+       </list>
+       <paragraph label="Proof">
+        Trivially, {a mathematical formula}F0=∅ is em admissible. By Corollary 24, {a mathematical formula}F0,…,Fi is a monotonically increasing sequence. 1 is then shown, given that E is the lfp of {a mathematical formula}Fp. 2 is then shown by showing that {a mathematical formula}Fp is ω-continuous. Let {a mathematical formula}E′=F0∪…∪Fn∪…, and let {a mathematical formula}X∈Fp(E′). Since there are finitely many arguments that defeat X, there exists a number m such that {a mathematical formula}X∈Fp(Fm). Therefore {a mathematical formula}Fp(E′)=F0∪…∪Fn∪….  □
+       </paragraph>
+       <paragraph>
+        Finally, before formally showing satisfaction of these postulates, we discuss what it means for a preference relation to be dialectically coherent when determining the success of attacks as defeats. A preference {a mathematical formula}Y≺X invalidating an attack from {a mathematical formula}Y=(Δ,∅,α‾) to {a mathematical formula}X=({α},∅,α), can be interpreted as: from amongst the inconsistent {a mathematical formula}Δ∪{α}, one preferentially accepts (i.e., includes in a complete extension E) arguments constructed from α and rejects (excludes from E) arguments constructed from {a mathematical formula}Δ∖{α}.
+       </paragraph>
+       <paragraph>
+        Now, let {a mathematical formula}Y′=(Δ∪{α},∅,ϕ) ({a mathematical formula}ϕ=⋏ or {a mathematical formula}ϕ=α‾). Then {a mathematical formula}Y≺X should imply that {a mathematical formula}Y′≺X. To see why, suppose {a mathematical formula}Y′⊀X. But then this would contradict the interpretation ascribed above to {a mathematical formula}Y≺X, since {a mathematical formula}Y′⊀X would mean that from amongst the inconsistent {a mathematical formula}Δ∪{α}, one does not preferentially accept arguments constructed from α and reject arguments constructed from {a mathematical formula}Δ∪{α}∖{α} (i.e., from {a mathematical formula}Δ∖{α}).
+       </paragraph>
+       <paragraph>
+        Moreover, suppose that for every {a mathematical formula}αi in some inconsistent {a mathematical formula}Δ={α1, …, {a mathematical formula}αn}, one constructs the argument {a mathematical formula}Ai=(Δ∖{αi},∅,αi‾), and that ∀i: {a mathematical formula}Ai≺({αi},∅,αi). Reasoning as above, we would then have ∀i: {a mathematical formula}Ai′=(Δ,∅,ϕi)≺({αi},∅,αi) ({a mathematical formula}ϕi=⋏ or {a mathematical formula}ϕi=αi‾). In other words one preferentially accepts arguments built from {a mathematical formula}α1 to those built from Δ, from {a mathematical formula}α2 to those built from Δ, and so on. But then (by Lemma 9), if E includes arguments with premises {a mathematical formula}α1,…,αn then E includes arguments built from premises Δ. Contradiction. Hence, it would be incoherent to have that {a mathematical formula}∀α∈Δ: {a mathematical formula}(Δ,∅,⋏)≺({α},∅,α) and (since ≺ is imle) {a mathematical formula}(∅,Δ,⋏)≺({α},∅,α). Indeed, all the results shown thus far would hold if instead of enforcing that attacks from {a mathematical formula}(∅,Δ,⋏) on each {a mathematical formula}α∈Δ always succeed as a defeat (given that it would be incoherent to reject the dialectical demonstration of inconsistency), one instead assumed a coherent preference relation implying that for at least one {a mathematical formula}α∈Δ, {a mathematical formula}(∅,Δ,⋏) defeats {a mathematical formula}({α},∅,α).{sup:17}
+       </paragraph>
+       <paragraph label="Definition 20">
+        Dialectically coherent preference relationsLet {a mathematical formula}(A,D) be a {a mathematical formula}pdAF defined by {a mathematical formula}B and ≺. Then ≺ is dialectically coherent iff
+       </paragraph>
+       <list>
+        <list-item>
+         {a mathematical formula}∀(∅,Δ,⋏)∈A: {a mathematical formula}∃α∈Δ such that {a mathematical formula}(∅,Δ,⋏)⊀({α},∅,α). (Pref1)
+        </list-item>
+        <list-item>
+         ∀ {a mathematical formula}X=({α},∅,α), {a mathematical formula}Y=(Δ,∅,α‾), {a mathematical formula}Y′=(Δ∪{α},∅,ϕ) ({a mathematical formula}ϕ=α‾ or {a mathematical formula}ϕ=⋏): {a mathematical formula}Y≺X implies {a mathematical formula}Y′≺X. (Pref2)
+        </list-item>
+       </list>
+       <paragraph>
+        In Section 4 we show that the Elitist preference satisfies Pref1 and Pref2. Notice that since ≺ is imle, Pref2 implies that if {a mathematical formula}(Δ,Γ,α‾)≺({α},∅,α) then {a mathematical formula}(Δ,Γ∪{α},ϕ)≺({α},∅,α). To see why preference relations that do not satisfy Pref2 may yield counter-intuitive results, suppose that in Example 28 we have that {a mathematical formula}C≺A but {a mathematical formula}D⊀A, thus violating Pref2. We would then have an additional complete extension {a mathematical formula}E2 containing C and D, since the defeats by A and B on C and D would now be defended by defeats from D on A and B. Counter-intuitively one would obtain a complete extension containing C, despite a strict preference for A over C.
+       </paragraph>
+       <paragraph>
+        Finally, in now proving the non-interference and crash resistance postulates, we will make use of the following result that holds for preference relations satisfying Pref1:
+       </paragraph>
+       <paragraph label="Proof">
+        Let{a mathematical formula}(A,D)be a{a mathematical formula}pdAFdefined by{a mathematical formula}Band ≺, where ≺ satisfies Pref1. Then for any{a mathematical formula}Y=(Δ,Γ,⋏),{a mathematical formula}Y′=(Γ,Δ,⋏):{a mathematical formula}Y⇒{Y′}Y′or{a mathematical formula}Y′⇒{Y}Y.Suppose for contradiction that {a mathematical formula}Y⇏{Y′}Y′ and {a mathematical formula}Y′⇏{Y}Y. Since ≺ is imle, {a mathematical formula}∀α∈Δ∪Γ: {a mathematical formula}(∅,Δ∪Γ,⋏)≺({α},∅,α), contradicting Pref1.  □
+       </paragraph>
+      </section>
+     </section>
+     <section label="3.6">
+      <section-title>
+       Contaminated arguments
+      </section-title>
+      <paragraph>
+       Dialectical AFs satisfy consistency and closure given relatively undemanding assumptions as to the arguments constructed from a base, while assuming arbitrary preference relations and eschewing the need for checking the legitimacy of arguments' assumptions. However, dropping consistency and subset minimality checks on arguments' assumptions may result in violation of the non-contamination postulates.
+      </paragraph>
+      <paragraph label="Example 28">
+       Let {a mathematical formula}B={p,¬p}. Fig. 3-i) shows arguments and attacks defined by {a mathematical formula}B. Suppose {a mathematical formula}C≺A, {a mathematical formula}D≺A, and so we have the defeats in Fig. 3-ii) and {a mathematical formula}E1 is the single grounded, preferred and stable extension (notice that {a mathematical formula}C⇏E1B since C attacks B on A and {a mathematical formula}C≺A). Suppose we now add s to {a mathematical formula}B, and suppose the defined arguments in Fig. 3-iii). Again, assume only {a mathematical formula}C≺A, {a mathematical formula}D≺A. Intuitively, since s is syntactically disjoint from {a mathematical formula}p,¬p, we should continue to obtain a single grounded, preferred and stable extension {a mathematical formula}{A,B,X,S}.Firstly, note that in contrast with the example in Section 3.2, we avoid the ‘contaminating effect’ (in the sense that the non-contamination postulates are violated) of arguments that are used to entail syntactically disjoint conclusions via the ‘explosivity’ (recall footnote 9) of classically inconsistent premises. Although {a mathematical formula}D′ defeats S (Fig. 3-iii), membership of S in any complete extension E can never be invalidated since any such E will contain the unassailable X that defeats {a mathematical formula}D′ and so defends S. Hence crash resistance is not violated (X's defence of S also prevents violation of non-interference that may occur due to the defeat by {a mathematical formula}D′).Secondly, with the addition of s to {a mathematical formula}B, we can also construct {a mathematical formula}C′=({s,¬p},∅,¬p). Since {a mathematical formula}C′⊀A, we have that {a mathematical formula}C′⇒E1A. We then have an additional complete extension {a mathematical formula}E2={C,C′,D,S,X}, since although {a mathematical formula}A⇒E2V, {a mathematical formula}V∈{C,C′,D}, each such defeat is defended given that {a mathematical formula}C′⇒{A}A. This is clearly counter-intuitive. We no longer obtain a single grounded, preferred and stable extension containing A; indeed the grounded extension E will now only contain S and X. Thus, by adding the syntactically disjoint s to {a mathematical formula}B, A is no longer a sceptically justified argument under any semantics, and hence non-interference is violated.
+      </paragraph>
+      <paragraph>
+       The above example describes two types of contamination. The first type of contamination may occur when the assumptions Γ of an argument X, with conclusion {a mathematical formula}α≠⋏, include some inconsistent Δ that is syntactically disjoint from {a mathematical formula}Γ∖Δ∪{α}, and αmay be derived by the explosivity of Δ (i.e., Δ contaminates X by explosivity).
+      </paragraph>
+      <paragraph label="Remark 29">
+       Notice that:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        if {a mathematical formula}α=⋏ then X is of the form {a mathematical formula}(Σ,Λ,⋏) and cannot have a contaminating effect due to explosivity, since X can only attack arguments on assumptions in {a mathematical formula}Λ≠∅, indicating that {a mathematical formula}Σ∪Λ is inconsistent (recall Definition 11).
+       </list-item>
+       <list-item label="2.">
+        We emphasise above that αmay be derived by explosivity since we are presently considering representations of arguments independently of the proof theory used for their construction. Hence, given an argument represented as {a mathematical formula}({p,¬p,r,r→q},∅,q) it may be that q is derived from {a mathematical formula}r,r→q, or explosively from {a mathematical formula}p,¬p; there is no way of telling which is the case without reference to the proof theory. Note that the same reasoning applies to {a mathematical formula}({p,¬p},∅,q∨¬q) in that the tautology may be derived from empty assumptions or explosively.
+       </list-item>
+       <list-item label="3.">
+        In addition to the arguments {a mathematical formula}A in a dialectical AF satisfying P1, P2 and P3 in Definition 17, we will later stipulate that if {a mathematical formula}X∈A and Δ contaminates X by explosivity, then {a mathematical formula}A also contains a falsum argument with assumptions Δ. (Intuitively, if an argument's inconsistent assumptions are used to conclude a syntactically disjoint conclusion via explosivity, then this can be explicitly recognised by concluding the syntactically disjoint ⋏.)
+       </list-item>
+      </list>
+      <paragraph>
+       Violation of the non-contamination postulates due to arguments contaminated by explosivity is then avoided if the assumption in 3 above is satisfied. In Example 28, {a mathematical formula}{p,¬p} contaminates {a mathematical formula}D′ by explosivity. However, we also have {a mathematical formula}X=(∅,{p,¬p},⋏) that defeats {a mathematical formula}D′.
+      </paragraph>
+      <paragraph label="Proof">
+       A second type of contamination may arise because we do not enforce that arguments' assumptions are subset minimal. Adding s to the premises of C yields the non-subset minimal {a mathematical formula}C′ that is stronger than its subset minimal counterpart C ({a mathematical formula}C≺A but {a mathematical formula}C′⊀A, and so {a mathematical formula}C′⇒E1A). As discussed in Section 3.2, [43] shows that if subset minimal arguments are not strengthened when adding redundant assumptions, then the argumentation defined inferences of a framework consisting only of subset minimal arguments, is not changed when adding non-subset minimal arguments to the framework. Intuitively, this also means that non-interference would not be violated due to inclusion of non-subset minimal arguments. However, we have argued that ensuring that assumptions are not redundant with respect to deriving an argument's conclusion, should not be enforced by computationally expensive checks on subset minimality, but rather should in principle be enforceable by the proof system used for constructing arguments. Recall that the issue here is not whether assumptions are actually used in deriving the conclusion (footnote 8 on page 12 provides an example of a non-subset minimal argument in which all assumptions are used in the proof), since one can readily exclude assumptions not actually used in a given proof. Rather, the focus is on identifying whether arguments specified ‘abstractly’ as tuples consisting of assumptions paired with a conclusion (i.e.,without reference to a specific proof system) include obviously redundant assumptions. One such obvious notion of redundancy is implied by the following property of classical logic (recall – Notation 3 – that ‖ denotes ‘syntactically disjoint’; to spare on parentheses, we also assume that ∪ binds more tightly than ‖): Let{a mathematical formula}Bbe a base. For all{a mathematical formula}Γ⊆B, if{a mathematical formula}Γ⊢cαand{a mathematical formula}∃Δ⊆Γsuch that{a mathematical formula}Δ‖(Γ∖Δ)∪{α}, then either{a mathematical formula}Δ⊢c⋏or{a mathematical formula}Γ∖Δ⊢cα.Suppose for contradiction that {a mathematical formula}Δ⊬c⋏ and {a mathematical formula}Γ⊬cα. By classical semantics, there is a model {a mathematical formula}M1 such that the value of all the formulas in Γ is 1 and the value of α is 0. The same holds true of every model {a mathematical formula}M1′ that agrees with {a mathematical formula}M1 on the interpretation of {a mathematical formula}symbols(Γ∪{α}). Moreover, since Δ is consistent, there is a model {a mathematical formula}M2 such that the value of all the formulas in Δ is 1. The same holds true of every model {a mathematical formula}M2′ that agrees with {a mathematical formula}M2 on the interpretation of {a mathematical formula}symbols(Δ). Now, since {a mathematical formula}Δ‖Γ∪{α}, there is a model {a mathematical formula}M3 that agrees with {a mathematical formula}M1 on the interpretation of {a mathematical formula}symbols(Γ∪{α}) and with {a mathematical formula}M2 on the interpretation of {a mathematical formula}symbols(Δ). For such a model the values of all the formulas in {a mathematical formula}Δ∪Γ is 1 and the value of α is 0, contradicting the hypothesis that {a mathematical formula}Δ∪Γ⊢cα.  □
+      </paragraph>
+      <paragraph label="Remark 31">
+       Suppose a dialectical AF{a mathematical formula}(A,D) such that {a mathematical formula}Y=(Γ,∅,α)∈A, and there is a non-empty {a mathematical formula}Δ⊆Γ such that {a mathematical formula}Δ‖(Γ∖Δ)∪{α}. Then, given Proposition 30:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        If {a mathematical formula}Γ∖Δ≠∅ then either:
+       </list-item>
+       <list-item label="2.">
+        If {a mathematical formula}Γ∖Δ=∅ then either:
+       </list-item>
+       <list-item label="3.">
+        In addition to P1, P2 and P3, we will later stipulate that if {a mathematical formula}Y∈A, then:– In case 1 {a mathematical formula}A also includes the redundantly weakened {a mathematical formula}Y′=(Γ∖Δ,∅,α), or, given the redundantly weakened explosive {a mathematical formula}Y′=(Δ,∅,α), {a mathematical formula}A also includes {a mathematical formula}(Δ,∅,⋏) (e.g., {a mathematical formula}Y″=({p,¬p},∅,⋏)) as stipulated in Remark 29-3.– In case 2, {a mathematical formula}A also includes the redundantly weakened {a mathematical formula}Y′=(∅,∅,α), or, given the explosive {a mathematical formula}(Δ,∅,α), {a mathematical formula}A also includes {a mathematical formula}(Δ,∅,⋏) (e.g., {a mathematical formula}({s,¬s},∅,⋏)).
+       </list-item>
+      </list>
+      <paragraph>
+       Let us formally define the above notions. We first identify the notion of a contaminated argument, and then further distinguish when such an argument is redundantly and/or explosively contaminated.
+      </paragraph>
+      <paragraph label="Definition 21">
+       Contaminated argumentsLet Y be an argument with {a mathematical formula}assumptions(Y)=Γ and {a mathematical formula}conclusion(Y)=α. We say that Y is contaminated if there exists some non-empty {a mathematical formula}Δ⊆Γ such that the following conditions hold:
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}Δ‖(Γ∖Δ)∪{α};
+       </list-item>
+       <list-item label="2.">
+        either {a mathematical formula}Γ∖Δ≠∅ or {a mathematical formula}α≠⋏.
+       </list-item>
+      </list>
+      <paragraph label="Definition 22">
+       Note that if an argument Y satisfies condition 1 and is not contaminated, then it violates condition 2; that is to say, {a mathematical formula}assumptions(Y) cannot be partitioned into non-empty syntactically disjoint subsets, so that the only contaminating Δ for Y is such that {a mathematical formula}Γ∖Δ=∅, and {a mathematical formula}conclusion(Y)=⋏ (recall that ⋏ does not appear in a base and so it must be that {a mathematical formula}Γ=Δ is syntactically disjoint from ⋏). Hence Y has not been obtained by some assumptions redundantly weakening an argument in any of the senses described in Remark 31. Moreover, recalling Remark 29-1, such an argument is not explosively contaminating. To illustrate, {a mathematical formula}({p,¬p},∅,⋏) is an example of such a Y that is not contaminated (either redundantly or explosively). On the other hand {a mathematical formula}({p,¬p,r},∅,⋏) is contaminated redundantly but not explosively, and {a mathematical formula}({p,¬p},∅,{q}) is contaminated explosively but not redundantly. R-contaminated argumentsLet Y be a contaminated argument such that {a mathematical formula}assumptions(Y)=Γ and {a mathematical formula}conclusion(Y)=α. We say that Y is redundantly contaminated or R-contaminated if: either (i) for some contaminating set {a mathematical formula}Δ⊆Γ for Y, {a mathematical formula}Γ∖Δ≠∅, or(ii) the only contaminating set for Y is Γ itself (i.e., {a mathematical formula}Γ∖Δ=∅) and {a mathematical formula}Δ⊬c⋏.
+      </paragraph>
+      <paragraph>
+       Conditions i) and ii) respectively state that Y is an R-contaminated argument of the type described in 1 and 2i) of Remark 31. Arguments of the type described in 2ii), such as {a mathematical formula}Y=({p,¬p},∅,q∨¬q), cannot be definitively recognised as being R-contaminated. This is because it may be that {a mathematical formula}X=(∅,∅,q∨¬q)∉A. That is to say Y has not been obtained by {a mathematical formula}{p,¬p} redundantly weakening X. Rather, {a mathematical formula}q∨¬q is only derived by explosivity and so we have (given Remark 29-3) that {a mathematical formula}({p,¬p},∅,⋏)∈A (and so the property described in Remark 31-3 is satisfied). On the other hand one can definitively identify {a mathematical formula}Y=({p,¬p,q,q→r},∅,r) as being R-contaminated, since satisfaction of the property in Remark 31-3 means that either {a mathematical formula}({p,¬p},∅,r)∈A or {a mathematical formula}({q,q→r},∅,r)∈A. In either case Y includes a redundantly weakening set of assumptions ({a mathematical formula}{q,q→r} respectively {a mathematical formula}{p,¬p}).
+      </paragraph>
+      <paragraph>
+       We now formally define explosively contaminated arguments:
+      </paragraph>
+      <paragraph label="Definition 23">
+       E-contaminated argumentsLet Y be a contaminated argument such that {a mathematical formula}conclusion(Y)=α. We say that Y is explosively contaminated or E-contaminated if {a mathematical formula}α≠⋏ and {a mathematical formula}Δ⊢c⋏ for some Δ that is a contaminating set for Y.
+      </paragraph>
+      <paragraph label="Example 32">
+       <section-title>
+        Examples of (non) contaminated arguments
+       </section-title>
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        {a mathematical formula}X=({p,¬p,q,q→r},∅,r), {a mathematical formula}Y=({p,¬p,q},∅,r), {a mathematical formula}Z=({p,¬p,q,¬q},∅,r) are all both R-contaminated and E-contaminated;
+       </list-item>
+       <list-item label="2.">
+        Both {a mathematical formula}({p,¬p},∅,{q}) and {a mathematical formula}({p,¬p},∅,{q∨¬q}) are E-contaminated, but not R-contaminated;
+       </list-item>
+       <list-item label="3.">
+        Both {a mathematical formula}({p,¬p},∅,{p∧q}) and {a mathematical formula}({p,¬p,r},∅,r∧p) are neither R-contaminated nor E-contaminated (as neither is contaminated);
+       </list-item>
+       <list-item label="4.">
+        {a mathematical formula}({p,¬p,r},∅,⋏) is R-contaminated but not E-contaminated. {a mathematical formula}({p,¬p},∅,⋏) is neither R-contaminated nor E-contaminated.
+       </list-item>
+      </list>
+      <paragraph>
+       For the examples in 1 above, if the property in Remark 31-3 is satisfied, then:
+      </paragraph>
+      <paragraph>
+       • if {a mathematical formula}X∈A then either {a mathematical formula}X′=({q,q→r},∅,r)∈A and {a mathematical formula}X′ has been redundantly
+      </paragraph>
+      <paragraph>
+       weakened by {a mathematical formula}{p,¬p}, or the explosive {a mathematical formula}X″=({p,¬p},∅,r) has been redundantly
+      </paragraph>
+      <paragraph>
+       weakened by {a mathematical formula}{q,q→r}, and so {a mathematical formula}({p,¬p},∅,⋏)∈A.
+      </paragraph>
+      <paragraph>
+       • If {a mathematical formula}Y∈A then {a mathematical formula}({p,¬p},∅,⋏)∈A.
+      </paragraph>
+      <paragraph>
+       • If {a mathematical formula}Z∈A then:
+      </paragraph>
+      <paragraph>
+       – either {a mathematical formula}({q,¬q},∅,r)∈A or {a mathematical formula}({p,¬p},∅,⋏)∈A, and
+      </paragraph>
+      <paragraph>
+       – either {a mathematical formula}({p,¬p},∅,r)∈A or {a mathematical formula}({q,¬q},∅,⋏)∈A.
+      </paragraph>
+     </section>
+     <section label="3.7">
+      Coherent preference relations and partially instantiated dialectical AFs
+      <paragraph>
+       Section 4 describes a propositional natural deduction proof theory that does not license construction of R-contaminated arguments. However, satisfaction of the non-contamination postulates when using proof systems that do generate such arguments, requires that preference relations are ‘redundance-coherent’ in the sense that arguments are not strengthened when redundantly weakening with syntactically disjoint assumptions (the Elitist preference is shown to be redundance-coherent in Section 4):
+      </paragraph>
+      <paragraph label="Definition 24">
+       Redundance-coherent preference relationsLet {a mathematical formula}A be a set of dialectical arguments. A strict partial ordering ≺ over {a mathematical formula}A is redundance-coherent iff
+      </paragraph>
+      <list>
+       <list-item>
+        {a mathematical formula}∀X,Y,Y′ such that {a mathematical formula}Y=(Γ,∅,α), {a mathematical formula}Y′=(Δ∪Γ,∅,α), and {a mathematical formula}Δ‖Γ∪{α}: if {a mathematical formula}Y≺X then {a mathematical formula}Y′≺X.
+       </list-item>
+      </list>
+      <paragraph>
+       We now define partially instantiated dialecticalAFs ({a mathematical formula}pdAFs) whose arguments {a mathematical formula}A satisfy P1, P2 and P3, and the property described in Remark 31-3 (which, as is easy to verify, subsumes the property in Remark 29-3). We also distinguish non-redundant {a mathematical formula}pdAFs whose arguments are obtained by proof theories that do not generate R-contaminated arguments. In this case it suffices that {a mathematical formula}A satisfies the property relating to arguments contaminated by explosivity described in Remark 29-3.
+      </paragraph>
+      <paragraph label="Definition 25">
+       (Non-redundant) partially instantiated dialectical AFLet {a mathematical formula}(A,D) be a dialectical AF such that {a mathematical formula}D is the defeat relation over {a mathematical formula}A defined by the attacks {a mathematical formula}C and the strict partial ordering ≺ over {a mathematical formula}A.• {a mathematical formula}(A,D) is a partially instantiated dialecticalAF ({a mathematical formula}pdAF) if {a mathematical formula}A is any subset of the dialectical arguments defined by a base {a mathematical formula}B such that {a mathematical formula}A satisfies P1, P2 and P3, and:
+      </paragraph>
+      <list>
+       <list-item label="(P4)">
+        If {a mathematical formula}(Γ,∅,α)∈A, {a mathematical formula}Δ⊆Γ, {a mathematical formula}Δ≠∅ and {a mathematical formula}Δ‖Γ∖Δ∪{α}, then either {a mathematical formula}(Δ,∅,⋏)∈A or {a mathematical formula}(Γ∖Δ,∅,α)∈A.
+       </list-item>
+      </list>
+      <paragraph>
+       By virtue of non-redundant {a mathematical formula}pdAFs satisfying P5, any argument in such a {a mathematical formula}pdAF that satisfies the precondition of P4 (and hence P4′) can only be explosively contaminated, and the argument's assumptions cannot be partitioned into non-empty syntactically disjoint subsets. Hence it suffices that a non-redundant {a mathematical formula}pdAF satisfy P4′. Indeed, we leave it to the reader to verify that:
+      </paragraph>
+      <paragraph label="Remark 33">
+       Let {a mathematical formula}(A,D) be a non-redundant {a mathematical formula}pdAF, and {a mathematical formula}(Γ,∅,α)∈A, {a mathematical formula}Δ⊆Γ, {a mathematical formula}Δ≠∅ and {a mathematical formula}Δ‖(Γ∖Δ)∪{α}. Then it must be the case that {a mathematical formula}Δ=Γ.
+      </paragraph>
+      <paragraph>
+       Henceforth, when referring to ‘{a mathematical formula}pdAFs’ we assume {a mathematical formula}pdAFs in the general sense or non-redundant {a mathematical formula}pdAFs. Finally note that since the arguments in (non-redundant) {a mathematical formula}pdAFs satisfy P1, P2 and P3, the results in Sections 3.4 and 3.5 all hold for such frameworks.
+      </paragraph>
+      <paragraph>
+       Let us now review the significance of the concepts thus far introduced. Suppose the {a mathematical formula}pdAF{a mathematical formula}(A,D) in Example 28 satisfies P4. Given the R-contaminated {a mathematical formula}C′∈A, P4 implies {a mathematical formula}C∈A. Moreover, if the {a mathematical formula}pdAF's preference relation is redundance-coherent, then {a mathematical formula}C≺A implies {a mathematical formula}C′≺A. Hence {a mathematical formula}C′⇏{A}A and non-interference is no longer violated. Furthermore, we have already noted that if P4 is satisfied, then an E-contaminated argument Y implies existence of an argument concluding ⋏ from the inconsistent Δ in {a mathematical formula}assumptions(Y), and this ensures satisfaction of the non-contamination postulates. Now, as will be shown in Section 4, one can define proof theories that do not generate R-contaminated arguments (such as {a mathematical formula}C′). However, to the best of our knowledge, proof theories cannot be defined so as to exclude non-subset minimal arguments. We have therefore defined non-redundant {a mathematical formula}pdAFs that only need satisfy the property P4′ implied by P4, and as shown in the following section, need not assume redundance-coherent preference relations (given the absence of R-contaminated arguments) in order that the non-contamination postulates are satisfied.
+      </paragraph>
+      <section label="3.7.1">
+       <section-title>
+        Proving the non-interference and crash resistance postulates
+       </section-title>
+       <paragraph>
+        The non-interference and crash resistance postulates [16] (reviewed in Section 2.2) are stated with respect to AFs defined by bases {a mathematical formula}B1, {a mathematical formula}B2 and {a mathematical formula}B=B1∪B2. For {a mathematical formula}pdAFs, we also need to account for preferences over arguments defined by these bases.
+       </paragraph>
+       <paragraph label="Definition 26">
+        Composing {a mathematical formula}pdAFsLet {a mathematical formula}(A1,D1) defined by {a mathematical formula}B1 and {a mathematical formula}≺1, and {a mathematical formula}(A2,D2) defined by {a mathematical formula}B2 and {a mathematical formula}≺2. Then {a mathematical formula}(A,D) defined by {a mathematical formula}B=B1∪B2 and ≺ is said to be composed from{a mathematical formula}(A1,D1) and {a mathematical formula}(A2,D2), denoted {a mathematical formula}(A,D)=(A1,D1)⊕(A2,D2), iff:
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         {a mathematical formula}A1∪A2⊆A.{sup:19}
+        </list-item>
+        <list-item label="2.">
+         {a mathematical formula}∀X∈A : if {a mathematical formula}assumptions(X)⊆B1 then {a mathematical formula}X∈A1 and if {a mathematical formula}assumptions(X)⊆B2 then {a mathematical formula}X∈A2.
+        </list-item>
+        <list-item label="3.">
+         ≺ is any preference ordering such that:
+        </list-item>
+       </list>
+       <paragraph>
+        The above formalises the assumption that preferences defined over any set of arguments {a mathematical formula}A, remain unchanged when adding further arguments to {a mathematical formula}A (3), and that the arguments constructed from some base {a mathematical formula}B are exactly those constructed from the subset {a mathematical formula}B of some base {a mathematical formula}B∪B′ (1 and 2). Intuitively, if the available resources are the limiting factor determining construction of arguments, then we assume the same resources available for constructing arguments from {a mathematical formula}B, independently of whether {a mathematical formula}B is included in a larger base {a mathematical formula}B∪B′.
+       </paragraph>
+       <paragraph label="Remark 34">
+        Assumptions on composed {a mathematical formula}pdAFsIn what follows, when stating that {a mathematical formula}(A,D)=(A1,D1)⊕(A2,D2), we assume the {a mathematical formula}pdAFs defined by {a mathematical formula}B1, {a mathematical formula}≺1 and {a mathematical formula}B2, {a mathematical formula}≺2 and {a mathematical formula}B1∪B2, ≺ respectively, and that {a mathematical formula}B1‖B2 ({a mathematical formula}B1 is syntactically disjoint from {a mathematical formula}B2).
+       </paragraph>
+       <paragraph label="Remark 35">
+        Assumptions on preference relations in (non-redundant) {a mathematical formula}pdAFsIn the following results, when referring to {a mathematical formula}pdAFs in general, we will assume {a mathematical formula}pdAFs defined by preference relations that satisfy Pref1 (and hence the results can make use of Lemma 27) and are redundance-coherent. When referring to non-redundant {a mathematical formula}pdAFs, we assume only that the preference relations satisfy Pref1.
+       </paragraph>
+       <paragraph label="Lemma 36">
+        Let{a mathematical formula}(A,D)=(A1,D1)⊕(A2,D2). Suppose{a mathematical formula}Y∈A∖A1,{a mathematical formula}X∈A1, and{a mathematical formula}Y⇒S⊆AXon{a mathematical formula}X′=(α‾,∅,α‾).Let{a mathematical formula}Y=(Δ,Γ,ϕ),{a mathematical formula}Δ1=Δ∩B1,{a mathematical formula}Γ1=Γ∩B1,{a mathematical formula}Δ2=Δ∩B2,{a mathematical formula}Γ2=Γ∩B2. Then:
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         {a mathematical formula}(Δ2,Γ2,⋏)∈A2, or
+        </list-item>
+        <list-item label="2.">
+         {a mathematical formula}(Δ1,Γ1,⋏)∈A1, or
+        </list-item>
+        <list-item label="3.">
+         {a mathematical formula}(Δ1,Γ1,α)∈A1
+        </list-item>
+       </list>
+       <paragraph label="Proof">
+        Suppose {a mathematical formula}ϕ=⋏. Since {a mathematical formula}Y∈A∖A1, then by Definition 26.2, {a mathematical formula}Δ2∪Γ2≠∅. Since ⋏ is not an atom in {a mathematical formula}B, then {a mathematical formula}Δ2∪Γ2‖Δ1∪Γ1∪{⋏}. By P4 and P2, either {a mathematical formula}Y1=(Δ1,Γ1,⋏)∈A and (by Definition 26.2), {a mathematical formula}Y1∈A1, or {a mathematical formula}Y2=(Δ2,Γ2,⋏)∈A and (by Definition 26.2), {a mathematical formula}Y2∈A2. Suppose {a mathematical formula}ϕ=α. Since {a mathematical formula}X′∈A1, {a mathematical formula}Δ2∪Γ2‖α. Hence {a mathematical formula}Δ2∪Γ2‖Δ1∪Γ1∪{α}. By P4 and P2: {a mathematical formula}Y1=(Δ1,Γ1,α)∈A hence {a mathematical formula}Y1∈A1, or {a mathematical formula}Y2=(Δ2,Γ2,⋏)∈A hence {a mathematical formula}Y2∈A2.  □
+       </paragraph>
+       <paragraph label="Lemma 37">
+        Let{a mathematical formula}(A,D)=(A1,D1)⊕(A2,D2), and{a mathematical formula}E′⊆A,{a mathematical formula}E=E′∩A1. Suppose{a mathematical formula}Y=(Δ,Γ,ϕ)∈A,{a mathematical formula}X∈A∩A1,{a mathematical formula}Y⇒E′Xon{a mathematical formula}X′=({α‾},∅,α‾), and:
+       </paragraph>
+       <list>
+        <list-item label="A1">
+         X is acceptable w.r.t. E in{a mathematical formula}(A1,D1);
+        </list-item>
+        <list-item label="A2">
+         {a mathematical formula}∀Δ⊆prem(E′∖E): ({a mathematical formula}prem(A)=Δ) → ({a mathematical formula}A∈E′and A is acceptable w.r.t.{a mathematical formula}E′).
+        </list-item>
+       </list>
+       <paragraph label="Proof">
+        1) Suppose {a mathematical formula}Y∈A1. Since {a mathematical formula}E=E′∩A1 and (given {a mathematical formula}X∈A1) {a mathematical formula}Γ⊆prem(E′∪{X})∩B1, then (given {a mathematical formula}Y⊀X′ implies {a mathematical formula}Y⊀1X′) {a mathematical formula}Y⇒E⊆A1X.Given A1, {a mathematical formula}∃Z∈E s.t. {a mathematical formula}Z⇒{Y}Y on {a mathematical formula}Y′, {a mathematical formula}Z⊀1Y′ and so {a mathematical formula}Z⊀Y′. Since {a mathematical formula}E⊆E′, then {a mathematical formula}Z∈E′ and {a mathematical formula}Z⇒{Y}Y on {a mathematical formula}Y′.2) Suppose {a mathematical formula}Y∈A∖A1. By Lemma 36, either: i) {a mathematical formula}Y1=(Δ∩B1,Γ∩B1,⋏)∈A1, or ii) {a mathematical formula}Y1=(Δ∩B1,Γ∩B1,α)∈A1, or iii) {a mathematical formula}Y2=(Δ∩B2,Γ∩B2,⋏)∈A2.2.1) Suppose we are in cases i) or ii). {a mathematical formula}Γ∩B1⊆prem(E) and by redundance-coherence of ≺, {a mathematical formula}Y⊀X′ implies {a mathematical formula}Y1⊀X′. Hence {a mathematical formula}Y1⊀1X′ and {a mathematical formula}Y1⇒E⊆A1X. Given A1, {a mathematical formula}∃Z∈E⊆E′, {a mathematical formula}Z⇒{Y1}Y1. Since {a mathematical formula}prem(Y1)⊆prem(Y), {a mathematical formula}Z⇒{Y}Y.2.2) Suppose we are in case iii). By P2, {a mathematical formula}Y2′=(Γ∩B2,Δ∩B2,⋏)∈A2. {a mathematical formula}Γ∩B2⊆prem(E′∖E) and so by A2, {a mathematical formula}Y2′∈E′. By Lemma 27:{a mathematical formula}Y2′⇒{Y2}Y2 and (since {a mathematical formula}prem(Y2)⊆prem(Y)) the result is shown for {a mathematical formula}Z=Y2′, or{a mathematical formula}Y2⇒{Y2′}Y2′, in which case, since {a mathematical formula}Y2′ is acceptable w.r.t. {a mathematical formula}E′ (by A2), then {a mathematical formula}∃Z∈E′,Z⇒{Y2}Y2, hence {a mathematical formula}Z⇒{Y}Y.  □
+       </paragraph>
+       <paragraph label="Proof">
+        Lemma 37holds for non-redundant{a mathematical formula}pdAFs{a mathematical formula}(A,D).1) is shown as in Lemma 37. In 2), {a mathematical formula}Y∉A1 implies {a mathematical formula}(Δ∩B2)∪(Γ∩B2)≠∅. Suppose {a mathematical formula}(Δ∩B1)∪(Γ∩B1)≠∅. Then {a mathematical formula}(Δ∩B2)∪(Γ∩B2) ‖ {a mathematical formula}(Δ∩B1)∪(Γ∩B1)∪{ϕ}, contradicting {a mathematical formula}(A,D) is non-redundant (recall Remark 33). Hence {a mathematical formula}assumptions(Y) is a non-empty subset of {a mathematical formula}B2 and {a mathematical formula}Y∈A2. If {a mathematical formula}ϕ=α,{sup:20} then since {a mathematical formula}assumptions(Y)‖{α}, by P4′ {a mathematical formula}(Δ,Γ,⋏)∈A2. We then reason as in 2.2) in Lemma 37, which does not assume redundance-coherent preference relations, to conclude {a mathematical formula}∃Z∈E′,Z⇒{Y}Y.  □
+       </paragraph>
+       <paragraph label="Lemma 39">
+        Let{a mathematical formula}(A,D)=(A1,D1)⊕(A2,D2). Then:
+       </paragraph>
+       <list>
+        <list-item>
+         If E is a complete extension of{a mathematical formula}(A1,D1)then{a mathematical formula}∃E′⊇Es.t.{a mathematical formula}E′is a complete extension of{a mathematical formula}(A,D)and{a mathematical formula}E=E′∩A1
+        </list-item>
+       </list>
+       <paragraph label="Proof">
+        Suppose E is a complete extension of {a mathematical formula}(A1,D1). Let {a mathematical formula}E′⊇E, such that {a mathematical formula}E=E′∩A1, and let us assume:{a mathematical formula}E′∖E={Y∈A∖A1|Y is acceptable w.r.t. E′}  (Ass1).(That there exists such an {a mathematical formula}E′ with {a mathematical formula}E′∖E≠∅, can be seen by the limiting case in which {a mathematical formula}E′∖E is the set of unassailable arguments in {a mathematical formula}A∖A1; these are acceptable w.r.t. any {a mathematical formula}E′⊆A.)Firstly, suppose {a mathematical formula}Δ⊆prem(E′∖E), {a mathematical formula}prem(V)=Δ. Hence {a mathematical formula}V∈A∖A1. Suppose {a mathematical formula}Z⇒E′V on some β. Since {a mathematical formula}prem(V)⊆prem(E′∖E), then for some {a mathematical formula}Y∈E′∖E, {a mathematical formula}Z⇒E′Y on β. By Ass1, Y is acceptable w.r.t. {a mathematical formula}E′ and so {a mathematical formula}∃W∈E′, {a mathematical formula}W⇒{Z}Z. Hence V is acceptable w.r.t. {a mathematical formula}E′. Hence:{a mathematical formula} We show {a mathematical formula}X∈E implies X acceptable w.r.t. {a mathematical formula}E′. Let {a mathematical formula}Y∈A, {a mathematical formula}Y⇒E′X. Since E is a complete extension of {a mathematical formula}(A1,D1), X is acceptable w.r.t. E in {a mathematical formula}(A1,D1). Hence, given Eq. (5), we can apply Lemma 37 to conclude that {a mathematical formula}∃Z∈E′ s.t. {a mathematical formula}Z⇒{Y}Y. Hence X acceptable w.r.t. {a mathematical formula}E′.Given Ass1 we now have that all arguments in {a mathematical formula}E′ are acceptable w.r.t. {a mathematical formula}E′. Hence by Lemma 17, {a mathematical formula}E′ is conflict free. To show {a mathematical formula}E′ is complete, it then remains to show (given Ass1) that {a mathematical formula}X∈A1,X∉E′ implies X is not acceptable w.r.t. {a mathematical formula}E′. Suppose some such X. Since E is a complete extension of {a mathematical formula}(A1,D1), X is not acceptable w.r.t. E. Hence:{a mathematical formula} Since {a mathematical formula}E⊆E′, {a mathematical formula}Y⇒E′X. Suppose for contradiction that X is acceptable w.r.t. {a mathematical formula}E′ in {a mathematical formula}(A,D). Hence:{a mathematical formula} 1) Suppose {a mathematical formula}Z∈A1. Hence {a mathematical formula}Z∈E. {a mathematical formula}Z⊀Y′ implies {a mathematical formula}Z⊀1Y′, and so {a mathematical formula}Z⇒{Y}Y in {a mathematical formula}(A1,D1), contradicting Eq. (6).2) Suppose {a mathematical formula}Z∈A∖A1. Since {a mathematical formula}Γ⊆prem(Y), {a mathematical formula}Y∈A1, it must be that {a mathematical formula}Γ⊆B1. Hence by Lemma 36 either: i) {a mathematical formula}Z1=(Δ∩B1,Γ,⋏)∈A1, or ii) {a mathematical formula}Z1=(Δ∩B1,Γ,α)∈A1, or iii) {a mathematical formula}Z2=(Δ∩B2,∅,⋏)∈A2.2.1) In case i) or ii), since {a mathematical formula}(Δ∩B1)⊆prem(E), and E is a complete extension of {a mathematical formula}(A1,D1), then by Lemma 9, {a mathematical formula}Z1∈E. Since {a mathematical formula}Z⊀Y′, and ≺ is redundance-coherent, {a mathematical formula}Z1⊀Y′. Hence {a mathematical formula}Z1⊀1Y′, and {a mathematical formula}Z1⇒{Y}Y, contradicting Eq. (6).2.2) In case iii). By Eq. (5), {a mathematical formula}Z2∈E′. But then {a mathematical formula}(∅,Δ∩B2,⋏)⇒E′Z2, contradicting {a mathematical formula}Z2 acceptable w.r.t. {a mathematical formula}E′.  □
+       </paragraph>
+       <paragraph label="Proof">
+        Lemma 39holds for non-redundant{a mathematical formula}pdAFs.Proof proceeds exactly as in Lemma 39, except that:• ‘Corollary 38’ replaces ‘Lemma 37’ (underlined in the proof of Lemma 39);• In 2) in the proof of Lemma 39, we show as in Corollary 38 that {a mathematical formula}Z∈A2 (substituting ‘{a mathematical formula}Z∈A2’ for ‘{a mathematical formula}Y∈A2’ in Corollary 38) and {a mathematical formula}(Δ,∅,⋏)∈A2. We then only need reason to a contradiction as in 2.2) of Lemma 39, which does not assume redundance-coherent preference relations.  □
+       </paragraph>
+       <paragraph label="Proof">
+        Let{a mathematical formula}(A,D)=(A1,D1)⊕(A2,D2). Then if{a mathematical formula}E′is a complete extension of{a mathematical formula}(A,D)then{a mathematical formula}E=E′∩A1is a complete extension of{a mathematical formula}(A1,D1).Suppose {a mathematical formula}E′ is a complete extension of {a mathematical formula}(A,D).Part 1 Since {a mathematical formula}E′ is conflict free then {a mathematical formula}E=E′∩A1 is conflict free.{sup:21} Suppose for contradiction that {a mathematical formula}E=E′∩A1 is not an admissible extension of {a mathematical formula}(A1,D1). Hence {a mathematical formula}∃X∈E, {a mathematical formula}Y∈A1, {a mathematical formula}Y⇒EX on {a mathematical formula}X′ (hence {a mathematical formula}Y⊀1X′), and:{a mathematical formula} Since {a mathematical formula}Y⊀X′, and {a mathematical formula}prem(E)⊆prem(E′), then {a mathematical formula}Y⇒E′X. By assumption of {a mathematical formula}E′ being a complete extension of {a mathematical formula}(A,D): {a mathematical formula}Z=(Δ,Γ,ϕ)∈E′ s.t. {a mathematical formula}Z⇒{Y}Y on {a mathematical formula}Y′=({α‾},∅,α‾), {a mathematical formula}Z⊀Y′. 1) Suppose {a mathematical formula}Z∈A1. Then {a mathematical formula}Z∈E. Since {a mathematical formula}Z⊀1Y′, {a mathematical formula}Z⇒{Y}Y, contradicting Eq. (8).2) Suppose {a mathematical formula}Z∈A∖A1. Since {a mathematical formula}Γ⊆prem(Y), {a mathematical formula}Y∈A1, it must be that {a mathematical formula}Γ⊆B1. We then reason to a contradiction as in 2) in the proof of Lemma 39, except that:in 2.1), we have that since {a mathematical formula}(Δ∩B1)⊆prem(E′) and {a mathematical formula}E′ is a complete extension of {a mathematical formula}(A,D), then by Lemma 9{a mathematical formula}Z1∈E′, hence {a mathematical formula}Z1∈E;in 2.2), {a mathematical formula}Z2∈E′ by virtue of {a mathematical formula}E′ being complete and Lemma 9.Part 2 We have shown that E is admissible. Suppose for contradiction that E is not complete. Hence {a mathematical formula}∃X∉E that is acceptable w.r.t. E. We show X is acceptable w.r.t. {a mathematical formula}E′. Suppose:{a mathematical formula}Y=(Δ,Γ,ϕ), {a mathematical formula}Y⇒E′X on {a mathematical formula}X′=({α‾},∅,α‾), hence {a mathematical formula}Y⊀X′.Since {a mathematical formula}E′ is complete, then (by Lemma 9):{a mathematical formula} Given Eq. (9) and X is acceptable w.r.t. E, we can apply Lemma 37 to conclude that {a mathematical formula}∃Z∈E′ s.t. {a mathematical formula}Z⇒{Y}Y. Hence X is acceptable w.r.t. {a mathematical formula}E′. Since {a mathematical formula}E′ is complete, {a mathematical formula}X∈E′. Hence {a mathematical formula}X∈E=E′∩A1. Contradiction.  □
+       </paragraph>
+       <paragraph label="Proof">
+        Lemma 41holds for non-redundant{a mathematical formula}pdAFs.Proof as in Lemma 41, except:• ‘Corollary 38’ replaces ‘Lemma 37’ (underlined);• In 2) in Part 1 of the proof of Lemma 41, we show as in Corollary 38 that {a mathematical formula}Z∈A2 (substituting ‘{a mathematical formula}Z∈A2’ for ‘{a mathematical formula}Y∈A2’ in Corollary 38) and {a mathematical formula}(Δ,∅,⋏)∈A2. Since {a mathematical formula}(Δ,∅,⋏)∈E′ by virtue of {a mathematical formula}E′ being complete and Lemma 9, this leads to a contradiction as in 2.2) in the proof of Lemma 39.  □
+       </paragraph>
+       <paragraph>
+        The following is a corollary of Lemma 39, Lemma 41 and Corollary 40, Corollary 42:
+       </paragraph>
+       <paragraph label="Corollary 43">
+        Let{a mathematical formula}(A,D)=(A1,D1) ⊕ {a mathematical formula}(A2,D2), where{a mathematical formula}(A,D),{a mathematical formula}(A1,D1)and{a mathematical formula}(A2,D2)are (non-redundant){a mathematical formula}pdAFs. Then:
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         If E is a complete extension of{a mathematical formula}(A1,D1)then there exist complete extensions{a mathematical formula}{E1,…,En}of{a mathematical formula}(A,D)such that for{a mathematical formula}i=1…n,{a mathematical formula}E=Ei∩A1.
+        </list-item>
+        <list-item label="2.">
+         If{a mathematical formula}{E1,…,En}are complete extensions of{a mathematical formula}(A,D)such that for{a mathematical formula}i=1…n,{a mathematical formula}E=Ei∩A1, then E is a complete extension of{a mathematical formula}(A1,D1).
+        </list-item>
+       </list>
+       <paragraph>
+        That there is a one to (possibly) many mapping between complete extensions of {a mathematical formula}(A1,D1) and {a mathematical formula}(A,D) is witnessed by an example in which {a mathematical formula}B1={a}, {a mathematical formula}B2={b,¬b}, {a mathematical formula}B={a,b,¬b}, and {a mathematical formula}≺1=≺2=≺=∅. Then E is a single complete extension of {a mathematical formula}(A1,D1) containing {a mathematical formula}A=({a},∅,a) and {a mathematical formula}E1 and {a mathematical formula}E2 are the complete extensions of {a mathematical formula}(A,D), where {a mathematical formula}E1 contains A and {a mathematical formula}({b},∅,b), and {a mathematical formula}E2 contains A and {a mathematical formula}({¬b},∅,¬b).
+       </paragraph>
+       <paragraph>
+        Note that Corollary 43 immediately implies that:
+       </paragraph>
+       <list>
+        <list-item label="1.">
+         X is credulously justified under the complete semantics in {a mathematical formula}(A1,D1) iff X is credulously justified under the complete semantics in {a mathematical formula}(A,D).
+        </list-item>
+        <list-item label="2.">
+         X is sceptically justified under the complete semantics in {a mathematical formula}(A1,D1) iff X is sceptically justified under the complete semantics in {a mathematical formula}(A,D).
+        </list-item>
+       </list>
+       <paragraph>
+        In [16], [61], the non-interference and crash resistance postulates are formulated w.r.t. the ‘consequences’ of propositional instantiations of AFs. Our formalisation of {a mathematical formula}symbols (Definition 4) and syntactic disjointedness for first order theories (Notation 3) allows us to generalise these postulates to first order instantiations of AFs, and show their satisfaction by (non-redundant) {a mathematical formula}pdAFs.
+       </paragraph>
+       <paragraph label="Definition 27">
+        Consequence relation for {a mathematical formula}pdAFsLet {a mathematical formula}(A,D) be a (non-redundant) {a mathematical formula}pdAF. Then {a mathematical formula}CnT((A,D))={claims(E1),…,claims(En)} where {a mathematical formula}E1,…,En are the T extensions of {a mathematical formula}(A,D), {a mathematical formula}T∈{complete, grounded, preferred, stable}.
+       </paragraph>
+       <paragraph>
+        Referring to the above example, and writing {a mathematical formula}Cncp as an abbreviation for {a mathematical formula}Cncomplete, {a mathematical formula}Cncp((A1,D1))={Cn({a})}{sup:22} and {a mathematical formula}Cncp{a mathematical formula}((A,D))={Cn({a,b}),Cn({a,¬b})}. Recall that we define {a mathematical formula}claims(E) as the conclusions of unconditional arguments that have empty suppositions. Also recall the notation {a mathematical formula}B|Sy in Notation 3.
+       </paragraph>
+       <paragraph label="Definition 28">
+        Non interferenceLet {a mathematical formula}(A1,D1) be defined by {a mathematical formula}B1 and {a mathematical formula}≺1, {a mathematical formula}(A2,D2) defined by {a mathematical formula}B2 and {a mathematical formula}≺2, and {a mathematical formula}(A,D) defined by {a mathematical formula}B1∪B2 and ≺, where {a mathematical formula}(A,D)=(A1,D1)⊕(A2,D2), and {a mathematical formula}B1‖B2. Then non-interference is satisfied iff:{a mathematical formula}Cncp((A1,D1))|symbols(B1)=Cncp((A,D))|symbols(B1)
+       </paragraph>
+       <paragraph label="Theorem 44">
+        Non interferenceNon-interference is satisfied by (non-redundant){a mathematical formula}pdAFs.
+       </paragraph>
+       <paragraph label="Proof">
+        By Corollary 43: E is a complete extension of {a mathematical formula}(A1,D1) iff {a mathematical formula}{E1,…,En} are complete extensions of {a mathematical formula}(A,D), where for {a mathematical formula}i=1…n, {a mathematical formula}E=Ei∩A1. Then assuming unconditional arguments X s.t. {a mathematical formula}symbols(conclusion(X))⊆symbols(B1):1) If {a mathematical formula}X∈E then {a mathematical formula}∀Ei, {a mathematical formula}X∈Ei.2) If {a mathematical formula}X∈Ei, {a mathematical formula}X∈A∩A1, then for {a mathematical formula}j=1…n, {a mathematical formula}X∈Ej and {a mathematical formula}X∈E.3) If {a mathematical formula}X=(Δ,∅,α)∈Ei, {a mathematical formula}X∈A∖A1, then {a mathematical formula}Δ=Π∪Σ, where {a mathematical formula}Π⊆B1, {a mathematical formula}Σ⊆B2, {a mathematical formula}Σ≠∅ (since if {a mathematical formula}Σ=∅ then given Definition 26.2, {a mathematical formula}X∈A1) and so {a mathematical formula}Σ‖Π∪{α}.• Assuming arbitrary {a mathematical formula}pdAFs, then by P4, either:3.1) {a mathematical formula}X′=(Π,∅,α)∈A and so (by Definition 26.2), {a mathematical formula}X′∈A1. By Lemma 9, {a mathematical formula}X′∈Ei, and we are in case 2), or3.2) {a mathematical formula}X′=(Σ,∅,⋏)∈A. By Lemma 9, {a mathematical formula}X′∈Ei, contradicting Theorem 11.• Assuming non-redundant {a mathematical formula}pdAFs, then it must be that {a mathematical formula}Π=∅ (recall Remark 33), and so by P4′, {a mathematical formula}X′=(Σ,∅,⋏)∈A, and we are in case 3.2).Cases 2) &amp; 3) show that if an unconditional X is in some {a mathematical formula}Ei and {a mathematical formula}symbols(α)⊆symbols(B1), then for {a mathematical formula}j=1…n, there is an {a mathematical formula}X′∈Ej where {a mathematical formula}X′ has conclusion α, and {a mathematical formula}X′∈E. This, together with 1), establishes that: {a mathematical formula}claims(E)|symbols(B1)=claims(Ei)|symbols(B1), where for {a mathematical formula}i=1…n, {a mathematical formula}E=Ei∩A1. Hence the theorem is shown.  □ In our example, {a mathematical formula}Cncp((A1,D1))|symbols(B1)={{a}} and {a mathematical formula}Cncp((A,D))={{a}}.
+       </paragraph>
+       <paragraph>
+        We now prove crash resistance, adapting the strategy employed in [16], [61]. We show that (non-redundant) {a mathematical formula}pdAFs are non-trivial, and then show that this property, together with non-interference, implies crash resistance.
+       </paragraph>
+       <paragraph label="Proof">
+        Let Sy be any set of predicate, function and constant symbols. Then there exist (non-redundant){a mathematical formula}pdAFs{a mathematical formula}(A1,D1)and{a mathematical formula}(A2,D2), respectively defined by{a mathematical formula}B1,≺1and{a mathematical formula}B2,≺2, s.t.{a mathematical formula}symbols(B1){a mathematical formula}=symbols(B2)=Sy, and{a mathematical formula}Cncp((A1,D1))|Sy≠Cncp((A2,D2))|Sy.Let {a mathematical formula}{P1,…,Pn} be the predicate symbols in Sy, and for {a mathematical formula}i=1…n, let {a mathematical formula}αi denote the atomic formula {a mathematical formula}Pi(ti→) where {a mathematical formula}ti→ is a vector of 0 or more terms, and such that {a mathematical formula}⋃i=1nsymbols(ti→)={t|t is a function or constant symbol in {a mathematical formula}Sy}. Let {a mathematical formula}B1={α1,…,αn}, {a mathematical formula}B2={α1→α1,…,αn→αn}, {a mathematical formula}≺1=≺2=∅. Then each {a mathematical formula}pdAF has a single complete extension whose unconditional arguments have conclusions that differ: {a mathematical formula}Cncp((A1,D1))={Cn({α1,…,αn})} ≠ {a mathematical formula}Cncp((A2,D2))={Cn({α1→α1,…,αn→αn})}.  □
+       </paragraph>
+       <paragraph label="Definition 29">
+        Contaminating baseLet {a mathematical formula}B1 be a base such that {a mathematical formula}symbols(B1)⊂symbols(L). {a mathematical formula}B1 is said to be contaminating for (non-redundant) {a mathematical formula}pdAFs iff:there exists a {a mathematical formula}(A1,D1) defined by {a mathematical formula}B1,≺1, such that for any{a mathematical formula}B2 such that {a mathematical formula}(A2,D2) is defined by {a mathematical formula}B2,≺2, and {a mathematical formula}B1‖B2: {a mathematical formula}Cncp((A1,D1))=Cncp((A,D)), where {a mathematical formula}(A,D)=(A1,D1) ⊕ {a mathematical formula}(A2,D2).
+       </paragraph>
+       <paragraph label="Proof">
+        Crash resistanceThere does not exist a contaminating base{a mathematical formula}Bfor{a mathematical formula}pdAFs and non-redundant{a mathematical formula}pdAFs.Suppose for contradiction that there exists a contaminating base {a mathematical formula}B1. Hence {a mathematical formula}symbols(B1)⊂symbols(L). Let {a mathematical formula}Sy=symbols(L)∖symbols(B1). By Lemma 45, there exists a {a mathematical formula}pdAF3 and {a mathematical formula}pdAF4 respectively defined by {a mathematical formula}B3,≺3 and {a mathematical formula}B4,≺4, such that {a mathematical formula}symbols(B3)=symbols(B4)=Sy, and:{a mathematical formula}Cncp(pdAF3)|Sy≠Cncp(pdAF4)|Sy.  (1)Since {a mathematical formula}B1 is contaminating, then there is a {a mathematical formula}pdAF1=(A1,D1) such that:{a mathematical formula}Cncp(pdAF1)=Cncp(pdAF1⊕pdAF3)=Cncp(pdAF1⊕pdAF4)Hence {a mathematical formula}Cncp(pdAF1⊕pdAF3)|Sy=Cncp(pdAF1⊕pdAF4)|Sy. This, together with (1) implies that {a mathematical formula}Cncp(pdAF3)|Sy≠Cncp(pdAF1⊕pdAF3)|Sy or {a mathematical formula}Cncp(pdAF4)|Sy≠Cncp(pdAF1⊕pdAF4)|Sy.Since {a mathematical formula}symbols(B3)=symbols(B4)=Sy, we immediately have that either {a mathematical formula}Cncp(pdAF3)|B3{a mathematical formula}≠Cncp(pdAF1⊕pdAF3)|B3 or {a mathematical formula}Cncp(pdAF4)|B4≠Cncp(pdAF1⊕pdAF4)|B4. In either case, Theorem 44 (non-interference) is violated.  □
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Instantiating dialectical classical frameworks
+     </section-title>
+     <section label="4.1">
+      <section-title>
+       C-intelim argumentation
+      </section-title>
+      <paragraph>
+       We now instantiate {a mathematical formula}pdAFs in which, in contrast with standard approaches to Cl-Arg[1], [33], [43], the proof theoretic means for constructing arguments is given. Indeed, we suggest that arguments conceived of as assumptions in support of a conclusion should be understood as ‘argument schemata’ that are concretely realised as ‘arguments proper’ through provision of the proof theoretic means by which the conclusion is inferred from the assumption. We argue that the persuasive force of a non-trivial argument partly depends on whether valid reasoning steps have been employed in inferring the argument's conclusion. For example, a mathematical argument claiming that a certain theorem follows from the Euclidean axioms would be incomplete and entirely unpersuasive without explicit representation of the proof steps involved. It is the means by which the conclusion is obtained that renders the argument understandable, and furthermore, one would not want to rely on the recipient expending resources to reconstruct the proof from assumptions to conclusion (we revisit this issue in Section 5 when discussing the ‘transparency’ postulate proposed for practical applications [27]).
+      </paragraph>
+      <paragraph>
+       In this section we therefore ‘instantiate’ {a mathematical formula}pdAFs with propositional natural deduction proofs. We present a non-standard version of classical natural deduction which, given some straightforward restrictions on the application of the rules, does not allow construction of R-contaminated arguments and admits definition of a simple notion of argument ‘depth’. The latter may be taken to reflect the inferential capabilities of resource-bounded agents. We then show that arguments constructed under any fixed bound on their depth, define non-redundant {a mathematical formula}pdAFs that satisfy the rationality postulates. In dialectical frameworks we use the word “assumption” as a general term that refers to both premises and suppositions.
+      </paragraph>
+      <section label="4.1.1">
+       <section-title>
+        C-intelim natural deduction
+       </section-title>
+       <paragraph>
+        Natural deduction proofs apply intuitive introduction and elimination rules (or “intelim rules” for short) that are akin to natural modes of human reasoning (in contrast to other proof theories e.g., axiomatic systems, Gentzen-style sequent calculi or resolution), and are thus particularly appropriate if one is to simulate human understanding and reasoning.{sup:23}
+       </paragraph>
+       <paragraph>
+        We use a non-standard version of classical natural deduction [20], [22], [23], that we call “C-intelim” (for “classical intelim”). As discussed in [20], [24], this version is more faithful to the intuitive classical meaning of the logical operators and naturally suggests a simple measure of the “depth” of an argument. This is used to define a hierarchy of tractable, albeit increasingly complex, approximations to classical propositional logic that converge to it in the limit (for ideal “unbounded” agents). Each level in the hierarchy equates with increments in the maximum depth of the arguments that can be constructed and the resources required to construct such arguments. Thus, C-intelim proofs provide a perspicuous account of argumentation for resource-bounded agents employing natural rules that are faithful to the classical interpretation of the logical operators.
+       </paragraph>
+       <paragraph>
+        The C-intelim rules are displayed in Table 1. Besides the intelim rules we have two extra rules for the “falsum” constant ⋏ (the first two displayed in Table 2), representing a sentence which is false in every possible world. RNC (“Rule of Non-Contradiction”) simply says that two contradictory sentences cannot be both true, and the XFQ (Ex Falso Quodlibet) rule says that every sentence follows from ⋏. The two falsum rules taken together imply that any arbitrary conclusion follows from a contradiction.
+       </paragraph>
+       <paragraph>
+        The intelim and falsum rules contain no discharge rules, namely rules that involve the temporary introduction of assumptions that are subsequently “discharged”, to the effect that their conclusion no longer depends on them.{sup:24} To obtain a complete set of rules for classical propositional logic we only need add a single discharge rule: if we have a deduction {a mathematical formula}D1 of ψ depending on assumptions {a mathematical formula}Γ∪{φ} and a deduction {a mathematical formula}D2 of ψ depending on assumptions {a mathematical formula}Δ∪{¬φ}, we thereby have a deduction of ψ depending on {a mathematical formula}Γ∪Δ. This typical pattern of classical case reasoning relies on the Aristotelian principle of bivalence; a cornerstone of classical semantics whereby any sentence is either true or false, and there are no other possibilities. Hence we call this pattern Rule of Bivalence (RB), which is the third rule displayed in Table 2 where the conclusion ψ does not depend on the “discharged” assumptions φ and ¬φ that are enclosed in square brackets.
+       </paragraph>
+       <paragraph>
+        C-intelim proofs can be presented using the standard natural deduction tree format in which the conclusion is at the root and the assumptions at the leaves. However this format involves a good deal of redundancy,{sup:25} and we therefore resort to a different more concise format that is better suited to algorithmic treatment.{sup:26} In this new format proofs are still represented by trees, but these trees branch downwards (like Smullyan's Tableaux). The premises of each application of the intelim or the falsum rules do not occur on adjacent branches, but on the same branch as the conclusion, and anywhere above it. So, the application of these rules is sequential, and we call an intelim sequence for Γ any sequence of formulae generated in this way. On the other hand, each application of RB splits an intelim sequence into two branches: one containing a formula φ and the other its negation ¬φ, as in the examples displayed in Fig. 4. In this case we say that RB has been applied toφ, and φ is the RB-formula of this RB application. Every application of RB introduces, on each branch, an extra assumption, that we call virtual to distinguish it from the actual assumptions that are usually listed at the top, starting from the root. For example, in the leftmost branch of the first tree in Fig. 4, the formula ¬q is obtained from the actual assumption {a mathematical formula}p→¬q at the top of the tree and from the virtual assumption p by means of an application of the rule {a mathematical formula}→E1; and r is obtained from the derived formula ¬q and the actual assumption {a mathematical formula}q∨r by means of an application of {a mathematical formula}∨E1. [22], [23] argue that the minimum number of nested applications of RB required to develop a deductive argument, provides a natural and plausible measure of the ‘difficulty’ involved in constructing it.
+       </paragraph>
+       <paragraph label="Definition 30">
+        In the sequel we shall use the expression “tree of formulae” as an abbreviation of “tree whose nodes (except possibly the root) are labelled with formulae”. The special case when the root is unlabelled will be used to represent proofs from the empty set of assumptions (starting with an application of the RB rule). C-intelim trees, proofs, refutationsA C-intelim tree based on a set Γ is a tree of formulae such that Γ is the set of all its actual assumptions and every other node results from the application of one of the C-intelim rules. A C-intelim proof of φdepending on Γ is a C-intelim tree based on Γ such that (i) φ occurs as the final formula in every branch and (ii) all actual assumptions in Γ are used as premises of some rule application. A C-intelim refutation of Γ is a C-intelim proof of ⋏ depending on Γ. C-intelim is sound and complete for classical propositional logic: if φ is a classical consequence of Γ, then there is a C-intelim proof of φ depending on some {a mathematical formula}Δ⊆Γ. Fig. 4 shows examples of C-intelim proof trees. The actual assumptions are marked with a ⁎.
+       </paragraph>
+       <paragraph>
+        A crucial role for practical applications in classical logic argumentation is played by normal C-Intelim proofs. These normal proofs can be generated by straightforward restrictions on the applications of the rules that (i) limit the choice of the RB-formula of an RB-application to a tractable space defined by the assumptions and the conclusion and (ii) avoid obvious redundancies in the construction of a proof. More specifically normal C-intelim proofs: (a) enjoy the (weak) subformula property,{sup:27} which makes their construction amenable to algorithmic treatment, and (b) do not allow the construction of R-contaminated arguments (as described in Section 3.6, Definition 22).
+       </paragraph>
+       <paragraph>
+        It can be shown (see [24]) that restricting to normal C-intelim proofs involves no loss of deductive power in that for each C-intelim proof there exists a normal one with the same assumptions and the same conclusion. The simple restrictions on the construction of normal C-intelim proofs ensure that such proofs are not trivially redundant (see [24] for a discussion). This allows us to bar convoluted proofs such as those shown on the left in each of Fig. 5 (a), (b), (c) and (d) and to generate the normal ones on the right instead. In particular, notice the redundant proof in Fig. 5(a), which makes contrived use of an assumption (¬q) that is syntactically disjoint from the other assumptions and from the conclusion.
+       </paragraph>
+      </section>
+      <section label="4.1.2">
+       Depth-bounded instantiations of {a mathematical formula}pDCFs
+       <paragraph>
+        One of the main advantages of C-intelim deduction is that, unlike standard natural deduction, it immediately provides a sharp measure of the depth of an argument that can be associated with the resources required for its construction.
+       </paragraph>
+       <paragraph label="Definition 32">
+        In the sequel we shall restrict our attention to normal C-intelim proofs. Depth of C-intelim proofsThe depth of a C-intelim proof {a mathematical formula}T is the maximum number of virtual assumptions occurring in a branch of {a mathematical formula}T. A C-intelim proof of depth 0 contains no virtual assumptions, i.e., no application of RB (and is therefore a C-intelim sequence). A C-intelim proof of depth k contains at most k nested applications of RB. Consider the rightmost C-intelim proof in Fig. 4 which makes use of one application of RB. A reasoning agent (whether human or artificial) with actual assumptions {a mathematical formula}p→q and {a mathematical formula}p→¬q considered true, does not possess the information that ¬p is true, unless it is able to simulate information states containing virtual assumptions. This is a non-trivial step both from the computational (and arguably cognitive) viewpoint, and the depth at which the iterated use of such virtual assumptions is required is an interesting measure of the computational effort involved in extracting the information (¬p) implicitly contained in the actual assumptions. Let C-Intelimk be the system allowing only (normal) C-intelim proofs of depth ≤k. C-IntelimkLet {a mathematical formula}⊢k⊆2L×L be defined as follows:
+       </paragraph>
+       <list>
+        <list-item>
+         {a mathematical formula}Γ⊢kφ if and only if there is a C-intelimk proof of φ depending on some {a mathematical formula}Δ⊆Γ.
+        </list-item>
+       </list>
+       <paragraph label="Proposition 47">
+        For each{a mathematical formula}k∈N, whether or not{a mathematical formula}Γ⊢kφcan be decided in time{a mathematical formula}O(nk+2), where n is the total number of occurrences of symbols in{a mathematical formula}Γ∪{φ}. For a proof see [23].
+       </paragraph>
+       <paragraph>
+        The relations {a mathematical formula}⊢k of Definition 32 form a sequence of increasingly powerful deducibility relations that are all (by Proposition 47) tractable and converge to classical propositional logic, which is the limit of the sequence for k approaching infinity.
+       </paragraph>
+       <paragraph label="Definition 33">
+        k-depth C-intelim argumentsLet {a mathematical formula}T be any normal C-intelimk proof of φ depending on Σ (recall – Definition 30 – that Σ are the actual, and not virtual assumptions in {a mathematical formula}T), where {a mathematical formula}∀α∈Σ, α is annotated in {a mathematical formula}T by  {an inline-figure} or  {an inline-figure}, where  {an inline-figure} stands for “premise” and  {an inline-figure} stands for “supposition”.Then {a mathematical formula}(Δ,Γ,φ) is a C-intelimk argument, where {a mathematical formula}Δ∪Γ=Σ, {a mathematical formula}α∈Δ iff α is annotated by  {an inline-figure}, and {a mathematical formula}α∈Γ iff α is annotated by  {an inline-figure}. We call {a mathematical formula}(Δ,Γ,φ)the C-intelimkargument associated with{a mathematical formula}T.A set {a mathematical formula}A of C-intelimk arguments is defined by {a mathematical formula}B if {a mathematical formula}∀X∈A, {a mathematical formula}assumptions(X)⊆B.
+       </paragraph>
+       <paragraph label="Proposition 48">
+        The following key result is shown in [24]: If{a mathematical formula}Tis a normal C-intelimkproof of φ depending on Γ, then the C-intelimkargument associated with{a mathematical formula}Tis not R-contaminated. Moreover [24] shows that if an argument associated with {a mathematical formula}T is contaminated, and so given Proposition 48, can only by E-contaminated (e.g. a proof of q from {a mathematical formula}p,¬p), then:
+       </paragraph>
+       <paragraph label="Proposition 49">
+        If an argument associated with a normal C-intelimkproof{a mathematical formula}Tdepending on Γ is E-contaminated, then the proof is said to be improper in that every branch in the downward-branching tree ends with an application of XFQ (and so{a mathematical formula}Γ⊢c⋏).
+       </paragraph>
+       <paragraph label="Remark 50">
+        [24] shows that it is easy to turn an improper proof into a proof of ⋏ (i.e., a refutation) of the same depth.
+       </paragraph>
+       <paragraph>
+        Proposition 48 shows that normal proofs satisfy a basic relevance requirement, which is, however, weaker than the standard requirement that an argument's assumptions are subset-minimal. For example, recalling the discussion in Section 3.2, and in particular Footnote 8 on p. 22, one could build an argument for q depending on {a mathematical formula}{p,p→r,p→q,r→((p→q)→q)} which is not R-contaminated and in which all the assumptions are actually used (i.e., it is relevant in the sense of relevance logic), although it is not subset-minimal.
+       </paragraph>
+       <paragraph label="Proof">
+        We now formally instantiate non-redundant {a mathematical formula}pdAFs (recall Definition 25) with C-intelimk arguments. Firstly, we show that given a non-redundant {a mathematical formula}pdAF instantiated by C-intelimk arguments, then the conditions P1–P4′ and P5 on the arguments in the {a mathematical formula}pdAF can be satisfied. This follows from the following result: Let{a mathematical formula}Abe any set of C-intelimkarguments defined by{a mathematical formula}B. Then there exists a set{a mathematical formula}A′⊇Aof C-intelimkarguments defined by{a mathematical formula}Bsuch that{a mathematical formula}A′satisfies P1–{a mathematical formula}P4′and P5.Proposition 48 states that P5 is satisfied by any set of C-intelimk arguments. P1 is trivially satisfied, since for any depth {a mathematical formula}n≥0, {a mathematical formula}α∈B implies {a mathematical formula}({α},∅,α)∈A′. P2 is trivially satisfied given that logically equivalent arguments are of equal depth. P3 is satisfied given the following result:{a mathematical formula} Given the structure of (normal) C-intelimk arguments, the proof of (10) follows again from results in [24]. In particular, if one of the two arguments is improper, then it is easy to turn its proof into a normal refutation of the same depth (Remark 50). If neither is improper, then it is easy to combine the two arguments via a single application of the RNC rule to obtain an argument of the same depth concluding to ⋏. For P4′, observe that given satisfaction of P5 and Remark 33, it suffices to show that:{a mathematical formula} This is again straightforward given that such an argument cannot be R-contaminated, hence is E-contaminated, improper, and easily turned into an argument concluding ⋏.  □
+       </paragraph>
+       <paragraph>
+        Proposition 51 allows instantiation of a non-redundant {a mathematical formula}pdAF by C-intelimk arguments:
+       </paragraph>
+       <paragraph label="Definition 34">
+        C-intelimk non-redundant {a mathematical formula}pdAFA C-intelimk non-redundant {a mathematical formula}pdAF defined by {a mathematical formula}B and ≺ is a tuple {a mathematical formula}(A,D) where {a mathematical formula}A is any set of C-intelimk arguments satisfying P1, P2, P3, P4′ and P5. The results in Sections 3.4 and 3.7.1 show that the consistency and closure postulates are satisfied by C-intelimk non-redundant {a mathematical formula}pdAFs defined by any {a mathematical formula}B and ≺, and the non-interference and crash resistance postulates are satisfied under the assumption that ≺ satisfy Pref1 (given that P5 is satisfied, it is not necessary that ≺ satisfies relevance-coherence).
+       </paragraph>
+       <paragraph label="Example 52">
+        We conclude by recalling the example in Section 3.2, on p. 22, in which [43] requires that X, Y and {a mathematical formula}Z=({p→q,p→¬q},∅,¬p) can be constructed, to ensure no admissible extension can contain arguments with premises {a mathematical formula}p,p→q and {a mathematical formula}p→¬q. However, suppose a 0-depth C-intelim {a mathematical formula}pdAF{a mathematical formula}(A,D). Then {a mathematical formula}Adoes not contain the 1-depth argument Z (the rightmost proof in Fig. 4), but does contain the 0-depth arguments {a mathematical formula}({p,p→¬q},∅,¬q), {a mathematical formula}({p,p→q},∅,q) and {a mathematical formula}(∅,{p,p→q,p→¬q},⋏).
+       </paragraph>
+      </section>
+     </section>
+     <section label="4.2">
+      <section-title>
+       A resource-bounded dialectical characterisation of preferred subtheories
+      </section-title>
+      <paragraph>
+       Section 2.1 reviewed [43]'s argumentation-based characterisation of non-monotonic inference relations defined by Preferred Subtheories [13]. Recall that arguments are defined by a totally ordered base, and the Elitist preference relation is used. We now provide a dialectical resource-bounded characterisation of Brewka's non-monotonic inference relations. First, we show that the Elitist preference relation, defined for the more general case of a base equipped with a partial preordering ≤ (where as usual &lt; is defined as {a mathematical formula}α&lt;β iff {a mathematical formula}α≤β and {a mathematical formula}β≰α) is a coherent strict partial ordering.
+      </paragraph>
+      <paragraph label="Proof">
+       Elitist preference orderingLet {a mathematical formula}X,Y be dialectical classical logic arguments defined by a base {a mathematical formula}B, and ≤ a partial preordering over {a mathematical formula}B. Then {a mathematical formula}X≺EY iff {a mathematical formula}∃α∈assumptions(X) such that {a mathematical formula}∀β∈assumptions(Y), {a mathematical formula}α&lt;β.Properties of elitist preferences{a mathematical formula}≺Eis a strict partial ordering, invariant modulo logical equivalence (imle), dialectically coherent, and relevance-coherent.In this proof we abuse notation writing {a mathematical formula}α∈A instead of {a mathematical formula}α∈assumptions(A).• {a mathematical formula}≺E is a strict partial ordering:Irreflexivity: Suppose for contradiction that {a mathematical formula}X≺EY and {a mathematical formula}Y≺EX. Then {a mathematical formula}∃α∈X s.t. {a mathematical formula}∀β∈Y, {a mathematical formula}α&lt;β, and {a mathematical formula}∃β∈Y s.t. {a mathematical formula}∀α∈X, {a mathematical formula}β&lt;α. But then for some {a mathematical formula}α,β, {a mathematical formula}α&lt;β and {a mathematical formula}β&lt;α, contradicting the asymmetry of the strict partial ordering &lt;.Asymmetry: Suppose for contradiction that {a mathematical formula}X≺EX. Then {a mathematical formula}∃α∈X s.t. {a mathematical formula}α&lt;α, contradicting the irreflexivity of &lt;.Transitivity: Suppose {a mathematical formula}X≺EY≺EZ. Firstly, {a mathematical formula}Y≺EZ implies {a mathematical formula}assumptions(Y)≠∅ and {a mathematical formula}∃β∈Y s.t. {a mathematical formula}∀γ∈Z, {a mathematical formula}β&lt;γ. By assumption of {a mathematical formula}X≺EY, {a mathematical formula}∃α∈assumptions(X) s.t. {a mathematical formula}α&lt;β. Hence by transitivity of &lt;, {a mathematical formula}∀γ∈Z, {a mathematical formula}α&lt;γ. Hence {a mathematical formula}X≺EZ.• {a mathematical formula}≺E is imle. Suppose {a mathematical formula}X≺EY, and {a mathematical formula}X′∈[X],Y′∈[Y]. Then {a mathematical formula}assumptions(X′)=assumptions(X) and {a mathematical formula}assumptions(Y′)=assumptions(Y). Hence {a mathematical formula}X′≺EY′.• {a mathematical formula}≺E is dialectically coherent. For the proof of Pref1, consider any {a mathematical formula}X=(∅,Δ,⋏). By the properties of classical logic, Δ is a non-empty finite (since {a mathematical formula}B is finite) set {a mathematical formula}{α1,…,αn}. Suppose for contradiction that ∀i: {a mathematical formula}X≺E({αi},∅,αi). Abusing notation by representing arguments by their assumptions, we have the sequence: {a mathematical formula}S1={α1,…,αn}≺{α1} … {a mathematical formula}Sn={α1,…,αn}≺αn
+       <list>
+        For {a mathematical formula}S1, by irreflexivity of &lt;, {a mathematical formula}α1≮α1. If {a mathematical formula}n=1, then this contradicts {a mathematical formula}S1. Else we can assume without loss of generality that {a mathematical formula}α2&lt;α1.For {a mathematical formula}S2, by asymmetry and irreflexivity of &lt;, {a mathematical formula}α1≮α2, {a mathematical formula}α2≮α2. If {a mathematical formula}n=2, then this contradicts {a mathematical formula}S2. Else, we can assume without loss of generality that {a mathematical formula}α3&lt;α2.For {a mathematical formula}S3, by transitivity of &lt;, {a mathematical formula}α3&lt;α1, and so by asymmetry and irreflexivity {a mathematical formula}α1≮α3, {a mathematical formula}α2≮α3, {a mathematical formula}α3≮α3. If {a mathematical formula}n=3, then this contradicts {a mathematical formula}S3. Else, we can assume without loss of generality that {a mathematical formula}α4&lt;α3.It is easy to see that one can continue reasoning in the same way, until for {a mathematical formula}Sn, {a mathematical formula}αi≮αn for {a mathematical formula}i=1…n, contradicting {a mathematical formula}Sn.•
+       </list>
+       <paragraph>
+        {a mathematical formula}≺E is relevance-coherent. Suppose {a mathematical formula}Y=(Δ,∅,α){a mathematical formula}≺EX. Hence {a mathematical formula}∃β∈Δ, and so {a mathematical formula}β∈Δ∪Γ for any {a mathematical formula}Y′=(Δ∪Γ,∅,α), s.t. {a mathematical formula}∀α∈assumptions(X): {a mathematical formula}β&lt;α.  □
+       </paragraph>
+      </paragraph>
+      <paragraph>
+       We now adapt [13]'s Preferred Subtheories so as to accommodate agents whose classical reasoning is resource-bounded:
+      </paragraph>
+      <paragraph label="Definition 36">
+       Resource bounded preferred subtheoriesLet {a mathematical formula}⊢r ⊆ {a mathematical formula}⊢c be a resource-bounded classical consequence relation, such that: 1) for any Δ, if {a mathematical formula}β∈Δ then {a mathematical formula}Δ⊢rβ; 2) if {a mathematical formula}Δ⊢rα and {a mathematical formula}Δ⊢r¬α then {a mathematical formula}Δ⊢r⋏. We say that Δ is r-inconsistent iff {a mathematical formula}Δ⊢r⋏; r-consistent otherwise.Let {a mathematical formula}(B,≤) be a totally ordered set of propositional wff and let {a mathematical formula}B1,…,Bn be a partition of {a mathematical formula}B such that for all {a mathematical formula}α∈Bi, and all {a mathematical formula}β∈Bj,i&lt;j iff {a mathematical formula}β&lt;α. An r-preferred subtheory Σ is a set {a mathematical formula}Σ1∪…∪Σn such that for {a mathematical formula}i=1,…,n, {a mathematical formula}Σ1∪⋯∪Σi is a ⊂-maximal r-consistent subset of {a mathematical formula}B1∪⋯∪Bi. We now show a correspondence between the r-preferred subtheories of a base {a mathematical formula}B and the stable extensions of a {a mathematical formula}pdAF defined by {a mathematical formula}B, and using Elitist preferences. Note that in what follows we use the notation {a mathematical formula}Args(Σ)={X|prem(X)⊆Σ}.
+      </paragraph>
+      <paragraph label="Proof">
+       Let{a mathematical formula}(A,D)be defined by{a mathematical formula}Band{a mathematical formula}≺Ebe defined on the basis of a total ordering ≤ over{a mathematical formula}B, and such that{a mathematical formula}(Δ,Γ,α)∈Aiff{a mathematical formula}Δ∪Γ⊢rα. Then:1) If Σ is an r-preferred subtheory of{a mathematical formula}B, then{a mathematical formula}E=Args(Σ)is a stable extension of{a mathematical formula}(A,D).2) If E is a stable extension of{a mathematical formula}(A,D), then{a mathematical formula}Σ=⋃X∈EPrem(X)is an r-preferred subtheory of{a mathematical formula}B.Proof of 1): We show E is conflict free. Since Σ is r-consistent, {a mathematical formula}Σ⊬r⋏. Suppose for contradiction that E is not conflict free, in which case {a mathematical formula}∃X,Y∈E s.t. {a mathematical formula}X=(Δ,Γ,ϕ) ({a mathematical formula}ϕ=⋏ or β) and {a mathematical formula}X⇒EY on {a mathematical formula}β‾∈prem(Y). Since {a mathematical formula}Δ⊆prem(E) and {a mathematical formula}Γ⊆prem(E) (given {a mathematical formula}Y∈E), then {a mathematical formula}ϕ=⋏ implies {a mathematical formula}Σ⊢r⋏. {a mathematical formula}ϕ=β implies {a mathematical formula}Σ⊢rβ and since {a mathematical formula}β‾∈prem(Y), {a mathematical formula}Σ⊢rβ‾. Hence {a mathematical formula}Σ⊢r⋏. Contradiction.We show {a mathematical formula}∀Y∈A∖E, {a mathematical formula}∃X∈E s.t. {a mathematical formula}X⇒{Y}Y. Consider any such Y (Y cannot be an argument of the form {a mathematical formula}(∅,Δ,ϕ) since any such Y is in {a mathematical formula}E=Args(Σ)). Then {a mathematical formula}∃γ∈prem(Y), {a mathematical formula}γ∉Σ. By construction, {a mathematical formula}Σ=Σ1∪…∪Σn such that for {a mathematical formula}i=1…n, {a mathematical formula}Σ1∪…∪Σi is a maximal r-consistent subset of {a mathematical formula}B1,…,Bi. Hence, suppose {a mathematical formula}γ∈Bj for some {a mathematical formula}j=1…n. Then {a mathematical formula}Σ1∪…∪Σj∪{γ}⊢r⋏. Hence {a mathematical formula}∃X=(Δ,{γ},⋏)∈Args(Σ1∪…∪Σj), and so {a mathematical formula}X∈E. Since {a mathematical formula}γ∈Bj, and {a mathematical formula}Δ⊆⋃k=1jBk, then {a mathematical formula}X⊀E({γ},∅,γ). Hence {a mathematical formula}X⇒{Y}Y on γ.Proof of 2): We show that {a mathematical formula}Σ=⋃X∈EPrem(X) is r-consistent. Suppose for contradiction that {a mathematical formula}Σ⊢r⋏. Then {a mathematical formula}Z=(∅,Δ,⋏)∈A for some {a mathematical formula}Δ⊆Σ. Hence {a mathematical formula}∀α∈Δ, {a mathematical formula}∃B∈E s.t. {a mathematical formula}Z⇒EB on α,{sup:28} contradicting E is stable.Now let {a mathematical formula}Σ1,…,Σn be the partition of the r-consistent Σ s.t. for {a mathematical formula}i=1…n, {a mathematical formula}Σi is a (possibly empty) subset of {a mathematical formula}Bi in the stratification {a mathematical formula}B1,…,Bn of {a mathematical formula}B. Suppose for contradiction that for some i, {a mathematical formula}Σ1∪…∪Σi is not a ⊂-maximal r-consistent subset of {a mathematical formula}B1∪…∪Bi. Without loss of generality we can assume that for {a mathematical formula}k=1…i−1, {a mathematical formula}Σ1,…,Σk is a ⊂-maximal r-consistent subset of {a mathematical formula}B1,…,Bi−1. Then {a mathematical formula}∃α∈Bi s.t.i){a mathematical formula}α∉Σi   ii){a mathematical formula}Σ1∪…∪Σi−1∪Σi∪{α}⊬r⋏.Given i), {a mathematical formula}Y=({α},∅,α)∉E. Since E is stable, {a mathematical formula}∃X∈E, {a mathematical formula}X⇒{Y}Y, where:a) {a mathematical formula}X=(Δ,{α},⋏) or b) {a mathematical formula}X=(Δ,{α},α‾) or c) {a mathematical formula}X=(Δ,∅,α‾).Note that since E is stable then E is complete (see immediately following Definition 15 and Footnote 15). Suppose either {a mathematical formula}Z=(Δ,∅,⋏)∈A or {a mathematical formula}({α},∅,⋏)∈A. The former contradicts {a mathematical formula}X∈E is acceptable w.r.t. E (given that {a mathematical formula}Z′=(∅,Δ,⋏)∈A and {a mathematical formula}Z′⇒EX), and the latter implies {a mathematical formula}{α}⊢r⋏, contradicting ii).Let us now rename X in c) to {a mathematical formula}X′, and in b) we have (by P2) {a mathematical formula}X′=(Δ∪{α},∅,α‾)∈A.For both instances of {a mathematical formula}X′, and having shown {a mathematical formula}(Δ,∅,⋏)∉A and {a mathematical formula}({α},∅,⋏)∉A, we have by P3 that {a mathematical formula}(Δ∪{α},∅,⋏)∈A. These cases and case a) imply {a mathematical formula}Δ∪{α}⊢r⋏. But then given ii) and {a mathematical formula}Δ⊆Σ1,…,Σn, it must be that {a mathematical formula}∃β∈Δ, s.t. {a mathematical formula}β∈Σj, {a mathematical formula}j&gt;i. But then in cases a), b) and c), {a mathematical formula}X≺EY, contradicting {a mathematical formula}X⇒{Y}Y.  □
+      </paragraph>
+      <paragraph>
+       The above correspondence yields a resource bounded dialectical characterisation of non-monotonic inference in Preferred Subtheories (both sceptical and credulous inference relations, as described in Section 2.1).
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Related work
+     </section-title>
+     <paragraph>
+      Design guidelines for theoretical models of argumentation suitable for real world applications{sup:29} have been proposed by Dung et al. in [27]. Firstly, submitted arguments and attacks should be transparent (Postulate 2.1) in that the computational cost of verifying: 1) the legitimacy of submitted arguments should be at most polynomial in the size of the (constructed) arguments; 2) that an argument attacks another should be at most linear (in the size of the argument's conclusion). Our approach satisfies the first desideratum,{sup:30} since we drop the consistency and subset minimality checks on arguments' assumptions, which is what makes legitimacy checks intractable under a widely accepted conjecture in computational complexity. By contrast, the time required to check the correctness of a constructed proof is bounded above by a polynomial in the size of the proof.{sup:31} As for the second desideratum, we note that it is satisfied by the purely “declarative” notion of attack in Definition 11. However, we also make essential use of the more complex notion of dialectical defeat in Definition 15, that allows the defeating argument X to include, as suppositions, any premises of arguments in the extension S with respect to which the acceptability of the defeated argument Y is challenged. This notion of defeat can be checked in polynomial time with respect to {a mathematical formula}suppositions(X)∪prem(S∪{Y})∪{conclusion(X)}.{sup:32} Transparency guarantees that constructed arguments and defeats can be understood by any parties, independently of their level of sophistication [27], with a use of resources which is polynomial with respect to the complexity of the input.{sup:33} We go one step further in this paper, arguing against the assumption that an agent constructs all arguments defined by a base; in particular because they may be resource bounded. Hence we drop the consistency and subset minimality checks on arguments' assumptions, and formally study partially instantiated frameworks. Moreover, for depth-bounded instantiations (see Section 4.1.2), it is worth noting that even finding a C-intelimk proof takes time at most polynomial in the size of the input assumptions and conclusion (see Proposition 47).
+     </paragraph>
+     <paragraph>
+      Secondly, an argument's assumptions should be relevant to its conclusion (Postulate 2.2), at least in the “weaker sense [...] that the argument is a defeasible proof of its claim from its support, without any obvious redundancy of any parts of the support” [27, p. 187, our emphasis]. In this paper we propose an analogous notion of “obvious” redundancy in terms of the syntactic unrelatedness of some part of the assumptions to the other assumptions and to the conclusion, which unlike that imposed by subset minimality, can be enforced proof theoretically (as shown in Section 4).
+     </paragraph>
+     <paragraph>
+      Thirdly, the no dismissal postulate (Postulate 2.3) proposes that legitimate arguments should not be dismissed without reason, and if dismissed (i.e., not submitted), their dismissal should not change the semantics of the given argumentation framework. We concur in the sense that all arguments constructed must be included in a {a mathematical formula}pdAF, unless their exclusion does not change the semantics. Related to the no dismissal postulate, ‘redundant’ arguments are distinguished from ‘non-redundant’ arguments in [27], where some Y is redundant if there is an X that attacks every Z that is attacked by Y, and any Z attacking X also attacks Y. One can then, having partitioned all the arguments defined by a base, exclude those that are redundant, while guaranteeing that the status of non-redundant arguments will remain unchanged.
+     </paragraph>
+     <paragraph>
+      A key feature of our approach is the distinction between premises accepted as true, and suppositions assumed true for the sake of argument. One can thus model the dialectical move of showing that an interlocutor's supposed premises, together with premises accepted as true, imply a contradiction. Caminada [14] is similarly motivated to develop accounts of argumentation for application in dialogues involving human and computational agents. He formalises what he terms ‘hang yourself’ (HY) arguments built from a language consisting of premises that are literals – atomic propositions and their negations – as well as defeasible rules {a mathematical formula}L0∧…Ln−1⇒Ln and ‘foreign commitments’ ⇝L. The latter refer to premises and conclusions of rules in attacked arguments, by way of supposing these to be true for the sake of argument. HY arguments can only reference premises or conclusions in an attacked argument Y (rather than in additional arguments used to defend Y). Clearly, Caminada is concerned with formalising intuitions similar to ours, albeit in a more restricted logical setting, only under the grounded semantics, and without accommodating the use of preferences. Satisfaction of rationality postulates is not studied in [14].
+     </paragraph>
+     <paragraph>
+      It is worth noting at this point that the distinction between premises and suppositions in {a mathematical formula}(Δ,{ϕ1,…,ϕn},ψ) cannot equivalently be made using the standard ontology, by an argument {a mathematical formula}(Δ,ϕ1,…,ϕn→ψ). This does not faithfully represent the intuitive meaning of the conditional claim because of the well-known qualms concerning the use of material implication to express a kind of entailment [5]. For example, most reasoners would not be prepared to accept that the falsity of such a conditional claim implies that all the {a mathematical formula}ϕi are factually true, nor that the factual falsity of one of the premises in {a mathematical formula}ϕi implies that the claim is true. Moreover, one would then either only be able to use such arguments as attacks on sets of premises rather than individual premises, or require that the premises of the attacked argument contain {a mathematical formula}¬(ϕ1,…,ϕn→ψ).
+     </paragraph>
+     <paragraph>
+      Recently, pragmatic considerations also motivate dropping consistency and subset minimality checks on propositional arguments in [6], [7]. Arguments are Gentzen style sequents and arguments with inconsistent premises are attacked by sequents with empty antecedents. In this work, the distinction between premises and suppositions, and the use of preferences are not considered. The postulates in [15] are not studied and neither is there consideration of partially instantiated frameworks. Types of redundancy in arguments are also identified in the context of assumption based argumentation (ABA), and are excluded by switching from a conception of arguments as trees to graphs [19]. While ABA does not capture classical logic argumentation, insights from [19] may potentially usefully be studied in the setting of Cl-Arg.
+     </paragraph>
+     <paragraph>
+      A key study of propositional classical logic instantiations of Dung AFs [33] considers various definitions of attacks amongst a (in general infinite) set of arguments defined by a base, and study (without use of preferences) consistency postulates closely related to those in [15] and the premise consistency postulate described here in Section 3.4. The two attack relations shown to be well behaved are those in which the attacking argument's conclusion is classically equivalent to, respectively classically entails, the negation of a premise in the attacked argument.{sup:34} Note that neither of these two attack definitions satisfy condition 2) of the transparency postulate described above.
+     </paragraph>
+     <paragraph>
+      [43]'s study of classical logic argumentation with preferences, as an instance of the ASPIC{sup:+} framework, has been reviewed (in Section 2) and compared with our approach at various points in this paper. In summary, the ASPIC{sup:+} instantiation requires checks on the consistency of arguments' premises and does not model the dialectical demonstration that a set of arguments' premises are inconsistent. While the foreign commitment problem has been addressed in [17], by allowing attacks on arguments' conclusions in a version of ASPIC{sup:+} that accommodates classical logic instantiations, the consistency and closure rationality postulates of [15] only then hold for the grounded semantics, and then only if argument preferences are defined by a totally ordered base B under the Elitist principle [17]. In this paper we have argued that subset minimality is a blunt and prohibitively expensive{sup:35} instrument for ensuring non-redundancy of an argument's premises. As already discussed, ASPIC{sup:+} also eschews subset minimality checks on arguments' premises, and show that the argumentation defined inferences remain unchanged under the assumption that preference relations do not strengthen non-subset minimal arguments. We have advocated a notion of non-redundancy defined in terms of the syntactic relatedness of formulae; one that can be enforced through appropriate restrictions on applications of proof rules in which case no such assumption on preference relations is required.
+     </paragraph>
+     <paragraph>
+      Satisfaction of the non-interference and crash resistance postulates [16] is not studied for the ASPIC{sup:+} formalisation of Cl-Arg. Consistency and closure are satisfied by complete extensions, for a restricted class of (reasonable) preference relations, and assuming all arguments defined by a base are included in an AF. However we show direct consistency for admissible extensions, and (modified) closure postulates for complete extensions, assuming arbitrary preference relations and for partially instantiated frameworks. Note that recent work [28] studies propositional instantiations of AFs that combine strict and defeasible rules, and without use of preferences. Dung and Thang [28] show that to guarantee closure and consistency, it is not necessary that the strict inference rules satisfy the property of contraposition (see [15], [43]). Their aim is different to ours. We consider first order classical logic instantiations with preferences in which all arguments are definable by a base, while we drop the assumption that all such arguments are constructed and included in a framework in order to ensure satisfaction of closure, consistency and the non-contamination postulates.
+     </paragraph>
+     <paragraph>
+      A number of works attempt to show satisfaction of the non-interference and crash resistance postulates for propositional argumentation formalisms that integrate deductive and defeasible reasoning. In [16], propositional logic programming and Default Logic [54] instantiations of Dung frameworks are shown to satisfy these postulates under the semi-stable semantics. In [61], arguments are built from a set of classically consistent propositional formulae P, and defeasible (D) and strict inference rules. The latter encode only those classical inferences {a mathematical formula}Δ⊢cα such that the atoms in {a mathematical formula}Δ∪{α} are a subset of the atoms appearing in P and D. Wu and Podlaszewski [61] relate the constructed arguments by attacks and so do not consider the use of preferences. Inconsistent arguments are identified as those whose contained premises together with the conclusions of defeasible rules are classically inconsistent. They then show satisfaction of the consistency, closure, non-interference and crash resistance postulates for ‘inconsistency cleansed’ Dung frameworks in which inconsistent arguments are excluded. Finally, Grooters and Prakken [34] define a version of the ASPIC{sup:+} framework in which the strict inference rules encode inference in [55]'s paraconsistent logic. Essentially, arguments are built from premises, defeasible inference rules and strict inference rules, where the latter encode classical inferences from only consistent sets of formulae. Grooters and Prakken [34] focus on showing that the adapted ASPIC{sup:+} framework satisfies closure and consistency postulates. Satisfaction of non-interference and crash resistance is not shown (although the authors state that satisfaction of these postulates can be taken for granted given the absence of the Ex Falso principle).
+     </paragraph>
+     <paragraph>
+      Finally, note that this paper revises and substantially extends [25]. We have revised the definition of attacks and defeats originating from arguments concluding ⋏, modified the conditions on arguments in {a mathematical formula}pdAFs, and specified a new class of non-redundant frameworks that exclude R-contaminated arguments. The closure and consistency postulates are satisfied for a restricted class of preference relations in [25], whereas this paper shows satisfaction of these postulates for arbitrary preference relations. This paper also additionally: 1) formally proves the Fundamental Lemma and existence of a unique least fixed point of a {a mathematical formula}pdAF's characteristic function; 2) provides a comprehensive study of two types of contaminated arguments; 3) formally proves the non-interference and crash resistance postulates, generalised here to first order argumentation; 4) studies instantiation of {a mathematical formula}pdAFs by natural deduction proof theories that exclude R-contaminated arguments and accommodate agents that have bounds on their inferential capabilities.
+     </paragraph>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

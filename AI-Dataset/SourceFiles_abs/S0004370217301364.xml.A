@@ -1,0 +1,835 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Fixpoint semantics for active integrity constraints.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      One of the key components of modern-day databases are integrity constraints: logical formulas that specify semantic relationships between the data being modeled that have to be satisfied at all times. When the database is changed (typically due to updating), it is necessary to check if its integrity constraints still hold; in the negative case, the database must be repaired.
+     </paragraph>
+     <paragraph>
+      The problem of database repair has been an important topic of research for more than thirty years [1]. There are two major problems when deciding how to repair an inconsistent database: finding possible repairs and choosing which one to apply. Indeed, there are typically several ways to fix an inconsistent database, and several criteria to choose the “best” one have been proposed over the years. Among the most widely accepted criteria are minimality of change [45], [25] – change as little as possible – and the common-sense law of inertia (discussed in, e.g., [33]) – do not change anything unless there is a reason for the change.
+     </paragraph>
+     <paragraph>
+      A typical implementation of integrity constraints in database systems is by means of event–condition–action (ECA) rules [38], [44], which specify update actions to be performed when a particular event (a trigger) occurs and specific conditions hold. ECA rules are widely used in practice, as they are simple to implement and their individual semantics is easy to understand. However, the lack of declarative semantics for ECA rules makes their interaction complex to analyze and their joint behavior hard to understand.
+     </paragraph>
+     <paragraph>
+      The formalism of active integrity constraints (AICs)[27] was inspired by a similar idea. AICs express database dependencies through logic programming-style rules that include update actions in their heads. They come with a set of declarative semantics that identifies several progressively more restricted classes of repairs, which can be used as criteria to select a preferred repair [13]. These repairs can be computed directly by means of tree algorithms [17], which have been implemented as a prototype [16].
+     </paragraph>
+     <paragraph label="Example 1.1">
+      We motivate the use of AICs in practice by means of a simple example. Consider a company's database, including tables employee and dept (relating employees to the department where they work). In particular, each employee is assigned to a unique department; if an employee is listed as working in two different departments, then the database is inconsistent, and this inconsistency must be fixed by removing one of those entries.We can write this requirement as the following AIC.{a mathematical formula}The intended meaning of this rule is: if all the literals in the lefthandside (body) of the rule are true in some state of the database, for particular values of x, y and z, then the database is inconsistent, and this inconsistency can be solved by performing the action on the right.Suppose that the database is{a mathematical formula} This database is inconsistent, and applying our AIC with {a mathematical formula}x=john, {a mathematical formula}y=finance and {a mathematical formula}z=hr gives us a possible fix consisting of the action “remove {a mathematical formula}dept(john,finance)”. Observe, however, that the instantiation {a mathematical formula}x=john, {a mathematical formula}y=hr and {a mathematical formula}z=finance detects the same inconsistency, but proposes instead the fix “remove {a mathematical formula}dept(john,hr)”: in general, there can be several different ways to repair inconsistencies.AICs may also interact with each other. Suppose that we add the constraint{a mathematical formula} stating that employees can only supervise people from their own department, and that whenever this constraint is violated, the department of the supervisee needs to be updated (i.e., the supervisor table and the department of the supervisor are deemed correct). If the database is now{a mathematical formula} then this AIC detects an inconsistency, and suggests that it be fixed by adding the entry {a mathematical formula}dept(john,hr). The database is still inconsistent, though, since there are now two entries for John in the dept table; restoring inconsistency would also require removing the entry {a mathematical formula}dept(john,finance).An alternative repair of the integrity constraint that the supervisee and supervisor should belong to the same department would be to change the department information associated with ann. By using active integrity constraints, we discard this solution: rule (1) only allows to insert a new department for the supervisee. If we additionally also want to allow changing ann's department, we need an extra constraint. ▴
+     </paragraph>
+     <paragraph>
+      It is striking that many intuitions about what “good” repairs are, such as minimality of change, are similar to intuitions that surfaced in other domains of non-monotonic reasoning, such as logic programming [39] and default logic [34]. Still, it has been hard to find satisfying semantics for AICs. As shown by Cruz-Filipe et al. [17], the semantics of so-called founded repairs[12] unexpectedly fails to respect the common-sense law of inertia, while the more restricted semantics of justified repairs [13] forbids natural repairs in some cases. That work proposed the operational semantics of well-founded repairs, which however is not modular [14] and is therefore severely restricted in its practical applicability.
+     </paragraph>
+     <paragraph>
+      In this work, we begin by defining a new semantics for AICs that avoids these problems: grounded repairs. Grounded repairs are natural counterparts to existing semantics in various non-monotonic reasoning domains such as logic programming; we discuss how they relate to other semantics for AICs. We also argue that grounded repairs match our intuitions regarding AICs on a broad set of examples.
+     </paragraph>
+     <paragraph>
+      We then give a more abstract characterization of the different semantics for AICs by associating with each set of AICs η a semantic operator {a mathematical formula}Tη. This operator immediately induces several semantics:
+     </paragraph>
+     <list>
+      <list-item>
+       weak repairs are fixpoints of {a mathematical formula}Tη;
+      </list-item>
+      <list-item>
+       repairs are minimal fixpoints of {a mathematical formula}Tη;
+      </list-item>
+      <list-item>
+       grounded repairs are grounded fixpoints[7] of {a mathematical formula}Tη.
+      </list-item>
+     </list>
+     <paragraph>
+      The first two semantics are pre-existing semantics for AICs that we recover in an operator-based fashion.
+     </paragraph>
+     <paragraph>
+      Next, we define a three-valued variant of {a mathematical formula}Tη. In the terminology of approximation fixpoint theory (AFT)[19] our three-valued operator is an approximator of the original semantic operator. Given such an approximator {a mathematical formula}Tη, AFT induces a few more semantics:
+     </paragraph>
+     <list>
+      <list-item>
+       the Kripke–Kleene repair is the Kripke–Kleene fixpoint of {a mathematical formula}Tη;
+      </list-item>
+      <list-item>
+       the AFT-well-founded repair is the well-founded fixpoint of {a mathematical formula}Tη;
+      </list-item>
+      <list-item>
+       (partial) stable repairs are (partial) stable fixpoints of {a mathematical formula}Tη;
+      </list-item>
+      <list-item>
+       partial grounded repairs are partial grounded fixpoints of {a mathematical formula}Tη.
+      </list-item>
+     </list>
+     <paragraph>
+      We again study properties of these new semantics and study how they compare to existing semantics. Furthermore, we argue that, from a practical point of view, the AFT-style well-founded semantics is very valuable. Indeed, we show that the AFT-well-founded repair can be computed in polynomial time, and that, on a broad set of practical examples, it corresponds to the intuitions underlying database repairs, providing natural upper and lower bounds on the set of acceptable repairs (formally: the AFT-style well-founded model approximates all justified, stable and grounded repairs).
+     </paragraph>
+     <paragraph>
+      All our semantics are defined within the framework of approximation fixpoint theory, a general algebraic framework for studying logics with a fixpoint semantics. This framework was initially developed by Denecker, Marek and Truszczyński, henceforth referred to as DMT [20], after identifying analogies in the semantics of logic programming [39], autoepistemic logic (AEL) [32] and default logic, hereafter abbreviated to DL [34]. The theory defines different types of fixpoints for what are called approximating operators, or approximators. In the context of logic programming, DMT [20] showed that Fitting's (three- or four-valued) immediate consequence operator is an approximator of the usual (two-valued) immediate consequence operator, and that the major semantics of logic programs coincide with the (equally named) different types of fixpoints of that approximator. They then identified approximators for both default and autoepistemic logic, showing that AFT induces all main semantics in these fields, as well as some new ones [21], thus unifying DL and AEL in a deep sense. More recently, Strass [36] showed that AFT can also be used to characterize the major semantics of Dung's argumentation frameworks [24] and abstract dialectical frameworks [11]. Other recent applications of AFT include: defining extensions of logic programming [2], defining new logics [10], integrating different formalisms [3], studying complexity [37], and studying modularity and predicate introduction in a uniform way [41], [42], [43].
+     </paragraph>
+     <paragraph>
+      As such, the contribution of this work goes beyond the definition of new semantics for AICs. By integrating active integrity constraints in AFT, we provide solid foundations for applying a rich algebraic theory to AICs. For instance, we can now directly apply existing results from AFT, such as modularity results and predicate introduction results to AICs. It remains to be researched how these related for instance to existing modularity results for AICs [14], [15]. Furthermore, our work paves the way to applying AFT to revision programming, following the results from Caroprese and Truszczyński [13], and to AICs outside the database world, as generalized by Cruz-Filipe et al. [18].
+     </paragraph>
+     <paragraph>
+      The rest of this paper is structured as follows. In Section 2, we provide preliminaries related to active integrity constraints. In Section 3 we discuss the semantics of grounded repairs. While our definitions are motivated from approximation fixpoint theory, their semantics can also be given without this machinery, hence we start with a direct definition. Next, in Section 4, we give background on approximation fixpoint theory. In Section 5, we define a semantic operator for AICs and show that its grounded fixpoints indeed correspond to grounded repairs, as defined in Section 3. Next, we define an approximator of our operator in Section 6 and use it to derive more AFT-style semantics for AICs; we study how these semantics relate to existing semantics. Afterwards, in Section 7, we discuss the relationship between our newly defined semantics and the equally-named semantics for logic programming. In Section 8, we study complexity of various tasks related to our newly defined semantics. We conclude in Section 9.
+     </paragraph>
+     <paragraph>
+      Publication history  The semantic operator for grounded AICs and the resulting semantics of grounded repairs were originally proposed by Cruz-Filipe [15]. The approximator for this operator and its properties were introduced by Bogaerts and Cruz-Filipe [6]. Our current work combines results from those conference papers and extends it with proofs, examples, and a detailed analysis of the connection between the approximation semantics for AICs and logic programming.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Preliminaries: active integrity constraints
+     </section-title>
+     <paragraph>
+      In this section we summarize previous work on active integrity constraints (AICs), including results developed by Flesca et al. [27], Caroprese et al. [12], Caroprese and Truszczyński [13] and Cruz-Filipe et al. [17].
+     </paragraph>
+     <paragraph>
+      We assume a fixed set At of atoms. An interpretation or database is a subset of At. In the current paper, following, e.g., Cruz-Filipe et al. [17], we assume, At to be a finite set. This restriction is not essential for defining our semantics, or to any of the theorems we prove about them, with the exception of complexity results and comparison with existing semantics (that have only been defined in the finite case). A literal is an atom a or its negation ¬a. We say that ¬a is the dual literal of a and vice versa, and denote the dual of a literal l by {a mathematical formula}lD. Propositional formulas are defined as usual: atoms are formulas, the negation of a formula is a formula, and the conjunction of formulas is a formula. The satisfaction relation between databases DB and formulas is defined as usual:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       {a mathematical formula}DB⊨a if {a mathematical formula}a∈DB,
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}DB⊨¬φ if {a mathematical formula}DB⊭φ,
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}DB⊨φ∧ψ if {a mathematical formula}DB⊨φ and {a mathematical formula}DB⊨ψ
+      </list-item>
+     </list>
+     <paragraph>
+      for all atoms a and all formulas φ and ψ.
+     </paragraph>
+     <paragraph>
+      An update action α has the form +a or −a with {a mathematical formula}a∈At. We call +a and −a dual actions and use {a mathematical formula}αD to denote the dual action of α. Intuitively, update actions represent changes to the database: +a adds a, while −a removes a. Formally, +a transforms DB into {a mathematical formula}DB∪{a}, and −a transforms DB into {a mathematical formula}DB∖{a}. A set of update actions {a mathematical formula}U is consistent if it does not contain both an action and its dual. A consistent set of update actions {a mathematical formula}U acts on a database DB by executing all its actions simultaneously; we denote the result of this operation by {a mathematical formula}U(DB). If α is an update action, we simply write {a mathematical formula}α(DB) for the result of applying α to DB, i.e., for {a mathematical formula}{α}(DB).
+     </paragraph>
+     <paragraph>
+      Literals and update actions are related by mappings {a mathematical formula}lit and {a mathematical formula}ua, where {a mathematical formula}lit(+a)=a,lit(−a)=¬a and {a mathematical formula}ua is the inverse of {a mathematical formula}lit. These mappings naturally extend to sets of literals/actions.
+     </paragraph>
+     <paragraph label="Definition 2.1">
+      An active integrity constraint (AIC) is a rule r of the form{a mathematical formula} such that {a mathematical formula}lit(αiD)∈{l1,…,ln} for each i. We call {a mathematical formula}l1∧…∧ln the body of r, denoted {a mathematical formula}body(r), and {a mathematical formula}α1|…|αk the head of r, denoted {a mathematical formula}head(r).
+     </paragraph>
+     <paragraph>
+      The informal reading of the above rule is: “If each of the {a mathematical formula}li holds in DB, then DB is inconsistent. It is allowed to repair this inconsistency by executing one or more of the {a mathematical formula}αi.” The body of an AIC represents a constraint a database should adhere to and its head represents a set of atoms that are allowed to be changed in order to fix the constraint, in case it is violated. Intuitively, atoms should only be changed if there is some rule that allows it. Furthermore, the only actions that are able to repair the inconsistency detected by the body of an AIC are those corresponding to the duals of its literals [12], hence we restrict the actions allowed in the head to these. Contrary to the seminal work on AICs [27], we only consider propositional AICs, i.e., we do not allow first-order variables (note that we did use them in Example 1.1). However, the restrictions in that work (more precisely, range restrictedness) ensure that we can always reduce to the propositional case by means of grounding.
+     </paragraph>
+     <paragraph>
+      An AIC is called normal if {a mathematical formula}k=1. The normalization of an AIC of the form (1) is the set of AICs{a mathematical formula} It follows from the informal explanation above that we expect normalization to preserve semantics. Indeed, this is the case for most semantics of AICs – the notorious exception being the semantics of justified repairs [13], which also poses several other problems [17]. In the current paper, we assume that, unless explicitly mentioned otherwise, all AICs are normal. Extensions of the semantics we define for non-normal AICs can be obtained through normalization, if needed.
+     </paragraph>
+     <paragraph label="Definition 2.2">
+      A set of update actions {a mathematical formula}U is a weak repair for DB and a set η of AICs (shortly, for {a mathematical formula}〈DB,η〉) if:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       every action in {a mathematical formula}U changes DB, and
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}U(DB)⊭body(r) for each {a mathematical formula}r∈η.
+      </list-item>
+     </list>
+     <paragraph>
+      (Weak) repairs do not take the head of AICs into account, and thus allow arbitrary changes to the database.
+     </paragraph>
+     <paragraph label="Example 2.3">
+      Consider the restriction that “if a and b both hold, then c and d should also hold”. In propositional logic, such a restriction can be expressed by the following formula:{a mathematical formula} or, equivalently by the two formulas{a mathematical formula} Now, the AIC formalism provides, besides the ability to express these constraints, also control over what should happen when one of them is violated. Assuming that in such a case, we only wish to modify a or b, the corresponding AICs are:{a mathematical formula} where the first one expresses that if a and b hold, but c does not (i.e., if the constraint is violated), we should remove one of the two literals a and b and the second constraint is similar for d. Despite the inclusion of explicit repair actions in the heads of these rules, the notions of weak repair and repair do not take them into account. Suppose a given database is {a mathematical formula}DB={a,b}. In this case, {a mathematical formula}{−a}, {a mathematical formula}{−b} and {a mathematical formula}{+c,+d} are repairs; furthermore, sets such as {a mathematical formula}{−a,−b} or {a mathematical formula}{−b,+c} are weak repairs: in all cases, all actions change DB, and the result always negates at least one literal in the body of each of the rules.Sets such as {a mathematical formula}{−a,−c} and {a mathematical formula}{+a,+c,+d} also solve the inconsistency, but they include actions that do not change the database, and therefore are not considered weak repairs. Sets such as {a mathematical formula}{+a,−a} are inconsistent, as it is not clear whether they state that the update of DB should include a or not.Applying normalization yields the following set of AICs.{a mathematical formula} It is immediate to check that everything discussed above with respect to the original set of AICs also applies to its normalized counterpart, i.e., intuitively, these constraints represent the same knowledge and the sets of repairs and weak repairs remain unchanged. ▴
+     </paragraph>
+     <paragraph>
+      We now review several other semantics for AICs that have been defined with the intention to allow only changes explicitly allowed by one of the AICs: founded (weak) repairs [12], justified (weak) repairs [13], and well-founded (weak) repairs [17].
+     </paragraph>
+     <paragraph label="Definition 2.4">
+      [12]A set of update actions {a mathematical formula}U is founded with respect to {a mathematical formula}〈DB,η〉 if, for each {a mathematical formula}α∈U, there is a rule {a mathematical formula}r∈η with {a mathematical formula}α∈head(r) and such that {a mathematical formula}U′(DB)⊨body(r), where {a mathematical formula}U′=U∖{α}. A founded (weak) repair is a (weak) repair that is founded.
+     </paragraph>
+     <paragraph>
+      The intuition behind this definition is that for each element in a “good” repair there should be a reason such that: if the element is removed, some constraint is violated and the removed element is an allowed fix.
+     </paragraph>
+     <paragraph label="Example 2.5">
+      Consider again the database {a mathematical formula}DB={a,b} together with the set η of normalized AICs from the previous example.{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}The set {a mathematical formula}{−a} is founded with respect to {a mathematical formula}〈DB,η〉: if its only action is removed, then rule {a mathematical formula}r1 is applicable, and −a occurs in {a mathematical formula}head(r1). Likewise, the set {a mathematical formula}{−b} is also a founded repair for {a mathematical formula}〈DB,η〉.On the other hand {a mathematical formula}U={+c,+d} is not founded. If we remove e.g. +c from {a mathematical formula}U, obtaining {a mathematical formula}U′={+d}, then {a mathematical formula}U′(DB)={a,b,d}, and:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       {a mathematical formula}U′(DB)⊨body(r1), but {a mathematical formula}+c∉head(r1), and likewise for {a mathematical formula}r3;
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}U′(DB)⊭body(r2) and {a mathematical formula}U′(DB)⊭body(r4),
+      </list-item>
+     </list>
+     <paragraph>
+      Caroprese and Truszczyński [13] discovered that there can be founded repairs exhibiting circularity of support. The following example is due to Cruz-Filipe et al. [17].
+     </paragraph>
+     <paragraph label="Example 2.6">
+      Consider the following set of AICs η, expressing that a and b are equivalent (and if this is not the case, then they should both become false) and that c should be true whenever a or b is true.{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} Suppose that the database is {a mathematical formula}DB={a,b}. There are two repairs for {a mathematical formula}〈DB,η〉: {a mathematical formula}U1={−a,−b} and {a mathematical formula}U2={+c}. Intuitively, the rules suggest that {a mathematical formula}U2 should be the preferred repair, since it includes the action suggested by the only AIC that is not satisfied, and indeed {a mathematical formula}U2 is founded (removing its only element yields ∅, and as we observed both (, ( provide support for +c given the state of DB).However, {a mathematical formula}U1 is also a founded repair. If we remove −a from {a mathematical formula}U1, we obtain {a mathematical formula}U1′={−b}, and {a mathematical formula}U1′(DB)={a}, where {a mathematical formula}r5 is applicable and {a mathematical formula}−a∈head(r5). Dually, if we remove −b we obtain {a mathematical formula}U1″={−a}, and {a mathematical formula}U1″(DB)={b}; now {a mathematical formula}r6 is applicable, and {a mathematical formula}−b∈head(r6). Thus both actions in {a mathematical formula}U1 are founded, hence this is a founded repair.
+     </paragraph>
+     <paragraph>
+      The problem in this example is that the property of being a founded repair only excludes individual actions that are not supported by the remaining ones, rather than sets of actions with this characteristic. In order to avoid this unwanted characteristic, Caroprese and Truszczyński [13] proposed considering justified repairs, which we now define.{sup:1}
+     </paragraph>
+     <paragraph label="Definition 2.7">
+      [13]Let {a mathematical formula}U be a set of update actions and {a mathematical formula}〈DB,η〉 a database.
+     </paragraph>
+     <list>
+      <list-item label="•">
+       The no-effect actions with respect to DB and {a mathematical formula}U, {a mathematical formula}neffDB(U), are the actions that change neither DB, nor {a mathematical formula}U(DB).{a mathematical formula}
+      </list-item>
+      <list-item label="•">
+       The set of non-updatable literals of an AIC r, {a mathematical formula}nup(r), contains all body literals of r that do not occur in the head of r.{a mathematical formula}
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}U is closed under η if for each {a mathematical formula}r∈η, {a mathematical formula}ua(nup(r))⊆U implies {a mathematical formula}head(r)∩U≠∅.
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}U is a justified action set if it is a minimal superset of {a mathematical formula}neffDB(U) closed under η.
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}U is a justified (weak) repair if it is a (weak) repair and {a mathematical formula}U∪neffDB(U) is a justified action set.
+      </list-item>
+     </list>
+     <paragraph>
+      Although the notion of closed set of actions does not take the database into account, its role in the definition of justified weak repairs is as part of the definition of justified action set – where all actions that do not change the database are included. In the normalized case that we considered, all justified weak repairs are minimal with respect to set inclusion, i.e., they are justified repairs.
+     </paragraph>
+     <paragraph label="Example 2.8">
+      In the setting of Example 2.6, the sets of non-updateable literals are as follows.{a mathematical formula} The founded repair {a mathematical formula}U1 is not justified. First, observe that {a mathematical formula}neff(U1)={−c} (assuming that a, b and c are the only atoms in the language). Consider {a mathematical formula}U′=∅⊆U1; then {a mathematical formula}U′∪neff(U1)={−c}, and {a mathematical formula}ua(nup(r))⊈(U′∪neff(U1)) for every {a mathematical formula}r∈η; therefore {a mathematical formula}U′∪neff(U1) is a subset of {a mathematical formula}U1∪neff(U1) containing {a mathematical formula}neff(U1) that is (trivially) closed under η.In contrast, the repair {a mathematical formula}U2 is justified. In this case, we have {a mathematical formula}neff(U2)={+a,+b}; the only proper subset of {a mathematical formula}U2 is again {a mathematical formula}U′=∅. Then both {a mathematical formula}r7 and {a mathematical formula}r8 satisfy {a mathematical formula}ua(nup(r))⊆(U′∪neff(U2))={+a,+b}, and in both cases {a mathematical formula}head(r)={+c}. Since {a mathematical formula}head(r)∩{+a,+b}=∅, we conclude that {a mathematical formula}U′∪neff(U2) is not closed under η. ▴
+     </paragraph>
+     <paragraph label="Lemma 2.9">
+      The relation between founded and justified weak repairs was established by Caroprese and Truszczyński [13]. Let DB be a database, η be a set of AICs over DB and{a mathematical formula}Ube a set of update actions over DB. If{a mathematical formula}Uis a justified weak repair for{a mathematical formula}〈DB,η〉, then{a mathematical formula}Uis a founded weak repair for{a mathematical formula}〈DB,η〉.
+     </paragraph>
+     <paragraph>
+      One of the main issues with the notion of justified repair is that it is too restrictive. Interestingly, this can already be seen by an example originally given by Caroprese and Truszczyński [13], which we reproduce below.
+     </paragraph>
+     <paragraph label="Example 2.10">
+      Consider the following set of AICs η.{a mathematical formula}{a mathematical formula}{a mathematical formula} Consider the same database {a mathematical formula}DB={a,b} as before. This database is inconsistent (it does not satisfy {a mathematical formula}r9), and the only possible repair is {a mathematical formula}U={−a,−b}. Furthermore, this repair is intuitively compatible with η, since rule {a mathematical formula}r9 requires us to remove a from DB, which triggers {a mathematical formula}r11 and forces us also to remove b.The repair {a mathematical formula}U is founded, but for a different reason: if we remove −a from {a mathematical formula}U, then {a mathematical formula}r10 is applicable, and its head includes −a, while removing −b from {a mathematical formula}U makes {a mathematical formula}r11 applicable, and its head includes −b. Caroprese and Truszczyński [13] considered this as another instance of circularity of support (see [17] for a discussion). The repair {a mathematical formula}U is not justified: {a mathematical formula}neff(U)=∅, and taking {a mathematical formula}U′=∅ we have that {a mathematical formula}U′∪neff(U)=∅ is again trivially closed under η (every rule has non-updateable literals in its body). ▴
+     </paragraph>
+     <paragraph>
+      A different attempt to resolve the problems of circularity posed by founded repairs, while avoiding the over-restrictiveness of justified repairs, was the introduction of well-founded repairs by Cruz-Filipe et al. [17] – a third kind of repairs, motivated by an operational approach directly inspired by the syntax of AICs.
+     </paragraph>
+     <paragraph label="Definition 2.11">
+      [17]A (weak) repair {a mathematical formula}U for {a mathematical formula}〈DB,η〉 is well-founded if there exists a sequence of actions {a mathematical formula}α1,…,αn such that {a mathematical formula}U={α1,…,αn} and, for each {a mathematical formula}i∈{1,…,n}, there is a rule {a mathematical formula}ri such that {a mathematical formula}Ui−1(DB)⊨body(ri) and {a mathematical formula}αi∈head(ri), where {a mathematical formula}Ui−1={α1,…,αi−1}.
+     </paragraph>
+     <paragraph label="Example 2.12">
+      In the setting of Example 2.6, the only well-founded repair for {a mathematical formula}〈DB,η〉 is {a mathematical formula}{+c}, as (, ( are the only rules applicable in DB.Likewise, the repair {a mathematical formula}U in Example 2.10 is well-founded, as it can be constructed by applying first {a mathematical formula}r9 (introducing −a) and afterwards {a mathematical formula}r11. ▴
+     </paragraph>
+     <paragraph label="Example 2.13">
+      However, well-founded repairs can also behave unexpectedly. Let η be the set of AICs containing{a mathematical formula}{a mathematical formula}{a mathematical formula} and consider {a mathematical formula}DB=∅. There are two well-founded repairs for {a mathematical formula}〈DB,η〉: {a mathematical formula}U1={+b,+a}, obtained by applying first {a mathematical formula}r13 and then {a mathematical formula}r12, and {a mathematical formula}U2={+a,+c}, obtained by applying first {a mathematical formula}r12 and then {a mathematical formula}r14. It is arguable that {a mathematical formula}U2 is preferable, as it is not reasonable to apply {a mathematical formula}r13 when {a mathematical formula}r12 is also applicable, since any action that solves the inconsistency detected by {a mathematical formula}r12 also repairs {a mathematical formula}r13, but not conversely. However, the well-founded semantics for AICs cannot infer this restriction. ▴
+     </paragraph>
+     <paragraph>
+      In this example, it is interesting to note that {a mathematical formula}U2 is a founded repair. Indeed, {a mathematical formula}r12 supports +a and this support is independent of b and c; furthermore {a mathematical formula}r14 supports +c when +a is present. However, {a mathematical formula}U1 is not founded, since the action +b is not supported, as {a mathematical formula}r13 is not applicable once a has been added to DB.
+     </paragraph>
+     <paragraph label="Lemma 2.14">
+      The examples above show that there exist both founded weak repairs that are not well-founded, and well-founded weak repairs that are not founded. These relations were established by Cruz-Filipe et al. [17], together with the connection to justified weak repairs. Let DB be a database, η be a set of AICs over DB and{a mathematical formula}Ube a set of update actions over DB. If{a mathematical formula}Uis a justified weak repair for{a mathematical formula}〈DB,η〉, then{a mathematical formula}Uis a well-founded weak repair for{a mathematical formula}〈DB,η〉.
+     </paragraph>
+     <paragraph>
+      We are also interested in the shifting property. Originally defined by Marek and Truszczynski [31] in the context of revision programming, this property was later transferred to active integrity constraints [13]. Intuitively, a semantics for AICs possesses the shifting property if uniformly replacing some literals with their duals preserves the semantics at hand, i.e., if the semantics treats truth and falsity of elements in the database symmetrically.
+     </paragraph>
+     <paragraph label="Definition 2.15">
+      Let {a mathematical formula}S⊆At be a set of atoms and l a literal. The shift of l with respect to S is defined as{a mathematical formula} The shift function is extended to sets of literals, update actions and AICs in the straightforward manner.
+     </paragraph>
+     <paragraph label="Definition 2.16">
+      We say that a semantics for AICs has the shifting property if: for all {a mathematical formula}〈DB,η〉 and all {a mathematical formula}S⊆At, {a mathematical formula}U is a repair of {a mathematical formula}〈DB,η〉 accepted by the semantics if and only if {a mathematical formula}shiftS(U) is a repair of {a mathematical formula}〈shiftS(DB),shiftS(η)〉 accepted by the semantics.
+     </paragraph>
+     <paragraph>
+      If a semantics has the shifting property, then we can reduce any situation to the case {a mathematical formula}DB=∅ by taking {a mathematical formula}S=DB. All semantics discussed in this section have the shifting property.
+     </paragraph>
+    </section>
+    <section label="3">
+     <section-title>
+      Grounded repairs
+     </section-title>
+     <paragraph>
+      Founded, well-founded and justified repairs were all introduced with the purpose of characterizing a class of repairs whose actions are supported (there is a reason for having them in the set), without being self-supporting. I.e., they try to avoid certain forms of circularity of support. Sometimes, one also requires these repairs to be constructible “from the ground up”, which was the motivation for defining well-founded repairs. However, all notions exhibit unsatisfactory examples: there exist founded repairs with circular support (see, e.g., Example 2.6), and repairs with no circular support that are not justified [17]. In this section, we introduce a new semantics, grounded repairs, aimed at directly tackling this issue.
+     </paragraph>
+     <paragraph>
+      Grounded repairs are motivated by Example 2.6, where we noticed that the definition of founded repairs does not manage to capture groups of self-supporting arguments. Indeed, there the repair {a mathematical formula}U1 is founded. It consists of two actions, −a and −b such that whenever one of them is removed from {a mathematical formula}U1, there is an AIC whose body is violated and whose head is the action in question. However, if we remove both of them simultaneously, we notice that no rule any longer applies. As such, we can conclude that these actions are “self-supporting”: the only reason to have one of the two actions in the repair of our choice is because the other action is also in there. Our definition of grounded (weak) repair is aimed directly at avoiding this kind of situations.
+     </paragraph>
+     <paragraph label="Definition 3.1">
+      A set of update actions {a mathematical formula}U is grounded with respect to {a mathematical formula}〈DB,η〉 if, for each {a mathematical formula}V⊊U, there is a rule {a mathematical formula}r∈η such that {a mathematical formula}V(DB)⊨body(r) and {a mathematical formula}head(r)∈(U∖V). A grounded (weak) repair is a (weak) repair that is grounded.
+     </paragraph>
+     <paragraph label="Proof">
+      As can be seen, our definition of groundedness is a slight variant of the notion of foundedness: instead of only considering what happens if one action is dropped from a proposed set of update actions, we consider arbitrary removals. A first observation with respect to groundedness is that grounded weak repairs are always minimal, i.e., that each grounded weak repair is a repair. All grounded weak repairs of{a mathematical formula}〈DB,η〉are ⊆-minimal, i.e., are repairs.Suppose {a mathematical formula}U is a grounded weak repair and {a mathematical formula}U is not minimal, i.e., that there exists a {a mathematical formula}V⊊U that is also a weak repair. Since {a mathematical formula}U is grounded, there must exist an AIC whose body is satisfied in {a mathematical formula}V(DB), contradicting the fact that {a mathematical formula}V is a weak repair.  □ Thus, the notion of groundedness intrinsically embodies the principle of minimality of change, unlike other kinds of weak repairs previously defined.
+     </paragraph>
+     <paragraph label="Proof">
+      Let DB be a database, η be a set of AICs over DB and{a mathematical formula}Ube a grounded repair for{a mathematical formula}〈DB,η〉. Then{a mathematical formula}Uis both founded and well-founded.Assume that {a mathematical formula}U is a grounded repair for {a mathematical formula}〈DB,η〉. The fact that {a mathematical formula}U is founded follows immediately from the definition of grounded repair, since for each action α, {a mathematical formula}V=U∖{α} is a strict subset of {a mathematical formula}U. Hence, by groundedness of {a mathematical formula}U, there must be a rule r with {a mathematical formula}head(r)∈U∖V={α}, whose body is satisfied in {a mathematical formula}V(DB). We find that {a mathematical formula}U is founded indeed.Now, we show how to construct a sequence of subsets of {a mathematical formula}U that illustrates that {a mathematical formula}U is well-founded. For this sequence, we start from {a mathematical formula}U0=∅ and construct {a mathematical formula}Ui=Ui−1∪{ui} by picking a rule {a mathematical formula}r∈〈DB,η〉 with {a mathematical formula}head(r)=ui∈U and {a mathematical formula}Ui−1(DB)⊨body(r). Since {a mathematical formula}U is grounded, if {a mathematical formula}Ui−1⊊U then such a rule always exists, and by construction {a mathematical formula}Ui⊆U. But {a mathematical formula}U is finite, therefore this sequence converges towards {a mathematical formula}U, and thus {a mathematical formula}U is a well-founded repair.  □
+     </paragraph>
+     <paragraph label="Example 3.4">
+      However, the notion of grounded repair is strictly stronger than both of these: Example 2.6, presented earlier, also shows that some forms of circular justifications are avoided by grounded repairs. Example 2.6 continuedThe repair {a mathematical formula}U1={−a,−b} is a founded repair that is not grounded: taking {a mathematical formula}V=∅, we notice that no AIC with −a or +a in the head has its body satisfied in {a mathematical formula}V(DB). The more natural repair {a mathematical formula}U2={+c} is also founded, and it is immediate to verify that it is also grounded. ▴
+     </paragraph>
+     <paragraph label="Example 3.5">
+      Likewise, not all well-founded repairs are grounded. Example 2.13 continuedConsider again η from Example 2.13, with {a mathematical formula}DB=∅. As shown earlier, the two well-founded repairs for {a mathematical formula}〈DB,η〉 are {a mathematical formula}U1={+b,+a} and {a mathematical formula}U2={+a,+c}. We already observed that {a mathematical formula}U1 is not founded, so it cannot be grounded; indeed, {a mathematical formula}V={+a} is a set of update actions such that no rule r with {a mathematical formula}head(r)∈(U∖V) has its body satisfied in {a mathematical formula}V(DB).
+     </paragraph>
+     <paragraph>
+      We thus have that grounded repairs are always founded and well-founded; the next example shows that they do not correspond to the intersection of those classes.
+     </paragraph>
+     <paragraph label="Example 3.6">
+      Consider the following set of AICs η.{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula}{a mathematical formula} Let {a mathematical formula}DB=∅. Then {a mathematical formula}U={+a,+b,+c} is a repair for {a mathematical formula}〈DB,η〉: the first three constraints require a and b to be included in the database. They do not do this in a straightforward manner. Starting from a database in which b holds, but a does not, rule ({a mathematical formula}r17) first enforces removal of b. Next, rule ({a mathematical formula}r15) adds a and subsequently, rule ({a mathematical formula}r16) adds b. While this combination of constraints seems unnatural (no-one would use these to enforce inclusion of a and b in the database), it is possible that this type of constraints show up if they are written by different developers maintaining the database, having different concerns. The last three rules state that no 2-element subset of {a mathematical formula}U can be a repair. Given rule ({a mathematical formula}r16), one might say that rule ({a mathematical formula}r19) is redundant. However, again the same argument holds: they could show up together in a database. In this example, {a mathematical formula}U is founded (the last three rules also ensure that) and well-founded (starting with ∅, we are forced to apply rules {a mathematical formula}r15, {a mathematical formula}r16 and {a mathematical formula}r18, in that order).However, {a mathematical formula}U is not grounded: if {a mathematical formula}V={+b}, then {a mathematical formula}V⊊U, but there is no rule r with {a mathematical formula}head(r)∈{+a,+c} whose body is satisfied in {a mathematical formula}V(DB). ▴
+     </paragraph>
+     <paragraph>
+      In this situation, {a mathematical formula}U might seem reasonable; however, observe that the support for its actions is circular: it is the three last rules that make {a mathematical formula}U founded, and none of them is applicable to DB. Also note that {a mathematical formula}V(DB)={b} is a database for which the given set η behaves very awkwardly: the only applicable AIC tells us to remove b, while the only repair of {a mathematical formula}V(DB) is actually {a mathematical formula}{+a,+c}.
+     </paragraph>
+     <paragraph>
+      We do not feel that this example weakens the case for studying grounded repairs, though: the consensual approach to different notions of repair is that they express preferences. In this case, where {a mathematical formula}〈DB,η〉 admits no grounded repair, it is sensible to allow a repair in a larger class – and a repair that is both founded and well-founded is a good candidate. The discussion by Caroprese and Truszczyński [13, Section 8] already proposes such a “methodology”: choose a repair from the most restrictive category (justified, founded, or any). We advocate a similar approach, but including grounded repairs among the possible choices.
+     </paragraph>
+     <paragraph>
+      We now investigate the relation between grounded and justified repairs, and find that all justified repairs are grounded, but not conversely – in line with our earlier claim that the notion of justified repair is too strong.
+     </paragraph>
+     <paragraph label="Proof">
+      Let DB be a database, and let η be a set of normal AICs over DB. If{a mathematical formula}Uis a justified repair for{a mathematical formula}〈DB,η〉, then{a mathematical formula}Uis grounded.Let {a mathematical formula}U be a justified repair for {a mathematical formula}〈DB,η〉 and take {a mathematical formula}V⊊U. Then {a mathematical formula}V∪neff(U) is not closed under η, whence there is a rule {a mathematical formula}r∈η such that {a mathematical formula}ua(nup(r))⊆V∪neff(U) and {a mathematical formula}head(r)∉V∪neff(U).Since {a mathematical formula}V⊆U, also {a mathematical formula}ua(nup(r))⊆U∪neff(U), whence {a mathematical formula}head(r)∈U∪neff(U) as {a mathematical formula}U is closed under η. But {a mathematical formula}head(r)∉V∪neff(U), so {a mathematical formula}head(r)∈U∖V.We need to show that also {a mathematical formula}V⊨body(r). On the one hand, {a mathematical formula}ua(nup(r))⊆V∪neff(U) implies that {a mathematical formula}V(DB)⊨nup(r), as {a mathematical formula}neff(U)⊆neff(V); on the other hand, from {a mathematical formula}head(r)∈U we know that {a mathematical formula}lit(head(r))D∈DB (all actions in {a mathematical formula}U change DB), whence {a mathematical formula}V(DB)⊨lit(head(r)D) since {a mathematical formula}head(r)∉V. As r is normal, there are no more literals in {a mathematical formula}body(r), so {a mathematical formula}V(DB)⊨body(r). Hence, we have found a rule r such that {a mathematical formula}V⊨body(r) and {a mathematical formula}head(r)∈(U∖V), thus showing that {a mathematical formula}U is grounded.  □
+     </paragraph>
+     <paragraph>
+      This proof does not use the hypothesis that {a mathematical formula}U is a repair. This is due to the fact (already mentioned earlier) that we only consider normal AICs in this paper. By Theorem 4 of [13], all justified weak repairs are minimal when η consists of only normal AICs.
+     </paragraph>
+     <paragraph label="Example 3.8">
+      Recall Example 2.10, which was used by Cruz-Filipe et al. [17] to point out that justified repairs sometimes eliminate “natural” repairs. This example also shows that the notion of justified repair is stricter than that of grounded repair. Example 2.10 continuedAlthough the repair {a mathematical formula}U={−a,−b} for {a mathematical formula}〈DB,η〉 is not justified, it is grounded: if {a mathematical formula}−a∈V⊊U, then there is a rule that derives −b; otherwise, there is a rule that derives −a. ▴
+     </paragraph>
+     <paragraph>
+      As discussed earlier, in this case the first rule clearly motivates the action −a, and the last rule then requires −b. This is in contrast to Example 2.6, where there was no clear reason to include either −a or −b in a repair. Hence grounded repairs avoid this type of unreasonable circularities, without being as restrictive as justified repairs.
+     </paragraph>
+     <paragraph>
+      We summarize the relations between the different types of repairs in Fig. 1.
+     </paragraph>
+    </section>
+    <section label="4">
+     <section-title>
+      Preliminaries: lattices, operators and approximation fixpoint theory
+     </section-title>
+     <section label="4.1">
+      <section-title>
+       Lattices, operators and fixpoints
+      </section-title>
+      <paragraph>
+       In this section we summarize the ideas, definitions and main results from approximation fixpoint theory (AFT) that we use in the remainder of the paper.
+      </paragraph>
+      <paragraph>
+       A partially ordered set (poset){a mathematical formula}〈L,≤〉 is a set L equipped with a partial order ≤, i.e., a reflexive, antisymmetric, transitive relation. As usual, we write {a mathematical formula}x&lt;y as abbreviation for {a mathematical formula}x≤y∧x≠y. If S is a subset of L, then x is an upper bound (a lower bound) of S if for every {a mathematical formula}s∈S, it holds that {a mathematical formula}s≤x ({a mathematical formula}x≤s, respectively). An element x is a least upper bound (a greatest lower bound) of S if it is an upper bound that is smaller than every other upper bound (a lower bound that is greater than every other lower bound, respectively). If S has a least upper bound (a greatest lower bound) we denote it {a mathematical formula}lub(S) ({a mathematical formula}glb(S), respectively). As is custom, we sometimes call a greatest lower bound a meet, and a least upper bound a join and use the related notations {a mathematical formula}⋀S=glb(S), {a mathematical formula}x∧y=glb({x,y}), {a mathematical formula}⋁S=lub(S) and {a mathematical formula}x∨y=lub({x,y}). We call {a mathematical formula}〈L,≤〉 a complete lattice if every subset of L has a least upper bound and a greatest lower bound. A complete lattice has both a least element {a mathematical formula}⊥=⋀L and a greatest element {a mathematical formula}⊤=⋁L.
+      </paragraph>
+      <paragraph>
+       A lattice L is distributive if ∧ and ∨ distribute over each other, i.e., if {a mathematical formula}x∧(y∨z)=(x∧y)∨(x∧z) and {a mathematical formula}x∨(y∧z)=(x∨y)∧(x∨z) for all {a mathematical formula}x,y,z∈L. A bounded lattice L is complemented if every element {a mathematical formula}x∈L has a complement: an element {a mathematical formula}¬x∈L satisfying {a mathematical formula}x∧¬x=⊥ and {a mathematical formula}x∨¬x=⊤. A Boolean lattice is a distributive complemented lattice.
+      </paragraph>
+      <paragraph>
+       Since we apply our results to (finite) databases, for the sake of simplicity we assume L to be finite in this text. All presented results easily generalize to the infinite setting as well.
+      </paragraph>
+      <paragraph>
+       An operator {a mathematical formula}O:L→L is monotone if {a mathematical formula}x≤y implies that {a mathematical formula}O(x)≤O(y). An element {a mathematical formula}x∈L is a fixpoint of O if {a mathematical formula}O(x)=x. Every monotone operator O in a complete lattice has a least fixpoint, denoted {a mathematical formula}lfp(O), which is the limit (the least upper bound) of the increasing sequence {a mathematical formula}(xi)i∈N defined by {a mathematical formula}x0=⊥ and {a mathematical formula}xi+1=O(xi).
+      </paragraph>
+      <paragraph>
+       Bogaerts et al. [7] called a point {a mathematical formula}x∈Lgrounded for O if, for each {a mathematical formula}v∈L such that {a mathematical formula}O(v∧x)≤v, it holds that {a mathematical formula}x≤v. They called a point {a mathematical formula}x∈Lstrictly grounded if there does not exist a y such that {a mathematical formula}y&lt;x, and {a mathematical formula}O(y)∧x≤y. They explained the intuition underlying these concepts under the assumption that the elements of L are sets of “facts” of some kind and the ≤ relation is the subset relation between such sets: in this case, a point x is grounded if it contains only facts that are sanctioned by the operator O, in the sense that if we remove them from x, then the operator will add at least one of them again. Bogaerts [5] showed that for Boolean lattices the notions of groundedness and strict groundedness coincide. In this paper, all lattices of our application are Boolean, hence we use both notions interchangeably.
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Approximation fixpoint theory
+      </section-title>
+      <paragraph>
+       Given a lattice L, approximation fixpoint theory (AFT) [20] uses the bilattice {a mathematical formula}L2. We define two projection functions for pairs as usual: {a mathematical formula}(x,y)1=x and {a mathematical formula}(x,y)2=y. Pairs {a mathematical formula}(x,y)∈L2 are used to approximate elements in the interval {a mathematical formula}[x,y]={z|x≤z∧z≤y}. We call {a mathematical formula}(x,y)∈L2consistent if {a mathematical formula}x≤y, that is, if {a mathematical formula}[x,y] is non-empty, and use {a mathematical formula}Lc to denote the set of consistent elements. Elements {a mathematical formula}(x,x)∈Lc are called exact; they constitute the embedding of L in {a mathematical formula}L2. We sometimes abuse notation and use the tuple {a mathematical formula}(x,y) and the interval {a mathematical formula}[x,y] interchangeably. The precision ordering on {a mathematical formula}L2 is defined as {a mathematical formula}(x,y)≤p(u,v) if {a mathematical formula}x≤u and {a mathematical formula}v≤y. In case {a mathematical formula}(u,v) is consistent, this means that {a mathematical formula}(x,y) approximates all elements approximated by {a mathematical formula}(u,v), or in other words that {a mathematical formula}[u,v]⊆[x,y]. If L is a complete lattice, then {a mathematical formula}〈L2,≤p〉 is also a complete lattice.
+      </paragraph>
+      <paragraph>
+       AFT studies fixpoints of lattice operators {a mathematical formula}O:L→L through operators approximating O. An operator {a mathematical formula}A:L2→L2 is an approximator of O if it is {a mathematical formula}≤p -monotone, and has the property that {a mathematical formula}A(x,x)=(O(x),O(x)) for all x. Approximators are internal in {a mathematical formula}Lc (i.e., map {a mathematical formula}Lc into {a mathematical formula}Lc). As usual, we often restrict our attention to symmetric approximators: approximators A such that, for all x and y, {a mathematical formula}A(x,y)1=A(y,x)2. Denecker et al. [22] showed that the consistent fixpoints of interest (supported, stable, well-founded) are uniquely determined by an approximator's restriction to {a mathematical formula}Lc, hence, sometimes we only define approximators on {a mathematical formula}Lc.
+      </paragraph>
+      <paragraph>
+       AFT studies fixpoints of O using fixpoints of A.
+      </paragraph>
+      <list>
+       <list-item label="•">
+        The A-Kripke–Kleene fixpoint is the {a mathematical formula}≤p-least fixpoint of A, and it approximates all fixpoints of O.
+       </list-item>
+       <list-item label="•">
+        A partial A-stable fixpoint is a pair {a mathematical formula}(x,y) such that {a mathematical formula}x=lfp(A(⋅,y)1) and {a mathematical formula}y=lfp(A(x,⋅)2), where {a mathematical formula}A(⋅,y)1 denotes the operator {a mathematical formula}L→L:z↦A(z,y)1 and analogously for {a mathematical formula}A(x,⋅)2.
+       </list-item>
+       <list-item label="•">
+        The A-well-founded fixpoint is the least precise (i.e., the {a mathematical formula}≤p-minimal) partial A-stable fixpoint.
+       </list-item>
+       <list-item label="•">
+        An A-stable fixpoint of O is a fixpoint x of O such that {a mathematical formula}(x,x) is a partial A-stable fixpoint. This is equivalent to the condition that {a mathematical formula}x=lfp(A(⋅,x)1).
+       </list-item>
+       <list-item label="•">
+        A partial A-grounded fixpoint is a consistent pair {a mathematical formula}(x,y) such that for each {a mathematical formula}v∈L, whenever {a mathematical formula}A(x∧v,y∧v)2≤v, also {a mathematical formula}y≤v.
+       </list-item>
+      </list>
+      <paragraph>
+       All (partial A-)stable fixpoints are (partial A-)grounded fixpoints and the A-well-founded fixpoint is the least precise partial A-grounded fixpoint [8]. The A-Kripke–Kleene fixpoint of O can be constructed as the limit of any monotone induction of A. For the A-well-founded fixpoint, a similar constructive characterization has been worked out by Denecker and Vennekens [23]:
+      </paragraph>
+      <paragraph label="Definition 4.1">
+       An A-refinement of {a mathematical formula}(x,y) is a pair {a mathematical formula}(x′,y′)∈L2 satisfying one of the following two conditions:
+      </paragraph>
+      <list>
+       <list-item>
+        {a mathematical formula}(x,y)≤p(x′,y′)≤pA(x,y), or
+       </list-item>
+       <list-item>
+        {a mathematical formula}x′=x and {a mathematical formula}A(x,y′)2≤y′≤y.
+       </list-item>
+      </list>
+      <paragraph>
+       We call the first type (i) of refinements application refinements and the second type (ii) unfoundedness refinements. If {a mathematical formula}(x′,y′) is an A-refinement of {a mathematical formula}(x,y) and A is clear from the context, we often write {a mathematical formula}(x,y)→(x′,y′).
+      </paragraph>
+      <paragraph label="Definition 4.2">
+       A well-founded induction of A is a sequence {a mathematical formula}(xi,yi)i≤n with {a mathematical formula}n∈N such that
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}(x0,y0)=(⊥,⊤);
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}(xi+1,yi+1) is an A-refinement of {a mathematical formula}(xi,yi), for all {a mathematical formula}i&lt;n.
+       </list-item>
+      </list>
+      <paragraph>
+       A well-founded induction is an algebraical generalization of the well-founded model construction defined by Van Gelder et al. [40]. The first type of refinement corresponds to making a partial structure more precise by applying Fitting's immediate consequence operator; the second type of refinement corresponds to making a structure more precise by eliminating an unfounded set. For a given approximator A, there are many different terminal well-founded inductions of A. Denecker and Vennekens [23] showed that they all have the same limit, which equals the A-well-founded fixpoint of O. Furthermore, if A is symmetric, then the A-well-founded fixpoint of O (in fact, every tuple in a well-founded induction of A) is consistent.
+      </paragraph>
+     </section>
+     <section label="4.3">
+      <section-title>
+       Logic programming and AFT
+      </section-title>
+      <paragraph>
+       A (normal{sup:2}) logic program {a mathematical formula}P is a set of rules r of the form{a mathematical formula} where h is an atom called the head of r, denoted {a mathematical formula}head(r), and each of the {a mathematical formula}li is a literal; {a mathematical formula}l1∧…∧ln is called the body of r and denoted {a mathematical formula}body(r). A rule of the form (2) is called simple if none of the {a mathematical formula}li equals ¬h or h; a logic program is simple if it consists of only simple rules. The set of interpretations {a mathematical formula}2At forms a lattice equipped with the order ⊆. The truth value ( t or f ) of a propositional formula φ in a structure I, denoted {a mathematical formula}φI is defined as usual. With a logic program {a mathematical formula}P, we associate an immediate consequence operator [39]{a mathematical formula}TP that maps a structure I to{a mathematical formula} Bogaerts et al. [7] called grounded fixpoints of {a mathematical formula}TPgrounded models of{a mathematical formula}P.
+      </paragraph>
+      <paragraph label="Example 4.3">
+       Consider the following logic program {a mathematical formula}P:{a mathematical formula} Its immediate consequence operator {a mathematical formula}TP is represented by the following graph:{a mathematical formula}{a mathematical formula}TP is a monotone operator with least fixpoint {a mathematical formula}{p}. As such, {a mathematical formula}{p} is its only grounded fixpoint. To see that {a mathematical formula}{p,q} is not grounded, notice that, when taking {a mathematical formula}v={p},{a mathematical formula} but {a mathematical formula}{p,q}⊈v. ▴
+      </paragraph>
+      <paragraph>
+       In the context of logic programming, elements of the approximation lattice {a mathematical formula}(2At)2 are four-valued interpretations, pairs {a mathematical formula}I=(I1,I2) of interpretations. The pair {a mathematical formula}(I1,I2) approximates all interpretations {a mathematical formula}I′ with {a mathematical formula}I1⊆I′⊆I2. We often identify an interpretation I with the four-valued interpretation {a mathematical formula}(I,I). We are mostly concerned with consistent (also called partial or three-valued) interpretations: tuples {a mathematical formula}I=(I1,I2) with {a mathematical formula}I1⊆I2. For such an interpretation, the atoms in {a mathematical formula}I1 are true ( t ) in {a mathematical formula}I, the atoms in {a mathematical formula}I2∖I1 are unknown ( u ) in {a mathematical formula}I and the other atoms are false ( f ) in {a mathematical formula}I. If {a mathematical formula}I is a three-valued interpretation, and φ a formula, we write {a mathematical formula}φI for the standard three-valued valuation based on the Kleene truth tables (see Fig. 2).
+      </paragraph>
+      <paragraph>
+       Several approximators have been defined for logic programs. The most common is Fitting's immediate consequence operator {a mathematical formula}ΨP[26], a direct generalization of {a mathematical formula}TP to partial interpretations:{a mathematical formula} Denecker et al. [20] showed that {a mathematical formula}ΨP is an approximator of {a mathematical formula}TP, that the well-founded fixpoint of {a mathematical formula}ΨP is the well-founded model of {a mathematical formula}P as defined by Van Gelder et al. and that {a mathematical formula}ΨP-stable fixpoints are exactly the stable models of {a mathematical formula}P as defined by Gelfond and Lifschitz. In this case, the operator {a mathematical formula}ΨP(⋅,y)1 coincides with the immediate consequence operator of the Gelfond–Lifschitz reduct [28] of {a mathematical formula}P with respect to the interpretation y.
+      </paragraph>
+      <paragraph label="Example 4.4">
+       Consider the following logic program {a mathematical formula}P:{a mathematical formula} It has two stable models, namely {a mathematical formula}{p} and {a mathematical formula}{q}. Its well-founded model equals its Kripke–Kleene model and is {a mathematical formula}I=(∅,{p,q}), i.e., the partial interpretation in which both p and q are unknown. To see that {a mathematical formula}I is the Kripke–Kleene model, it suffices that it is the least element of the approximation lattice {a mathematical formula}(2At)2 and that it is a fixpoint of {a mathematical formula}ΨP (since in this interpretation, the value of all the bodies is u). To see that {a mathematical formula}I is the well-founded model, we notice that there are no unfoundedness refinements of {a mathematical formula}I. Indeed, if for some {a mathematical formula}I⊆At, it would hold that{a mathematical formula} then {a mathematical formula}q∈I (otherwise, p would be derived by the first rule) and {a mathematical formula}p∈I (for a symmetric argument). Hence, {a mathematical formula}I={p,q} and there is no unfoundedness refinement.To see that {a mathematical formula}{p} is a stable model, it suffices to note that {a mathematical formula}ΨP(∅,{p})=({p},{p}) and hence that {a mathematical formula}{p}=lfpΨP(⋅,{p})1 indeed. ▴
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      A semantic operator for AICs
+     </section-title>
+     <paragraph>
+      In this section we show how a set of normal AICs induces an operator on a suitably defined lattice.
+     </paragraph>
+     <paragraph>
+      Given a fixed database DB, we are interested in the sets of update actions {a mathematical formula}U such that:
+     </paragraph>
+     <list>
+      <list-item>
+       {a mathematical formula}U is consistent and
+      </list-item>
+      <list-item>
+       each action in {a mathematical formula}U modifies DB.
+      </list-item>
+     </list>
+     <paragraph>
+      Note that the second condition here implies the first since it is not possible that both +a and −a modify DB. For each atom {a mathematical formula}a∈At, we define{a mathematical formula} Let us furthermore denote the set of update actions that modify DB by {a mathematical formula}A. With this notation, {a mathematical formula}A={cha|a∈At} and the sets of update actions we are interested in are elements of {a mathematical formula}2A. Note that ch and {a mathematical formula}A are defined solely based on the initial database DB and are not dependent of, for instance, a given repair.
+     </paragraph>
+     <paragraph>
+      Following the principle of minimality of change [45], [25], we also typically prefer smaller sets of updates over larger sets. Therefore, we are interested in the lattice {a mathematical formula}〈2A,⊆〉, where smaller elements correspond to better repairs according to this principle.
+     </paragraph>
+     <paragraph label="Example 5.1">
+      The intuitive reading of an AIC r naturally suggests an operator over this lattice, defined as “if {a mathematical formula}U(DB)⊨body(r), then add {a mathematical formula}head(r) to {a mathematical formula}U” to obtain a new element of {a mathematical formula}2A. However, this naive definition does not lead to an operator that is internal in {a mathematical formula}2A, as illustrated for instance in the following example. Consider{a mathematical formula} and {a mathematical formula}DB={a}. In this case, {a mathematical formula}A={−a} and {a mathematical formula}2A={∅,{−a}}. Now, taking {a mathematical formula}U={−a}, the body of the only rule in η is satisfied. Naively adding its head to {a mathematical formula}U results in the set {a mathematical formula}{+a,−a}, which is not an element of {a mathematical formula}2A. We expect a semantic operator to map {a mathematical formula}U to ∅ since the rule in η indicates that the problems with {a mathematical formula}U(DB) can be solved by adding a, i.e., by not changing DB at all. ▴ This kind of problems is inherent to the fact that AICs can have rules with dual heads and does not occur in other formalisms where AFT is applied, such as, e.g., logic programming{sup:3}. Intuitively, the operator {a mathematical formula}Tη we wish to define should satisfy the following properties:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       (inertia) Only change something in the input if there is a rule that warrants this change. This requirement consists itself of two parts:
+      </list-item>
+      <list-item label="•">
+       (cancellation) If there is an action in {a mathematical formula}U that is “canceled out” by some rule in η, then neither the action nor its dual are in the result (i.e., DB remains unchanged with respect to this action). Formally, if {a mathematical formula}α∈U and {a mathematical formula}αD∈{head(r)|r∈η∧U(DB)⊨body(r)}, then {a mathematical formula}α∉Tη(U),αD∉Tη(U).
+      </list-item>
+      <list-item label="•">
+       (completeness) If there is an applicable rule whose body is satisfied, and whose head does not contradict {a mathematical formula}U, then the head is derived. Formally,{a mathematical formula}
+      </list-item>
+     </list>
+     <paragraph>
+      It turns out that these three properties uniquely define an operator on {a mathematical formula}2A. In order to give a constructive characterization of this operator, we introduce the following concept.
+     </paragraph>
+     <paragraph label="Definition 5.2">
+      Let {a mathematical formula}U1 and {a mathematical formula}U2 be sets of update actions over a set of atoms At. The set {a mathematical formula}U1⊎U2 is defined as{a mathematical formula} This operation models sequential composition of repairs in the following sense: given a database DB, if every action in {a mathematical formula}U1 changes DB and every action in {a mathematical formula}U2 changes {a mathematical formula}U1(DB), then {a mathematical formula}(U1⊎U2)(DB)=U2(U1(DB)).
+     </paragraph>
+     <paragraph>
+      Observe that, while a set of AICs may include both a rule with head +a and another with head −a, these rules are not simultaneously applicable, as the conjunction of their bodies is always unsatisfiable. However, it may be the case that applying one of them makes the other applicable (undoing the effect of the first one). In this case, the operation defined above guarantees that the database always reflects the last actions that were executed.
+     </paragraph>
+     <paragraph label="Definition 5.3">
+      We note also that {a mathematical formula}U1⊎U2 is consistent whenever {a mathematical formula}U1 and {a mathematical formula}U2 are. Let DB be a database and η be a set of AICs over DB. The operator {a mathematical formula}TηDB:2A→2A is defined as follows:{a mathematical formula} In other words, {a mathematical formula}TηDB(U) is obtained by updating {a mathematical formula}U with the heads of all AICs whose bodies are satisfied by {a mathematical formula}U(DB). To see that this operator is well-defined (i.e., that the result of applying it indeed yields a consistent set of actions), observe that the syntactic restrictions on AICs guarantee that the set {a mathematical formula}{head(r)|r∈η∧U(DB)⊨body(r)} is always consistent. Indeed, if both +a and −a are in this set, then there must be rules {a mathematical formula}r1 and {a mathematical formula}r2 such that {a mathematical formula}¬a∈body(r1) and {a mathematical formula}a∈body(r2) with {a mathematical formula}U(DB)⊨body(ri) for {a mathematical formula}i=1,2, which is impossible since it would mean that {a mathematical formula}U(DB)⊨a and {a mathematical formula}U(DB)⊨¬a. From this, it also follows that {a mathematical formula}Tη(U) is always consistent. As before, when DB is clear from the context, we simply write {a mathematical formula}Tη for {a mathematical formula}TηDB.
+     </paragraph>
+     <paragraph label="Proof">
+      The operator{a mathematical formula}Tηis the only operator on{a mathematical formula}2Athat satisfies inertia, cancellation and completeness.It is easy to verify that {a mathematical formula}Tη satisfies inertia, cancellation and completeness.Now, assume {a mathematical formula}O:2A→2A satisfies the three properties. Let α be any action in {a mathematical formula}A and {a mathematical formula}U⊆A. Let {a mathematical formula}V denote {a mathematical formula}{head(r)|r∈η∧U(DB)⊨body(r)}. Since, {a mathematical formula}α∈A, we know that {a mathematical formula}αD∉U. We show that {a mathematical formula}α∈O(U) if and only if {a mathematical formula}α∈Tη(U)=U⊎V. We distinguish 3 cases:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       If {a mathematical formula}α∈V, then, since {a mathematical formula}αD∉U, by completeness, {a mathematical formula}α∈O(U). In this case, since {a mathematical formula}αD∉U∪V, but {a mathematical formula}α∈U∪V, it holds that {a mathematical formula}α∈U⊎V=Tη(U).
+      </list-item>
+      <list-item label="•">
+       If {a mathematical formula}αD∈V, then there is a rule {a mathematical formula}r∈η such that {a mathematical formula}αD∈head(r) and {a mathematical formula}U(DB)⊨body(r). Since {a mathematical formula}U(DB)⊨body(r), {a mathematical formula}lit(α) holds in {a mathematical formula}U(DB). Since α changes DB, we know that {a mathematical formula}lit(α) does not hold in DB, hence it must be the case that {a mathematical formula}α∈U. By cancellation, we then find that {a mathematical formula}α∉O(DB). Since {a mathematical formula}α∈U but {a mathematical formula}αD∈V, also {a mathematical formula}α∉U⊎V=Tη(U).
+      </list-item>
+      <list-item label="•">
+       If neither {a mathematical formula}α∈V, nor {a mathematical formula}αD∈V, then by inertia, it must hold that {a mathematical formula}α∈O(U) if and only if {a mathematical formula}α∈U. In this case, it also holds that {a mathematical formula}α∈Tη(U)=U⊎V if and only if {a mathematical formula}α∈U.
+      </list-item>
+     </list>
+     <paragraph label="Example 5.5">
+      Example 2.3 continuedConsider again the set of AICs η from Example 2.3, where {a mathematical formula}DB={a,b}. Then {a mathematical formula}Tη(∅)={−a,−b}. Indeed, the bodies of all rules are satisfied; hence all heads are elements of {a mathematical formula}Tη(∅). ▴
+     </paragraph>
+     <paragraph label="Proof">
+      Let DB be a database, η be a set of normal AICs over DB and{a mathematical formula}Ube a set of update actions. Then{a mathematical formula}Uis a weak repair for{a mathematical formula}〈DB,η〉if and only if{a mathematical formula}Uis a fixpoint of{a mathematical formula}Tη.If {a mathematical formula}U is a weak repair for {a mathematical formula}〈DB,η〉, then certainly, {a mathematical formula}U∈2A. Also, {a mathematical formula}U(DB)⊭body(r) for all {a mathematical formula}r∈η, whence {a mathematical formula}Tη(U)=U. If {a mathematical formula}U is not a weak repair for {a mathematical formula}〈DB,η〉, then {a mathematical formula}U(DB)⊨body(r) for some {a mathematical formula}r∈η, and {a mathematical formula}Tη(U) differs from {a mathematical formula}U by (at least) {a mathematical formula}head(r).  □
+     </paragraph>
+     <paragraph label="Example 5.7">
+      In general, {a mathematical formula}Tη does not need to have fixpoints (since there may be no database satisfying η). A simple (unrealistic) example is if η consists of the two rules{a mathematical formula} where {a mathematical formula}Tη(DB)≠DB for any database DB. ▴
+     </paragraph>
+     <paragraph label="Proof">
+      Let DB be a database, η be a set of normal AICs over DB and{a mathematical formula}Ube a set of update actions. Then{a mathematical formula}Uis a repair for{a mathematical formula}〈DB,η〉if and only if{a mathematical formula}Uis a minimal fixpoint of{a mathematical formula}Tη.Follows directly from Proposition 5.6 and the definition of repair.  □
+     </paragraph>
+     <paragraph label="Proof">
+      Let DB be a database, η be a set of normal AICs over DB and{a mathematical formula}U∈2A. Then{a mathematical formula}Uis founded with respect to{a mathematical formula}〈DB,η〉if and only if, for all{a mathematical formula}α∈U, it is the case that{a mathematical formula}α∈Tη(U∖{α}).It follows from the definition of {a mathematical formula}Tη that for each action {a mathematical formula}α∈U, the following are equivalent:
+     </paragraph>
+     <list>
+      <list-item>
+       there is a rule {a mathematical formula}r∈η such that {a mathematical formula}(U∖{α})(DB)⊨body(r) and
+      </list-item>
+      <list-item>
+       {a mathematical formula}α∈Tη(U∖{α}).
+      </list-item>
+     </list>
+     <paragraph>
+      This result also gives some intuition regarding why founded repairs allow for circular dependencies: the definition of founded repair only checks that each individual action is supported by the remaining ones, but it still allows for dependency cycles.
+     </paragraph>
+     <paragraph label="Proof">
+      Let DB be a database, η be a set of normal AICs over DB and{a mathematical formula}Ube a weak repair for{a mathematical formula}〈DB,η〉. Then{a mathematical formula}Uis well-founded if and only if there is an ordering{a mathematical formula}α1,…,αnof the elements of {a mathematical formula}Usuch that{a mathematical formula}αi∈Tη({α1,…,αi−1})for each{a mathematical formula}i=1,…,n.This is a direct consequence of the definitions of {a mathematical formula}Tη and of well-founded repair. By definition, {a mathematical formula}U is well-founded if and only if there exists a ordering {a mathematical formula}α1,…,αn of the elements of  {a mathematical formula}U such that for each i, there is a rule {a mathematical formula}ri∈η with {a mathematical formula}Ui−1(DB)⊨body(ri) and {a mathematical formula}αi∈head(ri) (where {a mathematical formula}Ui denotes {a mathematical formula}{α1,…,αi}). Now, the condition that there is a rule {a mathematical formula}ri∈η with {a mathematical formula}Ui−1(DB)⊨body(ri) and {a mathematical formula}αi∈head(ri) is equivalent with the condition that {a mathematical formula}αi∈Tη(Ui−1), from which the result follows.  □
+     </paragraph>
+     <paragraph label="Proof">
+      Let DB be a database and η a set of AICs over DB. A set of update actions{a mathematical formula}Uis a grounded repair of{a mathematical formula}〈DB,η〉if and only if{a mathematical formula}Uis a grounded fixpoint of{a mathematical formula}Tη.Recall that grounded and strictly grounded fixpoints of {a mathematical formula}Tη coincide. We show that {a mathematical formula}U is a grounded repair of {a mathematical formula}〈DB,η〉 iff {a mathematical formula}U is a strictly grounded fixpoint of {a mathematical formula}Tη.First suppose that {a mathematical formula}U is not a strictly grounded fixpoint of {a mathematical formula}Tη. This means that there exists a set {a mathematical formula}V⊊U such that {a mathematical formula}Tη(V)∩U⊆V. From the definition of {a mathematical formula}Tη it follows immediately that, if r is a rule such that {a mathematical formula}V(DB)⊨body(r), then {a mathematical formula}head(r)∉(U∖V), whence {a mathematical formula}U is not a grounded repair for {a mathematical formula}〈DB,η〉.Conversely, assume that {a mathematical formula}U is a strictly grounded fixpoint of {a mathematical formula}Tη and let {a mathematical formula}V be any subset of {a mathematical formula}U such that there is no rule r for which {a mathematical formula}V(DB)⊨body(r) and {a mathematical formula}head(r)∈(U∖V). From the definition of {a mathematical formula}Tη, it follows that {a mathematical formula}Tη(V)∩(U∖V)=∅ and thus that {a mathematical formula}Tη(V)∩U⊆V. Since {a mathematical formula}U is strictly grounded, it follows that {a mathematical formula}V=U.  □
+     </paragraph>
+     <paragraph>
+      The previous proposition illustrates that Proposition 3.7 is not a coincidence at all. Indeed, Bogaerts et al. [7] have already shown that all stable fixpoints of a given approximator are grounded, and Caroprese and Truszczyński [13, Theorem 6] showed that justified repairs are stable models of a given derived logic program. In the following sections, we explore this relationship further: first, we define an approximator for {a mathematical formula}Tη and as such obtain also a notion of stable repair. Next, in Section 7, we study the relationship between logic programs and AICs in depth.
+     </paragraph>
+     <paragraph>
+      Since grounded repairs can be built from the ground up, this result also corroborates the informal claim that justified repairs avoid circularity of support, as stated by Caroprese and Truszczyński [13].
+     </paragraph>
+    </section>
+    <section label="6">
+     <section-title>
+      An approximator for AICs
+     </section-title>
+     <paragraph>
+      In this section, we define an approximator for {a mathematical formula}Tη and hence, obtain a set of AFT-based semantics for AICs, based on intuitions similar to those underlying groundedness and various semantics from non-monotonic reasoning.
+     </paragraph>
+     <paragraph>
+      A partial action set is a tuple {a mathematical formula}U=(Uc,Up) where {a mathematical formula}Uc∈2A and {a mathematical formula}Up∈2A. A partial action set is an approximation of a set of update actions. It provides information on which update actions are certainly applied (the actions in {a mathematical formula}Uc) and which actions are possibly applied (the actions in {a mathematical formula}Up). If {a mathematical formula}Uc⊆Up, we say that {a mathematical formula}U is consistent. We are mostly concerned with consistent partial action sets. If {a mathematical formula}α∈A, the value of α in {a mathematical formula}U (denoted {a mathematical formula}U(α)) is:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       true, denoted t, if {a mathematical formula}α∈Uc and {a mathematical formula}α∈Up,
+      </list-item>
+      <list-item label="•">
+       false, denoted f, if {a mathematical formula}α∉Uc and {a mathematical formula}α∉Up,
+      </list-item>
+      <list-item label="•">
+       unknown, denoted u, if {a mathematical formula}α∉Uc and {a mathematical formula}α∈Up,
+      </list-item>
+      <list-item label="•">
+       inconsistent, denoted i, if {a mathematical formula}α∈Uc and {a mathematical formula}α∉Up.
+      </list-item>
+     </list>
+     <paragraph>
+      Note that a partial action set is characterized completely by the mapping {a mathematical formula}A→{t,f,u,i} it induces:{a mathematical formula} We sometimes exploit this correspondence, by not explicating the partial action set itself, but the mapping, as this allows for more compact notation and more elegant definitions. It can be seen that {a mathematical formula}U is consistent if and only if {a mathematical formula}U(α)∈{t,f,u} for all α. The intended interpretation of a consistent partial action set is thus that {a mathematical formula}U(a) is true iff a is certainly changed by {a mathematical formula}U, it is false iff a is certainly not changed by {a mathematical formula}U and it is unknown if {a mathematical formula}U leaves it open whether or not a is changed. The set of all consistent partial action sets is denoted as P. As such, P is exactly the consistent part of the bilattice {a mathematical formula}(2A)2. We call {a mathematical formula}Utwo-valued if {a mathematical formula}Uc=Up, i.e., if {a mathematical formula}U(α)∈{t,f} for all α; in this case, we identify {a mathematical formula}U with the action set {a mathematical formula}Uc. The truth order {a mathematical formula}≤t on truth values is defined by {a mathematical formula}f≤tu≤tt;f≤ti≤tt. The inverse of a truth value is {a mathematical formula}f−1=t,t−1=f,u−1=u,i−1=i.
+     </paragraph>
+     <paragraph>
+      A (consistent) partial database is a mapping {a mathematical formula}DB:At→{t,f,u}. The intended reading is that {a mathematical formula}DB(a) is true if a is certainly in the database, {a mathematical formula}DB(a) is false if a is certainly not in the database and {a mathematical formula}DB(a) is unknown otherwise.
+     </paragraph>
+     <paragraph>
+      If {a mathematical formula}U∈P is a consistent partial action set and DB is a (regular) database, then we define {a mathematical formula}U(DB) to be the partial database such that{a mathematical formula} where {a mathematical formula}DB(a)=t if {a mathematical formula}a∈DB and {a mathematical formula}DB(a)=f otherwise.
+     </paragraph>
+     <paragraph label="Definition 6.1">
+      Given a partial database {a mathematical formula}DB, a set of AICs η and an update action α, we define the support of α with respect to {a mathematical formula}〈DB,η〉 as{a mathematical formula} where {a mathematical formula}nup(r)DB refers to the standard three-valued truth evaluation of the formula{sup:4}{a mathematical formula}nup(r) in the partial interpretation {a mathematical formula}DB based on Kleene's truth tables [29] (see Fig. 2). Intuitively, this means that the support of an action α is the highest truth value of the (non-updateable part of the) body of a rule in η with α in the head.
+     </paragraph>
+     <paragraph label="Example 6.2">
+      Consider {a mathematical formula}DB=∅ and the following set η:{a mathematical formula} Consider {a mathematical formula}U=({+a,+b,+c},{+a,+b,+c,+d}). Then {a mathematical formula}U(DB)={a↦t,b↦t,c↦t,d↦u}. In this case, {a mathematical formula}suppU(DB),η(+a)=t and {a mathematical formula}suppU(DB),η(−a)=u. ▴
+     </paragraph>
+     <paragraph label="Definition 6.3">
+      Given DB and η, we define an operator {a mathematical formula}T〈DB,η〉:P→P, such that for each {a mathematical formula}U∈P and each {a mathematical formula}α∈A:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       If {a mathematical formula}U(α)=f, then {a mathematical formula}T〈DB,η〉(U)(α)=suppU(DB),η(α).
+      </list-item>
+      <list-item label="•">
+       If {a mathematical formula}U(α)=t, then {a mathematical formula}T〈DB,η〉(U)(α)=suppU(DB),η(αD)−1.
+      </list-item>
+      <list-item label="•">
+       Otherwise (i.e., if {a mathematical formula}U(α)=u):
+      </list-item>
+     </list>
+     <paragraph>
+      Definition 6.3 is motivated as follows. Assume {a mathematical formula}U is a partial update set containing some information on the intended update. In this case {a mathematical formula}Tη(U) represents a revised update, using the AICs in η. In the case where {a mathematical formula}U(α)=f, α is not an element of the (partial) update set at hand. The only way to add α to the update is if some rule supports α, which is captured by {a mathematical formula}suppU(DB),η(α). The case for {a mathematical formula}U(α)=t is completely symmetrical, in this case the only reason for removing α from the update at hand is there is support for its dual. In the last case, where {a mathematical formula}U(α)=u, we have no information on whether α should or shouldn't be in the update yet. In this case, we can derive that α must be in the update if we already have support for α and we are sure that there is no support for it dual (for {a mathematical formula}αD). Similarly, we can derive that α must not be in the update if we have support for {a mathematical formula}αD and certainly not for α. In all other cases, we derive nothing about α being in the update or not.
+     </paragraph>
+     <paragraph>
+      Since {a mathematical formula}suppU(DB),η(α) and {a mathematical formula}suppU(DB),η(αD)−1 are consistent whenever {a mathematical formula}U is consistent, the above operator is indeed defined on P, i.e., {a mathematical formula}T〈DB,η〉(U) is consistent whenever {a mathematical formula}U is.
+     </paragraph>
+     <paragraph>
+      Recall that Denecker et al. [22] showed that it suffices to define approximator on the consistent part of the bilattice. Using the fact that {a mathematical formula}P=(2A)c, {a mathematical formula}Tη is a candidate approximator of {a mathematical formula}Tη. The next proposition shows that this is indeed the case.
+     </paragraph>
+     <paragraph label="Proof">
+      {a mathematical formula}Tηis an approximator of{a mathematical formula}Tη.First, we show that {a mathematical formula}Tη is {a mathematical formula}≤p-monotone. To see this, first note that Kleene-valuation is {a mathematical formula}≤p-monotone. Hence, for each {a mathematical formula}α∈A, also the functions that map {a mathematical formula}U to {a mathematical formula}suppU(DB),η(α) and {a mathematical formula}suppU(DB),η(αD) are {a mathematical formula}≤p-monotone. Now take some {a mathematical formula}α∈A and suppose {a mathematical formula}U′≥pU. Then {a mathematical formula}suppU′(DB),η(α)≥psuppU(DB),η(α) and {a mathematical formula}suppU′(DB),η(αD)≥psuppU(DB),η(αD). We show that {a mathematical formula}Tη(U′)(α)≥pTη(U)(α) by a case analysis on the definition of {a mathematical formula}Tη(U)(α).
+      <list>
+       If {a mathematical formula}U(α)=f, then {a mathematical formula}U′(α)=f since {a mathematical formula}U′≥pU. In this case {a mathematical formula}Tη(U′)(α)=suppU′(DB),η(α)≥psuppU(DB),η(α)=Tη(U)(α).The case where {a mathematical formula}U(α)=t is similar.Assume {a mathematical formula}U(α)=u.Secondly, we show that on two-valued update sets,
+      </list>
+      <paragraph>
+       {a mathematical formula}Tη and {a mathematical formula}Tη coincide, i.e., that for all {a mathematical formula}U, {a mathematical formula}Tη(U)=Tη(U). Take any {a mathematical formula}α∈A, we again prove this claim by a case analysis on the definition of {a mathematical formula}Tη(U)(α).
+      </paragraph>
+      <list>
+       <list-item label="•">
+        If {a mathematical formula}U(α)=f, then {a mathematical formula}Tη(U)(α)=t if and only if there is some rule {a mathematical formula}r∈η with {a mathematical formula}U(DB)⊨body(r) and {a mathematical formula}head(r)=α. Since {a mathematical formula}body(r)=nup(r)∧lit(αD), we conclude that {a mathematical formula}Tη(U)(α) is true if and only if {a mathematical formula}suppU(DB),η(α)=t, if and only if {a mathematical formula}Tη(U)(α)=t.
+       </list-item>
+       <list-item label="•">
+        The case for {a mathematical formula}U(α)=f is similar.
+       </list-item>
+       <list-item label="•">
+        The case where {a mathematical formula}U(α)=u cannot occur, since {a mathematical formula}U is two-valued.  □
+       </list-item>
+      </list>
+     </paragraph>
+     <paragraph>
+      Since {a mathematical formula}Tη is an approximator, it defines a family of semantics for AICs.
+     </paragraph>
+     <paragraph label="Definition 6.5">
+      Let {a mathematical formula}〈DB,η〉 be a database.
+     </paragraph>
+     <list>
+      <list-item label="•">
+       A partial stable repair of {a mathematical formula}〈DB,η〉 is a partial update set {a mathematical formula}U such that {a mathematical formula}U is a partial {a mathematical formula}Tη-stable fixpoint. A stable repair is a partial stable repair that is two-valued.
+      </list-item>
+      <list-item label="•">
+       The AFT-well-founded repair of {a mathematical formula}〈DB,η〉 is the {a mathematical formula}Tη-well-founded fixpoint (in general, this is a partial update set).
+      </list-item>
+      <list-item label="•">
+       The Kripke–Kleene repair of {a mathematical formula}〈DB,η〉 is the {a mathematical formula}Tη-Kripke–Kleene fixpoint (in general, this is a partial update set).
+      </list-item>
+      <list-item label="•">
+       A partial grounded repair of {a mathematical formula}〈DB,η〉 is a partial update set {a mathematical formula}U such that {a mathematical formula}U is a partial {a mathematical formula}Tη-grounded fixpoint Bogaerts et al. [8]. A grounded repair is a partial grounded repair that is two-valued.
+      </list-item>
+     </list>
+     <paragraph>
+      The terminology in the above definition uses “repairs” for certain classes of fixpoints of a semantic operator. It follows easily that all two-valued update sets that are called “repair” in the above definition, indeed are repairs according to AIC terminology. This paper is the first work that studies partial (non-two-valued) repairs.
+     </paragraph>
+     <paragraph>
+      The well-founded semantics induced by AFT can in general differ from the existing well-founded semantics for AICs, as we show in Example 6.12. To distinguish the two, we use the term AFT-well-founded semantics.
+     </paragraph>
+     <paragraph>
+      It follows directly from Bogaerts et al. [8, Proposition 3.2] and Proposition 5.11 that grounded repairs as defined in Definition 6.5 coincide with Definition 3.1. All other classes of repairs are new.
+     </paragraph>
+     <paragraph>
+      We now illustrate these semantics by means of some examples.
+     </paragraph>
+     <paragraph label="Example 6.6">
+      Note that in this example, unfoundedness refinements take care of minimizations of repairs. ▴
+     </paragraph>
+     <paragraph label="Example 6.7">
+      Consider the following set η of AICs:{a mathematical formula} with {a mathematical formula}DB=∅. Intuitively, we expect +c to be an element of “good” repairs, and (following the minimality of change principle), no other actions to be in “good” repairs.Now, the {a mathematical formula}Tη -well-founded fixpoint can be computed as the limit of a well-founded induction. It starts at{a mathematical formula} Here, we see that{a mathematical formula} Hence, {a mathematical formula}Tη(U0)=U0 and {a mathematical formula}U0 is the {a mathematical formula}Tη -Kripke–Kleene fixpoint. A well-founded induction can continue with unfoundedness refinements. Indeed, consider{a mathematical formula} Since{a mathematical formula} it holds that {a mathematical formula}U1 is an unfoundedness refinement of {a mathematical formula}U0. Finally, we can conclude that {a mathematical formula}U2:=Tη(U1) is the {a mathematical formula}Tη -well-founded fixpoint. This corresponds to the intended repair. ▴
+     </paragraph>
+     <paragraph>
+      As can be expected, not every set of AICs has a two-valued well-founded repair. That would simply be too much to ask, as it would mean that for every set of AICs we can unambiguously identify a single repair. The following example illustrates that this is indeed not always the case. It also illustrates that, for this specific example, {a mathematical formula}Tη -stable repairs provide a solution that corresponds to the intuitions.
+     </paragraph>
+     <paragraph label="Example 6.8">
+      Consider the following set η of AICs:{a mathematical formula} with {a mathematical formula}DB=∅. Intuitively, η has two “good” repairs. The first two rules state that a or b should be added in order to “fix” the violated constraint {a mathematical formula}¬(¬a∧¬b). Depending on that choice, the last rule determines whether or not c should be repaired. The two intended repairs are thus {a mathematical formula}{+a,+c} and {a mathematical formula}{+b}. Let us investigate what the different AFT-style semantics give in this case.Consider{a mathematical formula}Here, it holds that{a mathematical formula} Hence, {a mathematical formula}Tη(U0)=U0 and {a mathematical formula}U0 is the {a mathematical formula}Tη -Kripke–Kleene fixpoint. Furthermore, we claim that there are no unfoundedness refinements of {a mathematical formula}U0, and hence that {a mathematical formula}U0 is also the {a mathematical formula}Tη -well-founded fixpoint. To see that our claim indeed holds, notice that any unfoundedness refinement of {a mathematical formula}U0 should consist of making a subset U of {a mathematical formula}{+a,+b,+c} false, in such a way that for each {a mathematical formula}α∈U, {a mathematical formula}Tη(U0[U:f])(α)=f. Assume {a mathematical formula}+a∈U. In order for {a mathematical formula}Tη(U0[U:f])(+a) to be false +b must be t in {a mathematical formula}U0[U:f] (otherwise the body of the rule defining +a is unknown or true). That is not possible, hence {a mathematical formula}+a∉U. From a similar argument, we find that {a mathematical formula}+b∉U and {a mathematical formula}+c∉U. Trivially, the two intended repairs are more precise than the well-founded fixpoint.Now, let us check whether {a mathematical formula}U:={+a,+c} is a stable repair. For this, we need to verify if{a mathematical formula} Define {a mathematical formula}U0=∅. Then{a mathematical formula} Hence{a mathematical formula} and{a mathematical formula} Similarly,{a mathematical formula} Hence{a mathematical formula} and{a mathematical formula} Furthermore, {a mathematical formula}Tη(U2,U)=U2=U, hence we find that indeed, {a mathematical formula}U is an {a mathematical formula}Tη -stable fixpoint. The case for {a mathematical formula}{+b} is similar.It can also be verified that there are no other {a mathematical formula}Tη-stable fixpoints. Due to minimality, no other could contain +b, hence they must be subsets of {a mathematical formula}{+a,+c}. But since {a mathematical formula}U is a stable repair, it is already minimal, hence no strict subset of {a mathematical formula}{+a,+c} can be a stable repair. ▴
+     </paragraph>
+     <paragraph>
+      Hence, in the above example, {a mathematical formula}Tη -stable repairs capture the intended semantics.
+     </paragraph>
+     <paragraph>
+      We omit examples of grounded fixpoints, as we already included some in Section 3.
+     </paragraph>
+     <paragraph>
+      Properties of AFT-style semantics
+     </paragraph>
+     <paragraph label="Proof">
+      We now show that all AFT-style semantics are nicely invariant under shifting. {a mathematical formula}Tη, and hence also{a mathematical formula}Tη, commutes with shifting, i.e., for each set{a mathematical formula}S⊆At:{a mathematical formula}The clue to proving this proposition is the fact that for each action α,{a mathematical formula} Then, the result easily follows from the fact that {a mathematical formula}Tη has been defined entirely based on the {a mathematical formula}supp function.  □
+     </paragraph>
+     <paragraph label="Corollary 6.10">
+      All AFT-style semantics for AICs have the shifting property.
+     </paragraph>
+     <paragraph label="Proof">
+      From this claim, taking any terminal well-founded induction yields the desired result.We now show the claim indeed holds. The claim is trivial for {a mathematical formula}k=0. Assume the claim holds for k, we show that it also holds for {a mathematical formula}k+1. Thus assume {a mathematical formula}α1,…,αn is a sequence with {a mathematical formula}Uk={α1,…,αn} satisfying the above condition. If {a mathematical formula}Uk+1 is an unfoundedness refinement of {a mathematical formula}Uk, then {a mathematical formula}Uk+1=Uk and there is nothing to show. Hence, assume that {a mathematical formula}Uk≤pUk+1≤pTη(Uk). In this case, {a mathematical formula}Uk+1=Uk∪{βj|1≤j≤m} for some sequence of elements {a mathematical formula}βj such that {a mathematical formula}Tη(Uk)(βj)=t. For each j, let {a mathematical formula}Uj′ denote {a mathematical formula}{α1,…,αn,β1,…,βj}. We claim that the sequence {a mathematical formula}α1,…,αn,β1,…,βm still satisfies the condition in the claim. To see this, note that from the definition of {a mathematical formula}Tη, it follows that for each {a mathematical formula}j∈{1,…,m} there is a rule {a mathematical formula}rj with {a mathematical formula}nup(r)Uk(DB)=t and {a mathematical formula}head(rj)=βj. Furthermore, for each j it holds that {a mathematical formula}Uj−1′≥pUk, hence also {a mathematical formula}nup(r)Uj−1′=t. Since {a mathematical formula}βj∉Uj−1, we also see that {a mathematical formula}body(rj)Uj−1′=t. Hence, the claim indeed holds for {a mathematical formula}k+1 as well.  □
+     </paragraph>
+     <paragraph label="Example 6.12">
+      The converse of Proposition 6.11 does not hold, as illustrated by Example 2.13. The intuitive repair {a mathematical formula}U2={+a,+c} is the AFT-well-founded repair for {a mathematical formula}〈DB,η〉. However, there is another well-founded repair {a mathematical formula}U1={+a,+b}. ▴
+     </paragraph>
+     <paragraph label="Proof">
+      All{a mathematical formula}Tη-stable repairs are justified.We can safely assume that {a mathematical formula}U is a repair of DB (otherwise, it is not a {a mathematical formula}Tη-stable repair).Before starting the actual proof, we introduce a couple of auxiliary operators. For each set of update actions {a mathematical formula}V, let {a mathematical formula}ext(V) denote {a mathematical formula}V∪neffU(DB). Note that {a mathematical formula}ext(V) is consistent whenever {a mathematical formula}V⊆U. For each set of update actions {a mathematical formula}V, let {a mathematical formula}closure(V) denote{a mathematical formula} Now, we define the operator (on sets of update actions):{a mathematical formula} Below, we prove the following claims:
+      <list>
+       Claim 1: {a mathematical formula}U is a minimal prefixpoint of O if and only if {a mathematical formula}U is a justified repair of {a mathematical formula}〈DB,η〉.Claim 2: For any literal l, {a mathematical formula}ua(l)∈ext(DB) if and only if {a mathematical formula}l(V,U)(DB)=t.Claim 3: For any update action α, {a mathematical formula}α∈closure(ext(V)) if and only if {a mathematical formula}supp(V,U)(DB),η(α)=t.Claim 4: For every set of update actions {a mathematical formula}V⊆U:{a mathematical formula}Claim 1
+      </list>
+      <paragraph>
+       Recall that {a mathematical formula}U is a repair. The claim then follows immediately from the definition of justified repair. Prefixpoints of the {a mathematical formula}closure operator are sets of update actions closed under η. Hence {a mathematical formula}U is a minimal prefixpoint of O iff {a mathematical formula}ext(U) is a minimal set of update actions that contains {a mathematical formula}neffU(DB) and is closed under η.Claim 2 Pick some literal l.First assume that {a mathematical formula}ua(l)∈ext(V)=V∪neffU(DB). We show that {a mathematical formula}l(V,U)(DB)=t. We consider two cases:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        If {a mathematical formula}ua(l)∈neffU(DB), then {a mathematical formula}lDB=t and {a mathematical formula}U does not change the value of l. Thus, {a mathematical formula}l(V,U)(DB)=lDB=t.
+       </list-item>
+       <list-item label="•">
+        If {a mathematical formula}ua(l)∉neffU(DB), then it must hold that {a mathematical formula}ua(l)∈V⊆U. Since {a mathematical formula}ua(l)∈U and every action in {a mathematical formula}U changes DB, it must hold that {a mathematical formula}lDB=f. Now, since {a mathematical formula}ua(l)∈V, {a mathematical formula}(V,U) changes the value of l and thus {a mathematical formula}l(V,U)(DB)=(lDB)−1=t in this case.
+       </list-item>
+      </list>
+      <paragraph>
+       For the other direction, assume that {a mathematical formula}l(V,U)(DB)=t. We need to show that {a mathematical formula}ua(l)∈ext(V)=V∪neffU(DB). Assume that {a mathematical formula}ua(l)∉neffU(DB), we show that {a mathematical formula}ua(l)∈V. Since {a mathematical formula}l(V,U)(DB)=t and {a mathematical formula}U≥p(V,U), also {a mathematical formula}lU=t. Since {a mathematical formula}l∉neffU(DB), this means that {a mathematical formula}lDB=f. Now, {a mathematical formula}l(V,U)(DB)=t=(lDB)−1. Hence it must hold that {a mathematical formula}(V,U) changes the value of l. Since {a mathematical formula}lDB=f, this means that {a mathematical formula}ua(l)∈V, which is exactly what we needed to prove.Claim 3 Let α be an update action. It holds that {a mathematical formula}supp(V,U)(DB),η(α)=t if and only if there is some rule r with {a mathematical formula}head(r)=α and {a mathematical formula}nup(r)(V,U)(DB)=t. This means that for each literal {a mathematical formula}l′∈nup(r), {a mathematical formula}l′(V,U)(DB)=t. From Claim 2 it then follows that this is equivalent with the condition that each literal {a mathematical formula}l′∈nup(r) is an element of {a mathematical formula}ext(V), i.e., with the condition that {a mathematical formula}α∈closure(ext(V)).Claim 4 Take {a mathematical formula}α∈A and a set {a mathematical formula}V of update actions. It holds that {a mathematical formula}α∈Tη(V,U)1 if and only if one of the following holds:
+      </paragraph>
+      <list>
+       <list-item>
+        {a mathematical formula}(V,U)(α)=t and {a mathematical formula}supp(V,U)(DB),η(αD)=f
+       </list-item>
+       <list-item>
+        {a mathematical formula}(V,U)(α)=f and {a mathematical formula}supp(V,U)(DB),η(α)=t
+       </list-item>
+       <list-item>
+        {a mathematical formula}(V,U)(α)=u, {a mathematical formula}supp(V,U)(DB),η(α)=t, and {a mathematical formula}supp(V,U)(DB),η(αD)=f.
+       </list-item>
+      </list>
+      <paragraph>
+       In the first case, {a mathematical formula}α∈V, hence {a mathematical formula}α∈ext(V) and {a mathematical formula}α∈closure(ext(V)). If {a mathematical formula}supp(V,U)(DB),η(α)=t (i.e., in cases ii and iii), then by Claim 3, {a mathematical formula}α∈closure(ext(V)). Thus, in all cases, {a mathematical formula}α∈closure(ext(V)). Now, since {a mathematical formula}U is a repair, {a mathematical formula}(U,U) is a fixpoint of {a mathematical formula}Tη. Since {a mathematical formula}(V,U)≤p(U,U), {a mathematical formula}α∈Tη(V,U)1 entails {a mathematical formula}α∈Tη(U,U)1, i.e., {a mathematical formula}α∈U. Thus, {a mathematical formula}α∉neffU(DB) and we find that {a mathematical formula}α∈closure(ext(V))∖neffU(DB)=O(V), which we needed to prove.  □
+      </paragraph>
+     </paragraph>
+     <paragraph label="Example 6.14">
+      The converse of Proposition 6.13 does not hold. Consider the following set η of AICs.{a mathematical formula} with {a mathematical formula}DB=∅. In this case {a mathematical formula}{+a,+b} is a justified repair of {a mathematical formula}〈DB,η〉, but not a stable repair. To see that it is not a stable repair, it suffices to note that{a mathematical formula} and hence{a mathematical formula}To see that it is a justified repair, note that {a mathematical formula}{+a,+b} is the least set closed under η.
+     </paragraph>
+     <paragraph>
+      While the converse of Proposition 6.13 does not hold in general, for a broad class of active integrity constraints, it does hold. We first define this class and then prove that this is indeed the case.
+     </paragraph>
+     <paragraph label="Definition 6.15">
+      A set of AICs η is called unipolar if there are no rules {a mathematical formula}r,r′∈η with {a mathematical formula}head(r)=head(r′)D.
+     </paragraph>
+     <paragraph>
+      Unipolar AICs make sense in practice, for example if there are tables from which removing data is never an option.
+     </paragraph>
+     <paragraph label="Proof">
+      If η is unipolar, then each justified repair of{a mathematical formula}〈DB,η〉is{a mathematical formula}Tη-stable.To prove this theorem, we show the following strengthening of Claim 4 in the proof of Proposition 6.13.
+      <list>
+       Claim 4′: For every set of update actions {a mathematical formula}V⊆U:{a mathematical formula}Claim 4
+      </list>
+      <paragraph>
+       ′ One direction of this claim has been proven as Claim 4 in the proof of Proposition 6.13; we show that the other inclusion also holds. Take {a mathematical formula}α∈A and a set {a mathematical formula}V⊆U of update actions such that {a mathematical formula}α∈O(V); we show that {a mathematical formula}α∈Tη(V,U)1. Since {a mathematical formula}α∈O(V), it holds that {a mathematical formula}α∈closure(ext(V)) and thus (by Claim 3) that {a mathematical formula}supp(V,U)(DB),η(α)=t. This means that there is at least one rule {a mathematical formula}r∈η with {a mathematical formula}head(r)=α. Since η is unipolar, there can be no rules {a mathematical formula}r′∈η with {a mathematical formula}head(r′)=αD hence, it holds that {a mathematical formula}supp(V,U)(DB),η(aD)=f. From the definition of {a mathematical formula}Tη, we then find that {a mathematical formula}Tη(V,U)(α)=t and thus that {a mathematical formula}α∈Tη(V,U)1, which we needed to prove.  □
+      </paragraph>
+     </paragraph>
+     <paragraph>
+      From Proposition 3.7, which states that all justified repairs are grounded, we easily find how justified repairs and the AFT-well-founded repair relate.
+     </paragraph>
+     <paragraph label="Corollary 6.17">
+      The AFT-well-founded repair and the Kripke–Kleene repair approximate all justified repairs.
+     </paragraph>
+    </section>
+    <section label="7">
+     <section-title>
+      Relationship with logic programming
+     </section-title>
+     <paragraph label="Definition 7.1">
+      Caroprese and Truszczyński [13] defined a translation from logic programs to AICs as follows. Let r be a normal logic programming rule,{a mathematical formula} We define the active integrity constraint {a mathematical formula}aic(r) as{a mathematical formula} Furthermore, if {a mathematical formula}P is a normal logic program, we define{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Caroprese and Truszczyński [13] showed that for simple programs{a mathematical formula}P, an interpretation I is a stable model of {a mathematical formula}P if and only if I (viewed as an update set) is a justified repair of {a mathematical formula}〈aic(P),∅〉. Since {a mathematical formula}aic(P) is unipolar, from our earlier results (Proposition 6.13, Proposition 6.16) it follows that this is also equivalent with the condition that I is a {a mathematical formula}Taic(P)-stable repair. The same result is also a corollary of the following stronger theorem.
+     </paragraph>
+     <paragraph label="Theorem 7.2">
+      Let{a mathematical formula}Pbe a simple normal logic program and{a mathematical formula}Ia partial interpretation. It holds that{a mathematical formula}Iis a partial stable model of{a mathematical formula}Pif and only if{a mathematical formula}Iis a partial stable repair of{a mathematical formula}〈aic(P),∅〉. The proof of this theorem follows later, since it makes use of Theorem 7.6. Since the well-founded model of a logic program is the least precise partial stable model, and an analogous relationship holds in the setting of AICs, we immediately find the following corollary.
+     </paragraph>
+     <paragraph label="Corollary 7.3">
+      Let{a mathematical formula}Pbe a normal logic program. The well-founded model of{a mathematical formula}Pcoincides with the AFT-well-founded repair of{a mathematical formula}〈aic(P),∅〉.
+     </paragraph>
+     <paragraph>
+      While the operation {a mathematical formula}aic preserves (partial) stable, well-founded fixpoints, it does not preserve grounded fixpoints or the Kripke–Kleene fixpoint (as the following two examples illustrate). In both cases, it is the intuition of inertia, present in AICs but not in logic programs, that is responsible for the difference.
+     </paragraph>
+     <paragraph label="Example 7.4">
+      Consider the logic program{a mathematical formula} Since {a mathematical formula}TPg has no fixpoints, {a mathematical formula}Pg has no grounded models. In this case,{a mathematical formula} Now, {a mathematical formula}〈aic(Pg),∅〉 has one grounded repair, namely {a mathematical formula}{+p,+q}. ▴
+     </paragraph>
+     <paragraph label="Example 7.5">
+      Consider the logic program{a mathematical formula} The Kripke–Kleene model of this program maps both a and b to f. The corresponding AIC{a mathematical formula} has a Kripke–Kleene repair that maps a and b to u, i.e., it is unknown if these need to be changed. ▴
+     </paragraph>
+     <paragraph>
+      It can be seen from the previous example that for AICs, the Kripke–Kleene semantics is very bad at deriving that something does not need to be changed. The well-founded semantics is much stronger with that respect. In a certain sense, one might say that the intuition of “inertia” underlying AICs lies at the foundation of this discrepancy. Now, in logic programming, the Kripke–Kleene semantics exhibits similar behavior. Consider for instance the empty logic program{a mathematical formula} This program has a Kripke–Kleene model in which each atom is false, as expected. However, adding a trivial rule{a mathematical formula} that “simulates” inertia results in a program with a Kripke–Kleene model in which p is unknown.
+     </paragraph>
+     <paragraph>
+      Inertia is also responsible for the discrepancy in Example 7.4. Intuitively, {a mathematical formula}aic(Pg) from that example corresponds more to the logic program{a mathematical formula} Indeed {a mathematical formula}aic(Pg) states that if neither p nor q are present in the database, add p, and once we add it, by inertia, it stays unless there is a reason to remove it again (which there is not), and similarly for q. {a mathematical formula}P′ and {a mathematical formula}Pg only differ from each other in the rules {a mathematical formula}p←p and {a mathematical formula}q←q, which simulate inertia.
+     </paragraph>
+     <paragraph>
+      The above discussion provides intuitions on what a transformation that preserves all AFT semantics should look like. In the following theorem, this is formalized.
+     </paragraph>
+     <paragraph label="Proof">
+      Suppose that{a mathematical formula}DB=∅and that the only update actions in η are of the form +a. The mapping{a mathematical formula}uainduces an isomorphism between the lattices{a mathematical formula}2Atand{a mathematical formula}2Aand between{a mathematical formula}(2At)cand{a mathematical formula}(2A)c. Let{a mathematical formula}lp(η)denote the following logic program:{a mathematical formula}then for each partial interpretation{a mathematical formula}I,{a mathematical formula}Tη(ua(I))=ua(Ψlp(η)(I)). Hence, all AFT semantics for{a mathematical formula}〈DB,η〉coincide in this case with the equally-named semantics for the logic program{a mathematical formula}lp(η).By definition,{a mathematical formula} Now, since, for each {a mathematical formula}α∈A, it holds that {a mathematical formula}suppI,η(αD)=f (since there are no rules with {a mathematical formula}αD in the head). From the definition of {a mathematical formula}Tη, it then follows that{a mathematical formula} i.e., that{a mathematical formula}Similarly, we also find that{a mathematical formula} and the result follows.  □
+     </paragraph>
+     <paragraph label="Proof of Theorem 7.2">
+      For each logic program {a mathematical formula}P, let {a mathematical formula}triv(P) denote the logic program{a mathematical formula} It is well-known{sup:6} that the partial stable models of {a mathematical formula}P and those of {a mathematical formula}triv(P) are the same. Now, the result easily follows from the facts that (i) if {a mathematical formula}P is simple, then{a mathematical formula} since {a mathematical formula}aic adds a literal ¬a to the body of each rule r with {a mathematical formula}head(r)=a and {a mathematical formula}lp removes such literal again (since {a mathematical formula}P is simple, there was no such literal at the start) and additionally, adds the trivial rules {a mathematical formula}triv adds, and (ii) that {a mathematical formula}triv and {a mathematical formula}lp preserve partial stable models.  □
+     </paragraph>
+     <paragraph label="Example 7.7">
+      Theorem 7.6 does not hold in general, not even for unipolar AICs. Consider for instance the following sets of AICs.{a mathematical formula} These two are not equivalent under all AFT semantics. For the first one, the KK-repair is {a mathematical formula}{+a↦f,+b↦f}, while for the latter, the KK-repair is {a mathematical formula}{+a↦u,+b↦u}. However, they have the same translation to logic programs (since there are no rules with positive actions in the head). ▴
+     </paragraph>
+     <paragraph>
+      The reason why the equivalence does not hold in the previous example is because rules with −a in the head are ignored, while in the context of AICs such rules can make a semantic difference.
+     </paragraph>
+     <paragraph>
+      Limitations and related work  In this Section, we studied mappings from sets of active integrity constraints to logic programs and back and how the semantics of the two formalisms relate. We briefly discuss the restrictions of this approach. In our translation of AICs to logic programs, namely in Theorem 7.6, we assume that {a mathematical formula}DB=∅ and that the only update actions that occur in heads of rules are positive, i.e., of the form +a. Since all our semantics satisfy the shifting property, the correspondence between the semantics still holds if DB is arbitrary but all actions in rule heads change DB. However, the condition that all actions in heads of rules change DB is essential, as illustrated by Example 7.7.
+     </paragraph>
+     <paragraph>
+      The translation Rew introduced by Caroprese et al. [12], on the other hand, is at first sight more expressive than ours, as it applies to AICs with arbitrary actions on their head. In order to deal also with removal actions (in the case of an empty database), the authors are required to consider a logic program with an extended signature that includes two copies of the database and two atoms for each possible update action. They can then prove a precise correspondence between stable models of logic programs and founded repairs for AICs – the only semantics that had been developed at that point in time.
+     </paragraph>
+     <paragraph>
+      However, their construction is very directly tailored to founded repairs, and it is not obvious that it can be adapted to AFT semantics. In order to capture inertia, the authors duplicate all database atoms, so that every model contains both a copy of the original database and a copy of the repaired database. Additional rules ensure that, in each model, the repaired database corresponds exactly to the result of applying the update actions also included in that model to the original database. It can easily be seen that this mapping does not preserve AFT semantics for AICs. For instance, this technique maps founded repairs (which are not always grounded) to stable models (which are always grounded), hence, it certainly does not preserve grounded repairs. By contrast, the correspondence stated in Theorem 7.6 holds for all different semantics considered in the current work.
+     </paragraph>
+     <paragraph>
+      Another limitation of our results is that for the reverse translation, we only preserve (partial) stable repairs and the AFT-well-founded repair (cf. Theorem 7.2). However, our discussion does highlight where the difference comes from, namely the intuition of inertia. That is, as shown in the proof of Theorem 7.2: for each simple normal logic program {a mathematical formula}P, the semantics of {a mathematical formula}triv(P) and {a mathematical formula}aic(P) coincide.
+     </paragraph>
+     <paragraph>
+      Furthermore, we restrict our attention to normal programs; Caroprese and Truszczyński [13] discuss this translation without requiring normality. However, as mentioned before, we see non-normal AICs as syntactic sugar for their normalization and hence have no need for non-normal logic programs either. The same applies to the translation Rew from Caroprese et al. [12]. The restriction that our programs are simple is rather a technical requirement that simplifies proofs. For several semantics, this is non-essential: for (partial) stable and well-founded semantics, each program can easily be translated into an equivalent simple program.
+     </paragraph>
+    </section>
+    <section label="8">
+     <section-title>
+      Complexity analysis
+     </section-title>
+     <paragraph label="Proof">
+      We begin this section by stating an observation about the complexity of computing {a mathematical formula}Tη. All complexity results are in terms of the size of the database, {a mathematical formula}〈DB,η〉. Given a partial action set{a mathematical formula}U,{a mathematical formula}Tη(U)is computable in polynomial time.The definition of {a mathematical formula}Tη only requires evaluating {a mathematical formula}U(α), {a mathematical formula}suppU(DB),η(α) and {a mathematical formula}suppU(DB),η(αD) for each {a mathematical formula}α∈A. In turn, the two last computations can be done in polynomial time: they require evaluating each literal in the body of each rule from η with head α or {a mathematical formula}αD and computing its truth value under the database updated by {a mathematical formula}U.  □
+     </paragraph>
+     <paragraph label="Proof">
+      Let DB be a database and η be a set of normal AICs over DB. The problem of deciding whether there exists a grounded repair for{a mathematical formula}〈DB,η〉is{a mathematical formula}Σ2P-complete.(Inclusion) We need to show that we can decide the problem with a non-deterministic Turing machine with an NP oracle. Given a set of update actions {a mathematical formula}U, checking that it is a fixpoint of {a mathematical formula}Tη can be done in polynomial time on the size of DB and η, as shown in Proposition 8.1; the NP-oracle can then answer whether there exists {a mathematical formula}U′⊊U with {a mathematical formula}Tη(U′)∩U⊆U′, thereby establishing whether {a mathematical formula}U is grounded.(Hardness) We show hardness directly by reducing another {a mathematical formula}Σ2P-hard problem to deciding whether a particular database with a set of AICs has a grounded repair. Our proof is a straightforward adaptation of Bogaerts et al. [7, Theorem 5.7], which in turn is inspired by Denecker et al. [22, Theorem 6.12].Given a DNF formula φ over propositional symbols {a mathematical formula}x1,…,xm,y1,…,yn, and an interpretation I of the {a mathematical formula}xi, let {a mathematical formula}φI denote the formula obtained by replacing each occurrence of {a mathematical formula}xi with either t, if {a mathematical formula}xi∈I, or f, otherwise. The problem to decide whether there exists an interpretation I of the {a mathematical formula}xi such that {a mathematical formula}φI is a tautology is {a mathematical formula}Σ2P hard. We now reduce this problem to our problem.We consider the empty database DB over {a mathematical formula}At={xi,xi′|1≤i≤m}∪{p,q,y1,…,yn}, where we use {a mathematical formula}xi′ to represent the negation of {a mathematical formula}xi. We write {a mathematical formula}φ′ for the formula obtained by uniformly replacing {a mathematical formula}¬xi with {a mathematical formula}xi′ in φ. The set of AICs {a mathematical formula}η(φ) is defined as follows, where we assume {a mathematical formula}φ′=φ1′∨…∨φk′ and each {a mathematical formula}φi′ is a conjunction of literals.{a mathematical formula}{a mathematical formula}{a mathematical formula} The following properties hold about {a mathematical formula}η(φ).
+     </paragraph>
+     <list>
+      <list-item label="a.">
+       Each weak repair of {a mathematical formula}〈η(φ),∅〉 contains +p (otherwise one of the rules {a mathematical formula}r23 would apply).
+      </list-item>
+      <list-item label="b.">
+       No repair for {a mathematical formula}〈η(φ),∅〉 contains +q (due to minimality).
+      </list-item>
+      <list-item label="c.">
+       In each grounded repair for {a mathematical formula}〈η(φ),∅〉, at least one of the {a mathematical formula}φi′ is satisfied (otherwise, removing +p from that repair would result in a set of update actions where +p is no longer derivable, contradicting groundedness).
+      </list-item>
+      <list-item label="d.">
+       Each grounded repair for {a mathematical formula}〈η(φ),∅〉 contains all of the {a mathematical formula}+yj (follows directly from the previous point).
+      </list-item>
+      <list-item label="e.">
+       Each grounded repair for {a mathematical formula}〈η(φ),∅〉 contains for each i, exactly one of {a mathematical formula}+xi and {a mathematical formula}+xi′ (it must contain at least one due to rules {a mathematical formula}r21; the previous points guarantee that rules (, ( are satisfied regardless of the {a mathematical formula}xi and {a mathematical formula}xi′ in each grounded repair, hence minimality implies that it can contain at most one of these two actions).
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      The Kripke–Kleene repair for{a mathematical formula}〈DB,η〉is computable in polynomial time.The Kripke–Kleene repair of {a mathematical formula}〈DB,η〉 can be computed by iterating {a mathematical formula}Tη until a fixpoint is reached. Since {a mathematical formula}Tη is monotonic, the maximum number of iterations is the size of At; since each iteration can be computed in polynomial time (Proposition 8.1), so can this fixpoint.  □
+     </paragraph>
+     <paragraph label="Proposition 8.4">
+      The ATF-well-founded repair for{a mathematical formula}〈DB,η〉is computable in polynomial time.
+     </paragraph>
+     <paragraph label="Proof of Proposition 8.4">
+      The proof makes use of the following proposition. [23]Let A be an approximator of O and{a mathematical formula}(x,y)∈L2. Let{a mathematical formula}SAxbe the operator on L that maps every{a mathematical formula}y′to{a mathematical formula}A(x,y′)2. This operator is monotone. The smallest{a mathematical formula}y′such that{a mathematical formula}(x,y′)is an unfoundedness refinement of{a mathematical formula}(x,y)is given by{a mathematical formula}y′=lfp(SAx).To compute the {a mathematical formula}Tη -well-founded fixpoint, we can construct a well-founded induction with only strict refinements. Since such a well-founded is {a mathematical formula}≤p-increasing, it can consist of at most of {a mathematical formula}|A|=|At| steps. Computing if there exists a strict application refinement of a given partial repair set {a mathematical formula}U can be done by computing {a mathematical formula}Tη(U). Now, Proposition 8.5 shows that the most precise unfoundedness refinement can also be computed as the least fixpoint of a derived operator on {a mathematical formula}2A. Such a fixpoint can again be computed in polynomial time. Hence, it follows that we can compute a terminal well-founded induction, and thus the well-founded fixpoint, in polynomial time.  □
+     </paragraph>
+     <paragraph label="Proof">
+      The task of checking if a database{a mathematical formula}〈DB,η〉has a stable repair is NP-complete.(Inclusion) Given a candidate repair {a mathematical formula}U, checking that it is stable can be done in polynomial time, as it amounts to verifying that it is a repair (two-valued) and that it is a least fixpoint of the operators {a mathematical formula}Tη(⋅,U)1 and {a mathematical formula}Tη(U,⋅)2. The latter can be done in polynomial time, as in the proof of Proposition 8.3.(Hardness) For hardness, we again use the reduction from simple logic programs to AICs from Caroprese and Truszczyński [13] given in Definition 7.1. This operator preserves stable semantics by Theorem 7.2, and therefore allows us to compute stable models of simple logic programs by first translating them (in linear time) to sets of AICs. Since checking whether a logic program has a stable model is NP-complete [4], [30], we conclude that checking whether a database has a stable repair must be NP-hard. Note that every logic program can be transformed in a simple logic program by removing the offending rules without changing its stable semantics.  □
+     </paragraph>
+     <paragraph>
+      What we notice in this section is that complexity for inference tasks related to our semantics is always the same as the complexity of its counterpart in (normal) logic programming. This illustrates that the added expressivity (essentially, allowing AICs that are not unipolar) does not result in added complexity.
+     </paragraph>
+     <paragraph>
+      Contrary to the original work introducing AICs [27], our definitions do not include first-order quantifications. When allowing such a richer syntax, the results presented in this section can be re-used and constitute data-complexity results.
+     </paragraph>
+    </section>
+    <section label="9">
+     <section-title>
+      Conclusion
+     </section-title>
+     <paragraph>
+      In this paper, we defined an approximator in the domain of active integrity constraints. The result is a family of semantics for AICs based on existing intuitions in various domains of non-monotonic reasoning. We studied properties of our induced semantics. In particular the AFT-well-founded semantics possesses desirable properties: it approximates all repairs of various families (stable, justified, grounded) and hence can be used for approximate skeptical query-answering with respect to any of these semantics. Furthermore, the AFT-well-founded repair can be computed in time polynomial in the size of the database.
+     </paragraph>
+     <paragraph>
+      Our study is far from finished. In the context of approximation fixpoint theory, ultimate approximators have been studied by Denecker et al. [22]. They showed that with each two-valued operator, we can associate a canonical approximator. The ultimate approximator induces another family of semantics for AICs. In other domains, e.g., in logic programming, semantics based on ultimate approximators have some very desirable properties, but in general come at the cost of a higher computational complexity than their “standard” variants. It remains to be researched if the same holds in the context of AICs. In this paper, we showed that the class of justified repairs is situated in between the classes of stable and of grounded repairs. It is known from AFT that the class of ultimate stable fixpoints also falls in between the classes of stable fixpoints (for any approximator) and grounded fixpoints. Hence, an interesting research question would be to verify if justified repairs coincide with ultimate stable fixpoints in this domain, and if not, how they relate. Another topic with potential for interesting future work is the notion of inconsistency. Consider for instance the set of AICs {a mathematical formula}{¬a⊃+a,a⊃−a}; intuitively, we expect a semantic operator to derive an inconsistency from any partial action set; in standard AFT this is not possible. However, extensions of AFT that accommodate this have been defined [3]; it would be interesting to see how AICs fit in this general theory. Another AFT-based topic of interest could be to study what safe inductions[9] yield in the context of AICs and whether they can fix problems with the well-founded semantics. One last topic on which more extensive research might be needed is the domain of revision programming [31]. Caroprese and Truszczyński [13] showed structural correspondences between semantics for AICs and semantics for revision programs. Our paper now paves the way to applying AFT to revision programming as well.
+     </paragraph>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

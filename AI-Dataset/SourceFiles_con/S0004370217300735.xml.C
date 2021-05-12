@@ -1,0 +1,526 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    Latent tree models for hierarchical topic detection.
+   </title>
+   <abstract>
+    We present a novel method for hierarchical topic detection where topics are obtained by clustering documents in multiple ways. Specifically, we model document collections using a class of graphical models called hierarchical latent tree models (HLTMs). The variables at the bottom level of an HLTM are observed binary variables that represent the presence/absence of words in a document. The variables at other levels are binary latent variables that represent word co-occurrence patterns or co-occurrences of such patterns. Each latent variable gives a soft partition of the documents, and document clusters in the partitions are interpreted as topics. Latent variables at high levels of the hierarchy capture long-range word co-occurrence patterns and hence give thematically more general topics, while those at low levels of the hierarchy capture short-range word co-occurrence patterns and give thematically more specific topics. In comparison with LDA-based methods, a key advantage of the new method is that it represents co-occurrence patterns explicitly using model structures. Extensive empirical results show that the new method significantly outperforms the LDA-based methods in term of model quality and meaningfulness of topics and topic hierarchies.
+   </abstract>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      The objective of hierarchical topic detection (HTD) is, given a corpus of documents, to obtain a tree of topics with more general topics at high levels of the tree and more specific topics at low levels of the tree. It has a wide range of potential applications. For example, a topic hierarchy for posts at an online forum can provide an overview of the variety of the posts and guide readers quickly to the posts of interest. A topic hierarchy for the reviews and feedbacks on a business/product can help a company gauge customer sentiments and identify areas for improvements. A topic hierarchy for recent papers published at a conference or journal can give readers a global picture of recent trends in the field. A topic hierarchy for all the articles retrieved from PubMed on an area of medical research can help researchers get an overview of past studies in the area. In applications such as those mentioned here, the problem is not about search because the user does not know what to search for. Rather the problem is about summarization of thematic contents and topic-guided browsing.
+     </paragraph>
+     <paragraph>
+      Several HTD methods have been proposed previously, including the nested Chinese restaurant process (nCRP) [1], [2], the hierarchical Pachinko allocation model (hPAM) [3], [4], and the nested hierarchical Dirichlet process (nHDP) [5]. Those methods are extensions of latent Dirichlet allocation (LDA)[6]. Hence we refer to them collectively as LDA-based methods.
+     </paragraph>
+     <paragraph>
+      In this paper, we present a novel HTD method called hierarchical latent tree analysis (HLTA). Like the LDA-based methods, HLTA is a probabilistic method and it involves latent variables. However, there are fundamental differences. The first difference lies in the types of variables used in the models. In the LDA-based methods, observed variables are token variables (usually denoted as {a mathematical formula}Wd,n), and latent variables are constructs in a hypothetical document generation process, including a list of topics (usually denoted as β), a topic distribution vector for each document (usually denoted as {a mathematical formula}θd), and a topic assignment for each token in each document (usually denoted as {a mathematical formula}Zd,n). In contrast, each observed variable in HLTA stands for a word. It is a binary variable and represents the presence/absence of the word in a document. The latent variables in HLTA are considered as unobserved attributes of the documents. If we compare whether words occur in particular documents to whether students do well in various subjects, then the latent variables correspond to latent traits such as analytical skill, literacy skill, and general intelligence.
+     </paragraph>
+     <paragraph>
+      In the LDA-based methods, each token variable stands for a location in a document, and its possible values are the words in a vocabulary. Here one cannot talk about conditional independence between words because the probabilities of all words must sum to 1. On the other hand, the output of HLTA is a tree-structured graphical model, where the word variables are at the leaves and the latent variables are at the internal nodes. Two word variables are conditionally independent given any latent variable on the path between them. Words that frequently co-occur in documents tend to be located in the same “region” of the tree. This fact is conducive to the discovery of meaningful topics and topic hierarchies. A drawback of using binary word variables is that word counts are discarded.
+     </paragraph>
+     <paragraph>
+      The second difference lies in the definition and characterization of topics. Topics in the LDA-based methods are probabilistic distributions over a vocabulary. When presented to users, a topic is characterized using a few words with the highest probabilities. In contrast, topics in HLTA are clusters of documents. More specifically, all latent variables in HTLA are assumed to be binary. Just as the concept “analytical skill” partitions a student population into two soft clusters, with one cluster consisting of people with high analytic skill and the other consisting of people with low analytic skill, a latent variable in HLTA partitions a document collection into two soft clusters of documents. The document clusters are interpreted as topics. For presentation to users, a topic is characterized using the words that not only occur with high probabilities in topic but also occur with low probabilities outside the topic. The consideration of occurrence probabilities outside the topic is important because a word that occurs with high probability in the topic might also occur with high probability outside the topic. When that happens, it is not a good choice for the characterization of the topic.
+     </paragraph>
+     <paragraph>
+      HLTA also differs from the LDA-based methods in several other ways. Those differences are more technical in nature and will be explained Section 4.
+     </paragraph>
+     <paragraph>
+      The rest of the paper is organized as follows. We discuss related work in Section 2 and review the basics of latent tree models in Section 3. In Section 4, we introduce hierarchical latent tree models (HLTMs) and explain how they can be used for hierarchical topic detection. The HLTA algorithm for learning HLTMs is described in Sections 5 Model structure construction, 6 Parameter estimation during model construction, 7 Dealing with large datasets. In Section 8, we present the results HTLA obtains on a real-world dataset and discuss some practical issues. In Section 9, we empirically compare HLTA with the LDA-based methods. Finally, we end the paper in Section 10 with some concluding remarks and discussions of future work.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Related work
+     </section-title>
+     <paragraph>
+      Topic detection has been one of the most active research areas in Machine Learning in the past decade. The most commonly used method is latent Dirichlet allocation (LDA) [6]. LDA assumes that documents are generated as follows: First, a list {a mathematical formula}{β1,…,βK} of topics is drawn from a Dirichlet distribution. Then, for each document d, a topic distribution {a mathematical formula}θd is drawn from another Dirichlet distribution. Each word {a mathematical formula}Wd,n in the document is generated by first picking a topic {a mathematical formula}Zd,n according to the topic distribution {a mathematical formula}θd, and then selecting a word according to the word distribution {a mathematical formula}βZd,n of the topic. Given a document collection, the generation process is reverted via statistical inference (sampling or variational inference) to determine the topics and topic compositions of the documents.
+     </paragraph>
+     <paragraph>
+      LDA has been extended in various ways for additional modeling capabilities. Topic correlations are considered in [7], [3]; topic evolution is modeled in [8], [9], [10]; topic structures are built in [11], [3], [1], [4]; side information is exploited in [12], [13]; supervised topic models are proposed in [14], [15]; and so on. In the following, we discuss in more details three of the extensions that are more closely related to this paper than others.
+     </paragraph>
+     <paragraph>
+      The hierarchical Pachinko allocation model (hPAM) [3], [4] is proposed as a method for modeling correlations among topics. It introduces multiple levels of supertopics on top of the basic topics. Each supertopic is a distribution over the topics at the next level below. Hence hPAM can also be viewed as an HTD method, and the hierarchical structure needs to be predetermined. To pick a topic for a token, it first draws a top-level topic from a multinomial distribution (which in turn is drawn from a Dirichlet distribution), and then draws a topic for the next level below from the multinomial distribution associated with the top-level topic, and so on. The rest of the generation process is the same as in LDA.
+     </paragraph>
+     <paragraph>
+      The nested Chinese Restaurant Process (nCRP) [2] and the nested Hierarchical Dirichlet Process (nHDP) [5] are proposed as HTD methods. They assume that there is a true topic tree behind data. A prior distribution is placed over all possible trees using nCRP and nHDP respectively. An assumption is made as to how documents are generated from the true topic tree, which, together with data, gives a likelihood function over all possible trees. In nCRP, the topics in a document are assumed to be from one path down the tree, while in nHDP, the topics in a document can be from multiple paths, i.e., a subtree within the entire topic tree. The true topic tree is estimated by combining the prior and the likelihood in posterior inference. During inference, one in theory deals with a tree with infinitely many levels and each node having infinitely many children. In practice, the tree is truncated so that it has a predetermined number of levels. In nHDP, each node also has a predetermined number of children, and nCRP uses a hyperparameter to control the number. As such, the two methods in effect require the user to provide the structure of an hierarchy as input.
+     </paragraph>
+     <paragraph>
+      As mentioned in the introduction, HLTA models document collections using hierarchical latent tree models (HLTMs) and the latent variables in the models are regarded as unobserved attributes of the documents. The concept of latent tree models was introduced in [16], [17], where they were referred to as hierarchical latent class models. The term “latent tree models” first appeared in [18], [19]. Latent tree models (LTMs) generalize two classes of models from the previous literature. The first class is latent class models [20], [21], which are used for categorical data clustering in social sciences and medicine. The second class is probabilistic phylogenetic trees [22], which are a tool for determining the evolution history of a set of species.
+     </paragraph>
+     <paragraph>
+      The reader is referred to [23] for a survey of previous works on latent tree models. The works were conducted in three settings. In the first setting, data are assumed to be generated from an unknown LTM, and the task is to recover the generative model [24]. Here one tries to discover relationships between the latent structure and observed marginals that hold in LTMs, and then use those relationships to reconstruct the true latent structure from data. One can also prove theoretical results on consistency and sample complexity.
+     </paragraph>
+     <paragraph>
+      In the second setting, no assumption is made about how data are generated and the task is to fit an LTM to data [25]. In this setting it does not make sense to talk about theoretical guarantees on consistency and sample complexity. Instead, algorithms are evaluated empirically using held-out likelihood. It has been shown that, on real-world datasets, better models can be obtained using methods developed in this setting than using those developed in the first setting [26]. The reason is that, although the assumption of the first setting is reasonable for data from domains such as phylogeny, it is not reasonable for other types of data such as text data and survey data.
+     </paragraph>
+     <paragraph>
+      The third setting is similar to the second setting, except that model fit is no longer the only concern. In addition, one needs to consider how useful the resulting model is to users, and might want to, for example, obtain a hierarchy of latent variables. Liu et al. [27] are the first to use latent tree models for hierarchical topic detection. They propose an algorithm, namely HLTA, for learning HLTMs from text data and give a method for extracting topic hierarchies from the models. A method for scaling up the algorithm is proposed by Chen et al. [28]. This paper is based on [27], [28]. There are substantial extensions: The novelty of HLTA w.r.t. the LDA-based methods is now systematically discussed; the theory and algorithm are described in more details and two practical issues are discussed; a new parameter estimation method is used for large datasets; and the empirical evaluations are more extensive.
+     </paragraph>
+     <paragraph>
+      Another method to learn a hierarchy of latent variables from data is proposed by Ver Steeg and Galstyan [29]. The method is named correlation explanation (CorEx). Unlike HLTA, CorEx is a model-free method and it hence does not intend to provide a representation for the joint distribution of the observed variables.
+     </paragraph>
+     <paragraph>
+      HLTA produces a hierarchy with word variables at the bottom and multiple levels of latent variables on top. It is related to hierarchical variable clustering. However, there are fundamental differences. One difference is that HLTA defines a distribution over documents while variable clustering does not. In addition, HLTA also partitions document collections in multiple ways. There is a vast literature on document clustering [30]. In particular, co-clustering [31] can identify document clusters where each cluster is associated with a potentially different set of words. However, document clustering and topic detection are generally considered two different fields with little overlap. This paper bridges the two fields by developing a full-fledged HTD method that partitions documents in multiple ways.
+     </paragraph>
+    </section>
+    <section label="3">
+     <section-title>
+      Latent tree models
+     </section-title>
+     <paragraph>
+      A latent tree model (LTM) is a tree-structured Bayesian network [32], where the leaf nodes represent observed variables and the internal nodes represent latent variables. An example is shown in Fig. 1(a). In this paper, all variables are assumed to be binary. The model parameters include a marginal distribution for the root {a mathematical formula}Z1, and a conditional distribution for each of the other nodes given its parent. The product of the distributions defines a joint distribution over all the variables.
+     </paragraph>
+     <paragraph>
+      In general, an LTM has n observed variables {a mathematical formula}X={X1,…,Xn} and m latent variables {a mathematical formula}Z={Z1,…,Zm}. Denote the parent of a variable Y as {a mathematical formula}pa(Y) and let {a mathematical formula}pa(Y) be the empty set when Y is the root. Then the LTM defines a joint distribution over all observed and latent variables as follows:{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      By changing the root from {a mathematical formula}Z1 to {a mathematical formula}Z2 in Fig. 1(a), we get another model shown in (b). The two models are equivalent in the sense that they represent the same set of distributions over the observed variables {a mathematical formula}X1,…,X5[17]. It is not possible to distinguish between equivalent models based on data. This implies that the root of an LTM, and hence orientations of edges, are unidentifiable. It therefore makes more sense to talk about undirected LTMs, which is what we do in this paper. One example is shown in Fig. 1(c). It represents an equivalent class of directed models. A member of the class can be obtained by picking a latent node as the root and directing the edges away from the root. For example, (a) and (b) are obtained from (c) by choosing {a mathematical formula}Z1 and {a mathematical formula}Z2 to be the root respectively. In implementation, an undirected model is represented using an arbitrary directed model in the equivalence class it represents.
+     </paragraph>
+     <paragraph>
+      In the literature, there are variations of LTMs where some internal nodes are observed [24] and/or the variables are continuous [33], [34], [35]. In this paper, we focus on basic LTMs as defined in the previous two paragraphs.
+     </paragraph>
+     <paragraph>
+      We use {a mathematical formula}|Z| to denote the number of possible states of a variable Z. An LTM is regular if, for any latent node Z, we have that{a mathematical formula} where {a mathematical formula}Z1,…,Zk are the neighbors of Z, and that the inequality holds strictly when {a mathematical formula}k=2[17]. When all variables are binary, the condition reduces to that each latent node must have at least three neighbors.
+     </paragraph>
+     <paragraph>
+      For any irregular LTM, there is a regular model that has fewer parameters and represents that same set of distributions over the observed variables [17]. Consequently, we focus only on regular models.
+     </paragraph>
+    </section>
+    <section label="4">
+     <section-title>
+      Hierarchical latent tree models and topic detection
+     </section-title>
+     <paragraph>
+      We will later present an algorithm, called HLTA, for learning from text data models such as the one shown in Fig. 2. There is a layer of observed variables at the bottom and multiple layers of latent variables on top. The model is hence called a hierarchical latent tree model (HLTM). In this section, we discuss how to interpret HLTMs and how to extract topics and topic hierarchies from them.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       HLTMs for text data
+      </section-title>
+      <paragraph>
+       We use the toy model in Fig. 2 as a running example. It is learned from a subset of the 20 Newsgroups data.{sup:1} The variables at the bottom level, level 0, are observed binary variables that represent the presence/absence of words in a document. The latent variables at level 1 are introduced during data analysis to model word co-occurrence patterns. For example, Z11 captures the probabilistic co-occurrence of the words nasa, space, shuttle and mission; Z12 captures the probabilistic co-occurrence of the words orbit, earth, solar and satellite; Z13 captures the probabilistic co-occurrence of the words lunar and moon. Latent variables at level 2 are introduced during data analysis to model the co-occurrence of the patterns at level 1. For example, Z21 represents the probabilistic co-occurrence of the patterns Z11, Z12 and Z13.
+      </paragraph>
+      <paragraph>
+       Because the latent variables are introduced layer by layer, and each latent variable is introduced to explain the correlations among a group of variables at the level below, we regard, for the purpose of model interpretation, the edges between two layers as directed and they are directed downwards. (The edges between top-level latent variables are not directed.) This allows us to talk about the subtree rooted at a latent node. For example, the subtree rooted at {a mathematical formula}Z21 consists of the observed variables orbit, earth, …, mission.
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Topics from HLTMs
+      </section-title>
+      <paragraph>
+       There are totally 14 latent variables in the toy example. Each latent variable has two states and hence partitions the document collection into two soft clusters. To figure out what the partition and the two clusters are about, we need to consider the relationship between the latent variable and the observed variables in its subtree. Take Z21 as an example. Denote the two document clusters it gives as {a mathematical formula}Z21=s0 and {a mathematical formula}Z21=s1. The occurrence probabilities in the two clusters of the words in the Z21 subtree is given in Table 1, along with the sizes of the two clusters. We see that the cluster {a mathematical formula}Z21=s1 consists of {a mathematical formula}5% of the documents. In this cluster, the words such as space, nasa and orbit occur with relatively high probabilities. It is clearly meaningful and is interpreted as a topic. One might label the topic “NASA”. The other cluster {a mathematical formula}Z21=s0 consists of {a mathematical formula}95% of the documents. In this cluster, the words occur with low probabilities. We interpret it as a background topic.
+      </paragraph>
+      <paragraph>
+       There are three subtle issues concerning Table 1. The first issue is how the word variables are ordered. To answer the question, we need the mutual information (MI) {a mathematical formula}I(X;Y)[36] between the two discrete variables X and Y, which is defined as follows:{a mathematical formula} In Table 1, the word variables are ordered according to their mutual information with Z21. The words placed at the top of the table have the highest MI with Z21. They are the best ones to characterize the difference between the two clusters because their occurrence probabilities in the two clusters differ the most. They occur with high probabilities in the clusters {a mathematical formula}Z21=s1 and with low probabilities in {a mathematical formula}Z21=s0. If one is to choose only the top, say 5, words to characterize the topic {a mathematical formula}Z21=s1, then the best words to pick are space, nasa, orbit, earth and shuttle.
+      </paragraph>
+      <paragraph>
+       The second issue is how the background topic is determined. The answer is that, among the two document clusters given by Z21, the one where the words occur with lower probabilities is regarded as the background topic. In general, we consider the sum of the probabilities of the top 3 words. The cluster where the sum is lower is designated to be the background topic and labeled s0, and the other one is considered a genuine topic and labeled s1.
+      </paragraph>
+      <paragraph>
+       Finally, the creation of Table 1 requires the joint distribution of Z21 with each of the words variable in its subtrees (e.g., {a mathematical formula}P(space,Z21)). The distributions can be computed using Belief Propagation [32]. The computation takes linear time because the model is tree-structured.
+      </paragraph>
+     </section>
+     <section label="4.3">
+      <section-title>
+       Topic hierarchies from HLTMs
+      </section-title>
+      <paragraph>
+       If the background topics are ignored, each latent variable gives us exactly one topic. As such, the model in Fig. 2 gives us 14 topics, which are shown in Table 2. Latent variables at high levels of the hierarchy capture long-range word co-occurrence patterns and hence give thematically more general topics, while those at low levels of the hierarchy capture short-range word co-occurrence patterns and give thematically more specific topics. For example, the topic given by Z22 (windows, card, graphics, video, dos) consists of a mixture of words about several aspects of computers. We can say that the topic is about computers. The subtopics are each concerned with only one aspect of computers: Z14 (card, video, driver), Z15 (dos, windows), and Z16 (graphics, display, image).
+      </paragraph>
+     </section>
+     <section label="4.4">
+      <section-title>
+       More on novelty
+      </section-title>
+      <paragraph>
+       In the introduction, we have discussed the differences between HLTA and the LDA-based methods with regard to the types of observed and latent variables used and the definition and characterization of topics. There are three other important differences. The third difference lies in the relationship between topics and documents. In the LDA-based methods, a document is a mixture of topics, and the probabilities of the topics within a document sum to 1. Because of this, the LDA models are sometimes called mixed-membership models. In HLTA, a topic is a soft cluster of documents, and a document might belong to multiple topics with probability 1. In this sense, HLTMs can be said to be multi-membership models.
+      </paragraph>
+      <paragraph>
+       The fourth difference between HLTA and the LDA-based methods is about the semantics of the hierarchies they produce. The LDA-based methods nCRP and nHDP produce a tree of topics, each of which being a distribution over the vocabulary. The topics at higher levels appear more often than those at lower levels, but they are not necessarily related thematically. Similarly, hPAM yields a collection of topics that are organized into a directed acyclic graph. The topics at the lowest level are distributions over the words, and topics at higher levels are distributions over the topics at the level below and hence are called super-topics. On the other hand, the output of HLTA is a tree of latent variables. Latent variables at high levels of the tree capture long-range word co-occurrence patterns and hence give thematically more general topics, while latent variables at low levels of the tree capture short-range word co-occurrence patterns and hence give thematically more specific topics.
+      </paragraph>
+      <paragraph>
+       Note that, in the context of document analysis, a common concept of hierarchy is a rooted tree where each node represents a cluster of documents, and the cluster of documents at a node is the union of the document clusters at its children. Neither HLTA nor the LDA-based methods yield such hierarchies.
+      </paragraph>
+      <paragraph>
+       Finally, LDA-based methods require the user to provide the structure of a hierarchy, including the number of latent levels and the number of nodes at each level. The number of latent levels is usually set at 3 out of efficiency considerations. The contents of the nodes (distributions over vocabulary) are learned from data. In contrast, HLTA learns both model structures and model parameters from data. The number of latent levels is not limited to 3.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      Model structure construction
+     </section-title>
+     <paragraph>
+      We present the HLTA algorithm in this and the next two sections. The inputs to HLTA include a collection of documents and several algorithmic parameters. The outputs include an HLTM and a topic hierarchy extracted from the HLTM. Topic hierarchy extraction has already been explained in Section 4, and we will hence focus on how to learn the HLTM. In this section we will describe the procedures for constructing the model structure. In Section 6 we will discuss parameter estimation issues, and in Section 7 we will discuss techniques employed to accelerate the algorithm.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       Top-level control
+      </section-title>
+      <paragraph>
+       The top-level control of HLTA is given in Algorithm 1 and the subroutines are given in Algorithm 2, Algorithm 3, Algorithm 4, Algorithm 5, Algorithm 6. In this subsection, we illustrate the top-level control using the toy dataset mentioned in Section 4, which involves 30 word variables.
+      </paragraph>
+      <paragraph>
+       There are 5 steps. The first step (line 3) yields the model shown in Fig. 3(a). It is said to be a flat LTM because each latent variable is connected to at least one observed variable. In hierarchical models such as the one shown in Fig. 2, on the other hand, only the latent variables at the lowest latent layer are connected to observed variables, and other latent variables are not. The learning of a flat model is the key step of HLTA. We will discuss it in details later.
+      </paragraph>
+      <paragraph>
+       We refer to the latent variables in the flat model from the first step as level 1 latent variables. The objective of the second step (line 9) is to turn the level 1 latent variables into observed variables through data completion. To do so, the subroutine HardAssignment carries out inference to compute the posterior distribution of each latent variable for each document. The document is assigned to the state with the highest posterior probability, resulting in a dataset {a mathematical formula}D1 over the level 1 latent variables.
+      </paragraph>
+      <paragraph>
+       In the third step, line 3 is executed again to learn a flat LTM for the level 1 latent variables, resulting the model shown in Fig. 3(b).
+      </paragraph>
+      <paragraph>
+       In the fourth step (line 7), the flat model for the level 1 latent variables is stacked on top of the flat model for the observed variables, resulting in the hierarchical model in Fig. 2. While doing so, the subroutine StackModels cuts off the links among the level 1 latent variables. The parameter values for the new model are copied from two source models.
+      </paragraph>
+      <paragraph>
+       In general, the first four steps are repeated until the number of top-level latent variables falls below a user-specified upper bound τ (lines 2 to 10). In our running example, we set {a mathematical formula}τ=5. The number of nodes at the top level in our current model is 3, which is below the threshold τ. Hence the loop is exited.
+      </paragraph>
+      <paragraph>
+       In the fifth step (line 11), the EM algorithm [37] is run on the final hierarchical model for κ steps to improve its parameters, where κ is another user specified input parameter.
+      </paragraph>
+      <paragraph>
+       The five steps can be grouped into two phases conceptually. The model construction phase consists of the first four steps. The objective is to build a hierarchical model structure. The parameter estimation phase consists of the fifth step. The objective is to optimize the parameters of the hierarchical structure from the first phase.
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Learning flat models
+      </section-title>
+      <paragraph>
+       The objective of the flat model learning step is to find, among all flat models, the one that has the highest BIC score. The BIC score [38] of a model m given a dataset {a mathematical formula}D is defined as follows:{a mathematical formula} where {a mathematical formula}θ⁎ is the maximum likelihood estimate of the model parameters, d is the number of free model parameters, and {a mathematical formula}|D| is the sample size. Maximizing the BIC score intuitively means to find a model that fits the data well and that is not overly complex.
+      </paragraph>
+      <paragraph>
+       One way to solve the problem is through search. The state-of-the-art in this direction is an algorithm named EAST [25]. It has been shown in [26] to find better models than alternative algorithms such as BIN [39] and CLRG [24]. However, it does not scale up. It is capable of handling data with only dozens of observed variables and is hence not suitable for text analysis.
+      </paragraph>
+      <paragraph>
+       In the following, we present an algorithm that, when combined with the parameter estimation technique to be described in the next section, is efficient enough to deal with large text data. The pseudo code is given in Algorithm 2. It calls two subroutines. The first subroutine is BuildIslands. It partitions all word variables into clusters, such that the words in each cluster tend to co-occur and the co-occurrences can be properly modeled using a single latent variable. It then introduces a latent variable for each cluster to model the co-occurrence of the words inside it. Thus we obtain an LTM with a single latent variable for each word variable cluster, and it is called a latent class model (LCM). In our running example, the results are shown in Fig. 4. We metaphorically refer to the LCMs as islands.
+      </paragraph>
+      <paragraph>
+       The second subroutine is BridgeIslands. It links up the islands by first estimating the mutual information between every pair of latent variables, and then finding the maximum spanning tree [40]. The result is the model in Fig. 3(a).
+      </paragraph>
+      <paragraph>
+       We now set out to describe the two subroutines in details.
+      </paragraph>
+      <section label="5.2.1">
+       <section-title>
+        Uni-dimensionality test
+       </section-title>
+       <paragraph>
+        Conceptually, a set of variables is said to be uni-dimensional if the correlations among them can be properly modeled using a single latent variable. Operationally, we rely on the uni-dimensionality test (UD-test) to determine whether a set of variables is uni-dimensional.
+       </paragraph>
+       <paragraph>
+        To perform UD-test on a set {a mathematical formula}S of observed variables, we first learn two latent tree models {a mathematical formula}m1 and {a mathematical formula}m2 for {a mathematical formula}S and then compare their BIC scores. The model {a mathematical formula}m1 is the model with the highest BIC score among all LTMs with a single latent variable, and the model {a mathematical formula}m2 is the model with the highest BIC score among all LTMs with two latent variables. Fig. 5(b) shows what the two models might look like when {a mathematical formula}S consists of four word variables nasa, space, shuttle and mission. We conclude that {a mathematical formula}S is uni-dimensional if the following inequality holds:{a mathematical formula} where δ is a user-specified threshold. In other words, {a mathematical formula}S is considered uni-dimensional if the best two-latent variable model is not significantly better than the best one-latent variable model.
+       </paragraph>
+       <paragraph>
+        Note that the UD-test is related to the Bayes factor for comparing the two models [41]:{a mathematical formula} The strength of evidence in favor of {a mathematical formula}m2 depends on the value of K. The following guidelines are suggested in [41]: If the quantity {a mathematical formula}2log⁡K is from 0 to 2, the evidence is negligible; If it is between 2 and 6, there is positive evidence in favor of {a mathematical formula}m2; If it is between 6 to 10, there is strong evidence in favor of {a mathematical formula}m2; And if it is larger than 10, then there is very strong evidence in favor of {a mathematical formula}m2. Here, “log” stands for natural logarithm.
+       </paragraph>
+       <paragraph>
+        It is well known that the BIC score {a mathematical formula}BIC(m|D) is a large sample approximation of the marginal loglikelihood {a mathematical formula}log⁡P(D|m)[38]. Consequently, the difference {a mathematical formula}BIC(m2|D)−BIC(m1|D) is a large sample approximation of the logarithm of the Bayes factor {a mathematical formula}log⁡K. According to the cut-off values for the Bayes factor, we conclude that there is positive, strong, and very strong evidence favoring {a mathematical formula}m2 when the difference is larger than 1, 3 and 5 respectively. In our experiments, we always set {a mathematical formula}δ=3.
+       </paragraph>
+      </section>
+      <section label="5.2.2">
+       <section-title>
+        Building islands
+       </section-title>
+       <paragraph>
+        The subroutine BuildIslands (Algorithm 3) builds islands one by one. It builds the first island by calling another subroutine OneIsland (Algorithm 4). Then it removes the variables in the island from the dataset, and repeats the process to build other islands. It continues until all variables are grouped into islands.
+       </paragraph>
+       <paragraph>
+        The subroutine OneIsland (Algorithm 4) requires a measurement of how closely correlated each pair of variables are. In this paper, mutual information is used for the purpose. The MI {a mathematical formula}I(X;Y) between the two variables X and Y is given by (3). We will also need the MI between a variable X and a set of variables {a mathematical formula}S. We estimate it as follows:{a mathematical formula}
+       </paragraph>
+       <paragraph>
+        The subroutine OneIsland maintains a working set {a mathematical formula}S of observed variables. Initially, {a mathematical formula}S consists of the pair of variables with the highest MI (line 2), which will be referred to as the seed variables for the island. Then the variable that has the highest MI with those two variables is added to {a mathematical formula}S as the third variable (lines 3 and 4). Then other variables are added to {a mathematical formula}S one by one. At each step, we pick the variable X that has the highest MI with the current set {a mathematical formula}S (line 9), and perform UD-test on the set {a mathematical formula}S∪{X} (lines 12, 14, 15). If the UD-test passes, X is added to {a mathematical formula}S (line 19) and the process continues. If the UD-test fails, one island is created and the subroutine returns (line 16). The subroutine also returns when the size of the island reaches a user-specified upper-bound μ (line 18). In our experiments, we always set {a mathematical formula}μ=15.
+       </paragraph>
+       <paragraph>
+        The UD-test requires two models {a mathematical formula}m1 and {a mathematical formula}m2. In principle, they should be the best models with one and two latent variables respectively. For the sake of computational efficiency, we construct them heuristically in this paper. For {a mathematical formula}m1, we choose the LCM where the latent variable is binary and the parameters are optimized by a fast subroutine Pem-Lcm that will be described in the next section.
+       </paragraph>
+       <paragraph>
+        Let W be the variable in {a mathematical formula}S that has the highest MI with the variable X to be added to the island. For {a mathematical formula}m2, we choose the model where one latent variable is connected to the variables in {a mathematical formula}S∖{W} and the second latent variable connected to W and X. Both latent variables are binary and the model parameters are optimized by a fast subroutine Pem-Ltm-2l that will be described in the next section.
+       </paragraph>
+       <paragraph>
+        We illustrate the OneIsland subroutine using an example in Fig. 5. The pair of variables nasa and space have the highest MI among all variables, and they are hence the seed variables. The variable shuttle has the highest MI with the pair among all other variables, and hence it is chosen as the third variable to start the island (Fig. 5(a)). Among all the other variables, mission has highest MI with the three variables in the model. To decide whether mission should be added to the group, the two models {a mathematical formula}m1 and {a mathematical formula}m2 in Fig. 5(b) are created. In {a mathematical formula}m2, shuttle is grouped with the new variable because it has the highest MI with the new variable among all the three variables in Fig. 5(a). It turns out that {a mathematical formula}m1 has higher BIC score than {a mathematical formula}m2. Hence the UD-test passes and the variable mission is added to the group. The next variable to be considered for addition is moon and it is added to the group because the UD-test passes again (Fig. 5(c)). After that, the variable lunar is considered. In this case, the BIC score of {a mathematical formula}m2 is significantly higher than that of {a mathematical formula}m1 and hence the UD-test fails (Fig. 5(d)). The subroutine OneIsland hence terminates. It returns an island, which is the part of the model {a mathematical formula}m2 that does not contain the last variable lunar (Fig. 5(e)). The island consists of the four words nasa, space, shuttle and mission. Intuitively, they are grouped together because they tend to co-occur in the dataset.
+       </paragraph>
+      </section>
+      <section label="5.2.3">
+       <section-title>
+        Bridging islands
+       </section-title>
+       <paragraph>
+        After the islands are created, the next step is to link them up so as to obtain a model over all the word variables. This is carried out by the BridgeIslands subroutine and the idea is borrowed from [42]. The subroutine first estimates the MI between each pair of latent variables in the islands, then constructs a complete undirected graph with the MI values as edge weights, and finally finds the maximum spanning tree of the graph. The parameters of the newly added edges are estimated using a fast method that will be described at the end of Section 6.3.
+       </paragraph>
+       <paragraph>
+        Let m and {a mathematical formula}m′ be two islands with latent variables Y and {a mathematical formula}Y′ respectively. The MI {a mathematical formula}I(Y;Y′) between Y and {a mathematical formula}Y′ is calculated using Equation (3) from the following joint distribution:{a mathematical formula} where {a mathematical formula}P(Y|m,d) is the posterior distribution of Y in m given data case d , {a mathematical formula}P(Y′|m′,d) is that of {a mathematical formula}Y′ in {a mathematical formula}m′, and C is the normalization constant.
+       </paragraph>
+       <paragraph>
+        In our running example, applying BridgeIslands to the islands in Fig. 4 results in the flat model shown in Fig. 3(a).
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Parameter estimation during model construction
+     </section-title>
+     <paragraph>
+      In the model construction phase, a large number of intermediate models are generated. Whether HLTA can scale up depends on whether the parameters of those intermediate models and the final model can be estimated efficiently. In this section, we present a fast method called progressive EM for estimating the parameters of the intermediate models. In the next section, we will discuss how to estimate the parameters of the final model efficiently when the sample size is very large.
+     </paragraph>
+     <section label="6.1">
+      <section-title>
+       The EM algorithm
+      </section-title>
+      <paragraph>
+       We start by briefly reviewing the EM algorithm. Let X and H be respectively the sets of observed and latent variables in an LTM m, and let {a mathematical formula}V=X∪H. Assume one latent variable is picked as the root and all edges are directed away from the root. For any V in V that is not the root, the parent {a mathematical formula}pa(V) of V is a latent variable and can take values ‘0’ or ‘1’. For technical convenience, let {a mathematical formula}pa(V) be a dummy variable with only one possible value when V is the root. Enumerate all the variables as {a mathematical formula}V1,V2,⋯,Vn. We denote the parameters of m as{a mathematical formula} where {a mathematical formula}i∈{1,⋯,n}, k is value of {a mathematical formula}Vi and j is a value of {a mathematical formula}pa(Vi). Let θ be the vector of all the parameters.
+      </paragraph>
+      <paragraph>
+       Given a dataset {a mathematical formula}D, the loglikelihood function of θ is given by{a mathematical formula} The maximum likelihood estimate (MLE) of θ is the value that maximizes the loglikelihood function.
+      </paragraph>
+      <paragraph>
+       Due to the presence of latent variables, there is no closed form solution for the MLE. An iterative method called the Expectation–Maximization (EM)[37] algorithm is usually used in practice. EM starts with an initial guess {a mathematical formula}θ(0) of the parameter values, and then produces a sequence of estimates {a mathematical formula}θ(1),θ(2),⋯. Given the current estimate {a mathematical formula}θ(t), the next estimate {a mathematical formula}θ(t+1) is obtained through an E-step and an M-step. For latent tree models, the two steps are as follows:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        The E-step:{a mathematical formula}
+       </list-item>
+       <list-item label="•">
+        The M-step:{a mathematical formula}
+       </list-item>
+      </list>
+      <paragraph>
+       Note that the E-step requires the calculation of {a mathematical formula}P(Vi,pa(Vi)|d,m,θ(t)) for each data case {a mathematical formula}d∈D and each variable {a mathematical formula}Vi. For a given data case d, we can calculate {a mathematical formula}P(Vi,pa(Vi)|d,m,θ(t)) for all variables {a mathematical formula}Vi in linear time using message propagation [43].
+      </paragraph>
+      <paragraph>
+       EM terminates when the improvement in loglikelihood {a mathematical formula}l(θ(t+1)|D)−l(θ(t)|D) falls below a predetermined threshold or when the number of iterations reaches a predetermined limit. To avoid local maxima, multiple restarts are usually used.
+      </paragraph>
+     </section>
+     <section label="6.2">
+      <section-title>
+       Progressive EM
+      </section-title>
+      <paragraph>
+       Being an iterative algorithm, EM can be trapped in local maxima. It is also time-consuming and does not scale up well. Progressive EM is proposed as a fast alternative to EM for the model construction phase. It estimates all the parameters in multiple steps and, in each step, it considers a small part of the model and runs EM in the submodel to maximize the local likelihood function. The idea is illustrated in Fig. 6. Assume Y is selected to be the root. To estimate all the parameters of the model, we first run EM in the part of the model shaded in Fig. 6(a) to estimate {a mathematical formula}P(Y),P(A|Y),P(B|Y) and {a mathematical formula}P(D|Y), and then run EM in the part of the model shaded in Fig. 6(b), with {a mathematical formula}P(Y),P(B|Y) and {a mathematical formula}P(D|Y) fixed, to estimate {a mathematical formula}P(Z|Y),P(C|Z) and {a mathematical formula}P(E|Z).
+      </paragraph>
+     </section>
+     <section label="6.3">
+      <section-title>
+       Progressive EM and HLTA
+      </section-title>
+      <paragraph>
+       We use progressive EM to estimate the parameters for the intermediate models generated by HLTA, specifically those generated by subroutine OneIsland (Algorithm 4). It is carried out by the two subroutines Pem-Lcm and Pem-Ltm-2l.
+      </paragraph>
+      <paragraph>
+       At lines 1 and 7, OneIsland needs to estimate the parameters of an LCM with three observed variables. It is done using EM. Next, it enters a loop. At the beginning, we have an LCM m for a set {a mathematical formula}S of variables. The parameters of the LCM have been estimated earlier (line 7 at beginning or line 12 of previous pass through the loop). At lines 9 and 10, OneIsland finds the variable X outside {a mathematical formula}S that has maximum MI with {a mathematical formula}S, and the variable W inside {a mathematical formula}S that has maximum MI with X.
+      </paragraph>
+      <paragraph>
+       At line 12, OneIsland adds X to the m to create a new LCM {a mathematical formula}m1. The parameters of {a mathematical formula}m1 are estimated using the subroutine Pem-Lcm (Algorithm 5), which is an application of progressive EM. Let us explain Pem-Lcm using the intermediate models shown in Fig. 5. Let m be the model shown on the left of Fig. 5(c) and {a mathematical formula}S={nasa,space,shuttle,mission,moon}. The variable X to be added to m is lunar, and the model {a mathematical formula}m1 after adding lunar to m is shown on the left of Fig. 5(d). The only distribution to be estimated is {a mathematical formula}P(lunar|Y), as other distributions have already been estimated. Pem-Lcm estimates the distribution by running EM on a part of the model {a mathematical formula}m1 in Fig. 7 (left), where the variables involved are marked with rectangles. The variables nasa and space are included in the submodel, instead of other observed variables, because they were the seed variables picked at line 2 of Algorithm 4.
+      </paragraph>
+      <paragraph>
+       At line 14, OneIsland adds X to the m to create a new LTM {a mathematical formula}m2 with two latent variables. The parameters of {a mathematical formula}m2 are estimated using the subroutine Pem-Ltm-2l (Algorithm 6),{sup:2} which is also an application of progressive EM. In our running example, let moon be the variable W that has the highest MI with lunar among all variables in {a mathematical formula}S. Then the model {a mathematical formula}m2 is as shown on the right hand side of Fig. 5(d). The distributions to be estimated are: {a mathematical formula}P(Z|Y),P(moon|Z) and {a mathematical formula}P(lunar|Z). Pem-Ltm-2l estimates the distributions by running EM on a part of the model {a mathematical formula}m2 in Fig. 7 (right), where the variables involved are marked with rectangles. The variables nasa and space are included in the submodel, instead of shuttle and mission, because they were the seed variables picked at line 2 of Algorithm 4.
+      </paragraph>
+      <paragraph>
+       There is also a parameter estimation problem inside the subroutine BridgeIslands. After linking up the islands, the parameters for edges between latent variables must be estimated. We use progressive EM for this task also. Consider the model in Fig. 3 (a). To estimate {a mathematical formula}P(Z11|Z12), we form a sub-model by picking two children of Z11, for instance nasa and space, and two children of Z12, for instance orbit and earth. Then we estimate the distribution {a mathematical formula}P(Z11|Z12) by running EM in the submodel with all other parameters fixed.
+      </paragraph>
+     </section>
+     <section label="6.4">
+      <section-title>
+       Complexity analysis
+      </section-title>
+      <paragraph>
+       Let n be the number of observed variables and N be the sample size. HLTA requires the computation of empirical MI between each pair of observed variables. This takes {a mathematical formula}O(n2N) time.
+      </paragraph>
+      <paragraph>
+       When building islands for the observed variables, HLTA generates roughly 2n intermediate models. Progressive EM is used to estimate the parameters of the intermediate models. It is run on submodels with 3 or 4 observed variables. The projection of a dataset onto 3 or 4 binary variables consists of only 8 or 16 distinct cases no matter how large the original sample size is. Hence progressive EM takes constant time, which we denote by {a mathematical formula}c1, on each submodel. This is the key reason why HLTA can scale up. The data projection takes {a mathematical formula}O(N) time for each submodel. Hence the total time for island building is {a mathematical formula}O(2n(N+c1)).
+      </paragraph>
+      <paragraph>
+       To bridge the islands, HLTA needs to estimate the MI between every pair of latent variables and runs progressive EM to estimate the parameters for the edges between the islands. A loose upper bound on the running time of this step is {a mathematical formula}n2N+n(N+c1). The total number of variables (observed and latent) in the resulting flat model is upper bounded by 2n. Inference on the model takes no more than 2n propagation steps for each data case. Let {a mathematical formula}c2 be the time for each propagation step. Then the hard assignment step takes {a mathematical formula}O(4nc2N) time. So, the total time for the first pass through the loop in HLTA is {a mathematical formula}O(2n2N+3n(N+c1)+4nc2N)=O(2n2N+3nc1+4nc2N), where the term {a mathematical formula}3nN is ignored because it is dominated by the term {a mathematical formula}4nc2N.
+      </paragraph>
+      <paragraph>
+       As we move up one level, the number of “observed” variables is decreased by at least half. Hence, the total time for the model construction phase is upper bounded by {a mathematical formula}O(4n2N+6nc1+8nc2N).
+      </paragraph>
+      <paragraph>
+       The total number of variables (observed and latent) in the final model is upper bounded by 2n. Hence, one EM iteration takes {a mathematical formula}O(4nc2N) time and the final parameter optimization steps takes {a mathematical formula}O(4nc2Nκ) times.
+      </paragraph>
+      <paragraph>
+       The total running time of HLTA is {a mathematical formula}O(4n2N+6nc1+8nc2N)+O(4nc2Nκ). The two terms are the times for model construction phase and the parameter estimation phase respectively.
+      </paragraph>
+     </section>
+    </section>
+    <section label="7">
+     <section-title>
+      Dealing with large datasets
+     </section-title>
+     <paragraph>
+      We employ two techniques to further accelerate HLTA so that it can handle large datasets with millions of documents. The first technique is downsampling and we use it to reduce the complexity of the model construction phase. Specifically, we use a subset of {a mathematical formula}N′ randomly sampled data cases instead of the entire dataset and thereby reduce the complexity to {a mathematical formula}O(4n2N′+6nc1+8nc2N′). When N is very large, we can set {a mathematical formula}N′ to be a small fraction of N and hence achieve substantial computational savings. In the meantime, we can still expect to obtain a good structure if {a mathematical formula}N′ is not too small. The reason is that model construction relies on salient regularities of data and those regularities should be preserved in the subset when {a mathematical formula}N′ is not too small.
+     </paragraph>
+     <paragraph>
+      The second technique is stepwise EM [44], [45]. We use it to accelerate the convergence of the parameter estimation process in the second phase, where the task is to improve the values of the parameters {a mathematical formula}θ={θijk} (Equation (9)) obtained in the model construction phase. While standard EM, a.k.a. batch EM, updates the parameter once in each iteration, stepwise EM updates the parameters multiple times in each iteration.
+     </paragraph>
+     <paragraph>
+      Suppose the data set {a mathematical formula}D is randomly divided into equal-sized minibatches {a mathematical formula}D1, …, {a mathematical formula}DB. Stepwise EM updates the parameters after processing each minibatch. It maintains a collection of auxiliary variables {a mathematical formula}nijk, which are initialized to 0 in our experiments. Suppose the parameters have been updated {a mathematical formula}u−1 times before and the current values are {a mathematical formula}θ={θijk}. Let {a mathematical formula}Db be the next minibatch to process. Stepwise EM carries out the updating as follows:{a mathematical formula}{a mathematical formula}{a mathematical formula} Note that equation (13) is similar to (11) except that the statistics are calculated on the minibatch {a mathematical formula}Db rather than the entire dataset {a mathematical formula}D. The parameter {a mathematical formula}ηu is known as the stepsize and is given by {a mathematical formula}ηu=(u+2)−α and the parameter α is to be chosen the range {a mathematical formula}0.5≤α≤1[46]. In all our experiments, we set {a mathematical formula}α=0.75.
+     </paragraph>
+     <paragraph>
+      Stepwise EM is similar to stochastic gradient descent [47] in that it updates the parameters after processing each minibatch. It has been shown to yield estimates of the same or even better quality as batch EM and it converges much faster than the latter [46]. As such, we can run it for much fewer iterations than batch EM and thereby substantially reduce the running time.
+     </paragraph>
+    </section>
+    <section label="8">
+     <section-title>
+      Illustration of results and practical issues
+     </section-title>
+     <paragraph>
+      HLTA is a novel method for hierarchical topic detection and, as discussed in the introduction, it is fundamentally different from the LDA-based methods. We will empirically compare HLTA with the LDA-based methods in the next section. In this section, we present the results HLTA obtains on a real-world dataset so that the reader can gain a clear understanding of what it has to offer. We also discuss two practical issues.
+     </paragraph>
+     <section label="8.1">
+      <section-title>
+       Results on the NYT dataset
+      </section-title>
+      <paragraph>
+       HLTA is implemented in Java. The source code is available online,{sup:3} along with the datasets used in this paper and the full details of the results obtained on them. HLTA has been tested on several datasets. One of them is the NYT dataset, which consists of 300,000 articles published on New York Times between 1987 and 2007.{sup:4} A vocabulary of 10,000 words was selected using average TF-IDF[48] for the analysis. The average TF-IDF of a term t in a collection of documents {a mathematical formula}D is defined as follows:{a mathematical formula} where {a mathematical formula}|⋅| stands for the cardinality of a set, {a mathematical formula}tf(t,d) is the term frequency of t in document d, and {a mathematical formula}idf(t,D)=log⁡(|D|/|{d∈D:t∈d}|) is the inverse document frequency of t in the document collection {a mathematical formula}D.
+      </paragraph>
+      <paragraph>
+       A subset of 10,000 randomly sampled documents was used in the model construction phase. Stepwise EM was used in the parameter estimation phase and the size of minibatches was set at 1,000. Other parameter settings are given in the next section. The analysis took around 420 minutes on a desktop machine.
+      </paragraph>
+      <paragraph>
+       The result is an HLTM with 5 levels of latent variables and 21 latent variables at the top level. Fig. 8 shows a part of the model structure. Four top-level latent variables are included in the figure. The level 4 and level 2 latent variables in the subtrees rooted at the five top-level latent variables are also included.
+      </paragraph>
+      <paragraph>
+       Each level 2 latent variable is connected to four word variables in its subtrees. Those are the word variables that have the highest MI with the latent variable among all word variables in the subtree.
+      </paragraph>
+      <paragraph>
+       The structure is interesting. We see that most words in the subtree rooted at Z501 are about economy and stock market; most words in the subtree Z502 are about companies and various industries; most words in the subtree rooted at Z503 are about movies and music; and most words in the subtree rooted at Z504 are about cooking.
+      </paragraph>
+      <paragraph>
+       Table 3 shows a part of the topic hierarchy extracted from the part of the model shown in Fig. 8. The topics and the relationships among them are meaningful. For example, the topic 1 is about economy and stock market. It splits into two groups of subtopics, one on economy and another on stock market. Each subtopic further splits into sub-subtopics. For example, the subtopic 1.2 under economy splits into three subtopics: currency expansion, labor union and minimum wages. The topic 2 is about company-firm-industry. Its subtopics include several types of companies such as insurance, retail stores/consumer products, natural gas/oil, drug, and so on.
+      </paragraph>
+     </section>
+     <section label="8.2">
+      <section-title>
+       Two practical issues
+      </section-title>
+      <paragraph>
+       Next we discuss two practical issues.
+      </paragraph>
+      <section label="8.2.1">
+       <section-title>
+        Broadly vs narrowly defined topics
+       </section-title>
+       <paragraph>
+        In HLTA, each latent variable is introduced to model a pattern of probabilistic word co-occurrence. It also gives us a topic, which is a soft cluster of documents. The size of the topic is determined by considering not only the words in the pattern, but all the other words in the vocabulary. As such, it conceptually includes two types of documents: (1) documents that contain, in a probabilistic sense, the pattern, and (2) documents that do not contain the pattern but are otherwise similar to those that do. Because of the inclusion of the second type of documents, the topic is said to be broadly defined. All the topics reported above are broadly defined.
+       </paragraph>
+       <paragraph>
+        The size of a broadly defined topic might appear unrealistically large at the first glance. For example, one topic detected from the NYT dataset consists of the words affair, widely, scandal, viewed, intern, monica_lewinsky, and its size is 0.18. Although this seems too large, it is actually reasonable. Obviously, the fraction of documents that contain the seven words in the topic should be much smaller than {a mathematical formula}18%. However, those documents also contain many other words, such as bill and clinton, about American politics. Other documents that contain many of those other words are also included in the topic, and hence it is not surprising for the topic to cover {a mathematical formula}18% of the corpus. As a matter of fact, there are several other topics about American politics that are of similar sizes. One of them is: corruption campaign political democratic presidency.
+       </paragraph>
+       <paragraph>
+        In some applications, it might be desirable to identify narrowly defined topics — topics made up of only the documents containing particular patterns. Such topics can be obtained as follows: First, pick a list of words to characterize a topic using the method described in Section 4; then, form a latent class model using those words as observed variables; and finally, use the model to partition all documents into two clusters. The cluster where the words occur with relatively higher probabilities are designated as the narrow topic. The size of a narrowly defined topic is typically much smaller than that of the widely defined version. For example, the sizes of the narrowly defined version of the two aforementioned topics are 0.008 and 0.169 respectively.
+       </paragraph>
+      </section>
+      <section label="8.2.2">
+       <section-title>
+        Use of collocations as observed variables
+       </section-title>
+       <paragraph>
+        In HLTMs, each observed variable is connected to only one latent variable. If individual words are used as observed variables, then each word would appear in only one branch of the resulting topic hierarchy. This is not reasonable. Take the word “network” as an example. It can appear in different multi-word expressions such as “neural network”, “Bayesian network”, “constraint network”, “social network”, “sensor network”, and so on. Clearly, those terms should appear in different branches in a good topic hierarchy.
+       </paragraph>
+       <paragraph>
+        Multi-word expressions such as “neural network” are known as collocations in the literature. In general, a collocation is sequence of consecutive words that has the characteristics of a syntactic and semantic unit [49]. It has been shown in [50] that replacing collocations with single tokens improves the performance of topic models. We borrow the idea to mitigate the problem mentioned above.
+       </paragraph>
+       <paragraph>
+        Specifically, we use the method described in [51]. The method first treats individual words as tokens and finds top n tokens with the highest average TF-IDF. Let Pick-top-tokens{a mathematical formula}(D,n) be the subroutine which does that. The method then calculates the TF-IDF values of all 2-grams, and includes the top n 1-grams and 2-grams with highest TF-IDF values as tokens. After that, the selected 2-grams (e.g., “social network”) are replaced with single tokens (e.g., “social-network”) in all the documents and the subroutine Pick-top-tokens{a mathematical formula}(D,n) is run again to pick a new set of n tokens. The process can be repeated if one wants to consider n-grams with {a mathematical formula}n&gt;2 as tokens.
+       </paragraph>
+       <paragraph>
+        The method has been applied in an analysis of all the papers published at AAAI and IJCAI between 2000 and 2015. Table 4 shows some of the topics from the resulting topic hierarchy. They all contain the word “network” and are from different branches of the hierarchy.
+       </paragraph>
+      </section>
+     </section>
+    </section>
+    <section label="9">
+     <section-title>
+      Empirical comparisons
+     </section-title>
+     <paragraph>
+      We now present empirical results to compare HLTA with LDA-based methods for hierarchical topic detection, including the nested Chinese restaurant process (nCRP) [2], the nested hierarchical Dirichlet process (nHDP) [5] and the hierarchical Pachinko allocation model (hPAM) [4]. Also included in the comparisons is CorEx [29]. CorEx produces a hierarchy of latent variables, but not a probability model over all the variables. For comparability, we convert the results into a hierarchical latent tree model.{sup:5} Implementations of all those methods were obtained online.{sup:6}
+     </paragraph>
+     <section label="9.1">
+      <section-title>
+       Datasets
+      </section-title>
+      <paragraph>
+       Three datasets were used in our experiments. The first one is the NYT dataset mentioned before. The second one is the 20 Newsgroups dataset first mentioned in Section 4. It consists of 19,940 newsgroup posts. The third one is the NIPS dataset, which consists of 1,955 articles published at the NIPS conference between 1988 and 1999.{sup:7} Symbols, stop words and the words that occur less than 3 times were removed for all the datasets.
+      </paragraph>
+      <paragraph>
+       Three versions of the NIPS dataset and two versions of the Newsgroup dataset were created by choosing vocabularies with different sizes using average TF-IDF. For the NYT dataset, only one version was chosen. So, the experiments were performed on six datasets. Information about them is given in Table 5. Each dataset has two versions: a binary version where word frequencies are discarded, and a bags-of-words version where word frequencies are kept. HLTA and CorEx were run only on the binary version because they can only process binary data. The methods nCRP, nHDP and hPAM were run on both versions and the results are denoted as nCRP-bin, nHDP-bin, hPAM-bin, nCRP-bow, nHDP-bow and hPAM-bow respectively. Note that the LDA-based algorithms can be run on binary datasets without modification because binary data can be represented as bags-of-words where no words appear more than once.
+      </paragraph>
+     </section>
+     <section label="9.2">
+      <section-title>
+       Settings
+      </section-title>
+      <paragraph>
+       HLTA was run in two modes. In the first mode, denoted as HLTA-batch, the entire dataset was used in the model construction phase and batch EM was used in the parameter estimation phase. In the second mode, denoted as HLTA-step, a subset of {a mathematical formula}N′ randomly sampled data cases was used in the model construction phase and stepwise EM was used in the parameter estimation phase (see Section 7). In all experiments, {a mathematical formula}N′ was set at 10,000, the size of minibatch at 1,000, and the parameter α in stepwise EM at 0.75. HLTA-batch was run on all the datasets, while HLTA-step was run only on NYT and the Newsgroup datasets. HLTA-step was not run on the NIPS datasets because the sample size is too small. For HLTA-batch, the number κ of iterations for batch EM was set at 50. For HLTA-step, stepwise EM was terminated after 100 updates.
+      </paragraph>
+      <paragraph>
+       The other parameters of HLTA (see Algorithm 1) were set as follows in both modes: The threshold δ used in UD-tests was set at 3; the upper bound μ on island size was set at 15; and the upper bound τ on the number of top-level topics was set at 30 for NYT and 20 for all other datasets. When extracting topics from an HLTM (see Section 4), we ignored the level 1 latent variables because the topics they give are too fine-grained and often consist of different forms of the same word (e.g., “image, images”).
+      </paragraph>
+      <paragraph>
+       The LDA-based methods nCRP, nHDP and hPAM do not learn model structures. A hierarchy needs to be supplied as input. In our experiment, the height of the hierarchy was set at 3, as is usually done in the literature. The number of nodes at each level was set in such way that nCRP, nHDP and hPAM would yield roughly the same total number of topics as HLTA. For example, HLTA produced 170 topics on the NIPS-1k dataset. To ensure that nHDP would produce a similar number of topics, we used 13 nodes for the top level and let each node have three children, leading to a total number of 169 topics. For hPAM, we used 100 subtopics, 70 supertopics and one root topic. In nCRP, the number of topics is controlled by a hyperparameter η. After some tuning, we found that setting η at 0.1, 0.05 and 0.025 respectively for the three levels result to approximately 170 topics. For CorEx, the number of nodes at each level was set to be the number of nodes at the corresponding level in HLTA.
+      </paragraph>
+      <paragraph>
+       All experiments were conducted on the same desktop computer. Each experiment was repeated 3 times so that variances can be estimated.
+      </paragraph>
+     </section>
+     <section label="9.3">
+      <section-title>
+       Model quality and running times
+      </section-title>
+      <paragraph>
+       For topic models, a standard way to assess model quality is to measure log-likelihood on a held-out test set [2], [5]. In our experiments, each dataset was randomly partitioned into a training set with {a mathematical formula}80% of the data, and a test set with {a mathematical formula}20% of the data. Models were learned from the training set, and per-document loglikelihood was calculated on the held-out test set. The statistics are shown in Table 6. For comparability, only the results on binary data are included.
+      </paragraph>
+      <paragraph>
+       We see that the held-out likelihood values for HLTA are drastically higher than those for all the alternative methods. This implies that the models obtained by HLTA can predict unseen data much better than the other methods. In addition, the variances are significantly smaller for HLTA than the other methods in most cases.
+      </paragraph>
+      <paragraph>
+       Table 7 shows the running times. We see that, between the two versions of HLTA, HLTA-step is significantly more efficient than HLTA-batch on large datasets, while there is virtually no decrease in model quality. To compare HLTA with other methods, we need to keep in mind that all algorithms have parameters that control computational complexity. Thus, running time comparison is only meaningful when it is done with reference to model quality. It is clear from Table 6, Table 7 that HLTA achieved much better model quality than the alternative algorithms using comparable or less time.
+      </paragraph>
+     </section>
+     <section label="9.4">
+      <section-title>
+       Quality of topics
+      </section-title>
+      <paragraph>
+       It has been argued that, in general, better model fit does not necessarily imply better topic quality [52]. It might therefore be more meaningful to compare alternative methods in terms of topic quality directly. We measure topic quality using two metrics. The first one is the topic coherence score proposed by [53]. Suppose a topic t is characterized using a list {a mathematical formula}W(t)={w1(t),w2(t),…,wM(t)} of M words. The coherence score of t is given by:{a mathematical formula} where {a mathematical formula}D(wi) is the number of documents containing word {a mathematical formula}wi, and {a mathematical formula}D(wi,wj) is the number of documents containing both {a mathematical formula}wi and {a mathematical formula}wj. It is clear that the score depends on the choices of M and it generally decreases with M. In our experiments, we set {a mathematical formula}M=4 because some of the topics produced by HLTA have only 4 words and hence the choice of a larger value for M would put other methods at a disadvantage. With M fixed, a higher coherence score indicates a better quality topic.
+      </paragraph>
+      <paragraph>
+       The second metric we use is the topic compactness score proposed by [54]. The compactness score of a topic t is given by:{a mathematical formula} where {a mathematical formula}S(wi,wj) is the similarity between the words {a mathematical formula}wi and {a mathematical formula}wj as determined by a word2vec model [55], [56]. The word2vec model was trained on a part of the Google News dataset.{sup:8} It contains about 100 billion word tokens and each word is mapped to a high dimensional vector. The similarity between two words is defined as the cosine similarity of the two corresponding vectors. When calculating {a mathematical formula}compactness(W(t)), words that do not occur in the word2vec model were simply skipped.
+      </paragraph>
+      <paragraph>
+       Note that the coherence score is calculated on the corpus being analyzed. In this sense, it is an intrinsic metric. The intuition is that words in a good topic should tend to co-occur in the documents. On the other hand, the compactness score is calculated on a general and very large corpus not related to the corpus being analyzed. Hence it is an extrinsic metric. The intuition here is that words in a good topic should be closely related semantically.
+      </paragraph>
+      <paragraph>
+       Table 8, Table 9 show the average topic coherence and topic compactness scores of the topics produced by various methods. For LDA-based methods, we reported their scores on both datasets of binary and bags-of-words versions. We see that the scores for the topics produced by HLTA are significantly higher than those obtained by other methods in all cases.
+      </paragraph>
+     </section>
+     <section label="9.5">
+      <section-title>
+       Quality of topic hierarchies
+      </section-title>
+      <paragraph>
+       There is no metric for measuring the quality of topic hierarchies to the best of our knowledge, and it is difficult to come up with one. Hence, we resort to manual comparisons.
+      </paragraph>
+      <paragraph>
+       The entire topic hierarchies produced by HLTA and nHDP on the NIPS and NYT datasets can be found at the URL mentioned at the beginning of the previous section. Table 10 shows the part of the hierarchy by nHDP that corresponds to the part of the hierarchy by HLTA shown in Table 3. In the HLTA hierarchy, the topics are nicely divided into three groups, economy, stock market, and companies. In Table 10, there is no such clear division. The topics are all mixed up. The hierarchy does not match the semantic relationships among the topics.
+      </paragraph>
+      <paragraph>
+       Overall, the topics and topic hierarchy obtained by HLTA are more meaningful than those by nHDP.
+      </paragraph>
+     </section>
+    </section>
+   </content>
+  </root>
+ </body>
+</html>

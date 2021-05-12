@@ -1,0 +1,792 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+ <body>
+  <root>
+   <title>
+    A progression semantics for first-order logic programs.
+   </title>
+   <content>
+    <section label="1">
+     <section-title>
+      Introduction
+     </section-title>
+     <paragraph>
+      Answer Set Programming (ASP) has emerged as a predominant approach for nonmonotonic reasoning in the area of knowledge representation and reasoning due to its simplicity, expressive power and computational advantage [6], [20], [33], [34]. At its beginning, the stable model (answer set) semantics for first-order logic programs is defined only on Herbrand Structures by grounding into propositional programs [21], [22]. In recent years, a number of approaches have been developed to release this restriction by directly defining the stable model semantics on arbitrary structures [4], [5], [7], [10], [15], [18], [24], [26], [28], [31], [36], [38], [40], [42].
+     </paragraph>
+     <paragraph>
+      A typical approach on this research line is to use a translation to another host language, e.g. second-order language [18] or circumscription [31]. For this purpose, second-order is inevitable as the class of the stable models of some logic programs, e.g. transitive closure, cannot be captured in first-order logic [16]. Under this backdrop, a first-order logic program Π is transformed to a corresponding second-order sentence {a mathematical formula}SM(Π), and the stable models of Π are defined as the models of {a mathematical formula}SM(Π)[18]. While this definition provides a precise mathematical representation and also generalizes the traditional propositional ASP, it, however, does not reveal much information about the expressiveness of first-order answer set programming. For instance, it is unclear whether we can provide a complete characterization of first-order definability for first-order ASP.
+     </paragraph>
+     <paragraph>
+      In this paper, we propose a progressional definition for first-order normal logic programs. Intuitively, this definition may be viewed as a generalization of the Gelfond–Lifschitz transformation [6] to the first-order case as well as a generalization of the progression semantics for Datalog [1], [32]. Also, it shares some fundamental ideas with Reiter's semantics for default logic [37]. Simply enough, in the progressional definition, a first-order structure {a mathematical formula}M is a stable model of a first-order normal logic program Π if and only if it is the fixed point of the progression of Π with respect to {a mathematical formula}M. More precisely, {a mathematical formula}M coincides with the structure obtained by recursively applying the rules in Π, where the negative parts are fixed by {a mathematical formula}M itself. We show that, for normal logic programs, this progressional definition is equivalent to the general stable model semantics defined by {a mathematical formula}SM(Π).
+     </paragraph>
+     <paragraph>
+      The progressional definition sheds new insights into Answer Set Programming (ASP), for instance, its relationships to Datalog, First-Order Logic (FOL) and Satisfiability Modulo Theories (SMT). It can be further evident from the progressional definition that Datalog is exactly the monotonic counterpart of ASP, and many important Datalog techniques can be applied to ASP as well. Based on the proposed progressional definition, we are able to define the notion of boundedness for first-order answer set programs, which is critical for understanding the relationship between first-order ASP and classical first-order logic.
+     </paragraph>
+     <paragraph>
+      With the features of iterative and nonmonotonic reasoning, ASP is a representative rule-based formalism that is significantly different from classical logics. Nevertheless, ASP and classical logics are very closely related. Hence, the relationships between them have attracted a lot of attention in the literature [4], [5], [12], [13], [14], [17], [25], [26], [39]. Among them, a central topic is first-order definability, that is, what kind of answer set programs can be captured in classical first-order logic in the sense that their answer sets/stable models are exactly the classical models of a first-order sentence. Our notion of boundedness provides a complete answer for this. We prove that an answer set program is first-order definable if and only if it is bounded. Moreover, the notion of boundedness/first-order definability is also equivalent to two important syntactic notions of recursion-freeness and loop-freeness (tightness) under program equivalence. We believe that results in this aspect will establish a foundation for the further study of the expressiveness and related properties of first-order ASP.
+     </paragraph>
+     <paragraph>
+      The progressional definition is not only of theoretical interest but also of practical relevance as it directly yields a new translation from first-order ASP to Satisfiability Modulo Theories (SMT). Comparing this translation to the one obtained from ordered completion [4], [5], it is logically stronger as it has less models.
+     </paragraph>
+     <paragraph>
+      This paper is organized as follows. Section 2 introduces necessary backgrounds. Section 3 proposes the progressional definition and shows that it is equivalent to the translational definition. Then, Section 4 extends the notion of boundedness in Datalog for ASP and shows that it is equivalent to the notions of recursion-freeness and loop-freeness under program equivalence. Section 5 further shows that boundedness exactly captures first-order definability of ASP. Section 6 reports a natural translation from first-order ASP to SMT based on the progressional definition. Finally, Section 7 discusses some related and ongoing works and Section 8 concludes the paper respectively.
+     </paragraph>
+    </section>
+    <section label="2">
+     <section-title>
+      Preliminaries
+     </section-title>
+     <paragraph>
+      We start with necessary logical notions and notations. We consider a second-order language without function symbols but with equality. A vocabulary τ is a set that consists of relation symbols (or predicates) including the equality symbol = and constant symbols (or constants). Each predicate is associated with a natural number, called its arity. Given a vocabulary, term, atom, substitution, (first-order and second-order) formula and (first-order and second-order) sentence are defined as usual. In particular, an atom is called an equality atom if it has the form {a mathematical formula}t1=t2, where {a mathematical formula}t1 and {a mathematical formula}t2 are terms. Otherwise, it is called a proper atom.
+     </paragraph>
+     <paragraph>
+      A structure{a mathematical formula}A of vocabulary τ (or a τ-structure) is a tuple {a mathematical formula}A=(A,c1A,⋯,cmA, {a mathematical formula}P1A,⋯,PnA), where A is a nonempty set called the domain of {a mathematical formula}A, {a mathematical formula}ciA ({a mathematical formula}1≤i≤m) is an element in A for every constant {a mathematical formula}ci in τ, and {a mathematical formula}PAj ({a mathematical formula}1≤j≤n) is a k-ary relation over A for every k-ary predicate {a mathematical formula}Pj in τ. {a mathematical formula}PjA is also called the interpretation of {a mathematical formula}Pj in {a mathematical formula}A. A structure is finite if its domain is a finite set. In this paper, we consider both finite and infinite structures.
+     </paragraph>
+     <paragraph>
+      Let {a mathematical formula}A be a structure of τ. An assignment in {a mathematical formula}A is a function η from the set of variables to A. An assignment can be extended to a corresponding function from the set of terms to A by mapping {a mathematical formula}η(c) to {a mathematical formula}cA, where c is an arbitrary constant. Let {a mathematical formula}P(x→) be an atom, η an assignment in structure {a mathematical formula}A. For convenience, we also write {a mathematical formula}P(x→)η∈A for the fact that {a mathematical formula}η(x→)∈PA. The satisfaction relation ⊨ between a structure {a mathematical formula}A and a formula ϕ associated with an assignment η, denoted by {a mathematical formula}A⊨ϕ[η], is defined as usual. Let {a mathematical formula}x→ be the set of free variables occurring in a formula ϕ. Then, the satisfaction relation is independent from the assignment of variables not in {a mathematical formula}x→. In this case, we also write {a mathematical formula}A⊨ϕ(x→/a→) for convenience, where {a mathematical formula}a→ is a tuple of elements in A. In particular, if ϕ is a sentence, then the satisfaction relation is independent of the assignment. In this case, we simply write {a mathematical formula}A⊨ϕ for short. A ground atom in A is of the form {a mathematical formula}P(a→), where P is a predicate and {a mathematical formula}a→ a tuple of elements that matches the arity of P. For convenience, we also use {a mathematical formula}P(a→)∈A, or {a mathematical formula}A⊨P(a→), to denote {a mathematical formula}a→∈PA.
+     </paragraph>
+     <paragraph>
+      Given a structure {a mathematical formula}A of τ, Q a predicate in τ and some ground atoms {a mathematical formula}Q(a1→) ,…, {a mathematical formula}Q(a→n), we use {a mathematical formula}A∪{Q(a1→),…,Q(an→)} to denote a new structure of τ which is obtained from {a mathematical formula}A by expanding the interpretation of predicate Q in {a mathematical formula}A (i.e. {a mathematical formula}QA) to {a mathematical formula}QA∪{a1→,…,an→}.
+     </paragraph>
+     <paragraph>
+      Let {a mathematical formula}A1 and {a mathematical formula}A2 be two structures of τ sharing the same domain, and for each constant c in τ, {a mathematical formula}cA1=cA2. By {a mathematical formula}A1⊆A2, we simply mean that for each predicate {a mathematical formula}P∈τ, {a mathematical formula}PA1⊆PA2. By {a mathematical formula}A1⊂A2, we mean that {a mathematical formula}A1⊆A2 but not {a mathematical formula}A2⊆A1. We write {a mathematical formula}A1∪A2 to denote the structure of τ where the domain of {a mathematical formula}A1∪A2 is the same as {a mathematical formula}A1 and {a mathematical formula}A2's domain, each constant c is interpreted in the same way as in {a mathematical formula}A1 and {a mathematical formula}A2, and for each predicate P in τ, {a mathematical formula}PA1∪A2=PA1∪PA2.
+     </paragraph>
+     <section label="2.1">
+      <section-title>
+       First-order normal logic program
+      </section-title>
+      <paragraph>
+       A rule r is of the following form:{a mathematical formula} where α is a proper atom, {a mathematical formula}βi ({a mathematical formula}0≤i≤m), and {a mathematical formula}γj ({a mathematical formula}0≤j≤l) are atoms. We say that α is the head of r, denoted by {a mathematical formula}Head(r); {a mathematical formula}{β1,…,βm} the positive body of r, denoted by {a mathematical formula}Pos(r); and {a mathematical formula}{notγ1,…,notγl} the negative body of r, denoted by {a mathematical formula}Neg(r). In addition, we use {a mathematical formula}Body(r) to denote {a mathematical formula}Pos(r)∪Neg(r).
+      </paragraph>
+      <paragraph>
+       A normal logic program (program for short) is a finite set of rules. Given a program Π, predicates that occur in the heads of some rules in Π are said to be intensional; all other predicates are said to be extensional.{sup:1} For a given program Π, we use {a mathematical formula}τ(Π) to denote the vocabulary of Π; {a mathematical formula}τext(Π) to denote all the extensional predicates in Π together with all the constants in Π; {a mathematical formula}τint(Π) to denote all the intensional predicates of Π. Clearly, {a mathematical formula}τ(Π)=τext(Π)∪τint(Π). In addition, {a mathematical formula}τint(Π) contains no constant. We also use {a mathematical formula}ΩΠ to denote the set of all intensional predicates of Π. Although {a mathematical formula}ΩΠ is the same as {a mathematical formula}τint(Π), we use two notations to make a difference because the former denotes a set of predicates whilst the latter presents a vocabulary.
+      </paragraph>
+      <paragraph>
+       Let {a mathematical formula}M be a structure, r a rule of the form (1) and η an assignment. We say that {a mathematical formula}M satisfies the positive body of r under η, namely {a mathematical formula}Pos(r), written {a mathematical formula}M⊨Pos(r)η, if for all atoms {a mathematical formula}P(t→)∈Pos(r), {a mathematical formula}M⊨P(t→)η; {a mathematical formula}M satisfies the negative body of r under η, namely {a mathematical formula}Neg(r), written {a mathematical formula}M⊨Neg(r)η, if for all atoms {a mathematical formula}notP(t→)∈Neg(r), {a mathematical formula}M⊭P(t→)η; {a mathematical formula}M satisfies the body of r under η, namely {a mathematical formula}Body(r), written {a mathematical formula}M⊨Body(r)η if {a mathematical formula}M⊨Pos(r)η and {a mathematical formula}M⊨Neg(r)η; and finally, {a mathematical formula}M satisfies the rule r under η, written {a mathematical formula}M⊨rη if {a mathematical formula}M⊨Head(r)η whenever {a mathematical formula}M⊨Body(r)η.
+      </paragraph>
+     </section>
+     <section label="2.2">
+      <section-title>
+       The translational stable model definition
+      </section-title>
+      <paragraph>
+       Let Π be a program and {a mathematical formula}ΩΠ the set of intensional predicates in Π. We introduce {a mathematical formula}ΩΠ⁎={Q1⁎,…,Qn⁎} to be a new set of predicates corresponding to {a mathematical formula}ΩΠ, where each {a mathematical formula}Qi⁎ in {a mathematical formula}ΩΠ⁎ has the same arity as predicate {a mathematical formula}Qi in {a mathematical formula}ΩΠ. Let r be a rule in Π of the form{a mathematical formula} by {a mathematical formula}rˆ, we denote the universal closure of the following formula{a mathematical formula} where {a mathematical formula}Body(r)ˆ is the conjunction of all elements in {a mathematical formula}Body(r) by replacing each occurrence of {a mathematical formula}not with ¬, i.e.{a mathematical formula} By {a mathematical formula}r⁎, we denote the universal closure of the following formula{a mathematical formula} where {a mathematical formula}α⁎=Q⁎(x→) if {a mathematical formula}α=Q(x→) and{a mathematical formula} By {a mathematical formula}Πˆ, we denote the first-order sentence {a mathematical formula}⋀r∈Πrˆ; by {a mathematical formula}Π⁎, we denote the first-order sentence {a mathematical formula}⋀r∈Πr⁎. Let Π be a normal logic program. By {a mathematical formula}SM(Π), we denote the following second-order sentence:{a mathematical formula} where {a mathematical formula}ΩΠ⁎&lt;ΩΠ is the abbreviation of the formula{a mathematical formula}
+      </paragraph>
+      <paragraph label="Definition 1">
+       Translational stable modelLet Π be a program and {a mathematical formula}A a {a mathematical formula}τ(Π)-structure. We say that {a mathematical formula}A is a stable model (an answer set) of Π if {a mathematical formula}A is a model of {a mathematical formula}SM(Π). We refer this definition to the translational definition. For convenience, we use {a mathematical formula}AS(Π) to denote the collection of all stable models of Π. Two programs are said to be equivalent if they have the same set of stable models.
+      </paragraph>
+      <paragraph>
+       This definition is originated from Lin and Shoham's work to translate normal logic programs under the answer set/stable model semantics into circumscription – a second order sentence [29]. Later on, a number of approaches have been proposed to generalize this work for translating richer forms of logic programs into fragments of second-order logic [8], [18], [28], [31], [36], [42]. Restricted to normal logic programs, these translations are essentially equivalent.
+      </paragraph>
+     </section>
+     <section label="2.3">
+      <section-title>
+       Clark's completion and ordered completion
+      </section-title>
+      <paragraph>
+       Answer Set Programming is a rule-based formalism for dealing with iterative reasoning (recursion) and nonmonotonic reasoning, which is significantly different from the classical first-order logic. However, these two types of formalisms are closely related. The relationships between answer set programming and classical logics have been one of the central topics in this area since its origin, and have attracted much attention in the literature [4], [5], [12], [13], [14], [17], [25], [26], [39].
+      </paragraph>
+      <paragraph>
+       Among them, one influential work is the completion approaches [14], which intend to use first-order sentences directly to capture the stable model (answer set) semantics of logic programs.
+      </paragraph>
+      <paragraph label="Definition 2">
+       Clark's completionLet Π be a program. Clark's Completion (completion for short if clear from the context) of Π, denoted by {a mathematical formula}Comp(Π), is the following first-order sentence:{a mathematical formula} where
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}P(x→)←Body1, …, {a mathematical formula}P(x→)←Bodyk are all the rules whose heads mention the predicate P;
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}yi→ is the tuple of body variables in {a mathematical formula}P(x→)←Bodyi;
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}Bodyiˆ is the conjunction of elements in {a mathematical formula}Bodyi by simultaneously replacing the occurrences of {a mathematical formula}not by ¬.
+       </list-item>
+      </list>
+      <paragraph>
+       It was shown that any stable model of a program Π must be a classical model of its completion, i.e. {a mathematical formula}Comp(Π). However, the converse does not hold in general. In this sense, Clark's completion fails to capture the stable model semantics.
+      </paragraph>
+      <paragraph>
+       The gap has been bridged recently. The loop formula approach [12], [26], [30] showed that, together with so-called loop formulas, Clark's completion can exactly capture the stable model semantics. That is, a finite structure is a stable model of a program if and only if it is a classical model of the program's Clark's completion and all its loop formulas. Nevertheless, in the first-order case, there could be infinite number of loop formulas. In contrast, the ordered completion approach [4], [5] introduces some extra comparison predicates to keep track of the derivation order so that the stable models can exactly be captured by ordered completion – a modified version of Clark's completion.
+      </paragraph>
+      <paragraph label="Definition 3">
+       Ordered completionLet Π be a program. Ordered completion of Π, denoted by {a mathematical formula}OC(Π), is the set of following sentences:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        For each intensional predicate P, the following sentences:{a mathematical formula}{a mathematical formula} where
+       </list-item>
+       <list-item label="•">
+        for each triple of intensional predicates P, Q, and R (two or all of them might be the same) the following sentence:{a mathematical formula}
+       </list-item>
+      </list>
+      <paragraph>
+       The following theorem states that the stable models of a normal program correspond to the classical models of its ordered completion on finite structures.
+      </paragraph>
+      <paragraph label="Proposition 1">
+       Theorem 1, [4]Let Π be a program. Then, a finite{a mathematical formula}τ(Π)-structure is a stable model of Π if and only if it can be expanded to a model of{a mathematical formula}OC(Π).
+      </paragraph>
+      <paragraph>
+       One can further eliminate the transitive formulas (i.e., formula (5)) by using Satisfiability Modulo Theories (SMT), more precisely, first-order logic augmented with a background theory about the comparison operator &lt; of integers. For every predicate P, we introduce an integer predicate {a mathematical formula}nP with the same arity. Then, the SMT version of ordered completion, written {a mathematical formula}OC′(Π), is the conjunction of formula (3) and formula (4), where the second the line of formula (4), i.e.,{a mathematical formula} is replaced by{a mathematical formula} In the SMT version of ordered completion, there is no need for formula (5) as it is implied by the nature of the built-in comparison operator &lt;.
+      </paragraph>
+     </section>
+     <section label="2.4">
+      <section-title>
+       The progression semantics for Datalog
+      </section-title>
+      <paragraph>
+       A program is called a Datalog program if every predicate occurred in the negative part of some rule in the program is extensional. That is, the negative parts of rules in the program mention no intensional predicate, thus their values are fixed.
+      </paragraph>
+      <paragraph>
+       The semantics for Datalog programs is usually defined in a progressional style as follows.
+      </paragraph>
+      <paragraph label="Definition 4">
+       Datalog evaluation stageLet Π be a Datalog program and {a mathematical formula}D a structure of {a mathematical formula}τext(Π) (called the extensional database). Let {a mathematical formula}ΩΠ={Q1,…,Qn} be the set of all intensional predicates of Π. The t-th simultaneous evaluation stage of Π, denoted as {a mathematical formula}{Q1t,…,Qnt}, is defined inductively as follows:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        for any {a mathematical formula}i,1≤i≤n, {a mathematical formula}Qi0=∅;
+       </list-item>
+       <list-item label="•">
+        for any {a mathematical formula}i,1≤i≤n, {a mathematical formula}Qik+1=Qik∪{Head(r)η|there exists a rule r=Qi(x→)←Body∈Π and an assignment η such thatD∪Q1k∪…∪Qnk⊨Bodyˆ[η]}.
+       </list-item>
+      </list>
+      <paragraph>
+       The underlying intuition behind Definition 4 is quite clear. The evaluation stage for a Datalog program is defined step-by-step. At the beginning, all interpretations of intensional predicates are set to be empty. At each stage k, the value of an intensional predicate {a mathematical formula}Qi (i.e. {a mathematical formula}Qik+1) is expanded from the previous one (i.e. {a mathematical formula}Qik) with all values computed at this stage by the Datalog program Π. More precisely, {a mathematical formula}Qik+1 is expanded from {a mathematical formula}Qik by the heads of all applicable rules associated with {a mathematical formula}Qi at stage k, where a rule in Π is associated with {a mathematical formula}Qi if its head mentions {a mathematical formula}Qi, and is applicable at stage k if its body is satisfied by the current evaluation, i.e., {a mathematical formula}D∪Q1k∪…∪Qnk.
+      </paragraph>
+      <paragraph>
+       Clearly, for any {a mathematical formula}Qi, the sequence {a mathematical formula}Qi0,Qi1,…,Qik,… is monotonic in the sense that {a mathematical formula}Qik⊆Qik+1 for any k. Hence, a convergence always exists on finite structures.
+      </paragraph>
+      <paragraph label="Definition 5">
+       Intended valueLet Π be a Datalog program and {a mathematical formula}D a structure of {a mathematical formula}τext(Π). Let {a mathematical formula}Q∈ΩΠ be an intensional predicate. The intended value of Q on{a mathematical formula}Dfor Π, denoted by {a mathematical formula}Q∞(Π,D), is{a mathematical formula}
+      </paragraph>
+      <paragraph>
+       Notice that Definition 5 can be extended for structures {a mathematical formula}D with arbitrary cardinality by using transfinite iteration. For an arbitrary cardinal number ϵ, we define
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}Qiϵ=⋃ξ&lt;ϵQiξ∪{Head(r)η|there exists a rule r=Qi(x→)←Body∈Π and an assignment η such thatD∪Q1ξ∪…∪Qnξ⊨Bodyˆ[η]}.
+       </list-item>
+      </list>
+      <paragraph>
+       Again, a least fixed point always exists, which is called the intended value. Nevertheless, for simplicity and clarity, we mainly use the notion of evaluation stage proposed in Definition 5 unless stated otherwise. This should not affect the major conclusions drawn in this paper.
+      </paragraph>
+     </section>
+    </section>
+    <section label="3">
+     <section-title>
+      A progression definition for normal logic programs
+     </section-title>
+     <paragraph>
+      In this section, we propose a progressional definition for first-order normal logic programs and show that it is equivalent to the translational stable model definition.
+     </paragraph>
+     <section label="3.1">
+      <section-title>
+       The progressional definition
+      </section-title>
+      <paragraph>
+       First of all, we define the evaluation stage for normal logic programs with respect to a structure.
+      </paragraph>
+      <paragraph label="Definition 6">
+       Evaluation stageLet Π be a (normal) program and {a mathematical formula}ΩΠ={Q1, …, {a mathematical formula}Qn} the set of all the intensional predicates of Π. Consider a structure {a mathematical formula}M of {a mathematical formula}τ(Π). The t-th simultaneous evaluation stage of Π with respect to {a mathematical formula}M, denoted by {a mathematical formula}Mt(Π), is a structure of {a mathematical formula}τ(Π) defined inductively as follows:
+      </paragraph>
+      <list>
+       <list-item label="•">
+        {a mathematical formula}M0(Π)=M|τext(Π)∪Eτint(Π), where {a mathematical formula}M|τext(Π) is the restriction{sup:2} of {a mathematical formula}M on {a mathematical formula}τext(Π), and {a mathematical formula}Eτint(Π) is the structure defined on {a mathematical formula}τint(Π) such that all interpretations of predicates are empty;
+       </list-item>
+       <list-item label="•">
+        {a mathematical formula}Mk+1(Π)=Mk(Π)∪{Head(r)η|there exists r=Q(x→)←β1,…,βm, {a mathematical formula}notγ1,…,notγl∈Π and an assignment ηsuch that for all i(1≤i≤m),βiη∈Mk(Π), and for all j(1≤j≤l),γjη∉M}.
+       </list-item>
+      </list>
+      <paragraph>
+       Although Definition 6 looks a little complicated, the underlying idea is quite simple. At each step, we expand the structure by adding those heads of rules that are applicable. Here, a rule r is applicable at step k if {a mathematical formula}Pos(r) is satisfied by {a mathematical formula}Mk(Π) and {a mathematical formula}Neg(r) is satisfied by {a mathematical formula}M.
+      </paragraph>
+      <paragraph>
+       Let us take a closer look at Definition 6. Clearly, {a mathematical formula}M0(Π) just takes all extensional relations as the initial input, while all relations corresponding to intensional predicates in {a mathematical formula}τint(Π) are set to be empty. Then, {a mathematical formula}Mt+1(Π) is obtained from {a mathematical formula}Mt(Π) by adding all derivable intensional values from {a mathematical formula}Mt(Π) by fixing {a mathematical formula}M. Here, an intensional value is derivable from {a mathematical formula}Mt(Π) by fixing {a mathematical formula}M if there exists a rule applying on an assignment whose head is exactly the intensional value, whose positive body can be derived from {a mathematical formula}Mt(Π) and whose negative body is consistent with {a mathematical formula}M. It is important to emphasize that, in Definition 6, the negative part is fixed by {a mathematical formula}M (i.e. the original structure) but not {a mathematical formula}Mt(Π) (i.e. the t-th evaluation stage).
+      </paragraph>
+      <paragraph>
+       For each intensional predicate {a mathematical formula}Q∈ΩΠ, we use {a mathematical formula}Qi(Π,M) to denote {a mathematical formula}QMi(Π) for simplicity. Then, it is easy to see that the sequence {a mathematical formula}Q0(Π,M), {a mathematical formula}Q1(Π,M), {a mathematical formula}Q2(Π,M), ⋯, always increases, that is, {a mathematical formula}Qj(Π,M)⊆Qi(Π,M) for {a mathematical formula}j&lt;i. So a convergence for the sequence of {a mathematical formula}Q0(Π,M), {a mathematical formula}Q1(Π,M), {a mathematical formula}Q2(Π,M), ⋯, always exists. We call {a mathematical formula}Q∞(Π,M)=⋃1≤j≤∞Qj(Π,M) the intended value of Q on {a mathematical formula}M for Π. Consequently, the convergence of the sequence {a mathematical formula}M0(Π), {a mathematical formula}M1(Π), {a mathematical formula}M2(Π), ⋯, also exists:{a mathematical formula} If {a mathematical formula}Q(a1,…,an)∈M∞(Π), then we say that {a mathematical formula}Q(a1,…,an) is a link of {a mathematical formula}M with respect to Π. In addition, the evaluation time of {a mathematical formula}Q(a1,…,an) on {a mathematical formula}M with respect to Π is the least number t such that {a mathematical formula}Q(a1,…,an)∈Mt(Π). In particular, if {a mathematical formula}Q(a1,…,an) is not a link of {a mathematical formula}M, we treat the evaluation time of {a mathematical formula}Q(a1,…,an) as ∞.
+      </paragraph>
+      <paragraph>
+       Similarly to Datalog, Definition 6 can be extended for structures with arbitrary cardinality by using transfinite iteration. For simplicity and clarity, we mainly use the notion and notations in Definition 6. Again, this should not affect the major conclusions drawn in this paper.
+      </paragraph>
+      <paragraph>
+       Based on the definition of evaluation stage, we are able to characterize the stable model semantics for first-order normal logic programs by using a progressional definition, similar to the one for Datalog.
+      </paragraph>
+      <paragraph label="Definition 7">
+       Progressional stable modelLet Π be a normal program and {a mathematical formula}M a structure of {a mathematical formula}τ(Π). {a mathematical formula}M is called a progressional stable model of Π iff {a mathematical formula}M∞(Π)=M.
+      </paragraph>
+      <paragraph>
+       We call this definition the progressional definition. Intuitively, a structure {a mathematical formula}M is a progressional stable model of a program Π iff it is the fixed point of the progression of Π with respect to {a mathematical formula}M. More precisely, {a mathematical formula}M coincides with the structure obtained by recursively applying the rules in Π, where the negative parts are fixed by {a mathematical formula}M itself.
+      </paragraph>
+      <paragraph label="Example 1">
+       Consider the following program {a mathematical formula}ΠG:{a mathematical formula} Note that {a mathematical formula}GoShopping is the only intensional predicate in program {a mathematical formula}ΠG. We consider a finite structure {a mathematical formula}M, where{a mathematical formula} Then, from Definition 6, we obtain the following sequence:{a mathematical formula} So {a mathematical formula}GoShopping∞(ΠG,M) = {a mathematical formula}{(alice,carol),(jane,sue),(alice,sue)}. From Definition 7, we can see that {a mathematical formula}M is a progressional stable model of {a mathematical formula}ΠG.  □
+      </paragraph>
+      <paragraph>
+       The progressional definition for answer set programs may be viewed as a generalization of the Gelfond–Lifschitz transformation [21], [22] to the first-order case. First, we guess a first-order structure {a mathematical formula}M. Then, we evaluate the intended values of all intensional predicates with respect to the candidate structure. Finally, if all the intended values are the same as the ones specified in the candidate structure {a mathematical formula}M, then {a mathematical formula}M is a progressional stable model (answer set) of the underlying program.
+      </paragraph>
+      <paragraph>
+       On the other hand, the progressional definition for normal programs can be viewed as an extension of the progressional definition for Datalog [1]. From a syntactic point of view, a Datalog program is a special case of normal program, where the negative bodies mention no intensional predicate. To address this difference semantically, one needs to handle the occurrences of intensional predicates in the negative bodies. For this purpose, we use several techniques. First, we guess a candidate structure on the signature of the program instead of just using a structure on the extensional signature (i.e., the extensional database) to start with the progression. Second, we fix the negative parts of the program by the guessed structure. In this sense, the evaluation process (i.e., the progression) follows similarly to Datalog. Finally, the guessed structure is considered to be a progressional stable model if it coincides with the structure obtained from the progression.
+      </paragraph>
+      <paragraph>
+       Our progressional definition also shares some fundamental ideas with Reiter's semantics for default logic [37]. Recall Reiter's definition of extensions. First, a candidate theory T is guessed; then an iterative process is applied to compute the result {a mathematical formula}Γ(T) of applying default rules with respect to this guessed theory T, in which the negative parts of default rules are fixed by T; finally, T is an extension if it coincides with {a mathematical formula}Γ(T). Nevertheless, there are two differences. First of all, in Reiter's default logic, what we guess is a theory, but in our progress definition, what we guess is a first-order structure. Also, Reiter's semantics is essentially propositional (or can only be applied to closed first-order logic) as it requires the closure property.
+      </paragraph>
+     </section>
+     <section label="3.2">
+      <section-title>
+       Progressional stable models = translational stable models
+      </section-title>
+      <paragraph>
+       We show that the progressional definition (i.e. Definition 7) is indeed equivalent to the translational definition (i.e. Definition 1).
+      </paragraph>
+      <paragraph label="Proof">
+       In order to prove this theorem, we introduce an alternative equivalent definition, and show that it is equivalent to both the progressional definition and the translational definition described above.Let Π be a program and {a mathematical formula}M a structure of {a mathematical formula}τ(Π). We say that {a mathematical formula}M is a justified stable model of Π iff
+       <list>
+        for every assignment η and every rule r of form (1) in Π, if for all i ({a mathematical formula}1≤i≤m), {a mathematical formula}βiη∈M and for all j ({a mathematical formula}1≤j≤l), {a mathematical formula}γjη∉M, then {a mathematical formula}αη∈M.there does not exist a structure {a mathematical formula}M′ of {a mathematical formula}τ(Π) such thatWe first show that this definition is equivalent to the translational definition. It is not difficult to verify that Condition 1 holds iff
+       </list>
+       <paragraph>
+        {a mathematical formula}M⊨Πˆ. Now we prove that Condition 2 does not hold iff {a mathematical formula}M⊨∃ΩΠ⁎((ΩΠ⁎&lt;ΩΠ)∧Π⁎). Suppose that there exists such an {a mathematical formula}M′, we construct n new relations in {a mathematical formula}M on predicates {a mathematical formula}ΩΠ⁎={Q1⁎,…,Qn⁎} corresponding to {a mathematical formula}ΩΠ={Q1,…,Qn} such that each {a mathematical formula}Q⁎∈ΩΠ⁎ and its corresponding {a mathematical formula}Q∈ΩΠ, {a mathematical formula}Q⁎M=QM′. Therefore, {a mathematical formula}M⊨Ω⁎&lt;Ω according to Condition 2(d). In addition, from Condition 2(e), it is easy to see that {a mathematical formula}M satisfies {a mathematical formula}Π⁎ where for each {a mathematical formula}Q⁎∈ΩΠ⁎, {a mathematical formula}Q⁎M=QM′ as specified above, here Q is {a mathematical formula}Q⁎'s corresponding predicate in {a mathematical formula}ΩΠ. Hence, {a mathematical formula}M⊨∃ΩΠ⁎((ΩΠ⁎&lt;ΩΠ)∧Π⁎). On the other hand, suppose that {a mathematical formula}M⊨∃ΩΠ⁎((ΩΠ⁎&lt;ΩΠ)∧Π⁎). We can always construct {a mathematical formula}M′ in such a way: (1) {a mathematical formula}Dom(M′)=Dom(M); (2) for each constant c in {a mathematical formula}τ(Π), {a mathematical formula}cM′=cM; (3) for each {a mathematical formula}P∈τext(Π), {a mathematical formula}PM′=PM; and (4) for each {a mathematical formula}Q∈ΩΠ and its corresponding {a mathematical formula}Q⁎∈ΩΠ⁎, {a mathematical formula}QM′=Q⁎M. Then it is not difficult to observe that {a mathematical formula}M′ satisfies Conditions 2(c)–(e).Now we show that this definition is also equivalent to the progressional definition. Suppose that {a mathematical formula}M∞(Π)=M. Then, Condition 1 holds. Otherwise, there exists an assignment η and a rule r such that, for all i ({a mathematical formula}1≤i≤m), {a mathematical formula}βiη∈M and for all j ({a mathematical formula}1≤j≤l), {a mathematical formula}γjη∉M but {a mathematical formula}αη∉M. Since {a mathematical formula}βiη∈M∞(Π), there exists a bound k such that for all i ({a mathematical formula}1≤i≤m), {a mathematical formula}βiη∈Mk(Π). Then, {a mathematical formula}αη∈Mk+1(Π) by the definition. This means that {a mathematical formula}αη∈M∞(Π). Therefore, {a mathematical formula}αη∈M, a contradiction. In addition, Condition 2 must hold as well. Otherwise, let us assume that there exists such an {a mathematical formula}M′. By induction on the evaluation stage t, it can be shown that for all t, {a mathematical formula}Mt(Π)⊆M′. Therefore, {a mathematical formula}M∞(Π)⊆M′. Hence, {a mathematical formula}M∞(Π)⊆M′⊂M, a contradiction. On the other hand, suppose that a structure {a mathematical formula}M satisfies both Conditions 1 and 2. Then, it can be shown that {a mathematical formula}Mt(Π)⊆M by induction on the evaluation stage t by Condition 1. Hence, {a mathematical formula}M∞(Π)⊆M. Now we show that {a mathematical formula}M⊆M∞(Π). Otherwise, {a mathematical formula}M∞(Π)⊂M. We construct a structure {a mathematical formula}M′ of {a mathematical formula}τ(Π) in the following way: {a mathematical formula}Dom(M′)=Dom(M), for each constant {a mathematical formula}c∈τ(Π), {a mathematical formula}cM′=cM, for each extensional predicate {a mathematical formula}P∈τext(Π), {a mathematical formula}PM′=PM, and for each intensional predicate {a mathematical formula}Q∈ΩΠ, {a mathematical formula}QM′=QM∞(Π). So {a mathematical formula}M′ satisfies Conditions 2(a)–(e) as well, a contradiction. Hence, {a mathematical formula}M∞(Π)=M.  □
+       </paragraph>
+      </paragraph>
+     </section>
+    </section>
+    <section label="4">
+     <section-title>
+      Boundedness, recursion-freeness and loop-freeness
+     </section-title>
+     <paragraph>
+      The progressional definition for normal logic programs is a natural extension of that for Datalog programs. As discussed in the previous section, it is important for understanding the deep and long neglected connections between ASP and Datalog. More interestingly, with this definition, we are able to consider some important notions and techniques originated from Datalog for first-order answer set programming.
+     </paragraph>
+     <paragraph>
+      Among them, one fundamental notion is boundedness. Roughly speaking, a Datalog program is bounded if there exists a natural number k such that every evaluation stage of this program must be ended within k steps. Boundedness is one of the key notions in Datalog, e.g., to study the expressive power of Datalog and classical first-order logic [2].
+     </paragraph>
+     <paragraph>
+      With our progressional definition, we are able to define the boundedness notion for first-order ASP. Certainly, the basic idea is similar, i.e., we may require that every evaluation of a normal program is bounded by some fixed number as well. However, as we shall see in this section, the definition is not that straightforward as the progression of a normal program is relative to a candidate structure.
+     </paragraph>
+     <paragraph>
+      Boundedness also plays an important role in first-order ASP. In this section, we shall show that it is actually equivalent to the syntactic notions of recursion-freeness and loop-freeness under program equivalence. Roughly speaking, recursion-free programs are those programs without recursions, that is, the positive bodies of any rules in the program contain no intensional predicate, while loop-free programs, also called tight program in the literature [17], are those programs without loops [12], [30]. In the next section, we will use boundedness as a key tool to study the expressive power of first-order ASP, in particular, its relationships to classical first-order logic.
+     </paragraph>
+     <section label="4.1">
+      <section-title>
+       Boundedness for normal logic programs
+      </section-title>
+      <paragraph>
+       We first review the notion of boundedness in Datalog, which had attracted much attention in the area of deductive databases [1], [32].
+      </paragraph>
+      <paragraph label="Definition 8">
+       Datalog boundednessA Datalog program Π is bounded if there exists a natural number k, such that for every extensional database {a mathematical formula}D, the evaluation stage of Π on {a mathematical formula}D is bounded within k steps, i.e., {a mathematical formula}Q∞=Qk for all intensional predicates Q in Π.
+      </paragraph>
+      <paragraph>
+       The boundedness notion can be extended for first-order answer set programming based on our progressional definition for normal logic programs (i.e. Definition 7).
+      </paragraph>
+      <paragraph label="Definition 9">
+       BoundednessA program Π is bounded if there exists a natural number k, such that for all intensional predicates Q of Π and all stable models {a mathematical formula}M of Π, {a mathematical formula}Q∞(Π,M)=Qk(Π,M); or equivalently, {a mathematical formula}M∞(Π)=Mk(Π). In this case, k is called a bound of Π, and Π is called a k-bounded program.
+      </paragraph>
+      <paragraph>
+       Definition 9 is not the same as saying that for all stable models {a mathematical formula}M, there exists a natural number k such that {a mathematical formula}M∞(Π)=Mk(Π). It is important to note that, similar to the boundedness notion for Datalog (see Definition 8), the fixed constant k applies on all stable models, i.e., such k is independent from specific structures (stable models). However, the difference between boundedness for ASP and that for Datalog is that the former only takes the stable models but not all {a mathematical formula}τ(Π)-structures into account. Hence, for a k-bounded program Π, there may exist a {a mathematical formula}τ(Π)-structure {a mathematical formula}M such that {a mathematical formula}M∞(Π)≠Mk(Π), where {a mathematical formula}M is not a stable model of Π.
+      </paragraph>
+      <paragraph>
+       Boundedness is a semantic notion in the sense that its definition is only depending on the progressional definition. It intends to capture a certain subclass of all programs, for which their progressions are very restricted.
+      </paragraph>
+      <paragraph label="Example 2">
+       Consider the following program {a mathematical formula}ΠV:{a mathematical formula} In program {a mathematical formula}ΠV, {a mathematical formula}Visits is the only intensional predicate. According to Definition 6, it is easy to verify that for any stable model {a mathematical formula}M of {a mathematical formula}ΠV, the evaluation time for all intended values of {a mathematical formula}Visits is not more than 2. In other words, program {a mathematical formula}ΠV is a 2-bounded program.  □Nevertheless, let {a mathematical formula}ΠV′ be the program obtained from {a mathematical formula}ΠV by replacing the rule (6) with the following one:{a mathematical formula} Then, {a mathematical formula}ΠV′ is unbounded. One can construct a structure {a mathematical formula}M with an infinite domain {a mathematical formula}a0,a1,…,an,…, {a mathematical formula}BusyM=∅, {a mathematical formula}InterestedM={(ai,ai+1)|i≥0} and {a mathematical formula}VisitsM={(ai,aj)|i&lt;j}. It can be verified that {a mathematical formula}M is a stable model of {a mathematical formula}ΠV′ but there does not exist a number k such that {a mathematical formula}M∞(ΠV′)=Mk(ΠV′).
+      </paragraph>
+      <paragraph>
+       Clearly, the boundedness notion for normal programs is an extension of that for Datalog programs.
+      </paragraph>
+      <paragraph label="Proposition 2">
+       Let Π be a Datalog program. Then, Π is bounded underDefinition 9iff it is bounded underDefinition 8.
+      </paragraph>
+      <paragraph>
+       As a consequence, some results in the Datalog literature can be directly applied under the context of ASP.
+      </paragraph>
+      <paragraph label="Proof">
+       Checking boundedness for normal logic programs is undecidable.This assertion follows directly from Proposition 2 and the result that checking boundedness for Datalog programs is undecidable (see Theorem 2.5 in [19]).  □
+      </paragraph>
+     </section>
+     <section label="4.2">
+      <section-title>
+       Recursion-freeness and loop-freeness
+      </section-title>
+      <paragraph>
+       Now we introduce two syntactic notions for first-order normal programs, namely recursion-freeness and loop-freeness, which are used to characterize the expressiveness of first-order answer set programs from a syntactic point of view.
+      </paragraph>
+      <paragraph>
+       Recursion-freeness is an important notion in Datalog and it is well-studied in the Datalog community [1], [2], [32]. It can be lifted for first-order normal programs as follows.
+      </paragraph>
+      <paragraph label="Definition 10">
+       Recursion-freenessA program is said to be recursion-free if no intensional predicate occurs in the positive body of any rule in the program.
+      </paragraph>
+      <paragraph>
+       Note that it is possible that the intensional predicates may occur negatively in a recursion-free program.
+      </paragraph>
+      <paragraph label="Example 3">
+       Consider the following program {a mathematical formula}ΠVP:{a mathematical formula} There are two intensional predicates {a mathematical formula}Visits and PossVisit in program {a mathematical formula}ΠVP. Since none of them positively occurs in the bodies of the two rules, {a mathematical formula}ΠVP is a recursion-free program.  □
+      </paragraph>
+      <paragraph>
+       It is generally considered that recursion is one of the most important features for Datalog and normal logic programs. Hence, recursion-free programs can be considered as “trivial” programs to some extent.
+      </paragraph>
+      <paragraph>
+       According to the definitions, it is easy to see that the following result holds.
+      </paragraph>
+      <paragraph label="Proposition 4">
+       If Π is a recursion-free program, then{a mathematical formula}M∞(Π)=M1(Π)for any structure{a mathematical formula}Mof{a mathematical formula}τ(Π).
+      </paragraph>
+      <paragraph>
+       Proposition 4 states that for recursion-free programs, the stable models of the program can be verified within one step. It immediately follows that all recursion-free programs are bounded.
+      </paragraph>
+      <paragraph label="Corollary 5">
+       Recursion-free programs are bounded.
+      </paragraph>
+      <paragraph>
+       A closely related notion is loop-freeness.{sup:3} For this purpose, we first review the concepts of loops for first-order normal programs [12]. Let Π be a program. The positive dependency graph of Π, denoted by {a mathematical formula}GΠ, is a graph (maybe infinite) {a mathematical formula}(V,E), where V is the set of atoms of {a mathematical formula}τint(Π), and {a mathematical formula}(α,β) is an edge in E if (a) there exists a rule {a mathematical formula}r∈Π, and {a mathematical formula}α′ and {a mathematical formula}β′ in r such that {a mathematical formula}α′ is the head of r and {a mathematical formula}β′ is one of the positive atoms of intensional predicate in the body of r, and (b) there exists a substitution θ such that {a mathematical formula}α′θ=α and {a mathematical formula}β′θ=β. A finite non-empty subset L of V is said to be a loop of Π if there exists a cycle in {a mathematical formula}GΠ that goes through only and all the nodes in L.
+      </paragraph>
+      <paragraph>
+       Loops and their corresponding loop formulas are critical concepts in answer set programming. As shown in [12], under the stable model semantics, a logic program can be captured by its completion together with all its loop formulas on finite structures. Also, it initiates an alternative way to compute the stable models of a program by transforming it to propositional formulas [30].
+      </paragraph>
+      <paragraph label="Definition 11">
+       Loop-freenessA program is said to be loop-free if it has no loop.
+      </paragraph>
+      <paragraph>
+       The stable models of a loop-free program can be exactly captured by its Clark's completion [12], [17].
+      </paragraph>
+      <paragraph label="Proposition 6">
+       [12]Let Π be a loop-free program. Then, a{a mathematical formula}τ(Π)-structure{a mathematical formula}Mis a stable model of Π iff it is a model of{a mathematical formula}Comp(Π).
+      </paragraph>
+      <paragraph label="Example 4">
+       Consider programs {a mathematical formula}ΠV and {a mathematical formula}ΠVP once again in Example 2, Example 3 respectively. It is easy to see that {a mathematical formula}ΠV has a loop {a mathematical formula}L={Visits(x,y),Visits(z,y)}. So {a mathematical formula}ΠV is not loop-free. On the other hand, program {a mathematical formula}ΠVP in Example 3 is loop-free obviously.  □
+      </paragraph>
+      <paragraph>
+       Clearly, recursion-free programs are loop-free as their positive dependency graphs have no edge at all.
+      </paragraph>
+      <paragraph label="Proposition 7">
+       A recursion-free program must be loop-free.
+      </paragraph>
+      <paragraph>
+       However, the converse of Proposition 7 does not hold in general. For example, the following program{a mathematical formula} is loop-free but not recursion-free.
+      </paragraph>
+     </section>
+     <section label="4.3">
+      <section-title>
+       On the relationships among boundedness, recursion-freeness and loop-freeness
+      </section-title>
+      <paragraph>
+       In this subsection, we shall show that the syntactic notions of recursion-freeness and loop-freeness are closely related with the semantic notion of boundedness. More precisely, these three notions coincide under program equivalence, that is, a program is bounded if and only if it is equivalent to a recursion-free program if and only if it is equivalent to a loop-free program.
+      </paragraph>
+      <paragraph>
+       Some straightforward observations are presented earlier, e.g., Corollary 5 and Proposition 7. Corollary 5 states that all recursion-free programs must be bounded. We can extend this into the following result.
+      </paragraph>
+      <paragraph label="Proposition 8">
+       A loop-free program must be bounded.
+      </paragraph>
+      <paragraph>
+       We leave the proof to the Appendix. Proposition 8 is an extension of Corollary 5 since all recursion-free programs are loop-free by Proposition 7.
+      </paragraph>
+      <paragraph>
+       Now we consider the other way around, that is, whether or not a bounded program can be converted to a recursion-free/loop-free program. First of all, the following example shows that there exists a bounded program that is neither recursion-free nor loop-free.
+      </paragraph>
+      <paragraph label="Example 5">
+       Let {a mathematical formula}Πflag be the following program:{a mathematical formula} Clearly, {a mathematical formula}Πflag is not a recursion-free program as the positive body of rule (7) mentions the intensional predicate {a mathematical formula}Reach. It is not a loop-free program either since rule (7) forms some loops. However, {a mathematical formula}Πflag is a bounded program. The reason is that the only recursion rule, i.e., rule (7), is guarded by the 0-ary intensional predicate {a mathematical formula}flag. As {a mathematical formula}flag will never be generated in the progression, this rule will never be triggered. Thus, the syntactic recursion in rule (7) is actually blocked semantically.
+      </paragraph>
+      <paragraph>
+       It is easy to see that the above program {a mathematical formula}Πflag can be equivalently transformed to a recursion-free one by simply deleting rule (7) and the rule {a mathematical formula}flag←flag. In this sense, {a mathematical formula}Πflag is “semantically” recursion-free to some extent. The following proposition confirms that this kind of semantical recursion-freeness indeed can be implied by boundedness.
+      </paragraph>
+      <paragraph label="Proposition 9">
+       If a program is bounded, then it is equivalent to a recursion-free program.
+      </paragraph>
+      <paragraph>
+       As the proof of Proposition 9 is a little tedious, although a similar result for Datalog programs holds straightforwardly. We leave it to the appendix.
+      </paragraph>
+      <paragraph>
+       It immediately follows from Proposition 9 and Proposition 7 that any bounded program can be equivalently transformed to a loop-free program.
+      </paragraph>
+      <paragraph label="Corollary 10">
+       If a program is bounded, then it is equivalent to a loop-free program.
+      </paragraph>
+      <paragraph>
+       From Corollary 5, Proposition 7, Proposition 8, Proposition 9 and Corollary 10, we can see that the notions of boundedness, recursion-freeness and loop-freeness are highly connected. However, these results are not enough to justify the claim made in the beginning of this subsection that boundedness, recursion-freeness and loop-freeness coincide under program equivalence. The missing assertion is: if a program is equivalent to a recursion-free or loop-free program (but not necessarily is recursion-free or loop-free itself), must it be bounded? The answer is again yes, and we shall prove it in Section 5. Nevertheless, for this purpose, more tools and techniques are needed.
+      </paragraph>
+      <paragraph>
+       Notice that the proofs provided in this section are independent of the cardinality of a particular structure. Hence, the main results proved in this section hold both on arbitrary structures and on finite structures.
+      </paragraph>
+     </section>
+    </section>
+    <section label="5">
+     <section-title>
+      First-order definability of answer set programs and boundedness
+     </section-title>
+     <paragraph>
+      The relationship between first-order ASP and FOL is one of the most important topics in this area, and it has been well-studied in the literature [4], [5], [12], [13], [14], [17], [25], [26], [39]. Researches in this direction are mainly focused on translating (some subclasses of) first-order ASP into classical FOL. This is because FOL is a well-established formalism so that translations from ASP to FOL would be helpful to understand some essential properties of the former. Also, normal logic programming is only a fragment of first-order logic programming. For instance, it lacks the support of disjunctive heads and existential quantifiers. Hence, it makes little sense to translate the full version of classical logic into a fragment of logic programming. Interestingly, some recent works are proposed to translate fragments of FOL (e.g., various description logics) into fragments of ASP (e.g., normal logic programs enhanced with existential quantifiers in the heads), largely driven by the need of rule-based reasoning and defeasible reasoning in ontology engineering [23].
+     </paragraph>
+     <paragraph>
+      For the problem of translating first-order normal logic programs under the stable model semantics into classical first-order logic, a rather complete answer has been provided by Asuncion et al. [4] based on previous results in the literature (see Table 2 in [4]). Interestingly and surprisingly, the answer is depending on three factors, considering arbitrary structures or only finite structures, introducing auxiliary predicates or not, and allowing the results to be infinite or not. To conclude, there is no translation from normal ASP to FOL when considering arbitrary structures. For finite structures, if no new predicates are introduced and the results are restricted to be finite, again, such translation does not exist. However, there exist translations from normal ASP to FOL when relaxing any of the above two conditions. Loop formulas provide a translation from normal ASP to FOL on finite structures without introducing any new predicates but the translated results could be infinite [12]. Ordered completion is an alternative translation that guarantees the result to be finite but a polynomial number of extra predicates are needed [4].
+     </paragraph>
+     <paragraph>
+      Although normal ASP cannot be translated into FOL on arbitrary structures in general, this can be done for some subclasses. A well known subclass is the class of loop-free programs (also called tight programs) [17]. It was shown that the stable models of a loop-free program can be captured by its Clark's completion, which is a first-order sentence. This result is extended to the so-called loop-separable programs [13]. In fact, work in this direction is not only theoretically important but also practically relevant. For instance, some modern ASP solvers are built based on the loop-formula approaches, e.g. ASSAT [30] and CMODELS [27].
+     </paragraph>
+     <paragraph>
+      However, it still remains an open problem whether there is an exact characterization of the first-order definability of first-order normal answer set programs, that is, whether we can exactly capture what kind of normal programs are first-order definable. In this paper, we bridge this gap and show that the concept of boundedness exactly captures first-order definability for first-order normal programs on arbitrary structures. That is, a program is first-order definable if and only if it is bounded. Moreover, we show that these two notions coincide with the syntactic notions of recursion-freeness and loop-freeness under program equivalence.
+     </paragraph>
+     <section label="5.1">
+      <section-title>
+       First-order definability of answer set programs
+      </section-title>
+      <paragraph>
+       We start our discussions with a formal definition of first-order definability of normal logic programs.
+      </paragraph>
+      <paragraph label="Definition 12">
+       First-order definabilityLet Π be a program and ϕ a first-order sentence of the signature {a mathematical formula}τ(Π). Let {a mathematical formula}C be a class of first-order structures. We say that ϕ defines Π on {a mathematical formula}C if the models of ϕ in {a mathematical formula}C are exactly the stable models of Π in {a mathematical formula}C.A program Π is said to be first-order definable on {a mathematical formula}C if there exists such a first-order sentence that defines Π.
+      </paragraph>
+      <paragraph>
+       In this paper, we normally consider {a mathematical formula}C to be the class of all structures or the class of finite structures.
+      </paragraph>
+      <paragraph label="Example 6">
+       Let us consider {a mathematical formula}ΠV again in Example 2. It can be verified that {a mathematical formula}ΠV is defined by the following sentence:{a mathematical formula}∀xy(Visits(x,y)↔(Interested(x,y)∧¬Busy(x)∨∃z(z≠x∧Visits(z,y)∧Attraction(y)∧¬Busy(x)))). □
+      </paragraph>
+      <paragraph>
+       It was shown in the literature that the stable models of a loop-free program can be exactly captured by its Clark's completion.
+      </paragraph>
+      <paragraph label="Proposition 11">
+       [13]If Π is a loop-free program, then{a mathematical formula}Comp(Π)defines Π on both arbitrary structures and finite structures.
+      </paragraph>
+      <paragraph>
+       Consequently, by Proposition 7, a recursion-free program is defined by its Clark's completion as well.
+      </paragraph>
+     </section>
+     <section label="5.2">
+      <section-title>
+       Boundedness = first-order definability
+      </section-title>
+      <paragraph>
+       Now we prove that the semantic notion of first-order definability can be exactly captured by the semantic notion of boundedness presented in Section 4 on arbitrary structures, which further corresponds to the syntactic notions of recursion-freeness and loop-freeness under program equivalence.
+      </paragraph>
+      <paragraph label="Theorem 2">
+       Let Π be a program. The following four statements are equivalent on arbitrary structures.
+      </paragraph>
+      <list>
+       <list-item label="1.">
+        Π is bounded.
+       </list-item>
+       <list-item label="2.">
+        Π is equivalent to a recursion-free program.
+       </list-item>
+       <list-item label="3.">
+        Π is equivalent to a loop-free program.
+       </list-item>
+       <list-item label="4.">
+        Π is first-order definable.
+       </list-item>
+      </list>
+      <paragraph>
+       Notice that {a mathematical formula}1⇒2 is Proposition 9; {a mathematical formula}2⇒3 follows straightforwardly from Proposition 7 and {a mathematical formula}3⇒4 follows straightforwardly from Proposition 11. We only need to prove {a mathematical formula}4⇒1 for Theorem 2. Nevertheless, the proof of this is rather technical and tedious. Hence, we leave it to the appendix.
+      </paragraph>
+      <paragraph label="Proof">
+       Boundedness is closed under program equivalence. That is, if two programs{a mathematical formula}Π1and{a mathematical formula}Π2are equivalent, then{a mathematical formula}Π1is bounded iff{a mathematical formula}Π2is bounded.Since {a mathematical formula}Π1 is bounded, then it is first-order definable. Therefore, {a mathematical formula}Π2 is first-order definable by the same sentence as {a mathematical formula}Π2 is equivalent to {a mathematical formula}Π1. It follows that {a mathematical formula}Π2 is bounded as well.  □
+      </paragraph>
+     </section>
+    </section>
+    <section label="6">
+     <section-title>
+      Yet another translation from ASP to SMT
+     </section-title>
+     <paragraph>
+      The progressional definition sheds new insights on first-order ASP from a theoretical point of view. For instance, Theorem 2 states that first-order definability of normal programs can be exactly captured by the notion of boundedness, which is defined based on the progressional definition. In this section, we show that the progressional definition sheds new insights into first-order ASP from a practical point of view. More precisely, the progressional definition suggests a natural way to encode first-order normal ASP into Satisfiability Modulo Theories (SMT) [35], which are classical first-order theories enhanced with some modular theories to represent some components that cannot be easily handled in a logical setting, for instance, arithmetical formulas such as {a mathematical formula}2x−y≤10.
+     </paragraph>
+     <paragraph>
+      This work follows the ordered completion approach, which translates a normal program to a first-order (SMT) sentence. The ordered completion approach initiates a new way of computing stable models by grounding on ordered completion (a first-order sentence) of programs instead of the first-order program itself, as most of the modern ASP solvers do.
+     </paragraph>
+     <paragraph>
+      Inspired from the progressional definition (see Definition 7), we can define an alternative translation from normal ASP to first-order logic/first-order SMT. In fact, the progressional definition directly specifies a derivation order. Let us take a closer look at Definition 7 again. At the k-th stage of the progression, the accumulating structure {a mathematical formula}Mk(Π) will be extended by some ground atoms, which are heads of some rules applicable at the k-th stage. Notice that the intensional part of the initial structure {a mathematical formula}M0(Π) is empty and the final structure {a mathematical formula}M∞(Π) coincides with {a mathematical formula}M itself if {a mathematical formula}M is a stable model of the program. This means that for any ground atom α to be true in the stable model {a mathematical formula}M, it must be generated at a particular stage t in the progression, that is, there exists a rule r in the program that generates the atom α at the stage t in the progression. This is equivalent to
+     </paragraph>
+     <list>
+      <list-item label="•">
+       the negative body of r is satisfied by the intended structure {a mathematical formula}M;
+      </list-item>
+      <list-item label="•">
+       the positive body of r is satisfied by the t-th evaluation stage {a mathematical formula}Mt(Π);
+      </list-item>
+      <list-item label="•">
+       and the positive body of r is not satisfied by the {a mathematical formula}t−1-th evaluation stage {a mathematical formula}Mt−1(Π) (otherwise the rule r must be applied before),
+      </list-item>
+     </list>
+     <paragraph>
+      which is further equivalent to (since {a mathematical formula}Mk(Π) is monotonic)
+     </paragraph>
+     <list>
+      <list-item label="•">
+       the negative body of r is satisfied by the intended structure {a mathematical formula}M;
+      </list-item>
+      <list-item label="•">
+       the positive body of r is satisfied by the intended structure {a mathematical formula}M;
+      </list-item>
+      <list-item label="•">
+       there exists at least one ground atom in the positive body of r, which is generated at the {a mathematical formula}t−1-th stage, and all other ground atoms in the positive body of r must be generated even earlier.
+      </list-item>
+     </list>
+     <paragraph>
+      Having explained our intuitions, we are now able to define the new translation from normal ASP to SMT. Again, for every intensional predicate P, we introduce an integer function {a mathematical formula}nP with the same arity.
+     </paragraph>
+     <paragraph label="Definition 13">
+      Progression based completionLet Π be a program. The progression based completion of Π, written {a mathematical formula}PC(Π), is the following sentence{a mathematical formula} where
+     </paragraph>
+     <list>
+      <list-item label="•">
+       some notations, including {a mathematical formula}yi, {a mathematical formula}Bodyi and {a mathematical formula}Bodyiˆ, are borrowed from Definition 2, Definition 3. Once again, {a mathematical formula}Q(z→) ranges over all intensional atoms in the positive part of {a mathematical formula}Bodyi;
+      </list-item>
+      <list-item label="•">
+       {a mathematical formula}succ and max stand for the successor function and the maximum function in arithmetic respectively.
+      </list-item>
+     </list>
+     <paragraph>
+      Similar to Clark's completion and ordered completion, progression based completion has to satisfy the program itself, namely {a mathematical formula}Πˆ. The main difference is the justification part, which states that if a ground atom is in the stable model, then it has to be justified. There are different understandings of justification. In Clark's completion, it simply states that there is a rule in the program to support this ground atom, i.e., whose head is the ground atom and whose body is also satisfied by the structure. It turns out that this kind of justification is not powerful enough to capture the stable model semantics. In ordered completion, justification is a bit stronger in the sense that not only that there exists a rule to support the ground atom but also that all ground atoms of that rule have to be justified earlier. As shown by Asunction et al. [4], this is enough to capture the stable model semantics. In progression based completion, justification is even stronger as it enforces a particular derivation order, which actually coincides with the derivation order obtained in the progression. Intuitively, for a ground atom {a mathematical formula}P(a→), {a mathematical formula}nP(a→) exactly represents its evaluation time in the progression of Π with respect to {a mathematical formula}M. Here, the arithmetical formula {a mathematical formula}nP(x→)=succ(max({nQ(z→)})) means that the stage of the head atom {a mathematical formula}P(x→) is exactly the maximal stage of the positive body atoms plus 1. That is, the rule is exactly triggered at this stage in the {a mathematical formula}max({nQ(z→)})-th evaluation stage.
+     </paragraph>
+     <paragraph label="Example 7">
+      Let {a mathematical formula}ΠR be the following program to check the reachability of a graph, whose edges are represented by the extensional predicate {a mathematical formula}Edge.{a mathematical formula} Then, {a mathematical formula}OC′(Π) is{a mathematical formula} while {a mathematical formula}PC(Π) is{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Progression based completion and ordered completion share something in common. Both of them modify the justification part of Clark's completion into a logically stronger formula by adding some extra statements about the derivation order of ground atoms. Nevertheless, ordered completion only requires that the ground atoms are justified in some order, i.e., bodies should be justified earlier than heads, while progression based completion strictly enforces one particular derivation order on ground atoms, which coincides with the one obtained in the progressional definition. Thus, progression based completion yields a stronger version.
+     </paragraph>
+     <paragraph label="Proof">
+      Let Π be a program. Then,{a mathematical formula}PC(Π)⊨OC′(Π).This follows from the definitions since if {a mathematical formula}nP(x→)=succ(max({nQ(z→)})), then for all {a mathematical formula}nQ(z→), {a mathematical formula}nQ(z→)&lt;nP(x→).  □
+     </paragraph>
+     <paragraph>
+      Another difference between these two translations is the host SMT language. Ordered completion needs to use the built-in comparison operators &lt;, while progression based completion needs to use two built-in functions, namely the maximum function and the successor function. Note that, for linear programs (in which all bodies of rules contain at most one intensional predicate) such as reachability, the maximum function is not needed in progression based completion.
+     </paragraph>
+     <paragraph>
+      We end up this section by showing that, on finite structures, progression based completion, namely {a mathematical formula}PC(Π), exactly captures the stable model semantics as well.
+     </paragraph>
+     <paragraph label="Proof">
+      Let Π be an extended program. Then, a finite{a mathematical formula}τ(Π)-structure is a stable model of Π if and only if it can be expanded to a model of{a mathematical formula}PC(Π).The “if” part follows from Proposition 1 and Proposition 13. We show the “only if” part. Let {a mathematical formula}M be a stable model of Π. For a ground atom {a mathematical formula}P(a→), we define {a mathematical formula}nP(a→) as its evaluation time in the progression. Now we show that {a mathematical formula}M+, the structure obtained from {a mathematical formula}M by expanding the interpretations on the integer predicates {a mathematical formula}nP as mentioned above, is a model of {a mathematical formula}PC(Π). First, {a mathematical formula}M+ is a model of {a mathematical formula}Πˆ since {a mathematical formula}M is a model of {a mathematical formula}Πˆ. For any ground atom {a mathematical formula}P(a→)∈M, it must be justified by a rule r together with an assignment η at step {a mathematical formula}nP(a→) in the progression. Then, for any intensional ground atom {a mathematical formula}Q(b→) in the positive body of rη, {a mathematical formula}Q(b→) has to be justified before in the progression since {a mathematical formula}Q(b→)∈MnP(a→)(Π). In addition, there exists some {a mathematical formula}Q(b→) in the positive body of rη whose evaluation time is exactly {a mathematical formula}nP(a→)−1. Otherwise, {a mathematical formula}P(a→) should be justified earlier in the progression. Hence, {a mathematical formula}nP(a→)=succ(max({Q(b→)|Q(b→)∈Pos(rη),Q∈ΩΠ})). This shows that {a mathematical formula}M+ is a model of {a mathematical formula}PC(Π).  □
+     </paragraph>
+    </section>
+    <section label="7">
+     <section-title>
+      Ongoing and related work
+     </section-title>
+     <paragraph>
+      In this paper, we have restricted our discussions to first-order normal logic programs with rules only of the form (1) — the most important and fundamental fragment of first-order answer set programming. Driven by needs, normal logic programs are extended with some useful building blocks, including disjunctive heads, constraints and choice rules, existentially quantified heads, functions, nested expressions and so on. A problem arises when extending the progressional definition for programs with those building blocks. Unfortunately, this seems to be a challenging task as the underlying principles of some building blocks are essentially different from the nature of the progressional definition. In the progressional definition, all intensional ground atoms in a stable model of a program must be justified at some step in the evaluation stage. Starting from the empty intensional database, each step justifies a set of ground atoms, which are the heads of all rules applicable at the current stage. Here, a ground rule is applicable if its positive body is satisfied by the current progression stage and its negative body is satisfied by the candidate structure itself.
+     </paragraph>
+     <paragraph>
+      Disjunctive logic programming is a natural extension of normal logic programming [22]. The head of a disjunctive rule is a disjunction of atoms, which represents a non-deterministic choice if the body is satisfied. The key point for extending the progressional definition for disjunctive programs is how to add the ground atoms when a ground rule is satisfied at a progression stage. There are two existing solutions. The first is to select a minimal hitting set of all heads of applicable rules (a collection of sets of ground atoms) as the justified ground atoms at this stage [42]. In this sense, there could be many different progression sequences with respect to a given disjunctive program and a candidate structure. The second approach is to collect the disjunctions of atoms (i.e., clauses) derivable at the current stage, and finally compute the minimal model of all collected clauses [39]. Both extensions are equivalent to the translational stable models definition. Again, some interesting consequences follow from the progressional definition for disjunctive programs, e.g., a translation to SMT [42] and a characterization of first-order definability via boundedness [39].
+     </paragraph>
+     <paragraph>
+      Constraints, choice rules and aggregates are essential building blocks for answer set programming, which are extensively used in most benchmark programs. Again, extending the progressional definition for them seems not easy as the underlying principles of the progressional definition and these building blocks are incompatible. For instance, while the progressional definition justifies the stable models step-by-step, the aggregate atoms are interpreted globally.
+     </paragraph>
+     <paragraph>
+      It remains an open problem to further extend the progressional definition for incorporating other building blocks, for instance, functions, existentially quantified heads and nested expressions. We expect that such a progression definition, if defined, should be equivalent to the stale model semantics on these richer formalisms [5], [18], [24], [38]. Nevertheless, this seems to be a challenging task as the progression definition needs to be defined step-by-step. Work in this direction is worth pursuing as the progressional definition has some important theoretical and practical consequences. Incorporating extensional functions in the progressional definition is straightforward as their interpretations are fixed in the extensional database. However, this task seems not easy for intensional functions [8], [9], [28]. Existentially quantified heads are of special interests as Datalog (ASP) enhanced with existentially quantified heads is able to capture some interesting fragments in description logics [23]. For incorporating existentially quantified heads in the progressional definition, again, the key point is how to add the ground atoms when a ground rule is satisfied at a progression stage. We leave these to our future investigations.
+     </paragraph>
+     <paragraph>
+      Naive extensions to richer syntactic classes do not work. New notions and techniques have to be developed. For instance, only boundedness itself cannot make a difference between first-order disjunctive logic programs and classical first-order logic. Recently, we coined a new term called “choice-boundedness” for this purpose [41]. Also, we found that the progression definition may work for certain aggregates such as convex aggregates [3]. We consider this to be one of the most important future directions as the progression definition can help us understanding first-order answer set programming much more deeply, from not only a theoretical but also a practical point of view.
+     </paragraph>
+     <paragraph>
+      The notion of boundedness (see Definition 9) presents an exact characterization of the first-order definability for normal logic programs on arbitrary structures (see Theorem 2). Hence, it covers the notion of loop separability [13], a sufficient condition for first-order definability based on loop formulas. Roughly speaking, a first-order program is loop-separable iff all its loop patterns can be separated in some sense so that all its loop formulas can be finitely characterized. As a consequence, the stable models of a loop separable program can be defined by the classical models of its Clark's completion together with a finite set of loop formulas. Since boundedness is equivalent to the condition of first-order definability, all loop-separable programs are bounded. In fact, this can also be observed from the proof (see Section 5 in [13]), which essentially shows that if a program is loop-separable, then we only need to take some loops with a bounded size into account. However, the converse does not hold. That is, there exists a bounded program that is not loop separable, e.g., the program {a mathematical formula}Πflag in Example 5. Nevertheless, loop separability is a syntactic condition, while boundedness is semantic. In addition, it is decidable to check whether a program is loop separable (see Theorem 3 in [13]), but checking boundedness is undecidable. Nevertheless, given a fixed number k, checking k-boundedness should be decidable. This might help us to rewrite some logic programs into loop-free ones so that they can be solved more easily.
+     </paragraph>
+     <paragraph>
+      Another important future direction is to apply our theoretical results into practices, for instance, to develop a new ASP solver based on the translation into SMT proposed in Section 6. Alternatively, we may utilize some notions and techniques developed in this paper, e.g., boundedness and k-boundedness, for solving certain subclasses of answer set programs more easily.
+     </paragraph>
+    </section>
+    <section label="8">
+     <section-title>
+      Conclusions
+     </section-title>
+     <paragraph>
+      The main contributions of this paper are summarized as follows:
+     </paragraph>
+     <list>
+      <list-item label="•">
+       We extended the progression semantics for Datalog into a progression definition for first-order normal logic programming and showed that it is equivalent to the well-known stable model semantics. As a consequence, many important and useful notions and techniques in Datalog can be lifted for first-order ASP.
+      </list-item>
+      <list-item label="•">
+       We introduced a notion of boundedness for first-order ASP and showed that it coincides with the notions of recursion-freeness and loop-freeness under program equivalence. More interestingly, we showed that these notions exactly capture first-order definability of ASP for normal logic programs. This clearly clarifies the expressive power of the intersection between first-order ASP and classical First-Order Logic (FOL), both from a syntactic and a semantic point of view. Syntactically, it is well known that recursion-free and loop-free logic programs are first-order definable [12], [17], [30]. Our result proved a long standing conjecture that this assertion holds the other way around. That is, a first-order definable logic program is essentially equivalent to a recursion-free (loop-free) one. Semantically, our result showed that boundedness draws a clear boundary between first-order definable and indefinable normal logic programs.
+      </list-item>
+      <list-item label="•">
+       The progression semantics naturally suggests a new translation from first-order ASP to Satisfiability Modulo Theories (SMT) by introducing new predicates. This translation is of practical relevance since it is has less models than so-called ordered completion [4].
+      </list-item>
+     </list>
+     <paragraph>
+      To conclude, the progression definition sheds new insights into first-order Answer Set Programming (ASP), including its deep connections and relationships to Datalog, FOL and SMT.
+     </paragraph>
+    </section>
+   </content>
+   <appendices>
+    <section label="Appendix">
+     Proofs of Proposition 9 and Theorem 2
+     <paragraph>
+      Without loss of generality, we may assume that all rules are presented in a normalized form. That is, each intensional predicate Q is associated with a tuple of distinguishable variables {a mathematical formula}xQ→ so that the head of each rule is of the form {a mathematical formula}Q(xQ→). For instance, if for some rule with an intensional predicate Q of its head, there is a constant c occurring in Q, i.e. {a mathematical formula}Q(x1,⋯,xi−1,c,xi+1,⋯,xn), we simply introduce a new variable {a mathematical formula}xi to replace c: {a mathematical formula}Q(x1,⋯,xi−1,xi,xi+1,⋯,xn), and add atom {a mathematical formula}xi=c in the body of this rule. We say that a variable x is a local variable of a rule r if it does not occur in the head of r. For convenience in our proofs, we assume that the sets of local variables in rules are pairwise disjoint.
+     </paragraph>
+     <paragraph label="Proof">
+      A loop-free program must be bounded.We prove this assertion by contradiction. Assume that Π is not bounded. Then for an arbitrary k, there exists some stable model {a mathematical formula}M of Π, such that for some intensional predicate Q in {a mathematical formula}ΩΠ, {a mathematical formula}Q(a→)∈Mk+1(Π) but {a mathematical formula}Q(a→)∉Mk(Π). Then from Definition 6, there must exist a rule r in Π:{a mathematical formula} and an assignment η such that (1) {a mathematical formula}Q(a→)=Q(x→)η, and (2) for all i ({a mathematical formula}1≤i≤m), {a mathematical formula}βiη∈Mk(Π), and for all j ({a mathematical formula}1≤j≤l), {a mathematical formula}γjη∉M.Based on this observation, for the given stable model {a mathematical formula}M of Π, we define the intensional dependency tree{a mathematical formula}T(Q(a→),M) for {a mathematical formula}Q(a→) as follows:
+      <list>
+       the root of {a mathematical formula}T(Q(a→),M) is {a mathematical formula}Q(a→),in (9), for each {a mathematical formula}βi ({a mathematical formula}1≤i≤m), if {a mathematical formula}βi is an intensional atom, then {a mathematical formula}βiη is a child of {a mathematical formula}Q(a→),for each child {a mathematical formula}βiη of {a mathematical formula}Q(a→), we build the subtree {a mathematical formula}T(βiη,M) as in (a) and (b), and repeat the process until no more subtree can be built.From the construction of
+      </list>
+      <paragraph>
+       {a mathematical formula}T(Q(x→)), we observe that for each parent-child pair {a mathematical formula}(Qi(x→),Qj(y→)) in tree {a mathematical formula}T(Q(x→)), there is a corresponding edge {a mathematical formula}(Qi(x→),Qj(y→)) in Π's positive dependency graph {a mathematical formula}GΠ.On the other hand, since Π is not bounded, for any arbitrary k, there exists some stable model {a mathematical formula}M and {a mathematical formula}Q(a→)∈M, we can construct the tree {a mathematical formula}T(Q(x→)) with depth {a mathematical formula}k+1. Let N be the number of intensional predicates in Π, and we choose some {a mathematical formula}M&gt;N. Then it is clear that for some intensional predicate Q, we can construct a tree {a mathematical formula}T(Q(x→)) which has a depth {a mathematical formula}(M+1)&gt;N. Consequently, there must exist a path from the root to some leaf such that an intensional predicate {a mathematical formula}Q′ occurs two or more than two times, i.e. atoms {a mathematical formula}Q′(x→) and {a mathematical formula}Q′(y→) are in the path. Therefore, a loop must exist in the corresponding positive dependency graph {a mathematical formula}GΠ. This concludes that Π is not loop-free.  □
+      </paragraph>
+     </paragraph>
+     <paragraph label="Proposition 9">
+      If a program is bounded, then it is equivalent to a recursion-free program.
+     </paragraph>
+     <paragraph>
+      We prove it by constructions and we decompose the constructions into several steps. First, we show that every k-bounded program is equivalent to a 1-bounded program. Then, we show that a 1-bounded program can be equivalently transformed to a recursion-free program.
+     </paragraph>
+     <paragraph>
+      Let Π be a normalized program and t a number. We define a program {a mathematical formula}Πt inductively as follows. Firstly, set {a mathematical formula}Π1=Π. We now specify {a mathematical formula}Πt+1 by giving {a mathematical formula}Πt, which is expanded from {a mathematical formula}Πt by adding some new rules. Suppose that there exists a rule r in Π of the form{a mathematical formula} and for all i ({a mathematical formula}1≤i≤m), if {a mathematical formula}βi=Qi(t→) is an intensional atomic formula, then there exists a rule {a mathematical formula}ri in {a mathematical formula}Πt such that {a mathematical formula}Head(ri)θi=βi, where {a mathematical formula}θi is the substitution {a mathematical formula}xQi→/t→. We add a new rule {a mathematical formula}r⁎ into {a mathematical formula}Πt+1 such that:{a mathematical formula} where {a mathematical formula}{βi1,…,βin} is the set of all intensional atomic formulas in {a mathematical formula}{β1,…,βm}, {a mathematical formula}r1,…,rn are the corresponding rules in {a mathematical formula}Πt as discussed above, and {a mathematical formula}θi are defined accordingly. In addition, we apply necessary substitutions such that the sets of local variables in rules in {a mathematical formula}Πt+1 are pairwise disjoint. It is easy to see that {a mathematical formula}Πt+1 is a normalized program as well. Such process is similar to the unfolding in propositional logic programs. Clearly, {a mathematical formula}Πt is normalized if Π is normalized.
+     </paragraph>
+     <paragraph label="Proof">
+      Let Π be a program and k an integer. Then,{a mathematical formula}Mk(Π)=M1(Πk)for any structure{a mathematical formula}Mof{a mathematical formula}τ(Π).We prove this assertion by induction on k. Clearly, this assertion holds when {a mathematical formula}k=1. Suppose that for all {a mathematical formula}k&lt;t, this assertion holds. Now we prove that it holds when {a mathematical formula}k=t as well.We first prove that {a mathematical formula}Mt(Π)⊆M1(Πt). Let {a mathematical formula}(a1,…,an)∈Qt(M), where Q is an intensional predicate of Π. If the evaluation time of {a mathematical formula}Q(a1,…,an) is less than t, then {a mathematical formula}Q(a1,…,an)∈M1(Πt) by induction assumption. If the evaluation time of {a mathematical formula}Q(a1,…,an) is exactly t, then according to the definition, there exists a rule {a mathematical formula}r∈Π of form (1) and an assignment η such that (a) {a mathematical formula}xQ→η=(a1,…,an), (b) for all i ({a mathematical formula}1≤i≤m), {a mathematical formula}βiη∈Mt−1(Π), and (c) for all j ({a mathematical formula}1≤j≤l), {a mathematical formula}γjη∉M. By induction assumption, for all i ({a mathematical formula}1≤i≤m), {a mathematical formula}βiη∈M1(Πt−1). If {a mathematical formula}βi is of the form {a mathematical formula}Q(t→), where Q is an intensional predicate, then according to Definition 6, there exists a rule {a mathematical formula}ri∈Πt−1 such that {a mathematical formula}βiη can be computed by {a mathematical formula}ri within one step by assuming {a mathematical formula}M. Therefore, αη can be computed by the following rule {a mathematical formula}r⁎ within one step (note that {a mathematical formula}Πk is normalized for all k).{a mathematical formula} where {a mathematical formula}βi1,…,βin are the atoms discussed above, and {a mathematical formula}ri and {a mathematical formula}θi are defined accordingly. This shows that {a mathematical formula}Q(a1,…,an)∈Mt1(Πt).We now prove {a mathematical formula}M1(Πt)⊆Mt(Π). Suppose that {a mathematical formula}Q(a1,…,an) can be computed from {a mathematical formula}Πt within one step by assuming {a mathematical formula}M, where Q is an intensional predicate of Π. Then there exists a rule {a mathematical formula}r⁎∈Πt, and an assignment η such that {a mathematical formula}Head(r⁎)η=Q(a1,…,an). Suppose that {a mathematical formula}r⁎ has the form{a mathematical formula} where {a mathematical formula}r∈Π, {a mathematical formula}ri∈Πt−1, and the others are defined accordingly. Then, {a mathematical formula}βijη can be computed from {a mathematical formula}ri within one step by assuming {a mathematical formula}M. So {a mathematical formula}βijη∈Mt−1(Π) by induction assumption. Consequently, {a mathematical formula}αη∈Mt(Π) since it can be computed through rule r.  □
+     </paragraph>
+     <paragraph>
+      Now we show that every k-bounded program Π is equivalent to a 1-bounded program, more precisely, {a mathematical formula}Πk.
+     </paragraph>
+     <paragraph label="Proof">
+      If Π is a k-bounded program, then Π is equivalent to{a mathematical formula}Πk, which is a 1-bounded program.We first show that Π is equivalent to {a mathematical formula}Πk by proving that for any structure {a mathematical formula}M, {a mathematical formula}M∞(Π)=M∞(Πk). Clearly, {a mathematical formula}M∞(Π)⊆M∞(Πk) since {a mathematical formula}Π⊆Πk. It suffices to show that {a mathematical formula}M∞(Πk)⊆M∞(Π). We prove this by induction that for any natural number t, {a mathematical formula}Mt(Πk)⊆M∞(Π). The induction basis follows from Lemma 1. Suppose that it holds for all natural numbers less than t, now we prove the case for t. Let {a mathematical formula}Q(a1,…,an) be a ground atom in {a mathematical formula}Mt(Πk) but not in {a mathematical formula}Mt−1(Πk). If it is obtained from a rule in Π itself together with an assignment, then the inductive step holds obviously. Otherwise, there exists a rule {a mathematical formula}r⁎∈Πk, and an assignment η such that {a mathematical formula}Head(r⁎)η=Q(a1,…,an) and its body can be applied at the current evaluation stage. Suppose that {a mathematical formula}r⁎ has the form{a mathematical formula} where {a mathematical formula}r∈Π, {a mathematical formula}ri∈Πt−1, and the others are defined accordingly. Notice that the negative parts are irrelevant here as they are fixed by {a mathematical formula}M. Considering the positive parts, for all {a mathematical formula}i,1≤i≤n, {a mathematical formula}Pos(ri)θi⊆Mt−1(Πk). By the induction hypothesis, {a mathematical formula}Pos(ri)θi⊆M∞(Π). This shows that, for all {a mathematical formula}i,1≤i≤n, {a mathematical formula}βiη∈M∞(Π). It follows that for the rule rη, {a mathematical formula}Pos(r)η⊆M∞(Π). Therefore, {a mathematical formula}Head(r)η∈M∞(Π). Hence, {a mathematical formula}Q(a1,…,an)∈M∞(Π).We now show that {a mathematical formula}Πk is a 1-bounded program. If {a mathematical formula}M is a stable model of {a mathematical formula}Πk, then {a mathematical formula}M is a stable model of Π as well. In addition, {a mathematical formula}M∞(Πk)=M=M∞(Π)=Mk(Π)=M1(Πk) (by Lemma 1). This shows that {a mathematical formula}Πk is 1-bounded.  □
+     </paragraph>
+     <paragraph>
+      We now show that every 1-bounded program is equivalent to a recursion-free program. For this purpose, we decompose this task into two steps. We first show that a 1-bounded program is equivalent to a program with only non-recursive rules and constraints, and then show that constraints can be eliminated into non-recursive rules as well.
+     </paragraph>
+     <paragraph>
+      Constraints are of the same as normal rules of the form (1) except that the head is empty instead of an atom. More precisely, a constraint is of the form{a mathematical formula} Let r be a constraint of the form (10). By {a mathematical formula}rˆ, we denote the first-order formula{a mathematical formula} Let Π be a program and C a set of constraints. A first-order structure {a mathematical formula}M is a stable model of {a mathematical formula}Π∪C if it is a stable model of Π and for all {a mathematical formula}c∈C, {a mathematical formula}M⊨cˆ.
+     </paragraph>
+     <paragraph>
+      Here, we use constraints to help us to prove that any 1-bounded program can be equivalently transformed into a recursion-free program. First, we show that any 1-bounded program can be equivalently transformed into a recursion-free program with constraints. Let r be a rule of the form (1), by {a mathematical formula}rC, we denote the constraint{a mathematical formula} Let Π be a program. By {a mathematical formula}ΠC, we denote the program obtained from Π by replacing every recursive rule r with {a mathematical formula}rC.
+     </paragraph>
+     <paragraph label="Proof">
+      If Π is a 1-bounded program, then Π is equivalent to{a mathematical formula}ΠC.First of all, we split the program {a mathematical formula}ΠC into two parts, namely {a mathematical formula}ΠNR that contains all non-recursive rules in Π and {a mathematical formula}ΠRC that contains all constraints obtained from recursive rules in Π. Then, a stable model of {a mathematical formula}ΠC is a stable model of {a mathematical formula}ΠNR that satisfies all constraints in {a mathematical formula}ΠRC, which is a stable model of {a mathematical formula}ΠNR that satisfies {a mathematical formula}Πˆ. In addition, a structure {a mathematical formula}M is a stable model of {a mathematical formula}ΠNR iff
+      <list>
+       for all ground atoms {a mathematical formula}Q(a→)∈M, there exist a non-recursive rule {a mathematical formula}r∈Π and an assignment η such that {a mathematical formula}Head(r)η=Q(a→) and {a mathematical formula}M⊨Body(r)η;for all ground atoms {a mathematical formula}Q(a→)∉M, there do not exist a non-recursive rule {a mathematical formula}r∈Π and an assignment η such that {a mathematical formula}Head(r)η=Q(a→) and {a mathematical formula}M⊨Body(r)η.On one side, suppose that
+      </list>
+      <paragraph>
+       {a mathematical formula}M is a stable model of Π. Since Π is 1-bounded, we have {a mathematical formula}M=M1(Π). Hence, {a mathematical formula}M is a stable model of {a mathematical formula}ΠNR as {a mathematical formula}M1(Π) satisfies the two conditions mentioned above (according to the definition of the evaluation stage). In addition, {a mathematical formula}M⊨Πˆ since {a mathematical formula}M is a stable model of Π. Hence, {a mathematical formula}M is a stable model of {a mathematical formula}ΠC.On the other side, suppose that {a mathematical formula}M is a stable model of {a mathematical formula}ΠC. Since {a mathematical formula}M is a stable model of {a mathematical formula}ΠC thus {a mathematical formula}ΠNR, {a mathematical formula}M1(Π)=M. Now assume that {a mathematical formula}M is not a stable model of Π. Then, {a mathematical formula}M⊂M∞(Π). There exists a ground atom {a mathematical formula}Q(a→) in {a mathematical formula}M∞(Π) but not in {a mathematical formula}M. In fact, there exists such a {a mathematical formula}Q(a→) in {a mathematical formula}M2(Π) but not in {a mathematical formula}M1(Π) (which is the same as {a mathematical formula}M). Otherwise, if {a mathematical formula}M2(Π)=M1(Π), then {a mathematical formula}M=M1(Π)=M2(Π)=M3(Π)=…=M∞(Π), a contradiction. Now suppose that {a mathematical formula}Q(a→) is derived by a rule r together with an assignment η in the second step of the evaluation stage and {a mathematical formula}Q(a→)=Head(r)η. Then, {a mathematical formula}M⊨Neg(r)η, and {a mathematical formula}M1(Π)⊨Pos(r)η. Therefore, {a mathematical formula}M⊨Body(r)η since {a mathematical formula}M=M1(Π). It follows that {a mathematical formula}M⊨Head(r)η. This shows that {a mathematical formula}Q(a→)∈M, a contradiction.  □
+      </paragraph>
+     </paragraph>
+     <paragraph>
+      Next, we show that recursion-free programs with constraints can always be equivalently transformed into recursion-free programs. Let Π be a recursion-free program and c a constraint of the form (10). Suppose that all the rules in Π whose head is {a mathematical formula}βi,1≤i≤m are{a mathematical formula} and all the rules in Π whose head is {a mathematical formula}γj,1≤j≤l are{a mathematical formula} Here, {a mathematical formula}Bodyik,1≤k≤bi ({a mathematical formula}Bodyjl,1≤l≤cj) is a body without positive intensional atoms since Π is a recursion-free program.
+     </paragraph>
+     <paragraph>
+      By {a mathematical formula}Π⊕c, we denote the program obtained from Π by replacing each {a mathematical formula}βi←Bodyk,i1≤k≤ibi with the following set (*) of rules{a mathematical formula}
+     </paragraph>
+     <paragraph label="Lemma 4">
+      If Π is a recursion-free program and c a constraint with at least one positive atom, then{a mathematical formula}Π∪{c}is equivalent to{a mathematical formula}Π⊕c.
+     </paragraph>
+     <paragraph label="Proof">
+      Suppose that {a mathematical formula}M is a stable model of {a mathematical formula}Π∪{c}. Then, {a mathematical formula}M is stable model of Π and {a mathematical formula}M⊨cˆ. Then, for any assignment η, there are two cases. Case 1:There exists {a mathematical formula}βi,1≤i≤m such that {a mathematical formula}M⊭βiη. In this case, consider any {a mathematical formula}βjη,1≤j≠i≤m. Clearly, if {a mathematical formula}βjη∉M, then {a mathematical formula}βjη∉M1(Π⊕c) according to the construction of the rule set (*). On the other side, if {a mathematical formula}βjη∈M, then there exists a rule in Π of the form {a mathematical formula}βj←Bodyjk,1≤jk≤jbj such that {a mathematical formula}M⊨Bodyjkη. Then, {a mathematical formula}M⊨[Bodyjk∪{¬βi}]η. Then, {a mathematical formula}βjη is in {a mathematical formula}M1(Π⊕c) since it is justified by the rule {a mathematical formula}βj←notβi,Bodyjk in the rule set (*).Case 2:There exists {a mathematical formula}γj,1≤j≤l such that {a mathematical formula}M⊨γjη. In this case, there exists a rule of the form {a mathematical formula}γj←Bodyjk,1≤k≤cj such that {a mathematical formula}M⊨Bodyjkη. Similarly, consider any {a mathematical formula}βiη,1≤i≤m. Again, if {a mathematical formula}βiη∉M, then {a mathematical formula}βiη∉M1(Π⊕c). If {a mathematical formula}βiη∈M, then there exists a rule in Π of the form {a mathematical formula}βi←Bodyis,1≤is≤ibi such that {a mathematical formula}M⊨Bodyisη. Then, {a mathematical formula}βiη is in {a mathematical formula}M1(Π⊕c) since it is justified by the rule {a mathematical formula}βi←Bodyjk,Bodyis in the rule set (*). In addition, for all other atoms α not in the positive body of c, Π and {a mathematical formula}Π⊕c have the same set of rules whose head is α. This shows that for all ground atoms, it is in {a mathematical formula}M iff it is in {a mathematical formula}M1(Π⊕c). It follows that {a mathematical formula}M is a stable model of {a mathematical formula}Π⊕c as {a mathematical formula}Π⊕c is a recursion-free program.Suppose that {a mathematical formula}M is a stable model of Π but does not satisfy c. Then, there exists an assignment η such that for all {a mathematical formula}βi, {a mathematical formula}1≤i≤m, {a mathematical formula}βiη∈M and for all {a mathematical formula}γj, {a mathematical formula}1≤j≤l, {a mathematical formula}γjη∉M. We use contradiction to prove that {a mathematical formula}M is not a stable model of {a mathematical formula}Π⊕c. Otherwise, {a mathematical formula}β1η∈M1(Π⊕c), there exists a rule in (*) that justifies {a mathematical formula}β1η when {a mathematical formula}i=1. It cannot be of the form {a mathematical formula}β1←notβj,Bodyk since {a mathematical formula}βjη∈M. Suppose that it is of the form {a mathematical formula}β1←Bodyij,Bodyk. Then, {a mathematical formula}M⊨Bodyijη. It follows that {a mathematical formula}M⊨γiη because of the rule {a mathematical formula}γi←Bodyij is in Π, a contradiction. This shows that {a mathematical formula}M is not a stable model of {a mathematical formula}Π⊕c.Finally suppose that {a mathematical formula}M is not a stable model of Π. Then there are two cases: Case 1:There exists a ground atom that is in {a mathematical formula}M but not in {a mathematical formula}M1(Π). In this case, this ground atom is not in {a mathematical formula}M1(Π⊕c) either according to the construction of the rule set (*).Case 2:There exists a ground atom that is in {a mathematical formula}M1(Π) but not in {a mathematical formula}M. If this atom is not in the positive body of c, then it is in {a mathematical formula}M1(Π⊕c) as well. Hence, {a mathematical formula}M is not a stable model of {a mathematical formula}Π⊕c. Suppose that it is of the form {a mathematical formula}βiη,1≤i≤m. Since it is in {a mathematical formula}M1(Π), there exists a rule of the form {a mathematical formula}βi←Bodyk such that {a mathematical formula}M⊨Bodykη. Hence, {a mathematical formula}M⊨[Bodyk∪{¬βi}]η as {a mathematical formula}βiη∉M. Therefore, {a mathematical formula}βiη∈M1(Π⊕c) as it is justified by the rule {a mathematical formula}βi←notβi,Bodyk. It follows that {a mathematical formula}M is not a stable model of {a mathematical formula}Π⊕c. No matter which case is, {a mathematical formula}M is not a stable model of {a mathematical formula}Π⊕c.This shows that {a mathematical formula}Π∪{c} is equivalent to {a mathematical formula}Π⊕c.  □
+     </paragraph>
+     <paragraph label="Proof">
+      If Π is a recursion-free program and C a set of constraints, then{a mathematical formula}Π∪Cis equivalent to a recursion-free program.Note that for eliminating constraints {a mathematical formula}←notγ1,…,notγl without positive body, one only needs to convert it to a non-recursive rule {a mathematical formula}γ1←notγ1,…,notγl. The assertion follows from Lemma 4 and this fact since constraints can be eliminated one-by-one. That is, for a constraint c and a set of constraints C, {a mathematical formula}M is a stable model of {a mathematical formula}Π∪C∪{c} iff {a mathematical formula}M is a stable model of {a mathematical formula}Π∪{c} and {a mathematical formula}M satisfies C iff {a mathematical formula}M is a stable model of {a mathematical formula}Π⊕c and {a mathematical formula}M satisfies C.  □
+     </paragraph>
+     <paragraph>
+      Finally, we are able to prove Proposition 9.
+     </paragraph>
+     <paragraph label="Proof of Proposition 9">
+      Proposition 9 follows from Lemma 2, Lemma 3 and Corollary 10.  □
+     </paragraph>
+     <paragraph label="Theorem 2">
+      Let Π be a program. The following four statements are equivalent on arbitrary structures.
+     </paragraph>
+     <list>
+      <list-item label="1.">
+       Π is bounded.
+      </list-item>
+      <list-item label="2.">
+       Π is equivalent to a recursion-free program.
+      </list-item>
+      <list-item label="3.">
+       Π is equivalent to a loop-free program.
+      </list-item>
+      <list-item label="4.">
+       Π is first-order definable.
+      </list-item>
+     </list>
+     <paragraph>
+      Here, we prove {a mathematical formula}4⇒1 for Theorem 2.
+     </paragraph>
+     <paragraph>
+      For this purpose, we need to introduce some background knowledge and results on least fixed-point logic. Let τ be a vocabulary and P a new predicate not in τ with the arity n. Let {a mathematical formula}ϕ(x→,P) be a first-order formula, where {a mathematical formula}x→ is the tuple of all free variables in ϕ with length n, and P only occurs positively in ϕ (i.e. every occurrence of P in ϕ is in the scope of even numbers of negations{sup:4}). Given a structure {a mathematical formula}A of τ, the formula {a mathematical formula}ϕ(x→,P) defines an operator {a mathematical formula}Φ(T) from an n-ary relation to an n-ary relation on {a mathematical formula}Dom(A):{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      Starting from the empty set, Φ gives rise to a sequence of n-ary relations as follows:{a mathematical formula} Since P only occurs positively in ϕ, the sequence {a mathematical formula}Φ1(x→,P),…,Φt(x→,P),… always increases. Thus, there exists a least ordinal k such that {a mathematical formula}Φk(x→,P)=Φt(x→,P)=Φ∞(x→,P), where {a mathematical formula}t&gt;k. Since P occurs positively in ϕ, the operator Φ has a least fixed-point{a mathematical formula}T0 in the sense that {a mathematical formula}Φ(T0)=T0 and for every T such that {a mathematical formula}Φ(T)=T, {a mathematical formula}T0⊆T. We use {a mathematical formula}Φ∞(x→,P) to denote the least fixed point of Φ.
+     </paragraph>
+     <paragraph>
+      This defines a corresponding iterative formula {a mathematical formula}ϕt(x→,P) in the sense that for any {a mathematical formula}a→∈Dom(A)n, {a mathematical formula}A⊨ϕt(x→/a→,P) iff {a mathematical formula}a→∈Φt(x→,P); {a mathematical formula}A⊨ϕ∞(x→/a→,P) iff {a mathematical formula}a→∈ϕ∞(x→,P). We write {a mathematical formula}ϕ∞(x→,P) ({a mathematical formula}ϕ∞ for short) to denote the the least fixed-point formula obtained from {a mathematical formula}ϕ(x→,P).
+     </paragraph>
+     <paragraph>
+      A fixed-point query is a formula in fixed-point logic that defines a global relation. More precisely, let {a mathematical formula}ϕ(x1,…,xn) be a formula in fixed-point logic of vocabulary τ, where {a mathematical formula}x1,…,xn are all the free variables in ϕ. We say that {a mathematical formula}ϕ(x1,…,xn)expresses an n-ary global relation of τ if for every structure {a mathematical formula}A of τ, {a mathematical formula}ϕ(x1,…,xn) yields the following n-ary relation on {a mathematical formula}Dom(A):{a mathematical formula}
+     </paragraph>
+     <paragraph>
+      The notion of definability and boundedness can be defined for least fixed-point logic as well. Let {a mathematical formula}K be a class of τ-structures. We say that a formula {a mathematical formula}ψ(y→), where {a mathematical formula}y→ is the tuple of all free variables in ψ with length n, of τ defines the fixed-point {a mathematical formula}ϕ∞(x→,P) on {a mathematical formula}K iff for every {a mathematical formula}A∈K and every {a mathematical formula}a→∈Dom(A)n,{a mathematical formula} We say that the least-fixed point formula {a mathematical formula}ϕ∞(x→,P) is bounded on {a mathematical formula}K if there exists a fixed natural number k such that for all {a mathematical formula}A∈K and every {a mathematical formula}a→∈Dom(A)n, {a mathematical formula}A⊨ϕ∞(x→/a→,P) iff {a mathematical formula}A⊨ϕk(x→/a→,P).
+     </paragraph>
+     <paragraph>
+      Barwise and Moschovakis [11] revealed the important correspondence between definability and boundedness on arbitrary structures in least fixed-point logic.
+     </paragraph>
+     <paragraph label="Lemma 5">
+      [11]Let{a mathematical formula}Kbe a class of τ-structures which is first-order finitely axiomatizable.{sup:5}A least fixed-point formula is bounded on{a mathematical formula}Kiff it is defined by a first-order formula on{a mathematical formula}K.
+     </paragraph>
+     <paragraph>
+      We shall prove {a mathematical formula}4⇒1 based on Lemma 5. The basic ideas are divided into two steps. First, we show that for each program, we can construct a program with a single intensional predicate to simulate the original program. Then we show that each program with a single intensional predicate can be translated to an equivalent fixed-point formula.
+     </paragraph>
+     <paragraph>
+      Let Π be a program. Let {a mathematical formula}{P1,…,Pn} be the set of intensional predicates of Π. Suppose that k is the maximal arity among all {a mathematical formula}Pi,(1≤i≤n). Let {a mathematical formula}0,1,…,n be {a mathematical formula}n+1 distinguishable new constants. Construct a new predicate P whose arity is {a mathematical formula}k+1. Let {a mathematical formula}ΠS be the program obtained from Π by simultaneously replacing each atom {a mathematical formula}Pi(ti→) in Π with {a mathematical formula}P(ti→,0,…,0,i), where the number of occurrences of 0 is equal to {a mathematical formula}k−|ti→|. We show that {a mathematical formula}ΠS simulates Π.
+     </paragraph>
+     <paragraph label="Lemma 6">
+      Let Π be a program and{a mathematical formula}ΠSbe the program constructed above. Let{a mathematical formula}Mbe a structure of{a mathematical formula}τ(Π). We construct a structure{a mathematical formula}MSon{a mathematical formula}τext(Π)∪{P}such that
+     </paragraph>
+     <list>
+      <list-item label="•">
+       the domain of{a mathematical formula}MSis{a mathematical formula}M∪{0,1,…,n};
+      </list-item>
+      <list-item label="•">
+       for all extensional predicates Q of Π,{a mathematical formula}QMS=QM;
+      </list-item>
+      <list-item label="•">
+       for all constants c in Π,{a mathematical formula}cMS=cM;
+      </list-item>
+      <list-item label="•">
+       for all intensional predicates{a mathematical formula}Pi,{a mathematical formula}Pi(a→)∈Miff{a mathematical formula}P(a→,0,…,0,i)∈MS.
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      This assertion follows from the constructions and definitions by induction on k.  □
+     </paragraph>
+     <paragraph>
+      Lemma 6 shows that {a mathematical formula}ΠS can simulate Π in the sense that every intensional atom {a mathematical formula}Pi(ti→) in Π is associated with the intensional atom {a mathematical formula}P(ti→,0,…,0,i) in {a mathematical formula}ΠS.
+     </paragraph>
+     <paragraph>
+      Now we show that each program with a single intensional predicate can be equivalently transferred into a fixed-point formula on a class of axiomatizable structures. Let Π be a program that only contains a single intensional predicate, say P. Then, all the heads of rules in Π are of the form {a mathematical formula}P(x→) since Π is normalized. Let {a mathematical formula}P⁎ be a new predicate that has the same arity as P. Let {a mathematical formula}ψ(Π,P⁎) be the first-order formula obtained from Π and {a mathematical formula}P⁎ by two steps: (1) construct a program {a mathematical formula}Π⁎ by replacing every occurrence of {a mathematical formula}P(t→) in the negative bodies of any rules in Π with {a mathematical formula}P⁎(t→), (2) let {a mathematical formula}ψ(Π,P⁎) be the formula {a mathematical formula}⋁r∈Π⁎∃y→Body(r)ˆ, where {a mathematical formula}y→ is the set of local variables in rule r. Clearly, {a mathematical formula}ψ(Π,P⁎) is a first-order formula of the vocabulary {a mathematical formula}τ(Π)∪{P⁎}, where P only occurs positively and {a mathematical formula}x→ are all the free variables.
+     </paragraph>
+     <paragraph>
+      Let {a mathematical formula}M be a {a mathematical formula}τ(Π)-structure. By {a mathematical formula}M⁎, we denote the structure of the vocabulary {a mathematical formula}τ(Π)∪{P⁎} such that
+     </paragraph>
+     <list>
+      <list-item label="•">
+       {a mathematical formula}Dom(M⁎)=Dom(M);
+      </list-item>
+      <list-item label="•">
+       for all {a mathematical formula}a→, {a mathematical formula}P⁎(a→)∈M⁎ iff {a mathematical formula}P(a→)∈M;
+      </list-item>
+      <list-item label="•">
+       the interpretations of all constants and other predicates are the same as those in {a mathematical formula}M.
+      </list-item>
+     </list>
+     <paragraph label="Proof">
+      If Π is defined by the first-order sentence ϕ, then {a mathematical formula}K is axiomatized by the first-order sentence {a mathematical formula}ϕ∧∀x→(P(x→)↔P⁎(x→)).  □
+     </paragraph>
+     <paragraph>
+      The fixed-point formula {a mathematical formula}ψ(Π,P⁎)∞(x→,P) simulates the program Π on all stable models of Π. By induction on k, the following lemma holds.
+     </paragraph>
+     <paragraph label="Lemma 7">
+      Let Π be a program that has a single intensional predicate P, and{a mathematical formula}Ma stable model of{a mathematical formula}τ(Π). Suppose that{a mathematical formula}ψ(Π,P⁎)and{a mathematical formula}M⁎are constructed as above. Then, for any integer k and any{a mathematical formula}a→,{a mathematical formula}P(a→)∈Mk(Π)iff{a mathematical formula}a→∈ψ(Π,P⁎)k(x→,P).
+     </paragraph>
+     <paragraph>
+      Lemma 7 shows that {a mathematical formula}Π⁎ can simulate Π on the class of structures {a mathematical formula}K. Consequently, the answer set program Π can be simulated by the fixed-point formula {a mathematical formula}Π⁎ˆ on {a mathematical formula}K. Together with Lemma 5, we can finally prove Theorem 2 in this paper.
+     </paragraph>
+     <paragraph>
+      We finish the proof of Theorem 2 as follows.
+     </paragraph>
+     <paragraph label="Proof of Theorem 2">
+      We only need to prove {a mathematical formula}4⇒1. From Lemma 6, it suffices to prove the case in which the program only contains a single intensional predicate. Let Π be such a program, which has a single intensional predicate P and is defined by a first-order sentence ϕ. Let {a mathematical formula}K={M⁎|M∈AS(Π)}. Then, {a mathematical formula}K is first-order axiomatized by {a mathematical formula}ϕ∧∀x→(P(x→)↔P⁎(x→)). By Lemma 7, the fixed-point formula {a mathematical formula}ψ(Π,P⁎)∞(x→,P) on {a mathematical formula}K is defined by the formula {a mathematical formula}ϕ⁎∧P⁎(x), where {a mathematical formula}ϕ⁎ is obtained from ϕ by simultaneously replacing each occurrence of {a mathematical formula}P(t→) with {a mathematical formula}P⁎(t→). Then, by Lemma 5, {a mathematical formula}ψ(Π,P⁎)∞(x→,P) is bounded on {a mathematical formula}K. Again, by Lemma 7, Π is bounded.  □
+     </paragraph>
+    </section>
+   </appendices>
+  </root>
+ </body>
+</html>

@@ -1,0 +1,513 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Improved Correction Detection in Revised ESL Sentences.
+  </title>
+ </head>
+ <body>
+  <div class="ltx_page_main">
+   <div class="ltx_page_content">
+    <div class="ltx_document ltx_authors_1line">
+     <div class="ltx_section" id="S1">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        1
+       </span>
+       Introduction
+      </h2>
+      <div class="ltx_para" id="S1.p1">
+       <p class="ltx_p">
+        Quality feedback from language tutors can help
+English-as-a-Second-Language (ESL) students improve their writing
+skills. One of the tutors’ tasks is to isolate writing mistakes
+within sentences, and point out (1) why each case is considered a
+mistake, and (2) how each mistake should be corrected. Because this is
+time consuming, tutors often just rewrite the sentences without giving
+any explanations
+        [5]
+        . Due to the effort involved in
+comparing revisions with the original texts, students often fail to
+learn from these revisions
+        [16]
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p2">
+       <p class="ltx_p">
+        Computer aided language learning tools offer a solution for providing more detailed feedback.
+Programs can be developed to compare the student’s original sentences
+with the tutor-revised sentences.
+        Swanson and Yamangil (2012)
+        have proposed
+a promising framework for this purpose. Their approach has two
+components: one to detect individual corrections within a revision,
+which they termed
+        correction detection
+        ; another to determine
+what the correction fixes, which they termed
+        error type
+selection
+        . Although they reported a high accuracy for the error
+type selection classifier alone, the bottleneck of their system is the
+other component – correction detection. An analysis of their system
+shows that approximately 70% of the system’s mistakes are caused by
+mis-detections in the first place. Their correction detection
+algorithm relies on a set of heuristics developed from one single data
+collection (the FCE corpus
+        [17]
+        ). When determining
+whether a set of basic-edits (word insertions, deletions,
+substitutions) contributes to the same correction, these heuristics
+lack the flexibility to adapt to a specific context. Furthermore, it
+is not clear if the heuristics will work as well for tutors trained to
+mark up revisions under different guidelines.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p3">
+       <p class="ltx_p">
+        We propose to improve upon the correction detection component by
+training a classifier that determines which edits in a revised
+sentence address the same error in the original sentence. The
+classifier can make more accurate decisions adjusted to
+contexts. Because the classifier were trained on revisions where
+corrections are explicitly marked by English experts, it is also
+possible to build systems adjusted to different annotation standards.
+       </p>
+      </div>
+      <div class="ltx_para" id="S1.p4">
+       <p class="ltx_p">
+        The contributions of this paper are: (1) We show empirically that a
+major challenge in correction detection is to determine the number of
+edits that address the same error. (2) We have developed a merging
+model that reduces mis-detection by 1/3, leading to significant
+improvement in the accuracies of combined
+        correction detection
+        and
+        error type selection
+        . (3) We have conducted experiments
+across multiple corpora, indicating that the proposed merging model is
+generalizable.
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S2">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        2
+       </span>
+       Correction Detection
+      </h2>
+      <div class="ltx_para" id="S2.p1">
+       <p class="ltx_p">
+        Comparing a student-written sentence with its revision, we observe
+that each correction can be decomposed into a set of more basic edits
+such as word insertions, word deletions and word substitutions. In the
+example shown in Figure
+        1
+        , the correction
+“
+        to change
+        ⇒
+        changing
+        ” is composed of a
+deletion of
+        to
+        and a substitution from
+        change
+        to
+        changing
+        ; the correction “
+        moment
+        ⇒
+        minute
+        ” is itself a single word substitution. Thus,
+we can build systems to detect corrections which operates in two steps: (1) detecting the basic edits that took place during the revision, and (2) merging those basic edits that address the same error. Figure
+        2
+        illustrates the process for a fragment of the example sentence from Figure
+        1
+        .
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p2">
+       <p class="ltx_p">
+        In practice, however, this two-step approach may result in
+mis-detections due to ambiguities. Mis-detections may be introduced
+from either steps. While detecting basic edits,
+Figures
+        5
+        gives an example of problems that
+might arise. Because the Levenshtein algorithm only tries to minimize
+the number of edits, it does not care whether the edits make any
+linguistic sense. For merging basic edits, Swanson and Yamangilapplied a distance
+heuristic – basic-edits that are close to each other (e.g. basic
+edits with at most one word lying in between) are merged.
+Figure
+        8
+        shows cases for which the heuristic results
+in the wrong scope.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p3">
+       <p class="ltx_p">
+        These errors caused their system to mis-detect 30% of the
+corrections. Since mis-detected corrections cannot be analyzed down
+the pipeline, the correction detection component became the
+bottle-neck of their overall system. Out of the 42% corrections that
+are incorrectly analyzed
+        , 30%/42%
+        ≈
+        70% are caused by mis-detections
+in the first place. An improvement in correction detection may
+increase the system accuracy overall.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p4">
+       <p class="ltx_p">
+        We conducted an error analysis to attribute errors to either step when
+the system detects a wrong set of corrections for a sentence. We
+examine the first step’s output. If the resulting basic edits do not
+match with those that compose the actual corrections, we attribute the
+error to the first step. Otherwise, we attribute the error to the
+second step. Our analysis confirms that the merging step is the
+bottleneck in the current correction detection system – it accounts
+for 75% of the mis-detections. Therefore, to effectively reduce the
+algorithm’s mis-detection errors, we propose to build a classifier to
+merge with better accuracies.
+       </p>
+      </div>
+      <div class="ltx_para" id="S2.p5">
+       <p class="ltx_p">
+        Other previous tasks also involve comparing two sentences. Unlike
+evaluating grammar error correction systems
+        [3]
+        ,
+correction detection cannot refer to a gold standard. Our error
+analysis above also highlights our task’s difference with previous
+work that identify corresponding phrases between two sentences,
+including phrase extraction
+        [9]
+        and paraphrase extraction
+        [1]
+        . They are fundamentally different in that the granularity
+of the extracted phrase pairs is a major concern in our work – we
+need to guarantee each detected phrase pair to address exactly one
+writing problem. In comparison, phrase extraction systems aim to
+improve the end-to-end MT or paraphrasing systems. A bigger concern
+is to guarantee the extracted phrase pairs are indeed translations or
+paraphrases. Recent work therefore focuses on identifying the
+alignment/edits between two sentences
+        [13, 8]
+        .
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S3">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        3
+       </span>
+       A Classifier for Merging Basic-Edits
+      </h2>
+      <div class="ltx_para" id="S3.p1">
+       <p class="ltx_p">
+        Figures
+        8
+        highlights the problems with
+indiscriminantly merging basic-edits that are adjacent. Intuitively,
+it seems that the decision should be more context dependent. Certain
+patterns may indicate that two adjacent basic-edits are a part of the
+same correction while others may indicate that they each address a
+different problem. For example, in Figure
+        11
+        ,
+when the insertion of one word is followed by the deletion of the same
+word, the insertion and deletion are likely addressing one single
+error. This is because these two edits would combine together as a
+word-order change. On the other hand, in Figure
+        11
+        , if one edit includes a substitution
+between words with the same POS’s, then it is likely fixing a word
+choice error by itself. In this case, it should not be merged with
+other edits.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p2">
+       <p class="ltx_p">
+        To predict whether
+two basic-edits address the same writing problem
+more discriminatively, we train a Maximum Entropy binary classifier based on features extracted from relevant contexts for the basic edits.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p3">
+       <p class="ltx_p">
+        We use features in Table
+        1
+        in the proposed
+classifier. We design the features to indicate:
+        (A)
+        whether
+merging the two basic-edits matches the pattern for a common
+correction.
+        (B)
+        whether one basic-edit addresses one single
+error.
+       </p>
+      </div>
+      <div class="ltx_para" id="S3.p4">
+       <p class="ltx_p">
+        We train the classifier using samples extracted from
+revisions where individual corrections are explicitly annotated. We
+first extract the basic-edits that compose each correction. We then
+create a training instance for each pair of two consecutive basic
+edits: if two consecutive basic edits need to be merged, we will mark
+the outcome as
+        True
+        , otherwise it is
+        False
+        . We
+illustrate this in Figure
+        12
+        .
+       </p>
+      </div>
+     </div>
+     <div class="ltx_section" id="S4">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        4
+       </span>
+       Experimental Setup
+      </h2>
+      <div class="ltx_para" id="S4.p1">
+       <p class="ltx_p">
+        We combine Levenshtein algorithm with different merging algorithms
+for correction detection.
+       </p>
+      </div>
+      <div class="ltx_subsection" id="S4.SS1">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.1
+        </span>
+        Dataset
+       </h3>
+       <div class="ltx_para" id="S4.SS1.p1">
+        <p class="ltx_p">
+         An ideal data resource would be a real-world collection of student essays and their revisions
+         [15]
+         .
+However, existing revision corpora do not have
+the fine-grained annotations necessary for our experimental gold standard.
+We instead use error
+annotated data, in which the corrections were provided by human
+experts. We simulate the revisions by applying corrections onto the
+original sentence. The teachers’ annotations are treated as gold
+standard for the detailed corrections.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p2">
+        <p class="ltx_p">
+         We considered four corpora with different ESL populations and
+annotation standards, including FCE corpus
+         [17]
+         ,
+NUCLE corpus
+         [2]
+         , UIUC corpus
+         [12]
+         and HOO2011 corpus
+         [4]
+         . These corpora all provide
+experts’ corrections along with error type mark-ups. The basic
+statistics of the corpora are shown in Table
+         2
+         . In these corpora, around half of revised
+sentences contains multiple corrections.
+        </p>
+       </div>
+       <div class="ltx_para" id="S4.SS1.p3">
+        <p class="ltx_p">
+         We have split each corpus into 11 equal parts. One part is used as the development dataset; the rest are used for 10-fold cross validation.
+        </p>
+       </div>
+      </div>
+      <div class="ltx_subsection" id="S4.SS2">
+       <h3 class="ltx_title ltx_title_subsection">
+        <span class="ltx_tag ltx_tag_subsection">
+         4.2
+        </span>
+        Evaluation Metrics
+       </h3>
+       <div class="ltx_para" id="S4.SS2.p1">
+        <p class="ltx_p">
+         In addition to
+evaluating the merging algorithms on the stand-alone task of
+correction detection, we have also plugged in the merging algorithms
+into an end-to-end system in which every automatically detected
+correction is further classified into an error type. We replicated
+the error type selector described in
+         Swanson and Yamangil (2012)
+         . The error
+type selector’s accuracies are shown in Table
+         3
+         . We compare two merging algorithms, combined with
+Levenshtein algorithm:
+        </p>
+       </div>
+       <div class="ltx_paragraph" id="S4.SS2.SSS0.P1">
+        <h4 class="ltx_title ltx_title_paragraph">
+         S&amp;Y
+        </h4>
+        <div class="ltx_para" id="S4.SS2.SSS0.P1.p1">
+         <p class="ltx_p">
+          The merging heuristic proposed by Swanson and Yamangil,
+which merges the adjacent basic edits into single corrections.
+         </p>
+        </div>
+       </div>
+       <div class="ltx_paragraph" id="S4.SS2.SSS0.P2">
+        <h4 class="ltx_title ltx_title_paragraph">
+         MaxEntMerger
+        </h4>
+        <div class="ltx_para" id="S4.SS2.SSS0.P2.p1">
+         <p class="ltx_p">
+          We use the Maximum Entropy
+classifier to predict whether we should merge the two edits, as
+described in Section
+          3
+          .
+         </p>
+        </div>
+        <div class="ltx_para" id="S4.SS2.SSS0.P2.p2">
+         <p class="ltx_p">
+          We evaluate extrinsically the merging components’ effect on overall
+system performance by comparing the boundaries of system’s detected
+corrections with the gold standard. We evaluate both (1) the F-score
+in detecting corrections (2) the F-score in correctly detecting both
+the corrections’ and the error types they address.
+         </p>
+        </div>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S5">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        5
+       </span>
+       Experiments
+      </h2>
+      <div class="ltx_para" id="S5.p1">
+       <p class="ltx_p">
+        We design experiments to answer two questions:
+       </p>
+      </div>
+      <div class="ltx_paragraph" id="S5.SS2.SSS0.P1">
+       <h4 class="ltx_title ltx_title_paragraph">
+        1.
+       </h4>
+       <div class="ltx_para" id="S5.SS2.SSS0.P1.p1">
+        <p class="ltx_p">
+         Do the additional contextual information about correction patterns
+help guide the merging decisions? How much does a classifier
+trained for this task improve the system’s overall accuracy?
+        </p>
+       </div>
+      </div>
+      <div class="ltx_paragraph" id="S5.SS2.SSS0.P2">
+       <h4 class="ltx_title ltx_title_paragraph">
+        2.
+       </h4>
+       <div class="ltx_para" id="S5.SS2.SSS0.P2.p1">
+        <p class="ltx_p">
+         How well does our method generalize over
+revisions from different sources?
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.SSS0.P2.p2">
+        <p class="ltx_p">
+         Our major experimental results are presented in Table
+         4
+         and Table
+         6
+         . Table
+         4
+         compares the overall educational system’s
+accuracies with different merging algorithms. Table
+         6
+         shows the system’s
+         F1
+         score when trained
+and tested on different corpora. We make the following observations:
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.SSS0.P2.p3">
+        <p class="ltx_p">
+         First, Table
+         4
+         shows that by incorporating
+correction patterns into the merging algorithm, the errors in
+correction detection step were reduced. This led to a
+significant improvement on the overall system’s
+         F1
+         -score on all
+corpora. The improvement is most noticeable on FCE corpus, where the
+error in correction detection step was reduced by
+9%. That is, one third of the correction mis-detections were eliminated.
+Table
+         5
+         shows that the number of
+merging errors are significantly reduced by the new merging
+algorithm. In particular, the number of false positives (system
+proposes merges when it should not) is significantly reduced.
+        </p>
+       </div>
+       <div class="ltx_para" id="S5.SS2.SSS0.P2.p4">
+        <p class="ltx_p">
+         Second, our proposed model is able to generalize over different
+corpora. As shown in Table
+         6
+         . The models built
+on corpora can generally improve the correction detection
+accuracy
+         . Models built on
+the same corpus generally perform the best. Also, as suggested by the
+experimental result, among the four corpora, FCE corpus is a
+comparably good resource for training correction detection models with
+our current feature set. One reason is that FCE corpus has many more
+training instances, which benefits model training. We tried varying
+the training dataset size, and test it on different corpora. Figure
+         13
+         suggests that the model’s accuracies
+increase with the training corpus size.
+        </p>
+       </div>
+      </div>
+     </div>
+     <div class="ltx_section" id="S6">
+      <h2 class="ltx_title ltx_title_section">
+       <span class="ltx_tag ltx_tag_section">
+        6
+       </span>
+       Conclusions
+      </h2>
+      <div class="ltx_para" id="S6.p1">
+       <p class="ltx_p">
+        A revision often contains multiple corrections that address different
+writing mistakes. We explore building computer programs to accurately
+detect individual corrections in one single revision. One major
+challenge lies in determining whether consecutive basic-edits address
+the same mistake. We propose a classifier specialized in this task.
+Our experiments suggest that: (1) the proposed classifier reduces
+correction mis-detections in previous systems by 1/3, leading to
+significant overall system performance. (2) our method is
+generalizable over different data collections.
+       </p>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </body>
+</html>
